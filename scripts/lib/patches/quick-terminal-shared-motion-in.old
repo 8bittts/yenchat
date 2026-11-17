@@ -1,0 +1,9 @@
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = derivedConfig.quickTerminalAnimationDuration
+            context.timingFunction = .init(name: .easeIn)
+            position.setFinal(
+                in: window.animator(),
+                on: screen,
+                terminalSize: derivedConfig.quickTerminalSize,
+                closedFrame: closedFrame)
+        }, completionHandler: {

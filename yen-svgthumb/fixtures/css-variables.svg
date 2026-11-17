@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <style>
+    :root {
+      --bg: #111827;
+      --card: #1f2937;
+      --accent: #22d3ee;
+      --ink: #f9fafb;
+    }
+    .bg { fill: var(--bg); }
+    .card { fill: var(--card); stroke: var(--accent); stroke-width: 6; }
+    .title { fill: var(--ink); font: 700 36px "Helvetica"; }
+    .body { fill: #d1d5db; font: 500 20px "Helvetica"; }
+  </style>
+  <rect class="bg" x="0" y="0" width="640" height="360" />
+  <rect class="card" x="36" y="36" width="568" height="288" rx="22" />
+  <text class="title" x="68" y="116">SVG Variable Render Test</text>
+  <text class="body" x="68" y="176">Native rendering should honor CSS variables.</text>
+  <text class="body" x="68" y="210">Includes styled text and stroke/fill classes.</text>
+</svg>

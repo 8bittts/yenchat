@@ -1,0 +1,7 @@
+const new_window = @import("new_window.zig");
+
+pub const ActionTier = enum {
+    public,
+    support,
+    internal,
+};

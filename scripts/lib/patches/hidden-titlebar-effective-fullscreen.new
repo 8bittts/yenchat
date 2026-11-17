@@ -1,0 +1,3 @@
+        if yenIsEffectivelyFullscreen || (terminalController?.fullscreenStyle?.isFullscreen ?? false) {
+            return
+        }

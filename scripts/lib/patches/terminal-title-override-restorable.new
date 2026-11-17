@@ -1,0 +1,7 @@
+    var titleOverride: String? {
+        didSet {
+            applyTitleToWindow()
+            NSApp.invalidateRestorableState()
+            window?.invalidateRestorableState()
+        }
+    }

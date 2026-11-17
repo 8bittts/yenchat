@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="arrowA" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#f97316" />
+    </marker>
+    <marker id="arrowB" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+      <path d="M0,0 L12,6 L0,12 z" fill="#22d3ee" />
+    </marker>
+  </defs>
+  <rect width="1200" height="700" fill="#020617" />
+  <g fill="none" stroke-width="14" stroke-linecap="round">
+    <path d="M130 560 C300 260 460 600 640 260" stroke="#f97316" marker-end="url(#arrowA)" />
+    <path d="M180 220 C340 470 560 80 1020 470" stroke="#22d3ee" marker-end="url(#arrowB)" marker-start="url(#arrowB)" />
+    <path d="M120 120 H1080" stroke="#a78bfa" stroke-dasharray="24 18" marker-end="url(#arrowA)" />
+  </g>
+</svg>

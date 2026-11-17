@@ -1,0 +1,115 @@
+# Dependencies
+node_modules/
+
+# Lock files (Bun only — bun.lock is tracked)
+package-lock.json
+yarn.lock
+
+# Next.js build outputs
+/.next/
+/out/
+
+# Zig/Desktop build outputs
+dist/
+/build/
+zig-out/
+zig-cache/
+.zig-cache/
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.a
+*.lib
+
+# Logs
+*.log
+
+# Environment & secrets (NEVER commit)
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE files
+.idea/
+*.swp
+.*.swp
+*.swo
+*~
+
+# Testing
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+__pycache__/
+
+# YEN Terminal (ghostty is downloaded fresh by scripts/10-update-ghostty.sh)
+yen-terminal/ghostty/
+yen-terminal/ghostty.backup/
+
+# Vendored binaries (downloaded by scripts/14-vendor.sh and individual vendor scripts)
+yen-terminal/customizations/vendor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vercel local
+.vercel
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Data directories
+.data/
+
+# Temp files
+.ghostty-changes*.json
+.triaged-crashes
+
+# DMG releases (hosted on GitHub Releases, not git)
+*.dmg
+
+# Sparkle delta updates (hosted on GitHub Releases, not git)
+*.delta
+
+# Compiled Swift binary
+yen-vidthumb/yen-vidthumb
+yen-vidthumb/yen-vidthumb-*
+yen-pdfthumb/yen-pdfthumb
+yen-pdfthumb/yen-pdfthumb-*
+yen-svgthumb/yen-svgthumb
+yen-svgthumb/yen-svgthumb-*
+yen-svgthumb/.eval/
+# Thumbnailer eval outputs and generated fixtures (manifest.csv stays committed)
+yen-pdfthumb/.eval/
+yen-vidthumb/.eval/
+yen-pdfthumb/fixtures/*.pdf
+yen-vidthumb/fixtures/*.mp4
+yen-vidthumb/fixtures/*.m4a
+tmp/skill-telemetry/
+
+# Codex CLI cache
+.codex-cache/
+
+# Code coverage
+*.profraw
+
+# Claude Code runtime state
+.claude/scheduled_tasks.lock
+
+plugins/
+
+# Git worktrees (operator convention: <repo>/.worktrees/<task>)
+.worktrees/
+
+# env / secrets — never commit; keep examples committable
+.env*
+!.env.example

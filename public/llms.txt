@@ -1,0 +1,271 @@
+# YEN - GPU-Accelerated Terminal for macOS
+
+YEN is a GPU-accelerated terminal emulator for macOS with Metal rendering,
+Apple Speech dictation, terminal-first IDE workflows, bundled developer tools,
+a bundled file browser, native WebKit and Git surfaces, and local-first defaults.
+
+## Key Links
+- [YEN website](https://yen.chat/)
+- [Documentation](https://yen.chat/docs)
+- [Alternatives](https://yen.chat/alternatives)
+- [Use cases](https://yen.chat/use-cases)
+- [Download](https://yen.chat/download)
+- [Terms & Privacy](https://yen.chat/terms)
+- [Music](https://yen.chat/tunes)
+- [Blog](https://blog.yen.chat/)
+- [Contact](https://twitter.com/yenFTW)
+
+## About YEN
+YEN is a GPU-accelerated terminal emulator for macOS with Metal rendering and native workflow tools.
+Rendering latency and frame rate depend on the Mac and workload; YEN publishes no fixed performance guarantee.
+
+## Key Features
+- GPU-accelerated rendering via Metal backend
+- Command Palette (Cmd + Shift + P) — one palette surface: empty query launches YEN actions (including `Review Pull Request`, `Resolve Merge Conflicts`, `IDE: Merge Readiness`, `IDE: Agents Timeline`, `IDE: Agents Export`, `IDE: Benchmark Status`, `IDE: Run Benchmarks`, `IDE: Workspace Doctor`, `IDE: Debug Status`, `IDE: LSP Status`, `IDE: LSP Diagnostics`, `IDE: LSP Install Matrix`, `IDE: Share Status`, `IDE: Share Host (Read-Only)`, `IDE: Share Revoke`, `IDE: Devcontainer Status`, `IDE: VS Code Inventory`, `IDE: VS Code Import (Dry Run)`, and `IDE: AST Status` on macOS), non-empty query searches project actions/files/symbols/content/diagnostics/history from the active terminal context, plus user-configured terminal commands (command-palette-entry)
+- IDE workflows — `yen ide doctor`, `yen ide trust status`, `yen ide debug status`, `yen ide debug tui`, `yen ide debug start`, `yen ide debug continue/next/step/out/stack/inspect`, `yen ide debug breakpoint`, `yen ide debug watch`, `yen ide debug transcript`, `yen ide debug stop`, `yen ide merge-readiness`, `yen ide benchmark`, `yen ide open`, `yen ide search`, `yen ide lsp start`, `yen ide lsp status`, `yen ide lsp diagnostics`, `yen ide lsp hover`, `yen ide lsp definition`, `yen ide lsp references`, `yen ide lsp rename`, `yen ide lsp install`, `yen ide ast status`, `yen ide ast definition`, `yen ide ast references`, `yen ide share status`, `yen ide share host`, `yen ide share join`, `yen ide share revoke`, `yen ide devcontainer`, `yen ide vscode inventory/import`, `yen ide test status`, `yen ide test run`, `yen ide format/lint/fix status`, `yen ide format/lint/fix run`, `yen ide verify status`, `yen ide verify`, `yen ide gate`, `yen ide explain` / `??`, `yen ide workflow discover`, `yen ide workflow run --native <task-id>`, `yen ide workflow`, `yen ide timeline`, `yen ide pr-review`, `yen ide pr-notify`, and `yen agents list/open/timeline/note/export/templates`, with local watch-mode parity for `test run`, `workflow run --native`, and `verify`, current-branch CI plus local build-watch summaries in `pr-notify --ci-status`, a debugger baseline over shared trust/timeline state for Python / Node / executables with managed local, SSH-backed, and tracked devcontainer execution, a terminal debugger dashboard over that same session/transcript state for source excerpts, breakpoints, watches, and recent output when they are honestly available, reusable summary/log/transcript evidence surfaced through `debug status` and `trust status`, explicit debug handoffs reused across failing test/verify steps plus review/search/diagnostic routing only when the shipped debugger can really launch that semantic target, remote-aware `ssh://...` parity for detect/doctor/trust summaries/verify status/share plus explicit remote workflow execution/trust and remote devcontainer lifecycle/status keyed by workspace identity, with tracked remote devcontainer debugger execution on that same control plane, plus a bounded source-tagged `yen agents timeline` surface (`agent:<slot>`, `human`, `supervisor`, `system`) with minimal `--tail` / `--event` / `--source` / `--kind` filtering, lightweight `yen agents note` templates plus optional `--validate-link` session/slot validation and latest-session binding for slot-only validation, PR evidence that reuses recent agent approval/handoff notes for the same workspace, one shared `evidenceStatus` vocabulary (`missing-report`, `stale-report`, `unverified`, `exported-with-gaps`) plus stable JSON schema/taxonomy fields across timeline/export/PR evidence, one shared `linkedEvidence` block for reusable `quality` / `workflow` report artifacts, merge-readiness, PR review, current-branch PR-CI, and local build-watch snapshots, explicit captured adapter path/probe/launch/fallback metadata in export/session state, workspace-keyed repo context plus shared risk summary, semantic PR-review jump targets, and redacted short-retention local agent artifacts with positive-day retention overrides plus opt-in archival, plus desktop PR review and merge-conflict workspaces on macOS launched from the command palette
+- Polyglot AST fallback — `yen ide ast status|definition|references` provide parser-backed fallback for Python, JavaScript/TypeScript, Go, and Swift with explicit engine labels; Rust and Zig stay on the explicit no-fallback path until shipped
+- Native Settings panel (Cmd + ,) with curated bundled themes and live preview
+- Chromatic window border (Settings > Appearance > Border): on/off, Theme or Accent color, and Thin/Regular/Thick weight, shown live in the Settings preview; scope and focused/unfocused palettes from the command palette Window Border actions; dashed-outline accessibility fallback (hidden in fullscreen + quick terminal)
+- Built-in speech-to-text (Option + Space) — on-device on macOS 26+; older macOS uses on-device recognition when Apple reports support; no YEN speech service; runtime fallback follows the legacy rules below
+- Translate-on-Dictate (experimental, opt-in, macOS 26+) — can translate final transcript before paste with safe fallback to the original transcript on failure/timeout/unsupported pairs
+- Dictation menu status shows explicit enabled/blocked state with permission recovery actions
+- Native macOS integration (system fonts, colors, notifications)
+- Configuration-first design (plain text config file)
+- Engine shell integration supports bash, zsh, fish, elvish, and nushell; YEN command wrappers and the `y` function are supplied for bash and zsh
+- Built-in file browser (Cmd + Shift + O) — terminal-native file browser with Quick Look, incremental search, fuzzy find, static bundled theme/flavor defaults, and syntax-highlighted code previews (with readable fallback for huge/minified text) plus rich media/archive previews — all bundled, no Homebrew needed
+- Local Git drawer (Cmd + Shift + G) — read-only native bottom overlay for branch/upstream status, grouped staged/unstaged/untracked/conflicted changes, untracked-aware stash file lists, raw unified diffs, clear no-repo/failure notices, copy/open actions, and handoff to bundled `lazygit`; follows focused-split directory changes while open, even when the tab sidebar is hidden
+- Native browser preview — Command Palette > Browser / Browser Split (search Browser, web preview, localhost, loopback, dev server, or terminal browser), `yen web`, and optional split targeting open docs, HTTPS pages, and localhost/loopback in isolated, non-persistent WebKit; WebKit connects directly to selected sites and YEN does not receive browsing activity; stateful `yen web` commands support automatic, window, split, and focused targets, and targeted status confirms which app executable acknowledged the command; terminal link capture is default-off, explicit-activation-only, and there is no bundled browser runtime
+- macOS AppleScript automation — enabled by default with `macos-applescript`, target by absolute bundle path, and script `windows`, `tabs`, `terminals`, `new window`, `new tab`, `split`, `focus`, `close`, `input text`, `send key`, `send mouse button`, `send mouse position`, `send mouse scroll`, `surface configuration`, plus terminal `pid` and `tty`; `perform action` resolves allowlisted command-catalog actions only
+- Bundled CLI tools (fd, rg, fzf, zoxide, bat, jq, lazygit, delta, btop, fastfetch, yen-vidthumb, yen-pdfthumb, yen-svgthumb, resvg) plus native archive preview/extract via macOS bsdtar — `bat` is included as a standalone syntax pager CLI, while file-browser code previews use the built-in previewer; SVG previews run native-first with `resvg` fallback for `.svgz` and unsupported edge cases; `delta` is bundled as the Git diff renderer for the review baseline; pre-signed and ready without homebrew
+- Splits, tabs, tab sidebar (Cmd + Shift + B), scratchpad (Cmd + Shift + J), split layout presets (Cmd + Option + 1-0), and Quick Terminal (global hotkey dropdown)
+- Automatic window state restoration on every launch (splits, tabs, positions)
+- Copy-on-select — enabled by default and configurable in Settings; selected text copies as plain text
+- Live settings reload — most changes apply while running; background opacity requires an app restart
+- Welcome message for new users with key shortcuts and getting-started tips
+
+IDE prerequisites: language servers, debugger runtimes, `devcontainer`, `upterm` or `tmate`, and agent CLIs are separate installations.
+Project execution requires the relevant trust grant; read-only status commands do not grant trust.
+
+## Keyboard Shortcuts
+- Cmd + Shift + P — Command palette (empty query launches actions; non-empty query searches project actions, files, symbols, content, diagnostics, and history)
+- Cmd + , — Open Settings panel
+- Option + Space (hold) — Speech-to-text dictation
+- Cmd + T / Cmd + N — New tab / window
+- Hold an arrow, then press Cmd + D — Split left, right, up, or down
+- Cmd + D / Cmd + Shift + D — Split right / down
+- Cmd + F — Find terminal text
+- Cmd + Option + Arrow — Focus a split; Cmd + Shift + Enter — Toggle split zoom
+- Cmd + W — Close tab/pane
+- Cmd + Shift + O — Open file browser
+- Cmd + Shift + P, then Browser — Open native browser preview; also findable by web preview, localhost, loopback, and dev server searches
+- Cmd + Shift + P, then Browser Split — Open native browser beside the active terminal window; also findable by terminal browser and split searches
+- Cmd + Shift + S — Screenshot (saves window to file and copies to clipboard)
+- Cmd + Shift + B — Toggle tab sidebar (transient left tab rail or opt-in persistent docked rail)
+- Cmd + Shift + G — Toggle local Git drawer (read-only bottom overlay with branch/upstream status, grouped changed files, untracked-aware stash file lists, raw diff, clear no-repo/failure notices, copy/open actions, bundled `lazygit` handoff)
+- Cmd + Shift + J — Toggle scratchpad (right-side notes panel)
+- Cmd + Option + 1-0 — Split layout presets (Single Pane, Three Columns, Right Stack, Bottom Stack, Quad, Eastward 1-3, Eastward 2-1, Eastward 2-3, Center Stage, Three Column Bottom)
+- Ctrl + ` — Toggle Quick Terminal (global hotkey dropdown)
+- Cmd + Enter — Toggle fullscreen
+- Fixed shortcuts are locked in Settings > Shortcuts: Cmd + ,; Option + Space; Cmd + Shift + O/S/B/G/J; Cmd + Option + 1-0
+- Dictation fixed-shortcut conflicts are called out in Settings with links to System Keyboard Shortcuts
+- Fixed handlers are exact-match: dictation listens to exact Option + Space; layouts listen to exact Cmd + Option + 1-0 (no extra modifiers)
+
+## File Browser Shortcuts
+Inside the file browser (Cmd + Shift + O or y command):
+- h / j / k / l — Vim-style navigation (or arrow keys)
+- Enter — Enter a directory or open the configured file preview; l — Enter a directory
+- h — Go up a directory
+- Space — Quick Look preview (macOS native)
+- e — Open in $EDITOR
+- g o — Open in default app
+- / — Find in the current file list; z — Fuzzy find with fzf; Z — Directory jump with zoxide
+- Tab — Select file (for bulk operations)
+- . — Toggle hidden files
+- ~ — Jump to home directory
+- g r — Reveal in Finder
+- ? — Show help (full shortcut list)
+- q — Quit; cd to the last directory only when launched through y
+
+## Settings Panel
+Press Cmd + , to open Settings. The window is a live terminal preview that shows every appearance change as you make it, with five panes in a Liquid Glass inspector beside it: Appearance, General, Notifications, Dictation, and Shortcuts. Settings has no search and no import or export; every setting is on one of the five panes. Configure:
+- Settings > Appearance: theme (a dock with every bundled theme as a swatch), font family and size, cursor style (block, bar, underline) and blink, background opacity, padding, a PNG or JPEG background image, and the window border
+- Window border: on/off, Theme or Accent color, and Thin/Regular/Thick weight, shown live in the preview; scope and focused/unfocused palettes from the command palette Window Border actions; Differentiate Without Color dashes the unfocused border; the border hides in fullscreen and Quick Terminal
+- Settings > General: open at login, copy on select, scroll bar, tab sidebar (Off, Floating, or Docked; Cmd + Shift + B), pane labels (default-off per-pane label pill, with optional worktree naming that names a pane after the git worktree its working directory sits in, falling back to the branch), scratchpad toggle (Cmd + Shift + J), link handling, and Reset All Settings
+- Settings > Notifications: command-finish alerts (Never, when the pane is unfocused, or always; minimum runtime; bell and/or notification), one system alert sound each for General and Build notifications, and sound/banner behavior while YEN is active
+- Settings > Dictation: Accessibility, Microphone, and Speech Recognition status, microphone selection, live transcript, and translation
+- Settings > Shortcuts: every rebindable keybind in five groups (Terminal, Windows, Tabs, Splits, YEN) with conflict detection (macOS system shortcuts + popular apps); click a shortcut to record new keys; Restore Default Shortcuts
+- Split layout presets — 10 layouts via Cmd + Option + 1-0, the File menu, or the command palette (Single Pane, Three Columns, Right Stack, Bottom Stack, Quad, Eastward 1-3, Eastward 2-1, Eastward 2-3, Center Stage, Three Column Bottom)
+- Keyboard recorder constraints are explicit: shortcuts must include Cmd/Ctrl/Option, Esc cancels capture, and recording times out after 10 seconds
+- Cmd + Q and Cmd + W can be recorded safely while recording is active
+- Keyboard remaps are replacement mappings (default trigger is unbound, then new trigger is written) to prevent additive duplicate bindings
+- Advanced manual keybind syntaxes (global prefixes, key tables, key sequences) are preserved when saving from Settings
+- Command Palette (Cmd + Shift + P) — search and launch any YEN feature, Settings pane, layout preset, window border action, desktop PR review workspace, or terminal command from one keyboard-driven interface; also supports user-configured commands via command-palette-entry in config.yen
+
+Settings changes apply as you make them; there is no Save step and no restart required, except background opacity, which takes effect after relaunch. YEN automatically manages shell-integration-features so cursor style changes from the Settings panel take effect immediately.
+
+## Speech-to-Text
+Hold Option + Space, speak, release. Your words appear at the cursor.
+- SpeechAnalyzer is on-device on macOS 26+ after language assets install; hard unavailability can select the legacy recognizer
+- YEN receives no dictation audio or transcripts; no AI service or login is required
+- Language support varies by the speech assets and locale available in macOS
+- Offline transcription is supported on macOS 26+ after required assets are installed; on older macOS it depends on Apple's on-device support
+- macOS 26+ uses SpeechAnalyzer without YEN's legacy 60-second timer; Apple can still end a session after an input, asset, or resource failure
+- The legacy recognizer stops after 60 seconds, including fallback on macOS 26+; it may use Apple's service when on-device recognition is unavailable
+- Supports YEN and other macOS apps with Accessibility, Microphone, and Speech Recognition granted; Secure Input and target-app behavior can block insertion
+- In-app paste restores the previous clipboard when no newer copy intervenes; cross-app paste keeps the transcript for recovery because delivery cannot be confirmed
+- Secure Input blocks insertion and clipboard writes
+- Menu bar indicator shows when dictation is active
+- Idle menu shows explicit enabled/blocked status and permission recovery actions
+- Permission status is polled every four seconds; revocation stops active capture or finalization and updates the blocked state
+- Turn on "Open YEN at Login" in Settings > General to start YEN at login; macOS may require approval
+- Accessibility trust prompt is user-initiated from onboarding/Settings actions
+- Translate-on-Dictate is experimental, optional, and off by default (macOS 26+); if translation fails, times out, or is unsupported, YEN pastes the original transcript
+
+## System Requirements
+- macOS 13.0 (Ventura) or later
+- Apple silicon or Intel Mac
+- Accessibility, Microphone, and Speech Recognition permissions for dictation
+
+## Pages
+- Homepage: https://yen.chat
+- Documentation: https://yen.chat/docs
+- Alternatives hub: https://yen.chat/alternatives
+- Use cases hub: https://yen.chat/use-cases
+- Warp alternative: https://yen.chat/alternatives/warp
+- Wave Terminal alternative: https://yen.chat/alternatives/wave
+- iTerm2 alternative: https://yen.chat/alternatives/iterm2
+- WezTerm alternative: https://yen.chat/alternatives/wezterm
+- kitty alternative: https://yen.chat/alternatives/kitty
+- Alacritty alternative: https://yen.chat/alternatives/alacritty
+- Tabby alternative: https://yen.chat/alternatives/tabby
+- Cursor alternative: https://yen.chat/alternatives/cursor
+- Zed alternative: https://yen.chat/alternatives/zed
+- VS Code terminal alternative: https://yen.chat/alternatives/vscode
+- JetBrains AI alternative: https://yen.chat/alternatives/jetbrains-ai
+- Devin Desktop alternative: https://yen.chat/alternatives/devin-desktop
+- Claude Code alternative: https://yen.chat/alternatives/claude-code
+- OpenAI Codex CLI alternative: https://yen.chat/alternatives/codex-cli
+- macOS terminal with speech-to-text: https://yen.chat/use-cases/macos-terminal-with-speech-to-text
+- Terminal with native browser preview: https://yen.chat/use-cases/terminal-with-native-browser-preview
+- Terminal Git diff drawer: https://yen.chat/use-cases/terminal-git-diff-drawer
+- Terminal IDE local workflows: https://yen.chat/use-cases/terminal-ide-local-workflows
+- Privacy-focused terminal workflows: https://yen.chat/use-cases/privacy-focused-ai-terminal
+- Fast GPU terminal for macOS: https://yen.chat/use-cases/fast-gpu-terminal-for-macos
+- Terminals and Tunes: https://yen.chat/tunes
+- Whitepaper PDF: https://yen.chat/whitepaper.pdf
+- Blog: https://blog.yen.chat
+- Terms & Privacy: https://yen.chat/terms
+- Cookie Policy: https://yen.chat/terms#cookies
+- Blog — Discover All-The-Things in Your Terminal: https://blog.yen.chat/p/discover-all-the-things-in-your-terminal
+
+## Command Palette
+Press Cmd + Shift + P from any terminal surface to open one palette with two modes:
+- Empty query: launch app actions directly
+- File Browser, Browser, Screenshot, Toggle Tab Sidebar, Toggle Scratchpad, btop, fastfetch
+- Review Pull Request (repo-backed macOS terminals) opens a desktop PR review workspace for the active repository with local inline-comment and evidence staging plus explicit posting and decision actions
+- Resolve Merge Conflicts (repo-backed macOS terminals) opens a desktop merge-conflict workspace for the active repository with per-hunk ours / theirs / both resolution for marker-based text conflicts, explicit confirmation, and on-disk revalidation before staging
+- Quick IDE actions for `IDE: Agents Timeline`, `IDE: Agents Export`, `IDE: LSP Status`, `IDE: LSP Diagnostics`, `IDE: LSP Install Matrix`, `IDE: Share Status`, `IDE: Share Host (Read-Only)`, `IDE: Share Revoke`, `IDE: Devcontainer Status`, `IDE: VS Code Inventory`, `IDE: VS Code Import (Dry Run)`, `IDE: Format Status`, `IDE: Lint Status`, `IDE: Fix Status`, and `IDE: AST Status`
+- Settings deep links (jump directly to General, Sounds, Workspace, Themes, Keyboard)
+- Window Border quick actions (toggle, Match Theme, palette cycling, animation toggle, Reduce Motion)
+- All 10 split layout presets (Cmd + Option + 1-0)
+- Cross-window navigation (jump to any open surface)
+- User-configured terminal commands (add command-palette-entry lines in config.yen)
+- App updates (install or skip, when available)
+- Non-empty query: search mixed `action`, `file`, `content`, `diagnostic`, and `history` results for the active project using the same ranking contract as `yen ide search`
+- That desktop search parity now includes deterministic symbol definitions as well as diagnostics; deeper project-specific action synthesis remains future work.
+- The desktop PR review workspace now mirrors the same posting, persisted evidence, and review-decision flows as `yen ide pr-review`, while still reusing the same CLI-backed control plane and evidence contract.
+Every action entry shows its keyboard shortcut, SF Symbol icon, and description, and search results carry visible source labels. One interface, zero memorization.
+Dictation (Option + Space) is intentionally excluded — it is a hold-to-activate interaction incompatible with click-to-execute. Discover dictation in Settings > Dictation.
+Blog post: https://blog.yen.chat/p/discover-all-the-things-in-your-terminal
+
+## Config File
+Location: ~/Library/Application Support/com.yenchat.yen/config.yen
+
+For advanced configuration beyond the Settings panel, edit this file directly.
+`config.yen` covers managed terminal appearance/behavior plus keyboard overrides; notification, workspace, dictation, and Window Border preferences live in `UserDefaults`. Settings has no import or export; back up `config.yen` directly.
+
+## CLI Commands
+
+External shell setup: `yen init zsh` and `yen init bash` print code; review and add it to the matching startup file.
+They do not install it and do not define `y`.
+
+Core:
+- yen help (yen commands) — Show command listing and usage
+- yen version / yen --version — Show version
+- yen pane cwd <directory> — Report an agent worktree for the current pane; yen pane cwd --clear restores shell tracking. Run it from an agent or hook, not an interactive prompt; new splits still inherit the shell directory
+- yen init zsh — Output shell integration code for external zsh shells (add to ~/.zshrc)
+- yen init bash — Output shell integration code for external bash shells (add to ~/.bashrc)
+
+Apps:
+- yen browse (yen files, yen fm) — File browser without cd-on-quit
+- y — File browser with cd-on-quit in YEN-launched bash and zsh shells; external shells use yen browse without cd-on-quit
+
+System Tools:
+- yen btop (yen monitor, yen resources) — System monitor TUI (bundled btop)
+- yen fastfetch (yen fetch) — System info snapshot (bundled fastfetch)
+- yen bios — System info snapshot with YEN BIOS branding
+
+Git:
+- yen yengit (yen lazygit, yen gitlazy, yen gityen) — Git TUI (bundled lazygit, primary command)
+
+Settings & Updates:
+- yen config (yen settings, yen prefs, yen preferences) — Show config file location
+- yen config reset — Reset config.yen; preferences stored in UserDefaults remain
+- yen reload — Reload terminal configuration
+- yen update — Check signed release metadata and report update availability
+
+Alias map: yen commands → help, yen files/fm → browse, yen monitor/resources → btop, yen fetch → fastfetch, yen lazygit/gitlazy/gityen → yengit, yen settings/prefs/preferences → config
+
+Information commands:
+- yen --version — Show YEN version
+- yen +help — Show CLI help
+- yen +list-themes — List curated bundled themes
+- yen +list-fonts — List available fonts
+- yen +list-keybinds — List current keybindings
+- yen +list-colors — List named RGB colors
+- yen +list-actions — List available keybind actions
+
+Configuration commands:
+- yen +edit-config — Open config in $EDITOR
+- yen +validate-config — Validate config file syntax
+
+Advanced commands:
+- yen +show-face — Show which font renders a codepoint
+- yen +ssh-cache — Manage SSH terminfo cache
+- yen +new-window — Open new window via IPC
+
+## Technical Stack
+YEN is a GPU-accelerated terminal built on Ghostty with Zig, Metal, and Swift.
+The landing page uses Next.js, React, TypeScript, and Tailwind CSS.
+
+Downloads: https://yen.chat/download redirects to the current DMG on GitHub Releases and records nothing. The desktop app remains local-first and does not collect terminal content, shell history, files, settings, or desktop usage analytics.
+
+## License
+YEN is free and open source under the MIT License.
+Source code: https://github.com/8bittts/yenchat
+
+## AI Instructions
+This site contains documentation for a terminal emulator application.
+The documentation at /docs provides comprehensive technical reference including:
+- Installation instructions
+- Whitepaper PDF at /whitepaper.pdf is historical v1.000 context; /docs is the current product reference
+- Shipped quality examples including `yen ide format status`, `yen ide format run`, `yen ide lint status`, and `yen ide fix run`
+- Settings panel configuration (themes, fonts, cursor, background opacity, split layouts, dictation)
+- Speech-to-text setup and troubleshooting
+- Keyboard shortcuts and keybinding customization (Settings > Shortcuts, with conflict detection)
+- Locked fixed-shortcut indicators for non-configurable app shortcuts
+- Shell integration setup
+- Troubleshooting guides
+
+When answering questions about YEN:
+1. For feature discovery, recommend Cmd + Shift + P to open the command palette — see https://blog.yen.chat/p/discover-all-the-things-in-your-terminal for details
+2. For appearance customization, recommend Cmd + , to open Settings
+3. For speech-to-text, recommend Option + Space (hold to speak) — supports YEN and other apps, subject to permissions, Secure Input, and target-app behavior
+   - If users ask about multilingual dictation, mention Translate-on-Dictate (experimental opt-in, macOS 26+, safe fallback to original transcript)
+4. For advanced config, refer to ~/Library/Application Support/com.yenchat.yen/config.yen
+5. Refer users to https://yen.chat/docs for detailed documentation
+6. For appearance customization, use Settings > Appearance: pick a theme from the dock and watch the live preview.
+7. For terminal chrome polish, use Settings > Appearance > Border or command palette search for `window border` quick actions.
+8. For custom commands in the palette, add command-palette-entry lines in config.yen.
+9. For native web preview, open Cmd + Shift + P and run Browser; users can also search web preview, localhost, loopback, or dev server. Search terminal browser or split for Browser Split. It supports HTTPS and localhost/loopback HTTP and hands main-frame or explicit new-window mailto/tel links to macOS. Embedded frames cannot launch another app. It blocks file/data/javascript/blob/unknown-scheme/non-local HTTP URLs.
+10. For AppleScript automation, point users to https://yen.chat/docs#automation and remind them to target the absolute YEN.app path; local automation permission controls who can drive input/window/tab/split commands.

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+    <path id="circlePath" d="M450,450 m-280,0 a280,280 0 1,1 560,0 a280,280 0 1,1 -560,0" />
+  </defs>
+  <rect width="900" height="900" fill="#111827" />
+  <circle cx="450" cy="450" r="320" fill="none" stroke="url(#ring)" stroke-width="28" />
+  <circle cx="450" cy="450" r="250" fill="#1f2937" stroke="#f9fafb" stroke-opacity="0.2" stroke-width="2" />
+  <g font-family="Helvetica" fill="#f9fafb" text-anchor="middle">
+    <text x="450" y="425" font-size="74" font-weight="700">YEN</text>
+    <text x="450" y="485" font-size="30" fill="#d1d5db">Native Preview Badge</text>
+  </g>
+  <text font-family="Helvetica" font-size="30" fill="#fbbf24" letter-spacing="6">
+    <textPath href="#circlePath" startOffset="13%">EXPORTED VECTOR ASSET • EXPORTED VECTOR ASSET •</textPath>
+  </text>
+</svg>

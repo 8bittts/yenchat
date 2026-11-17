@@ -1,0 +1,15 @@
+        // Toggle quick terminal (YEN default — Ctrl+`)
+        try self.set.putFlags(
+            alloc,
+            .{ .key = .{ .physical = .backquote }, .mods = .{ .ctrl = true } },
+            .{ .toggle_quick_terminal = {} },
+            .{ .global = true },
+        );
+
+
+        // Shift+Enter fix — send \r instead of garbled escape sequences
+        try self.set.put(
+            alloc,
+            .{ .key = .{ .physical = .enter }, .mods = .{ .shift = true } },
+            .{ .text = "\\x0d" },
+        );

@@ -1,0 +1,5 @@
+    func toggleFullscreen(mode: FullscreenMode) {
+        // We need a window to fullscreen
+        guard let window = self.window else { return }
+
+        // If we have a previous fullscreen style initialized, we want to check if

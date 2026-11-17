@@ -1,0 +1,108 @@
+#!/bin/bash
+# YEN bios command
+# Fastfetch alias with YEN default BIOS logo.
+
+source "${YEN_LIB}/init.sh"
+
+# Palette inspired by public/favicons/yen-vector-2.svg.
+YEN_BIOS_COLOR_TOP=$'\033[38;2;114;236;156m'
+YEN_BIOS_COLOR_MID=$'\033[38;2;72;203;130m'
+YEN_BIOS_COLOR_STEM=$'\033[38;2;38;160;98m'
+YEN_BIOS_COLOR_RESET=$'\033[0m'
+
+YEN_BIOS_LOGO_CORE=$(cat <<'EOF'
+░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓███████▓▒░
+░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░
+░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░
+ ░▒▓██████▓▒░░▒▓██████▓▒░ ░▒▓█▓▒░░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░
+EOF
+)
+
+YEN_BIOS_LOGO_COLORIZED=""
+YEN_BIOS_LINE_NO=0
+while IFS= read -r YEN_BIOS_LINE; do
+    YEN_BIOS_LINE_NO=$((YEN_BIOS_LINE_NO + 1))
+    case "$YEN_BIOS_LINE_NO" in
+        1|2)
+            YEN_BIOS_LINE_COLOR="$YEN_BIOS_COLOR_TOP"
+            ;;
+        3|4|5)
+            YEN_BIOS_LINE_COLOR="$YEN_BIOS_COLOR_MID"
+            ;;
+        *)
+            YEN_BIOS_LINE_COLOR="$YEN_BIOS_COLOR_STEM"
+            ;;
+    esac
+    YEN_BIOS_LOGO_COLORIZED+="${YEN_BIOS_LINE_COLOR}${YEN_BIOS_LINE}${YEN_BIOS_COLOR_RESET}"$'\n'
+done <<< "$YEN_BIOS_LOGO_CORE"
+YEN_BIOS_LOGO_COLORIZED="${YEN_BIOS_LOGO_COLORIZED%$'\n'}"
+
+# Keep bounded logo height with clear rows above/below.
+YEN_BIOS_LOGO=$(printf '\n\n%s\n\n' "$YEN_BIOS_LOGO_COLORIZED")
+
+YEN_BIOS_USE_DEFAULT_LAYOUT=1
+
+for arg in "$@"; do
+    case "$arg" in
+        --logo|--logo=*|--logo-type|--logo-type=*|--file|--file=*|--file-raw|--file-raw=*|--data|--data=*|--data-raw|--data-raw=*|--raw|--raw=*|--sixel|--sixel=*|--kitty|--kitty=*|--kitty-direct|--kitty-direct=*|--kitty-icat|--kitty-icat=*|--iterm|--iterm=*|--chafa|--chafa=*)
+            exec "${YEN_CMD_DIR}/core/fastfetch" "$@"
+            ;;
+        -c|--config|--config=*|-s|--structure|--structure=*)
+            YEN_BIOS_USE_DEFAULT_LAYOUT=0
+            ;;
+    esac
+done
+
+if [[ "$YEN_BIOS_USE_DEFAULT_LAYOUT" -eq 1 ]]; then
+    exec "${YEN_CMD_DIR}/core/fastfetch" \
+        --logo-type data-raw \
+        --logo "$YEN_BIOS_LOGO" \
+        --logo-padding-top 4 \
+        --logo-padding-right 2 \
+        --config - \
+        "$@" <<'EOF'
+{
+  "modules": [
+    "title",
+    "separator",
+    "os",
+    "host",
+    "kernel",
+    "uptime",
+    "packages",
+    "shell",
+    "display",
+    "de",
+    "wm",
+    "wmtheme",
+    "theme",
+    "icons",
+    "font",
+    "cursor",
+    "terminal",
+    "terminalfont",
+    "cpu",
+    "gpu",
+    "memory",
+    "swap",
+    "disk",
+    "localip",
+    "battery",
+    "poweradapter",
+    "locale",
+    "break",
+    "colors"
+  ]
+}
+EOF
+fi
+
+exec "${YEN_CMD_DIR}/core/fastfetch" \
+    --logo-type data-raw \
+    --logo "$YEN_BIOS_LOGO" \
+    --logo-padding-top 4 \
+    --logo-padding-right 2 \
+    "$@"

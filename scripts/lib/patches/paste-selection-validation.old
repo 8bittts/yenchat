@@ -1,0 +1,4 @@
+        case #selector(pasteSelection):
+            let pb = NSPasteboard.yenSelection
+            guard let str = pb.getOpinionatedStringContents() else { return false }
+            return !str.isEmpty

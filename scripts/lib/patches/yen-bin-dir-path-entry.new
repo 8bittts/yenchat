@@ -1,0 +1,1 @@
+if (std.mem.eql(u8, entry, bin_dir.?)) break :yen_path;

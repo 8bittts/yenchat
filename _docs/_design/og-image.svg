@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#22d3ee;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="100" cy="100" r="80" fill="#3b82f6" opacity="0.1"/>
+  <circle cx="1100" cy="530" r="100" fill="#06b6d4" opacity="0.1"/>
+  <circle cx="600" cy="315" r="150" fill="#8b5cf6" opacity="0.05"/>
+
+  <!-- Main text -->
+  <text x="600" y="200" font-family="system-ui, -apple-system, sans-serif" font-size="96" font-weight="bold" text-anchor="middle" fill="url(#textGradient)">
+    YEN
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="48" text-anchor="middle" fill="#e2e8f0">
+    Modern Terminal Emulator
+  </text>
+
+  <!-- Description -->
+  <text x="600" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="32" text-anchor="middle" fill="#cbd5e1">
+    GPU-Accelerated. Fast. Beautiful.
+  </text>
+
+  <!-- Features -->
+  <text x="600" y="500" font-family="system-ui, -apple-system, sans-serif" font-size="24" text-anchor="middle" fill="#94a3b8">
+    Built with modern web technologies • WCAG 2.1 AA • SEO Optimized
+  </text>
+
+  <!-- Bottom branding -->
+  <text x="600" y="580" font-family="system-ui, -apple-system, sans-serif" font-size="18" text-anchor="middle" fill="#64748b">
+    yen.chat — The future of terminal emulation
+  </text>
+</svg>

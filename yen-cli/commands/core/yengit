@@ -1,0 +1,233 @@
+#!/bin/bash
+# YEN Git Command
+# Launch bundled lazygit with YEN config overlays.
+
+source "${YEN_LIB}/init.sh"
+yen_require git-review-tools
+
+review_usage() {
+    cat << 'EOF'
+Usage: yen yengit review [options]
+
+Options:
+  --staged                Review staged changes instead of the working tree
+  --base <ref>            Review changes from <ref>...HEAD
+  --file <path>           Focus the diff on one repo-relative file
+  --list-hunks            Print deterministic hunk targets for the selected diff
+  --hunk <path:line[:col]> Render one semantic hunk target with delta
+  --help                  Show this help
+
+Notes:
+  - `yen yengit` without `review` still launches bundled lazygit.
+  - `--hunk` and `--list-hunks` preserve repo-relative `path:line[:col]` targets.
+EOF
+}
+
+repo_relative_review_path() {
+    local repo_root="$1"
+    local raw_path="$2"
+    local normalized="${raw_path#./}"
+
+    if [[ -z "${normalized}" ]]; then
+        printf "%s\n" "${normalized}"
+        return 0
+    fi
+
+    if [[ "${normalized}" == "${repo_root}" ]]; then
+        printf ".\n"
+        return 0
+    fi
+
+    if [[ "${normalized}" == "${repo_root}/"* ]]; then
+        printf "%s\n" "${normalized#${repo_root}/}"
+        return 0
+    fi
+
+    printf "%s\n" "${normalized}"
+}
+
+run_review_helper() {
+    local staged="0"
+    local base_ref=""
+    local selected_file=""
+    local hunk_ref=""
+    local list_hunks="0"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --staged)
+                staged="1"
+                ;;
+            --base)
+                shift
+                base_ref="${1:-}"
+                ;;
+            --file)
+                shift
+                selected_file="${1:-}"
+                ;;
+            --list-hunks)
+                list_hunks="1"
+                ;;
+            --hunk)
+                shift
+                hunk_ref="${1:-}"
+                ;;
+            --help|-h)
+                review_usage
+                return 0
+                ;;
+            *)
+                yen_error "Unknown yengit review option: $1"
+                review_usage >&2
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -n "${base_ref}" && "${staged}" == "1" ]]; then
+        yen_error "--base cannot be combined with --staged."
+        return 1
+    fi
+
+    local repo_root=""
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    if [[ -z "${repo_root}" ]]; then
+        yen_error "yengit review requires a Git repository."
+        return 1
+    fi
+
+    local hunk_path=""
+    local hunk_line=""
+    local hunk_col="1"
+    if [[ -n "${hunk_ref}" ]]; then
+        local parsed_hunk=""
+        parsed_hunk=$(yen_git_review_parse_location_ref "${hunk_ref}" || true)
+        if [[ -z "${parsed_hunk}" ]]; then
+            yen_error "Invalid --hunk value '${hunk_ref}'. Use path:line[:col]."
+            return 1
+        fi
+        IFS=$'\t' read -r hunk_path hunk_line hunk_col << EOF
+${parsed_hunk}
+EOF
+        hunk_path=$(repo_relative_review_path "${repo_root}" "${hunk_path}")
+        if [[ -n "${selected_file}" ]]; then
+            selected_file=$(repo_relative_review_path "${repo_root}" "${selected_file}")
+            if [[ "${selected_file}" != "${hunk_path}" ]]; then
+                yen_error "--file and --hunk must point to the same file."
+                return 1
+            fi
+        else
+            selected_file="${hunk_path}"
+        fi
+    elif [[ -n "${selected_file}" ]]; then
+        selected_file=$(repo_relative_review_path "${repo_root}" "${selected_file}")
+    fi
+
+    local -a diff_cmd=(
+        git diff
+        --no-ext-diff
+        --minimal
+        --src-prefix=a/
+        --dst-prefix=b/
+        --no-color
+    )
+    if [[ "${staged}" == "1" ]]; then
+        diff_cmd+=(--cached)
+    elif [[ -n "${base_ref}" ]]; then
+        diff_cmd+=("${base_ref}...HEAD")
+    fi
+    if [[ -n "${selected_file}" ]]; then
+        diff_cmd+=(-- "${selected_file}")
+    fi
+
+    local diff_text=""
+    if ! diff_text=$("${diff_cmd[@]}" 2>&1); then
+        yen_error "Unable to generate review diff."
+        printf "%s\n" "${diff_text}" >&2
+        return 1
+    fi
+
+    echo ""
+    yen_header "YEN Git Review"
+    echo "Repository:  ${repo_root}"
+    if [[ "${staged}" == "1" ]]; then
+        echo "Mode:        staged"
+    elif [[ -n "${base_ref}" ]]; then
+        echo "Mode:        ${base_ref}...HEAD"
+    else
+        echo "Mode:        working-tree"
+    fi
+    if [[ -n "${selected_file}" ]]; then
+        echo "Focus file:  ${selected_file}"
+    fi
+    echo ""
+
+    if [[ -z "${diff_text}" ]]; then
+        echo "No diff entries found for the requested review scope."
+        echo ""
+        return 0
+    fi
+
+    if [[ "${list_hunks}" == "1" ]]; then
+        local hunk_rows=""
+        hunk_rows=$(printf "%s\n" "${diff_text}" | yen_git_review_emit_hunk_rows "${selected_file}")
+        echo "Git Review Hunk Targets"
+        echo ""
+        yen_git_review_print_hunk_rows_table "${hunk_rows}"
+        echo ""
+        return 0
+    fi
+
+    if [[ -n "${hunk_ref}" ]]; then
+        local hunk_rows=""
+        local matched_row=""
+        local focus_target=""
+        local focus_header=""
+        local focused_hunk_diff=""
+        hunk_rows=$(printf "%s\n" "${diff_text}" | yen_git_review_emit_hunk_rows "${selected_file}")
+        matched_row=$(printf "%s\n" "${hunk_rows}" | yen_git_review_find_hunk_row_for_line "${selected_file}" "${hunk_line}" || true)
+        if [[ -z "${matched_row}" ]]; then
+            yen_error "No diff hunk found for ${selected_file}:${hunk_line}:${hunk_col}."
+            return 1
+        fi
+        IFS=$'\t' read -r _ _ _ _ _ _ focus_target focus_header << EOF
+${matched_row}
+EOF
+        focused_hunk_diff=$(printf "%s\n" "${diff_text}" | yen_git_review_extract_hunk_from_file_diff "${hunk_line}" || true)
+        if [[ -z "${focused_hunk_diff}" ]]; then
+            yen_error "Unable to isolate diff hunk for ${focus_target}."
+            return 1
+        fi
+        echo "Focused hunk: ${focus_target}"
+        echo "Header:       ${focus_header}"
+        echo ""
+        yen_git_review_show_diff_text "${focused_hunk_diff}"
+        return 0
+    fi
+
+    if [[ -n "${selected_file}" ]]; then
+        echo "Focused diff: ${selected_file}"
+        echo ""
+    else
+        echo "Repository diff"
+        echo ""
+    fi
+    yen_git_review_show_diff_text "${diff_text}"
+}
+
+if [[ "${1:-}" == "review" ]]; then
+    shift
+    run_review_helper "$@"
+    exit $?
+fi
+
+if LAZYGIT_EXEC=$(yen_git_review_resolve_lazygit_binary); then
+    yen_git_review_run_lazygit "$LAZYGIT_EXEC" "$@"
+fi
+
+yen_error "lazygit is not available."
+echo "Expected: bundled Resources/bin/lazygit (app) or vendored customizations/vendor/lazygit/lazygit (dev)."
+echo "Run: ./scripts/14-vendor.sh lazygit and rebuild YEN."
+exit 1

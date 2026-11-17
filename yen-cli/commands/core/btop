@@ -1,0 +1,37 @@
+#!/bin/bash
+# YEN btop Command
+# Launch bundled btop system monitor.
+
+source "${YEN_LIB}/init.sh"
+
+BTOP_BIN="${YEN_RESOURCES}/bin/btop"
+DEV_BTOP_BIN="${YEN_RESOURCES}/../yen-terminal/customizations/vendor/btop/btop"
+
+resolve_btop_binary() {
+    if [[ -x "$BTOP_BIN" ]]; then
+        echo "$BTOP_BIN"
+        return 0
+    fi
+
+    if [[ -x "$DEV_BTOP_BIN" ]]; then
+        echo "$DEV_BTOP_BIN"
+        return 0
+    fi
+
+    # Local-debug escape hatch only (not default runtime behavior).
+    if [[ "${YEN_ALLOW_SYSTEM_BIN_FALLBACK:-}" == "1" ]] && command -v btop >/dev/null 2>&1; then
+        command -v btop
+        return 0
+    fi
+
+    return 1
+}
+
+if BTOP_EXEC=$(resolve_btop_binary); then
+    exec "$BTOP_EXEC" "$@"
+fi
+
+yen_error "btop is not available."
+echo "Expected: bundled Resources/bin/btop (app) or vendored customizations/vendor/btop/btop (dev)."
+echo "Run: ./scripts/14-vendor.sh btop and rebuild YEN."
+exit 1

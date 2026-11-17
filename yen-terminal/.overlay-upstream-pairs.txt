@@ -1,0 +1,68 @@
+# Overlays that REPLACE an upstream file: overlay-relative path, TAB, and the
+# SHA256 of UPSTREAM's copy at the pinned commit.
+#
+# [3a/5] in scripts/10-update-ghostty.sh walks this against the freshly
+# downloaded PRISTINE tree and fails closed on either failure mode:
+#   path missing  -> upstream moved or deleted a file YEN forks. Without this
+#                    the stale fork is resurrected with no signal.
+#   hash changed  -> upstream EDITED a file YEN overwrites wholesale. The
+#                    overlay silently discards that edit; there is no diff and
+#                    no compile error. This is exactly how upstream's
+#                    normalizeArchive work in src/build/LibtoolStep.zig was
+#                    being thrown away on every bump, and how the entire Find
+#                    menu was lost from macos/Sources/App/MainMenu.xib.
+#
+# Paths NOT listed are YEN-only files and are not checked.
+#
+# REGENERATE AGAINST PRISTINE UPSTREAM, NEVER AGAINST yen-terminal/ghostty/ —
+# that directory has overlays applied, so every YEN-only file looks like an
+# upstream pair. An earlier version built that way was 225/265 wrong.
+#
+#   PIN=$(grep '^upstream_commit=' yen-terminal/.ghostty-baseline | cut -d= -f2)
+#   curl -sL "https://github.com/ghostty-org/ghostty/archive/${PIN}.tar.gz" | tar xz -C /tmp
+#   cd yen-terminal && /usr/bin/find overlays -type f -not -path '*/.zig-cache/*' \
+#     | while read -r f; do rel="${f#overlays/}"; u="/tmp/ghostty-${PIN}/$rel"; \
+#         [ -f "$u" ] && printf '%s\t%s\n' "$rel" "$(shasum -a 256 "$u" | awk '{print $1}')"; done \
+#     | LC_ALL=C sort > .overlay-upstream-pairs.txt
+#
+# Re-pin only after reading upstream's change and porting what applies.
+build.zig	e1627882f9bb61cdafbc71a044d93674e37ab9260fe9a427ae0ce6affa499df7
+macos/Assets.xcassets/AccentColor.colorset/Contents.json	9af65086fa30b49252fae1a1225731691de794f7775af74d71befeb507d12b7c
+macos/Sources/App/AppDelegate.swift	1da3d93651f515df7318d9467f411907ee375035f5c33343ca947c4002a71b26
+macos/Sources/App/MainMenu.xib	1ca7690ee6047bfb77f2e9ac40b63bf9932c3e5c597c16aff5a584a37a4f97c8
+macos/Sources/Features/About/AboutController.swift	f2efa8ebc1cadb0aed8ce9b87b59697aad03e41e25227f9b5d2252f5375f8cc5
+macos/Sources/Features/About/AboutView.swift	86295953047e878fe5612f22f307821b0ba7be3cf77af4c5d6a88fc73410fd84
+macos/Sources/Features/App Intents/CommandPaletteIntent.swift	4cb3a473b70d3e851f09dfa85b4eccde6f9dca08e9e320d0e4fc1e3a76c6400b
+macos/Sources/Features/App Intents/Entities/CommandEntity.swift	08d9206db136719069f06243e66b2ed6f7a61bd63ab1de368305265605390ff8
+macos/Sources/Features/App Intents/GetTerminalDetailsIntent.swift	d478863a99400dfd4d0af788890411f5be10be797f0038d744c80af60aa2135e
+macos/Sources/Features/App Intents/GhosttyIntentError.swift	0de2e8109930e578d4b64d4c6a50da480aab7df802aa1be2500871a5d207517e
+macos/Sources/Features/App Intents/IntentPermission.swift	fcf077971a53f6f832b63733dd5fe37d62c995ab13f03cabf12f22345ab5b27c
+macos/Sources/Features/App Intents/KeybindIntent.swift	153670c068af1e32b53909c17acdfcb8975cb2a856a7a76ae6c78dbe8eec6950
+macos/Sources/Features/Command Palette/CommandPalette.swift	8d5d53308aeb6df1d3b030e2254c0e8d30ce22880f7ed8d05a5f49955738c63f
+macos/Sources/Features/Command Palette/TerminalCommandPalette.swift	9d6dfcd1f4cd0420e49d2a8de08861b01109889aa48c435ca4122e8fa97b5538
+macos/Sources/Features/QuickTerminal/QuickTerminalRestorableState.swift	ff025c55ecd5643fca9f1e465856d9beece2c80f5643731b54a716de835195e7
+macos/Sources/Features/QuickTerminal/QuickTerminalWindow.swift	b093f41b7f47f2148f51ab3c9c58f735bc9c485b6ab7e146c9cedcfbde25b2a9
+macos/Sources/Features/Splits/TerminalSplitTreeView.swift	1c542ace8e4451767f1bd54a765be2f17c53220becabc2f22d3006d7a254ed53
+macos/Sources/Features/Terminal/TerminalRestorable.swift	d8be45fe5da43b72ec18d311bba6457cf1fc9a2a8fe5ef820781a80f38165e3b
+macos/Sources/Features/Terminal/TerminalView.swift	ebfe146bc76dcca33ade91216fa57721f7d37e1099f05a91ff19819fc4d9e76c
+macos/Sources/Features/Terminal/TerminalViewContainer.swift	4afca86cad101d33270f2dd14fcf0386b602d5d4825e15f00714a9a69e9765c4
+macos/Sources/Features/Update/UpdateController.swift	c57c99be8b59c708db62757431e1b2ffbb75acad470492eb3c581ad06ac6f677
+macos/Sources/Features/Update/UpdateDelegate.swift	0d7eb464ef174aec61c889a216df849abab246c2c42cbb605d03ea6bdb4690c0
+macos/Tests/BenchmarkTests.swift	3a94bb7a9e77ad564ced19c91956bf4e07f4a5ef5425abaacbe67a4fbe59727c
+macos/Tests/ColorizedGhosttyIconTests.swift	b16e1e80c4dab0bc800dfbf56654084ad4b6581bd89f6055222fdda6d0c84316
+macos/Tests/Ghostty/ConfigTests.swift	c3829f59924411eed1f97549081cdcbaf398618166197af34d09fc430e3d8ae2
+macos/Tests/Ghostty/MenuShortcutManagerTests.swift	f480667f7753a88c5bd45de7cc0d5e41c31fe4a266c3f96410ec29c5a6194318
+macos/Tests/Ghostty/NormalizedMenuShortcutKeyTests.swift	f6b904ac0c71a133547a422352554ee2c47c978b4d6b309e0726665cdfca8594
+macos/Tests/Ghostty/ShellTests.swift	031c0fb09f1ac5dd89bfad1a401cd8c3680c61117fdcf9e4a45def69dba34d5f
+macos/Tests/Helpers/TemporaryConfig.swift	b65cc4a628e7e2d8e9d280faa63c1c31271d745597146976a7dee321b2e2f40c
+macos/Tests/Helpers/TransferablePasteboardTests.swift	1df7c438e3da8175d1bdb125418ce6fc1a5b726da6877190d36a572ae7edda23
+macos/Tests/NSPasteboardTests.swift	8a37d781bee77ca55471cc699fdac6b103b63225aca646e1f9967d8b941ceda3
+macos/Tests/NSScreenTests.swift	8e53b20bd17b0e3e55e4e63fc31e74b3aeb03b3800ca7de867cc19fdfdfcb284
+macos/Tests/Splits/SplitTreeTests.swift	e1f2813cae80fe7ad1d6e0ac74a33fc6b6d16cdd00683e1d1fb70bb8dd22f8d3
+macos/Tests/Splits/TerminalSplitDropZoneTests.swift	65f9e74c79122bfc1431f62a3dacd842be406e97167f5d824188b7b6794df9d1
+macos/Tests/Terminal/TerminalViewContainerTests.swift	540203280f2565fda40263ca47e1642dc06f0a93261ad86d73322d8fc212b296
+macos/Tests/Update/ReleaseNotesTests.swift	853325ca0e5af5b8c5fb6ec4decb08eccabc8077ccf6132f0615aa08feebd895
+macos/Tests/Update/UpdateStateTests.swift	5c116e966912b4bf300e73d18624dfbdf5771d0a4d98c208f9646839b615bd4a
+macos/Tests/Update/UpdateViewModelTests.swift	e8ad903d3162a031309d6a404515adcf6744166b51874ce5a30c165bf4b7a606
+src/build/LibtoolStep.zig	0236983b8c58c7e4f354acb871c0a8615eaf38bef951bdc50e96a006e8784f68
+src/build/main.zig	7c7cd2ecb19fbfc0f3ec60afda38c75cfe0b610f09a4ec6ef7b72819536631fc

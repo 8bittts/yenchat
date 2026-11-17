@@ -1,0 +1,21 @@
+    /// Gets the contents of the pasteboard as a string following a specific set of semantics.
+    /// Does these things in order:
+    /// - Tries to get the absolute filesystem path of the file in the pasteboard if there is one and ensures the file path is properly escaped.
+    /// - Tries to get any string from the pasteboard.
+    /// If all of the above fail, returns None.
+    func getOpinionatedStringContents() -> String? {
+        let strings = (pasteboardItems ?? []).compactMap { item in
+            if let plist = item.propertyList(forType: .fileURL),
+               let fileURL = NSURL(pasteboardPropertyList: plist, ofType: .fileURL) as URL?,
+               fileURL.isFileURL {
+                return YEN.Shell.escape(fileURL.path)
+            } else {
+                return item.string(forType: .string)
+            }
+        }
+
+        guard !strings.isEmpty else {
+            return nil
+        }
+        return strings.joined(separator: " ")
+    }

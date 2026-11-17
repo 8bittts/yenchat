@@ -1,0 +1,14 @@
+# Regex allowlist for non-concurrency diagnostics in build-release preflight.
+#
+# One regex per line. Keep this file minimal and temporary. Each entry must
+# include owner + expiry in the comment block above it.
+#
+# Scope:
+# - Used by `yen-terminal/customizations/build-release.sh` log gates.
+# - Applies only to known non-concurrency warning noise classes.
+# - Real build errors/warnings should be fixed at source, not allowlisted.
+#
+# The list is intentionally empty. The three entries that expired on 2026-10-30
+# (umbrella header, could not find symbol, AppIntents metadata extraction
+# skipped) were removed rather than renewed; any warning they hid now fails
+# the build log gates and must be fixed at source.

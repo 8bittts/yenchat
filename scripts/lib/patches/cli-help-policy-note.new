@@ -1,0 +1,11 @@
+    try stdout.writeAll(
+        \\
+        \\Support-only actions are hidden by default. Set
+        \\`YEN_CLI_SUPPORT_ACTIONS=1` to reveal and run them.
+        \\Internal debug actions remain hidden unless explicitly enabled with
+        \\`YEN_CLI_INTERNAL_ACTIONS=1`.
+        \\
+        \\Specify `+<action> --help` to see the help for a specific action,
+        \\where `<action>` is one of actions listed above.
+        \\
+    );

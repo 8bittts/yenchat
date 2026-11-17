@@ -1,0 +1,8 @@
+            .@"context-menu" => {
+                // Preserve the current selection state on right-click and
+                // let AppKit show the context menu without forcing selection.
+                _ = screen;
+                _ = pin;
+                _ = pos;
+                return false;
+            },

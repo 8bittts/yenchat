@@ -1,0 +1,2 @@
+              !window.yenIsEffectivelyFullscreen,
+              !(fullscreenStyle?.isFullscreen ?? false) else { return false }

@@ -1,0 +1,182 @@
+#!/bin/bash
+# YEN pane command: report a coding agent's working directory for the pane it runs in.
+#
+# Agents such as Claude Code work in a git worktree while the pane's shell stays in the main
+# checkout, and they never emit OSC 7. This posts the directory to YEN.app over the same
+# distributed-notification channel `yen web` uses, keyed by the pane's YEN_SURFACE_ID, so the
+# split label, tab sidebar, and git drawer follow the agent until it exits.
+# Notification name must match YENDistributedNotificationIdentifier.agentWorkingDirectory in
+# yen-terminal/overlays/macos/Sources/YEN/YENCustomNotifications.swift.
+
+source "${YEN_LIB}/init.sh"
+
+usage() {
+    cat << 'EOF'
+Usage:
+  yen pane cwd <directory>   Report <directory> as this pane's working directory
+  yen pane cwd --hook        Report new_cwd from a Claude Code CwdChanged hook payload on stdin
+  yen pane cwd --clear       Drop the report; the pane follows its shell again
+
+Options:
+  --dry-run   Print the report as JSON instead of sending it
+
+Notes:
+  The split label, tab sidebar, and git drawer follow a report while the process that was in
+  front of the pane when it arrived keeps running. New splits keep the shell's directory.
+  Run it from the agent (a hook or the agent's shell tool), not at a prompt: the shell's next
+  prompt drops the report.
+  Outside a YEN pane, --hook exits 0 without doing anything, so one shared hook stays quiet in
+  other terminals.
+
+Claude Code hook (~/.claude/settings.json):
+  "CwdChanged": [{"hooks": [{"type": "command", "command":
+    "[ \"$TERM_PROGRAM\" != yen ] || [ ! -f \"$YEN_BIN_DIR/../commands/core/pane\" ] || \"$YEN_BIN_DIR/yen\" pane cwd --hook"}]}]
+EOF
+}
+
+usage_error() {
+    echo "yen pane: $1" >&2
+    echo "Run 'yen pane --help' for usage." >&2
+    exit 2
+}
+
+# Sends one report. An empty directory clears. With read_hook=1 the directory comes from the
+# hook payload on stdin, parsed in the same osascript call so a hook pays for one process.
+post_report() {
+    local directory="$1"
+    local read_hook="$2"
+    local dry_run="$3"
+    local output
+
+    command -v osascript >/dev/null 2>&1 || {
+        echo "yen pane: osascript is required to contact YEN.app" >&2
+        exit 1
+    }
+
+    if ! output=$(
+        YEN_PANE_SURFACE_ID="${YEN_SURFACE_ID}" \
+        YEN_PANE_DIRECTORY="${directory}" \
+        YEN_PANE_READ_HOOK="${read_hook}" \
+        YEN_PANE_DRY_RUN="${dry_run}" \
+        osascript -l JavaScript -e '
+            ObjC.import("Foundation");
+            function run() {
+                var env = $.NSProcessInfo.processInfo.environment;
+                function envString(name) {
+                    var value = env.objectForKey(name);
+                    return value ? value.js : "";
+                }
+                var directory = envString("YEN_PANE_DIRECTORY");
+                if (envString("YEN_PANE_READ_HOOK") === "1") {
+                    var data = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;
+                    var text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js;
+                    var payload;
+                    try {
+                        payload = JSON.parse(text);
+                    } catch (error) {
+                        throw new Error("hook payload on stdin is not JSON");
+                    }
+                    directory = payload && typeof payload.new_cwd === "string" ? payload.new_cwd : "";
+                    if (directory.charAt(0) !== "/") {
+                        throw new Error("hook payload has no absolute new_cwd");
+                    }
+                }
+                var userInfo = {
+                    "schema_version": "1",
+                    "surface_id": envString("YEN_PANE_SURFACE_ID"),
+                    "directory": directory
+                };
+                if (envString("YEN_PANE_DRY_RUN") === "1") {
+                    return JSON.stringify(userInfo);
+                }
+                $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately(
+                    "com.yenchat.yen.agentWorkingDirectory", "", $(userInfo), true
+                );
+                return "";
+            }
+        ' 2>&1
+    ); then
+        # osascript reports a thrown Error as "execution error: Error: Error: <message> (-2700)".
+        output="${output##*Error: }"
+        echo "yen pane: ${output% (-*)}" >&2
+        exit 1
+    fi
+
+    if [[ "${dry_run}" == "1" ]]; then
+        printf "%s\n" "${output}"
+    fi
+}
+
+cmd_cwd() {
+    local mode=""
+    local directory=""
+    local dry_run="0"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --hook)
+                [[ -z "${mode}" ]] || usage_error "use only one of <directory>, --hook, --clear"
+                mode="hook"
+                ;;
+            --clear)
+                [[ -z "${mode}" ]] || usage_error "use only one of <directory>, --hook, --clear"
+                mode="clear"
+                ;;
+            --dry-run)
+                dry_run="1"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -*)
+                usage_error "unknown option for cwd: $1"
+                ;;
+            *)
+                [[ -z "${mode}" ]] || usage_error "use only one of <directory>, --hook, --clear"
+                mode="directory"
+                directory="$1"
+                ;;
+        esac
+        shift
+    done
+
+    [[ -n "${mode}" ]] || usage_error "cwd needs <directory>, --hook, or --clear"
+
+    if [[ -z "${YEN_SURFACE_ID:-}" ]]; then
+        # A shared agent hook also runs in other terminals; it must stay silent there.
+        [[ "${mode}" == "hook" ]] && exit 0
+        echo "yen pane: run this inside a YEN pane (YEN_SURFACE_ID is not set)" >&2
+        exit 1
+    fi
+
+    case "${mode}" in
+        directory)
+            local resolved
+            resolved=$(cd "${directory}" 2>/dev/null && pwd -P) || {
+                echo "yen pane: not a directory: ${directory}" >&2
+                exit 1
+            }
+            post_report "${resolved}" "0" "${dry_run}"
+            ;;
+        hook)
+            post_report "" "1" "${dry_run}"
+            ;;
+        clear)
+            post_report "" "0" "${dry_run}"
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    cwd)
+        shift
+        cmd_cwd "$@"
+        ;;
+    ""|-h|--help|help)
+        usage
+        ;;
+    *)
+        usage_error "unknown subcommand: $1"
+        ;;
+esac

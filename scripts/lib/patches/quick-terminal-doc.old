@@ -1,0 +1,2 @@
+Note: There is no default keybind for toggling the quick terminal.
+/// To enable this feature, bind the `toggle_quick_terminal` action to a key.

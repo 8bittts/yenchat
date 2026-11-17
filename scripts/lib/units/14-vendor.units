@@ -1,0 +1,14 @@
+# Units declared by scripts/14-vendor.sh.
+#
+# upstream-status carries all four outcome counts because a rate-limited or
+# token-expired run once printed "Up to date: 13 / Errors: 0" and exited 0 in
+# update mode while verifying nothing. UNKNOWN is its own count for that reason,
+# and the roster unit fails closed on an empty vendor manifest -- with no
+# vendors every loop is a no-op and every count is legitimately zero.
+
+roster
+upstream-status
+# release-window RAN only under `--check --release` when a Ghostty 'behind' was
+# accepted because the committed baseline is a recent, published vendor: commit;
+# every other run records it as SKIP with the reason (scripts/lib/release-vendor-window.sh).
+release-window

@@ -1,0 +1,121 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": [
+			"app/**",
+			"components/**",
+			"lib/**",
+			"scripts/**",
+			"tests/**",
+			"*.ts",
+			"*.tsx",
+			"*.js",
+			"*.json",
+			"*.css",
+			"!app/release/release-notes-data.ts"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"correctness": {
+				"noUnusedVariables": "error",
+				"noUnusedImports": "error",
+				"useExhaustiveDependencies": "error",
+				"noUndeclaredVariables": "error",
+				"noUnreachable": "error",
+				"noConstantCondition": "error",
+				"noEmptyPattern": "error"
+			},
+			"suspicious": {
+				"noExplicitAny": "error",
+				"noArrayIndexKey": "error",
+				"noConsole": "warn",
+				"noDebugger": "error",
+				"noTemplateCurlyInString": "off",
+				"noDoubleEquals": "error",
+				"noShadowRestrictedNames": "error",
+				"noAsyncPromiseExecutor": "error",
+				"noConfusingVoidType": "error",
+				"noEmptyBlockStatements": "error"
+			},
+			"style": {
+				"noParameterAssign": "error",
+				"useConst": "error",
+				"noNonNullAssertion": "error",
+				"useImportType": "error",
+				"useTemplate": "error",
+				"useSingleVarDeclarator": "error",
+				"useForOf": "warn"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "error",
+					"options": {
+						"maxAllowedComplexity": 15
+					}
+				},
+				"noForEach": "warn",
+				"noUselessSwitchCase": "error"
+			},
+			"a11y": {
+				"useAltText": "error",
+				"useKeyWithClickEvents": "warn",
+				"useButtonType": "error",
+				"useValidAnchor": "error"
+			},
+			"performance": {
+				"noAccumulatingSpread": "warn",
+				"noDelete": "warn"
+			}
+		}
+	},
+	"javascript": {
+		"globals": ["Bun"],
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["scripts/**", "*.js"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		}
+	],
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		},
+		"formatter": {
+			"indentStyle": "tab"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}

@@ -1,0 +1,8 @@
+{
+  "name": "yen-ide-benchmark-verify",
+  "private": true,
+  "scripts": {
+    "lint:check": "node scripts/lint.js",
+    "test": "node scripts/test.js"
+  }
+}

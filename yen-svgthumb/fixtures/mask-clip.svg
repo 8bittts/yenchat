@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="380" viewBox="0 0 640 380">
+  <defs>
+    <clipPath id="clip-wave">
+      <path d="M0 220 C120 160, 240 280, 360 220 C480 160, 560 260, 640 220 L640 380 L0 380 Z" />
+    </clipPath>
+    <mask id="fade-mask">
+      <rect width="640" height="380" fill="white" />
+      <rect x="0" y="0" width="640" height="170" fill="black" />
+    </mask>
+  </defs>
+  <rect width="640" height="380" fill="#0f172a" />
+  <rect width="640" height="380" fill="#38bdf8" clip-path="url(#clip-wave)" />
+  <rect width="640" height="380" fill="#f8fafc" mask="url(#fade-mask)" opacity="0.28" />
+</svg>

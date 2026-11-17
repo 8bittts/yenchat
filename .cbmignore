@@ -1,0 +1,48 @@
+# codebase-memory-mcp excludes (gitignore syntax)
+# VCS / deps / build / caches
+.git/
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+.venv/
+.codex-cache/
+.tmp-home/
+.triaged-crashes/
+
+# Secrets & local env — NEVER index
+.env
+.env.*
+*.pem
+*.key
+
+# Databases / logs / lockfiles noise
+*.sqlite
+*.db
+*.log
+# Vendored upstream Ghostty source — not YEN-owned
+yen-terminal/ghostty/
+# Archived / superseded app code
+yen-terminal/archive/
+
+# Tunes sister music project (repo-boundary rule: keep independent; ~54G)
+tunes/
+
+# Generated thumbnails / large binary media
+public/
+tmp/
+
+# Binary/media fixtures and art assets (not architecture)
+yen-svgthumb/.eval/
+yen-svgthumb/fixtures/
+yen-terminal/customizations/icons/
+yen-terminal/customizations/dmg-resources/
+
+# Build/cache artifacts and debug symbols
+tools/sparkle/Symbols/
+yen-terminal/overlays/.zig-cache/
+.zig-cache/

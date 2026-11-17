@@ -1,0 +1,18 @@
+# Required post-branding patch targets, relative to yen-terminal.
+ghostty/macos/Sources/Features/QuickTerminal/QuickTerminalController.swift
+ghostty/macos/Sources/YEN/Ghostty.Config.swift
+ghostty/macos/Sources/YEN/Ghostty.App.swift
+ghostty/macos/Sources/YEN/GhosttyPackage.swift
+ghostty/macos/Sources/YEN/Surface View/SurfaceView.swift
+ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift
+ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift
+ghostty/macos/Sources/Features/Terminal/TerminalController.swift
+ghostty/macos/Sources/Features/Terminal/Window Styles/HiddenTitlebarTerminalWindow.swift
+ghostty/macos/Sources/Features/Terminal/Window Styles/TerminalWindow.swift
+ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift
+ghostty/src/Surface.zig
+ghostty/src/config/Config.zig
+ghostty/src/termio/Exec.zig
+ghostty/src/termio/stream_handler.zig
+ghostty/src/cli/yen.zig
+ghostty/src/cli/help.zig

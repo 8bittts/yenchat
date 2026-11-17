@@ -1,0 +1,6 @@
+fixture,category,policy,expected_pages,expected_orientation,notes
+multipage.pdf,multipage,render_ok,3,landscape,Three landscape pages; every page index renders and out-of-range fails.
+portrait.pdf,orientation,render_ok,1,portrait,Single portrait page; upscaled long edge equals the cap.
+rotated.pdf,rotation,render_ok,1,portrait,Landscape media box with page.rotation=90 so it displays portrait.
+encrypted-owner.pdf,encrypted,render_ok,1,landscape,Owner password with empty user password; unlock("") succeeds and renders.
+encrypted-user.pdf,encrypted,expected_failure,1,none,User password set; unlock("") fails so the helper exits non-zero.

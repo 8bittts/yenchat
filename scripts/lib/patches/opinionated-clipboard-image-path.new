@@ -1,0 +1,129 @@
+    private static let directImageFileTypes: [(type: NSPasteboard.PasteboardType, ext: String)] = [
+        (.png, "png"),
+        (.init(UTType.gif.identifier), "gif"),
+        (.init(UTType.jpeg.identifier), "jpg"),
+    ]
+    private static let opinionatedClipboardImageDirectoryName = "com.yenchat.yen.clipboard-images"
+    private static let opinionatedClipboardImagePrefix = "com.yenchat.yen.clipboard-image-"
+    private static let opinionatedClipboardImageMaximumAge: TimeInterval = 60 * 60 * 24
+
+    func hasOpinionatedStringContents() -> Bool {
+        if let urls = readObjects(forClasses: [NSURL.self]) as? [URL],
+           urls.contains(where: { url in
+            (try? url.checkResourceIsReachable()) == true
+        }) {
+            return true
+        }
+
+        if let string = self.string(forType: .string),
+           !string.isEmpty {
+            return true
+        }
+
+        if Self.directImageFileTypes.contains(where: { availableType(from: [$0.type]) != nil }) {
+            return true
+        }
+
+        return NSImage(pasteboard: self) != nil
+    }
+
+    /// Gets the contents of the pasteboard as a string following a specific set of semantics.
+    /// Does these things in order:
+    /// - Tries to get the absolute filesystem path of the file in the pasteboard if there is one and ensures the file path is properly escaped.
+    /// - Tries to get any string from the pasteboard.
+    /// - Tries to materialize raw image clipboard contents as a temporary local file path.
+    /// If all of the above fail, returns None.
+    func getOpinionatedStringContents() -> String? {
+        let strings = (pasteboardItems ?? []).compactMap { item in
+            if let plist = item.propertyList(forType: .fileURL),
+               let fileURL = NSURL(pasteboardPropertyList: plist, ofType: .fileURL) as URL?,
+               fileURL.isFileURL,
+               (try? fileURL.checkResourceIsReachable()) == true {
+                return YEN.Shell.escape(fileURL.path)
+            } else {
+                return item.string(forType: .string)
+            }
+        }
+
+        if !strings.isEmpty {
+            return strings.joined(separator: " ")
+        }
+
+        return clipboardImagePathContents()
+    }
+
+    private func clipboardImagePathContents() -> String? {
+        for candidate in Self.directImageFileTypes {
+            if let data = data(forType: candidate.type),
+               let path = Self.writeClipboardImageData(data, ext: candidate.ext) {
+                return YEN.Shell.escape(path)
+            }
+        }
+
+        guard let image = NSImage(pasteboard: self),
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmap.representation(using: .png, properties: [:]),
+              let path = Self.writeClipboardImageData(pngData, ext: "png") else {
+            return nil
+        }
+
+        return YEN.Shell.escape(path)
+    }
+
+    static func opinionatedClipboardImageDirectoryURL(
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        let url = fileManager.temporaryDirectory
+            .appendingPathComponent(opinionatedClipboardImageDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+        return url
+    }
+
+    private static func pruneStaleOpinionatedClipboardImageFiles(
+        fileManager: FileManager = .default,
+        now: Date = .init()
+    ) {
+        guard let rootURL = try? opinionatedClipboardImageDirectoryURL(fileManager: fileManager),
+              let urls = try? fileManager.contentsOfDirectory(
+                at: rootURL,
+                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey],
+                options: [.skipsHiddenFiles]
+              ) else {
+            return
+        }
+
+        let cutoff = now.addingTimeInterval(-opinionatedClipboardImageMaximumAge)
+        for url in urls where url.lastPathComponent.hasPrefix(opinionatedClipboardImagePrefix) {
+            let values = try? url.resourceValues(
+                forKeys: [.contentModificationDateKey, .creationDateKey]
+            )
+            let referenceDate = values?.contentModificationDate ?? values?.creationDate ?? .distantFuture
+            if referenceDate < cutoff {
+                try? fileManager.removeItem(at: url)
+            }
+        }
+    }
+
+    private static func writeClipboardImageData(_ data: Data, ext: String) -> String? {
+        let fileManager = FileManager.default
+        pruneStaleOpinionatedClipboardImageFiles(fileManager: fileManager)
+
+        guard let rootURL = try? opinionatedClipboardImageDirectoryURL(fileManager: fileManager) else {
+            return nil
+        }
+
+        let url = rootURL
+            .appendingPathComponent("\(opinionatedClipboardImagePrefix)\(UUID().uuidString)")
+            .appendingPathExtension(ext)
+
+        do {
+            try data.write(to: url, options: .atomic)
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            return url.path
+        } catch {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+    }

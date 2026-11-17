@@ -1,0 +1,2 @@
+Note: The default keybind is Ctrl+` (global).
+/// This can be customized by rebinding the `toggle_quick_terminal` action.

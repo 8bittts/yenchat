@@ -1,0 +1,9 @@
+        var undoTimeout: Duration {
+            guard let config = self.config else { return .seconds(5) }
+            var v: UInt = 0
+            let key = "undo-timeout"
+            guard yen_config_get(config, &v, key, UInt(key.lengthOfBytes(using: .utf8))) else {
+                return .seconds(5)
+            }
+            return .milliseconds(v)
+        }

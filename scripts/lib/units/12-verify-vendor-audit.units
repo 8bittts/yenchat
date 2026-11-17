@@ -1,0 +1,8 @@
+# Units declared by scripts/12-verify-vendor-audit.sh.
+#
+# app-bundle closes a documented hole: `--app` was bolted on below the assertion
+# body and above an unchanged summary, so a run WITH bundle verification and a
+# run without printed the identical line. The skip is now an explicit token.
+
+doc-inventory
+app-bundle

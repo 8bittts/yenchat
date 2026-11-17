@@ -1,0 +1,32 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignoreDependencies": ["tailwindcss"],
+	"ignoreBinaries": [
+		"infisical",
+		"lsof",
+		"python3",
+		"lua",
+		"clang",
+		"zsh",
+		"openssl",
+		"zig",
+		"msgfmt",
+		"msgunfmt"
+	],
+	"ignoreExportsUsedInFile": true,
+	"entry": [
+		"app/**/*.tsx",
+		"app/**/*.ts",
+		"tests/*.integration.ts",
+		"tests/*.policy.ts",
+		"tests/*.prod.ts",
+		"scripts/**/*.ts"
+	],
+	"project": ["**/*.{ts,tsx}"],
+	"ignore": ["yen-cli/fixtures/**"],
+	"rules": {
+		"duplicates": "off",
+		"exports": "warn",
+		"types": "warn"
+	}
+}

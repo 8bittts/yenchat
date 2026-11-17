@@ -1,0 +1,3 @@
+name: "YEN Zip Release"
+description: "Update every manifest vendor with a 6-layer audit, then build, sign, notarize, and ship a YEN desktop release with eval verification."
+default_prompt: "Execute the yen-zip workflow. Start with vendor Step V1, run the vendor phase when anything is behind, then the release from preflight, phase by phase. Run the full 6-layer audit for Ghostty. Stop on any gate failure."

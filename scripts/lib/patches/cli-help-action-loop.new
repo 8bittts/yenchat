@@ -1,0 +1,6 @@
+    inline for (@typeInfo(Action).@"enum".field_names) |field| {
+        const action = @field(Action, field);
+        if (action.shouldShowInHelp()) {
+            try stdout.print("  +{s}\n", .{field});
+        }
+    }

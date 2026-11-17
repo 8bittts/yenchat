@@ -1,0 +1,22 @@
+        var lastPerformKeyEvent: TimeInterval?
+
+        static func performableClipboardSelector(
+            menuAction: Selector?,
+            standardClipboardHasContents: Bool,
+            selectionClipboardHasContents: Bool
+        ) -> Selector? {
+            if menuAction == #selector(YEN.SurfaceView.paste(_:)),
+               standardClipboardHasContents {
+                return menuAction
+            }
+
+            if menuAction == #selector(YEN.SurfaceView.pasteSelection(_:)),
+               selectionClipboardHasContents {
+                return menuAction
+            }
+
+            return nil
+        }
+
+        /// Special case handling for some control keys
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {

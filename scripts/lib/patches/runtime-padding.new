@@ -1,0 +1,18 @@
+    self.config = derived;
+
+    // Apply updated padding immediately on config reload so explicit
+    // window-padding-x/y changes affect existing surfaces without
+    // requiring a new window/tab.
+    if (self.rt_surface.getContentScale()) |content_scale| {
+        const x_dpi = content_scale.x * font.face.default_dpi;
+        const y_dpi = content_scale.y * font.face.default_dpi;
+
+        const explicit_padding = self.config.scaledPadding(x_dpi, y_dpi);
+        if (self.config.window_padding_balance != .false) {
+            self.size.balancePadding(explicit_padding, self.config.window_padding_balance);
+        } else {
+            self.size.padding = explicit_padding;
+        }
+    } else |err| {
+        log.warn("failed to read content scale during config reload err={}", .{err});
+    }

@@ -1,0 +1,5 @@
+scenario,hitches_rows,hitches_max_ms,hitches_p95_ms,hitches_over100ms,expensive_updates,expensive_renders,potential_hangs,potential_hang_max_ms
+first-open,22,291.67,50,1,7,2,12,133.65
+reopen,30,283.33,16.67,1,7,3,9,134.7
+rapid-tabs,62,541.66,150,6,8,1,24,443.57
+sounds-refresh,20,483.33,458.33,3,2,1,17,580.86

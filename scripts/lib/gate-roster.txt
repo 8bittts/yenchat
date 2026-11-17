@@ -1,0 +1,42 @@
+# Gates that have adopted the receipt contract (scripts/lib/gate-receipt.sh).
+#
+# THIS FILE IS THE MIGRATION CHECKLIST, AND THE BUILD ENFORCES IT.
+# tests/145-gate-receipt-contract.test.ts requires every entry here to source
+# gate-receipt.sh, declare its units in scripts/lib/units/<name>.units, carry no
+# hand-rolled "(N checks)" summary, and fail closed when its inputs are absent.
+#
+# Add a gate to this file in the same commit that migrates it — never before.
+#
+# MIGRATION COMPLETE. Every gate on the /yen-zip vendor and release paths is listed below.
+#
+# An entry may name a subdirectory (`manual/16-...`). The path is resolved under
+# scripts/, and the gate NAME is the basename -- that is what appears in the
+# RECEIPT line and names the units file. scripts/manual/ was outside this
+# roster's reach until 16-verify-applescript-if-needed joined it, which is how
+# that gate shipped with no receipt at all: its skip and its pass were the same
+# checkmark and the same exit 0, and both callers' evals scored the skip a pass.
+#
+# Deliberately NOT on this roster, and why:
+#   35-vendor-delta.sh   — a vendor BUILD wrapper, not a gate. It delegates to
+#                          vendor_source_build() in scripts/lib/vendor-binary.sh,
+#                          which owns the pass/fail semantics. Wrapping it would
+#                          put a receipt on the caller while the decision stays
+#                          in the library.
+#   40's text/hash modes — DATA producers. Their stdout is piped into `shasum`
+#                          and diffed, so a RECEIPT line would corrupt the hash.
+#                          Only the verify and baseline modes emit one.
+
+02-sync-versions
+03-verify-components
+04-verify-branding
+05-detect-failures
+06-verify-download-links
+07-stage-release
+10-update-ghostty
+12-verify-vendor-audit
+13-scan-artifact-fingerprints
+14-vendor
+manual/16-verify-applescript-if-needed
+40-vendor-parity-snapshot
+41-lint-swift-view-modifiers
+42-lint-overlay-recurrence-gates

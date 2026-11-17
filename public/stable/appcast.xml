@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>YEN Updates</title>
+        <description>YEN Terminal updates via Sparkle.</description>
+        <language>en</language>
+        <item>
+            <title>YEN 1.271</title>
+            <link>https://yen.chat</link>
+            <sparkle:version>1271</sparkle:version>
+            <sparkle:shortVersionString>1.271</sparkle:shortVersionString>
+            <description><![CDATA[
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 12px; }
+                    h2 { font-size: 16px; margin: 0 0 8px 0; color: #ff5100; }
+                    .quip { color: white; margin-bottom: 12px; }
+                    .tech { background: #f5f5f5; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+                    .tech strong { color: #333; }
+                </style>
+                <h2>YEN 1.271</h2>
+                <p class="quip">Fresh signed rebuild with current components</p>
+                <p class="tech"><strong>Full release notes:</strong> <a href="https://yen.chat/docs">yen.chat/docs</a></p>
+            ]]></description>
+            <pubDate>Mon, 16 Nov 2026 15:56:35 -0800</pubDate>
+            <enclosure
+                url="https://github.com/8bittts/yenchat/releases/download/v1.271/yen-1271.dmg"
+                length="111110796"
+                type="application/x-apple-diskimage"
+                sparkle:edSignature="vDilyZ8vXM/IKKkxshX1xvq8YeT+lfCza55zztmG+kkvsmpA55PyEPtLe+XWIdW9yF5lafqtTXnCrUpW+9UvCQ==" />
+            <sparkle:deltas>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.271/YEN1271-1270.delta" sparkle:deltaFrom="1270" length="697654" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="w68Oo362eSF2hIwnExG00w/pkakk08u5uQwGkUYbK0EZx3URdiHFzc5PKNB/613wLs/YGwFAC0UNPlsuaXIhCg=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.271/YEN1271-1269.delta" sparkle:deltaFrom="1269" length="695062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Px+kRW9hjK9d5wPyfvnogCiAE1iZ+U5uWzs5/+iF0FVrquESCdnKfLjzYMbkOQcffMZX2mAzLWgO1tXGw2BgDw=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.271/YEN1271-1268.delta" sparkle:deltaFrom="1268" length="1112886" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BJSutSiAl0JogNmSt6sDk/FEsEc2A+JbTGQL6SZ/LsVx1ZluXmtCfiQZAkjDxaSztT89Od/lx3jDSVMzVrOzDg=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.271/YEN1271-1267.delta" sparkle:deltaFrom="1267" length="1240474" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="t1V5C0I1+u30CprZ9/pKaZnVNamUy39/rLqz5RQKNIzjPmeKXhWISOFVHQJmvNJHJHjG0TjWT83IB/RvkkRSAA=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.271/YEN1271-1266.delta" sparkle:deltaFrom="1266" length="1287238" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="1PMZs4T4IZoH+kOm+mhq3a6G6fqN1O+rt9y2jzXJwRLheImfbkNMb1a41rSPMtplObMo9VPfbtIntyM8k+HADA=="/>
+            </sparkle:deltas>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+        </item>
+    </channel>
+</rss>

@@ -1,0 +1,17 @@
+# fastfetch Baseline Tracking
+upstream_repo=https://github.com/fastfetch-cli/fastfetch
+upstream_version=2.71.0
+last_sync=2026-11-06
+architecture=universal (arm64 + x86_64)
+source_asset_arm64=fastfetch-macos-universal.tar.gz
+source_asset_x86_64=fastfetch-macos-universal.tar.gz
+source_sha256_arm64=6e503980ac268b072259f00e5c439eb90a420535f3593704c096b5b3bea64199
+source_sha256_x86_64=6e503980ac268b072259f00e5c439eb90a420535f3593704c096b5b3bea64199
+source_api_sha256_arm64=6e503980ac268b072259f00e5c439eb90a420535f3593704c096b5b3bea64199
+source_api_sha256_x86_64=6e503980ac268b072259f00e5c439eb90a420535f3593704c096b5b3bea64199
+source_checksums_file=none
+source_checksums_sha256=none
+provenance_verification=github-release-asset-digests
+output_verification=verified
+output_sha256=ddd59a307a6257bcbb66a8c32d21f1a92dcaee627a882e4dfe277b089969acc9
+companion_output_sha256=none

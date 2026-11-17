@@ -1,0 +1,6 @@
+            // The clicked location should still resolve back to this surface (or one
+            // of its descendants) when hit-tested in content-view coordinates.
+            guard SplitFocusClickHitTesting.surfaceOwnsWindowClick(
+                surfaceView: self,
+                eventLocationInWindow: event.locationInWindow
+            ) else { return event }

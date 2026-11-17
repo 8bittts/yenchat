@@ -1,0 +1,173 @@
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { DEVELOPMENT_CSP_NONCE } from "@/lib/csp/development";
+import {
+	DYNAMIC_ROOT_INLINE_SCRIPT_HASHES,
+	ERROR_INLINE_SCRIPT_HASHES,
+	STATIC_INLINE_SCRIPT_HASHES,
+} from "@/lib/csp/generated-inline-script-hashes";
+import { buildCSP } from "@/lib/csp/policy";
+import { resolveRequestHostSignals } from "@/lib/http/request-host";
+
+export { buildCSP } from "@/lib/csp/policy";
+
+const HEADER_BYPASS_PREFIXES = [
+	"/api",
+	"/_next/static",
+	"/_next/image",
+	"/favicons",
+	"/doc-images",
+	"/mascot",
+	"/stable",
+];
+
+const HEADER_BYPASS_EXACT = new Set([
+	"/robots.txt",
+	"/sitemap.xml",
+	"/manifest.webmanifest",
+	"/llms.txt",
+	"/bitcoin.pdf",
+	"/favicon.ico",
+]);
+
+const ENCODED_PATH_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
+
+function matchesExactOrChildPath(pathname: string, prefix: string): boolean {
+	return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function uniqueHashes(...groups: readonly (readonly string[])[]): string[] {
+	return Array.from(new Set(groups.flat())).sort();
+}
+
+function decodeUnreservedPathname(pathname: string): string {
+	return pathname.replace(/%[0-9a-f]{2}/gi, (encodedByte) => {
+		const character = String.fromCharCode(
+			Number.parseInt(encodedByte.slice(1), 16),
+		);
+		return /^[A-Za-z0-9._~-]$/.test(character)
+			? character
+			: encodedByte.toUpperCase();
+	});
+}
+
+function findCanonicalStaticPath(pathname: string): string | undefined {
+	const normalizedPathname = decodeUnreservedPathname(pathname).toLowerCase();
+	return Object.keys(STATIC_INLINE_SCRIPT_HASHES).find(
+		(candidate) => candidate.toLowerCase() === normalizedPathname,
+	);
+}
+
+function continueWithCSP(
+	request: NextRequest,
+	csp: string,
+	nonce?: string,
+): NextResponse {
+	const requestHeaders = new Headers(request.headers);
+	requestHeaders.set("Content-Security-Policy", csp);
+	if (nonce) {
+		requestHeaders.set("x-nonce", nonce);
+	} else {
+		requestHeaders.delete("x-nonce");
+	}
+
+	const response = NextResponse.next({
+		request: {
+			headers: requestHeaders,
+		},
+	});
+	response.headers.set("Content-Security-Policy", csp);
+	if (nonce) {
+		response.headers.set("x-nonce", nonce);
+	}
+	return response;
+}
+
+function getRequestHost(request: NextRequest): {
+	hasConflict: boolean;
+	host: string;
+} {
+	return resolveRequestHostSignals({
+		nextUrlHost: request.nextUrl.host,
+		requestUrl: request.url,
+		hostHeader: request.headers.get("host"),
+		forwardedHostHeader: request.headers.get("x-forwarded-host"),
+	});
+}
+
+function shouldBypassSecurityHeaders(pathname: string): boolean {
+	if (HEADER_BYPASS_EXACT.has(pathname)) {
+		return true;
+	}
+	return HEADER_BYPASS_PREFIXES.some((prefix) =>
+		matchesExactOrChildPath(pathname, prefix),
+	);
+}
+
+export function proxy(request: NextRequest) {
+	const { hasConflict, host } = getRequestHost(request);
+	const pathname = request.nextUrl.pathname;
+
+	if (hasConflict) {
+		return new NextResponse("Bad Request", {
+			status: 400,
+			headers: {
+				"Cache-Control": "no-store",
+			},
+		});
+	}
+
+	// Vercel can decode reserved separators after this proxy runs. Reject them
+	// here so a non-canonical request cannot inherit the wrong static CSP.
+	if (ENCODED_PATH_SEPARATOR_PATTERN.test(pathname)) {
+		return new NextResponse("Bad Request", {
+			status: 400,
+			headers: {
+				"Cache-Control": "no-store",
+			},
+		});
+	}
+
+	if (host === "www.yen.chat") {
+		const canonicalUrl = new URL(request.url);
+		canonicalUrl.protocol = "https:";
+		canonicalUrl.hostname = "yen.chat";
+		canonicalUrl.port = "";
+		return NextResponse.redirect(canonicalUrl, 308);
+	}
+
+	const canonicalStaticPath = findCanonicalStaticPath(pathname);
+	if (canonicalStaticPath && canonicalStaticPath !== pathname) {
+		const canonicalUrl = new URL(request.url);
+		canonicalUrl.pathname = canonicalStaticPath;
+		return NextResponse.redirect(canonicalUrl, 308);
+	}
+	if (shouldBypassSecurityHeaders(pathname)) {
+		return NextResponse.next();
+	}
+
+	const isDevelopment = process.env.NODE_ENV === "development";
+	const staticHashes = isDevelopment
+		? undefined
+		: STATIC_INLINE_SCRIPT_HASHES[pathname];
+	if (staticHashes) {
+		const csp = buildCSP(
+			undefined,
+			uniqueHashes(staticHashes, ERROR_INLINE_SCRIPT_HASHES),
+		);
+		return continueWithCSP(request, csp);
+	}
+	const nonce = isDevelopment
+		? DEVELOPMENT_CSP_NONCE
+		: btoa(crypto.randomUUID());
+	const csp = buildCSP(
+		nonce,
+		uniqueHashes(DYNAMIC_ROOT_INLINE_SCRIPT_HASHES, ERROR_INLINE_SCRIPT_HASHES),
+		isDevelopment,
+	);
+	return continueWithCSP(request, csp, nonce);
+}
+
+export const config = {
+	matcher: ["/:path*"],
+};

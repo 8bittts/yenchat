@@ -1,0 +1,6 @@
+# INTENTIONALLY EMPTY — baseline zero. apply-overlays.sh inline python heredoc payloads
+# have all migrated to named helpers under scripts/lib/ (see _docs/04-security.md).
+# This is a regression TRIPWIRE, not a live allowlist: scripts/42 fails closed if a
+# `python3 - ... << 'MARKER'` heredoc reappears in apply-overlays.sh. Only add a
+# target|count|note row to knowingly baseline a deliberate exception.
+# target variable|count|note

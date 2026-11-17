@@ -1,0 +1,1 @@
+    pub fn detectSpecialCase(arg: []const u8) ?SpecialCase(Action) {

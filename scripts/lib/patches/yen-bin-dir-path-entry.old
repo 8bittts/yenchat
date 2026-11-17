@@ -1,0 +1,1 @@
+if (std.mem.eql(u8, entry, exe_dir)) break :yen_path;

@@ -1,0 +1,2810 @@
+#!/bin/bash
+# YEN IDE Command
+# S1 foundation tools:
+# - project detection
+# - trusted env loading
+# - project-scoped history + replay
+# - command profiling + port/process snapshot
+# - semantic output reference parsing
+
+source "${YEN_LIB}/init.sh"
+yen_require git-review-tools
+
+IDE_STATE_DIR="${YEN_IDE_STATE_DIR:-$HOME/.config/yen/ide}"
+IDE_TRUST_FILE="${IDE_STATE_DIR}/trusted-env-projects"
+IDE_HISTORY_DIR="${IDE_STATE_DIR}/history"
+IDE_PROFILE_DIR="${IDE_STATE_DIR}/profiles"
+IDE_BENCHMARK_DIR="${IDE_STATE_DIR}/benchmarks"
+IDE_VERIFY_DIR="${IDE_STATE_DIR}/verify"
+IDE_TEST_DIR="${IDE_STATE_DIR}/test"
+IDE_QUALITY_DIR="${IDE_STATE_DIR}/quality"
+IDE_EVIDENCE_DIR="${IDE_STATE_DIR}/evidence"
+IDE_WORKFLOW_DIR="${IDE_STATE_DIR}/workflows"
+IDE_LSP_DIR="${IDE_STATE_DIR}/lsp"
+IDE_LSP_TOOLS_DIR="${IDE_STATE_DIR}/lsp-tools"
+IDE_LSP_SOCKET_DIR="${YEN_IDE_LSP_SOCKET_DIR:-/tmp/yen-lsp-${UID}}"
+IDE_DEVCONTAINER_DIR="${IDE_STATE_DIR}/devcontainer"
+IDE_VSCODE_IMPORT_DIR="${IDE_STATE_DIR}/vscode-import"
+IDE_SHARE_DIR="${IDE_STATE_DIR}/share"
+IDE_WATCH_DIR="${IDE_STATE_DIR}/watch"
+IDE_DEBUG_DIR="${IDE_STATE_DIR}/debug"
+IDE_TIMELINE_FILE="${IDE_STATE_DIR}/timeline.log"
+IDE_VERIFY_FLAKY_FILE="${IDE_VERIFY_DIR}/flaky-ledger.tsv"
+IDE_NON_INTERFERENCE_SLO_FILE="${IDE_STATE_DIR}/non-interference-slo.tsv"
+IDE_NON_INTERFERENCE_FREEZE_FILE="${IDE_STATE_DIR}/non-interference-freeze"
+IDE_WORKFLOW_TRUST_FILE="${IDE_STATE_DIR}/trusted-workflow-projects"
+IDE_LSP_TRUST_FILE="${IDE_STATE_DIR}/trusted-lsp-projects"
+IDE_DEVCONTAINER_TRUST_FILE="${IDE_STATE_DIR}/trusted-devcontainer-projects"
+IDE_SHARE_TRUST_FILE="${IDE_STATE_DIR}/trusted-share-projects"
+IDE_DEBUG_TRUST_FILE="${IDE_STATE_DIR}/trusted-debug-projects"
+IDE_MODULE_DIR="${YEN_LIB}/ide"
+
+# Module load order is part of the router contract. Extracted modules must stay
+# source-time pure and define their exported helpers/handlers before the
+# assertions below run, so loader drift fails fast during startup.
+declare -a _IDE_LOADED_MODULES=()
+
+_ide_module_loaded() {
+    local module="$1"
+    local loaded=""
+    for loaded in "${_IDE_LOADED_MODULES[@]}"; do
+        if [[ "${loaded}" == "${module}" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+ide_require_module() {
+    local module="$1"
+    local module_path=""
+
+    if _ide_module_loaded "${module}"; then
+        return 0
+    fi
+
+    module_path="${IDE_MODULE_DIR}/${module}.sh"
+    if [[ ! -f "${module_path}" ]]; then
+        yen_error "IDE module not found: ${module}"
+        exit 1
+    fi
+
+    # shellcheck source=/dev/null
+    source "${module_path}"
+    _IDE_LOADED_MODULES+=("${module}")
+}
+
+ide_require_module_list() {
+    local module=""
+    for module in "$@"; do
+        ide_require_module "${module}"
+    done
+}
+
+ide_require_phase1_modules() {
+    ide_require_module "bootstrap"
+    ide_bootstrap_assert_compatible "1"
+}
+
+ide_require_phase2_modules() {
+    ide_require_module "common"
+    ide_require_module "workspace-identity"
+    ide_require_module "state-trust"
+    ide_require_module "timeline"
+    ide_require_module "reports"
+}
+
+ide_require_phase3_modules() {
+    ide_require_module "lsp"
+    ide_require_module "ast"
+}
+
+ide_require_phase4_modules() {
+    ide_require_module "verify-test"
+    ide_require_module "workflow-quality"
+    ide_require_module "quality"
+}
+
+ide_require_phase5_modules() {
+    ide_require_module "editor-handoff"
+    ide_require_module "debug-execution"
+    ide_require_module "debug-targets"
+    ide_require_module "debug-ui"
+    ide_require_module "debugger"
+    ide_require_module "review-context"
+    ide_require_module "env"
+    ide_require_module "workspace-summary"
+    ide_require_module "workspace-doctor"
+    ide_require_module "workspace-trust"
+    ide_require_module "workspace-capabilities"
+    ide_require_module "devcontainer"
+    ide_require_module "share"
+    ide_require_module "vscode"
+    ide_require_module "search-history"
+    ide_require_module "benchmark"
+}
+
+ide_require_detect_modules() {
+    ide_require_module "common"
+    ide_require_module "workspace-identity"
+    ide_require_module "state-trust"
+    ide_require_module "env"
+    ide_require_module "workspace-summary"
+    # workspace-summary.sh's detect payload calls doctor_* helpers directly, so
+    # omitting this module does not fail — it prints bash "command not found" to
+    # stderr and resolves those fields to empty while still exiting 0.
+    ide_require_module "workspace-doctor"
+}
+
+ide_assert_loaded_function() {
+    local function_name="$1"
+    if ! declare -F "${function_name}" >/dev/null 2>&1; then
+        yen_error "IDE module contract missing required function: ${function_name}"
+        exit 1
+    fi
+}
+
+ide_assert_phase_contracts() {
+    local required_function=""
+    for required_function in \
+        ensure_state_dirs \
+        timeline_log \
+        cmd_detect \
+        cmd_doctor \
+        cmd_trust \
+        cmd_env \
+        cmd_lsp \
+        cmd_ast \
+        cmd_share \
+        cmd_devcontainer \
+        cmd_vscode \
+        cmd_history \
+        cmd_replay \
+        cmd_profile \
+        cmd_open \
+        cmd_debug \
+        cmd_benchmark \
+        cmd_ports \
+        cmd_parse \
+        cmd_search \
+        cmd_explain \
+        cmd_merge_readiness \
+        cmd_quality_action \
+        cmd_test \
+        cmd_verify \
+        cmd_workflow
+    do
+        ide_assert_loaded_function "${required_function}"
+    done
+}
+
+# Route on the requested subcommand and load only the modules its handler
+# transitively needs, so a trivial `yen ide ports` no longer pays the full
+# ~22-module parse. Unlisted/heavy subcommands fall through to the full suite
+# below (unchanged behavior). `detect` keeps its own fast path above.
+ide_require_command_modules() {
+    case "$1" in
+        ""|-h|--help|help|timeline)
+            ide_require_module common ;;
+        gate|non-interference|noninterference|slo)
+            ide_require_module_list common workspace-identity state-trust timeline ;;
+        pr-notify|pr-watch)
+            ide_require_module_list common workspace-identity state-trust timeline reports ;;
+        parse)
+            ide_require_module_list common search-history ;;
+        open)
+            ide_require_module_list common editor-handoff ;;
+        history|replay)
+            ide_require_module_list common workspace-identity state-trust search-history ;;
+        ports|profile)
+            ide_require_module_list common workspace-identity state-trust timeline search-history ;;
+        benchmark)
+            ide_require_module_list common workspace-identity state-trust timeline benchmark ;;
+        explain)
+            ide_require_module_list common workspace-identity state-trust timeline search-history workspace-capabilities ;;
+        env)
+            ide_require_module_list common workspace-identity state-trust timeline reports env ;;
+        vscode)
+            ide_require_module_list common workspace-identity state-trust timeline workflow-quality vscode ;;
+        format|fmt|lint|fix)
+            ide_require_module_list common workspace-identity state-trust timeline search-history workflow-quality quality ;;
+        share)
+            ide_require_module_list common workspace-identity state-trust timeline env workflow-quality workspace-summary workspace-doctor share ;;
+        devcontainer)
+            ide_require_module_list common workspace-identity state-trust timeline reports env workflow-quality workspace-summary workspace-doctor devcontainer ;;
+        workflow|workflows)
+            ide_require_module_list common workspace-identity state-trust timeline env search-history quality workflow-quality workspace-summary workspace-doctor ;;
+        *)
+            # doctor, trust, ast, lsp, debug, search, test, verify,
+            # merge-readiness, pr-review, and any unrecognized subcommand
+            # still load the complete IDE suite (unchanged behavior + contract assert).
+            ide_require_phase2_modules
+            ide_require_phase3_modules
+            ide_require_phase4_modules
+            ide_require_phase5_modules
+            ide_assert_phase_contracts
+            ;;
+    esac
+}
+
+ide_require_phase1_modules
+
+# Shell integration calls `yen ide detect --cached --format env` before the first prompt.
+# Keep that path on a minimal bootstrap so startup doesn't pay for the full IDE suite.
+case "${1:-}" in
+    detect|project)
+        ide_require_detect_modules
+        shift
+        cmd_detect "$@"
+        exit $?
+        ;;
+esac
+
+ide_require_command_modules "${1:-}"
+
+is_number_value() {
+    local value="$1"
+    printf "%s" "${value}" | grep -Eq '^-?[0-9]+([.][0-9]+)?$'
+}
+
+float_gt() {
+    local left="$1"
+    local right="$2"
+    awk -v left="${left}" -v right="${right}" 'BEGIN { if (left > right) exit 0; exit 1 }'
+}
+
+non_interference_default_window_days() {
+    local raw="${YEN_IDE_NON_INTERFERENCE_WINDOW_DAYS:-30}"
+    if [[ ! "${raw}" =~ ^[0-9]+$ ]] || [[ "${raw}" -lt 1 ]]; then
+        raw="30"
+    fi
+    printf "%s\n" "${raw}"
+}
+
+non_interference_default_error_budget() {
+    local raw="${YEN_IDE_NON_INTERFERENCE_ERROR_BUDGET:-0.05}"
+    if ! is_number_value "${raw}" || ! awk -v v="${raw}" 'BEGIN { if (v > 0 && v <= 1) exit 0; exit 1 }'; then
+        raw="0.05"
+    fi
+    printf "%s\n" "${raw}"
+}
+
+non_interference_default_min_samples() {
+    local raw="${YEN_IDE_NON_INTERFERENCE_MIN_SAMPLES:-20}"
+    if [[ ! "${raw}" =~ ^[0-9]+$ ]] || [[ "${raw}" -lt 1 ]]; then
+        raw="20"
+    fi
+    printf "%s\n" "${raw}"
+}
+
+normalize_non_interference_metric() {
+    local metric="$1"
+    case "${metric}" in
+        key-to-echo-p95-ms|key_to_echo_p95_ms|p95)
+            printf "key-to-echo-p95-ms\n"
+            ;;
+        key-to-echo-p99-ms|key_to_echo_p99_ms|p99)
+            printf "key-to-echo-p99-ms\n"
+            ;;
+        search-latency-ms|search_latency_ms|search)
+            printf "search-latency-ms\n"
+            ;;
+        lsp-start-ms|lsp_start_ms|lsp)
+            printf "lsp-start-ms\n"
+            ;;
+        verify-duration-ms|verify_duration_ms|verify)
+            printf "verify-duration-ms\n"
+            ;;
+        orchestration-latency-ms|orchestration_latency_ms|orchestration)
+            printf "orchestration-latency-ms\n"
+            ;;
+        startup-regression-ms|startup_regression_ms|startup)
+            printf "startup-regression-ms\n"
+            ;;
+        idle-cpu-overhead-pct|idle_cpu_overhead_pct|cpu)
+            printf "idle-cpu-overhead-pct\n"
+            ;;
+        idle-extra-rss-mib|idle_extra_rss_mib|rss)
+            printf "idle-extra-rss-mib\n"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+non_interference_metric_threshold() {
+    local metric="$1"
+    case "${metric}" in
+        key-to-echo-p95-ms)
+            printf "%s\n" "${YEN_IDE_SLO_KEY_TO_ECHO_P95_MS:-16}"
+            ;;
+        key-to-echo-p99-ms)
+            printf "%s\n" "${YEN_IDE_SLO_KEY_TO_ECHO_P99_MS:-25}"
+            ;;
+        search-latency-ms)
+            printf "%s\n" "${YEN_IDE_SLO_SEARCH_LATENCY_MS:-250}"
+            ;;
+        lsp-start-ms)
+            printf "%s\n" "${YEN_IDE_SLO_LSP_START_MS:-1500}"
+            ;;
+        verify-duration-ms)
+            printf "%s\n" "${YEN_IDE_SLO_VERIFY_DURATION_MS:-4000}"
+            ;;
+        orchestration-latency-ms)
+            printf "%s\n" "${YEN_IDE_SLO_ORCHESTRATION_LATENCY_MS:-1200}"
+            ;;
+        startup-regression-ms)
+            printf "%s\n" "${YEN_IDE_SLO_STARTUP_REGRESSION_MS:-150}"
+            ;;
+        idle-cpu-overhead-pct)
+            printf "%s\n" "${YEN_IDE_SLO_IDLE_CPU_OVERHEAD_PCT:-2}"
+            ;;
+        idle-extra-rss-mib)
+            printf "%s\n" "${YEN_IDE_SLO_IDLE_EXTRA_RSS_MIB:-250}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+non_interference_freeze_field() {
+    local field="$1"
+    [[ -f "${IDE_NON_INTERFERENCE_FREEZE_FILE}" ]] || return 1
+    sed -nE "s/^${field}=(.*)$/\\1/p" "${IDE_NON_INTERFERENCE_FREEZE_FILE}" | head -n 1
+}
+
+non_interference_freeze_mode() {
+    non_interference_freeze_field "mode"
+}
+
+write_non_interference_auto_freeze() {
+    local window_days="$1"
+    local total="$2"
+    local breaches="$3"
+    local ratio="$4"
+    local budget="$5"
+    cat > "${IDE_NON_INTERFERENCE_FREEZE_FILE}" << EOF
+mode=auto
+activated_at=$(iso_now)
+window_days=${window_days}
+samples=${total}
+breaches=${breaches}
+ratio=${ratio}
+budget=${budget}
+reason=error-budget-exceeded
+EOF
+}
+
+write_non_interference_manual_freeze() {
+    local reason="$1"
+    cat > "${IDE_NON_INTERFERENCE_FREEZE_FILE}" << EOF
+mode=manual
+activated_at=$(iso_now)
+reason=${reason}
+EOF
+}
+
+evaluate_non_interference_budget() {
+    local window_days="$1"
+    local write_state="${2:-0}"
+    local now_epoch
+    local cutoff_epoch
+    local total=0
+    local breaches=0
+    local ratio="0.000000"
+    local budget
+    local min_samples
+    local mode="inactive"
+    local active="0"
+    local manual_mode=""
+    local should_freeze="0"
+
+    if [[ ! "${window_days}" =~ ^[0-9]+$ ]] || [[ "${window_days}" -lt 1 ]]; then
+        window_days=$(non_interference_default_window_days)
+    fi
+    budget=$(non_interference_default_error_budget)
+    min_samples=$(non_interference_default_min_samples)
+
+    now_epoch=$(date +%s)
+    cutoff_epoch=$((now_epoch - (window_days * 86400)))
+
+    if [[ -f "${IDE_NON_INTERFERENCE_SLO_FILE}" ]]; then
+        local agg
+        agg=$(awk -F'\t' -v cutoff="${cutoff_epoch}" '
+            NF >= 6 && $2 ~ /^[0-9]+$/ && $2 >= cutoff {
+                total += 1
+                if ($6 == "breach") {
+                    breaches += 1
+                }
+            }
+            END { printf "%d\t%d", total, breaches }
+        ' "${IDE_NON_INTERFERENCE_SLO_FILE}" 2>/dev/null || true)
+        if [[ -n "${agg}" ]]; then
+            IFS=$'\t' read -r total breaches << EOF
+${agg}
+EOF
+        fi
+    fi
+
+    ratio=$(awk -v b="${breaches}" -v t="${total}" 'BEGIN { if (t == 0) { printf "0.000000" } else { printf "%.6f", b / t } }')
+
+    if [[ "${total}" -ge "${min_samples}" ]] && float_gt "${ratio}" "${budget}"; then
+        should_freeze="1"
+    fi
+
+    manual_mode=$(non_interference_freeze_mode 2>/dev/null || true)
+    if [[ "${manual_mode}" == "manual" ]]; then
+        mode="manual"
+        active="1"
+    elif [[ "${should_freeze}" == "1" ]]; then
+        mode="auto"
+        active="1"
+    fi
+
+    if [[ "${write_state}" == "1" ]]; then
+        if [[ "${manual_mode}" == "manual" ]]; then
+            :
+        elif [[ "${should_freeze}" == "1" ]]; then
+            write_non_interference_auto_freeze "${window_days}" "${total}" "${breaches}" "${ratio}" "${budget}"
+        else
+            rm -f "${IDE_NON_INTERFERENCE_FREEZE_FILE}"
+        fi
+    fi
+
+    printf "%s|%s|%s|%s|%s|%s|%s\n" "${active}" "${mode}" "${total}" "${breaches}" "${ratio}" "${budget}" "${min_samples}"
+}
+
+show_help() {
+    cat << 'EOF'
+Usage: yen ide <command> [options]
+
+Commands:
+  detect [path|ssh://user@host/abs/path]
+                             Detect local or SSH-backed project root/runtime/tooling context
+                             --format env prints export statements for shells
+                             --cached returns last-known env exports when root mtime is unchanged
+  doctor [path|ssh://user@host/abs/path]
+                             Aggregate repo health across detect/env/lsp/devcontainer/verify
+                             --format text|env|json; includes latest verify/security readiness; --strict fails when warnings remain
+  trust [options]            Workspace trust center over env/lsp/debug/devcontainer/share/workflow
+                             status [path|ssh://user@host/abs/path] [--format text|env|json] shows trust, runtime state, and latest local audit metadata
+                             revoke <env|lsp|debug|devcontainer|share|workflow|all> removes trust through the owning capability command
+                             reset <lsp|debug|devcontainer|share|all> tears down active state through the owning capability command
+  env status [path]          Show env trust + .env file status for project
+  env trust [path]           Mark project .env files as trusted
+  env untrust [path]         Remove project from trusted list
+  env list                   List trusted project roots
+  env load [path]            Print safe export lines from trusted .env files
+                             --strict fails on unsupported/invalid env lines
+                             --report <path> writes parse issues report
+                             Use with: eval "$(yen ide env load)"
+  lsp [options]              LSP lifecycle + requests (status/trust/untrust/trusted/diagnostics/install)
+                             start/status/stop [path] manage the local project LSP runtime
+                             diagnostics [path] [--severity levels --limit N] shows grouped diagnostics snapshot output
+                             hover/definition/references <file:line[:col]> query live LSP responses
+                             code-actions <file:line[:col]> [--format text|json] [--apply] previews code actions and only auto-applies a single/preferred edit-only action
+                             rename <file:line[:col]> --new-name <value> [--write] previews/applies rename edits
+                             install status|install|update [language] manages pinned reference-server installs/guidance
+                             status [path] [--format text|env] shows trust + runtime paths
+                             trust/untrust [path] manage per-project LSP execution consent
+                             trusted lists project roots approved for future LSP execution
+  ast [options]              Syntax-aware fallback/complement for Python, JS/TS, Go, and Swift projects
+                             status [path] shows parser/runtime support
+                             definition/references <symbol> [path] label results as AST-sourced and print the active parser engine
+  share [options]            Trusted terminal-sharing control plane (upterm primary, tmate fallback)
+                             host/status/join/revoke plus trust/untrust/trusted
+                             host/status/revoke/trust/untrust accept [path|ssh://user@host/abs/path]
+                             host supports --read-only|--interactive, --ttl-minutes|--ttl-seconds, --passphrase, --replace
+                             status supports --format text|env|json; join requires --token + passphrase and supports --print-command
+  devcontainer [options]     Trusted wrapper around the reference devcontainer CLI
+                             up/status/shell/down plus trust/untrust/trusted
+                             status [path|ssh://user@host/abs/path] supports --format text|env|json
+                             ssh targets support remote status/up/shell/down/trust/untrust via the remote CLI with local-record trust and tracked state keyed by workspace identity
+  vscode [options]           VS Code workspace inventory/import into deterministic YEN-local artifacts
+                             inventory [path] classifies config, extensions, and parity guidance
+                             import [path] [--dry-run] writes .yen/vscode-import/*, migration artifacts, and workflow task shims
+  history [path]             Show project-scoped command history
+  history add <command...>   Append a command to project history
+  history clear [path]       Clear project history file
+  replay [index|last]        Print command from project history (newest-first)
+  replay --exec [index]      Execute selected history command
+  profile -- <command...>    Run command with timing + status log
+  benchmark [options]        Repeatable search/LSP/verify/orchestration benchmark harness
+                             status [path] [--format text|json] shows latest benchmark/baseline snapshot
+                             run [path] [--suite search|lsp|verify|orchestration|all] [--samples N]
+                             [--write-baseline] [--format text|json] records reports + non-interference samples
+  open <path:line[:col]>     Open a semantic location in the user's editor
+                             [--project <path>] [--editor <cmd>] [--wait] [--dry-run --format text|json]
+  debug [options]            Shared debugger status/trust summary plus local + ssh execution baseline
+                             status [path|ssh://user@host/abs/path] [--devcontainer] [--format text|json] shows trust, supported families, and latest debug state
+                             start <path:line[:col]|executable> [--project <path>] [--tool auto|python-pdb|node-inspect|lldb]
+                             [--managed] [--devcontainer] [--dry-run --format text|json] [-- args...] launches the selected local, ssh-backed, or tracked devcontainer debugger
+                             tui [path|ssh://user@host/abs/path] [--devcontainer] [--tail N] [--watch --interval N] renders the debugger dashboard over the shared session/transcript state
+                             continue|next|step|out|stack|inspect control a live managed session for the selected local, ssh-backed, or tracked devcontainer project
+                             breakpoint add|list|remove and watch add|list|remove manage live managed-session state
+                             transcript [path] [--tail N] prints the latest managed debug transcript
+                             stop [path] clears tracked debug state and stops a live tracked process when present
+                             trust/untrust [path|ssh://user@host/abs/path] manage per-project debug consent; trusted lists trusted roots/identities
+  ports [subcommand]         Dev-focused port/process inspection
+                             <port>, ps, clean, watch plus --all|--json|--yes
+  parse [file] [--format text|tsv]
+                             Extract file:line references from output text
+  search <query> [options]   Universal project search (files/symbols/content/diagnostics/history/actions)
+                             --sources files,symbols,content,diagnostics,history,actions
+                             --limit <N> --project <path>
+  explain [options] [cmd]    Explain failed command with project context
+                             --last uses shell-captured command/status
+  format [options]           Repo-native format baseline over task discovery + toolchain defaults
+                             status [path] [--format text|json] shows discovered format candidates and recommended default
+                             run [path] [--dry-run] [--changed] [--format text|json] executes or previews the selected format plan
+  lint [options]             Repo-native lint baseline over task discovery + verify-adjacent heuristics
+                             status [path] [--format text|json] shows discovered lint candidates and recommended default
+                             run [path] [--dry-run] [--changed] [--format text|json] executes or previews the selected lint plan
+  fix [options]              Repo-native fix baseline over task discovery + safe formatter fallbacks
+                             status [path] [--format text|json] shows discovered fix candidates and recommended default
+                             run [path] [--dry-run] [--changed] [--format text|json] executes or previews the selected fix plan
+  test [options]             First-class test status/runner surface over verify-backed detection
+                             status [path] [--format text|json] shows discovered repo-native test runners + latest local reports
+                             run [path] [--runner <id>] [--failed] [--quick] [--watch --watch-interval <sec> --max-runs <N>] executes selected test runners and writes summary/details/semantic reports
+  verify [options]           Verification bundle plus latest local verify status/readiness
+                             status [path|ssh://user@host/abs/path] [--format text|json] shows latest verify/readiness/security snapshot from local reports
+                             run [--quick] [--no-build] [--no-security] [--strict] [--watch --watch-interval <sec> --max-runs <N>] writes summary/details/semantic reports + flaky tracker updates
+  merge-readiness [path]     Read-only merge readiness report over local verify/trust/git/PR state
+                             [--format text|json] summarizes diff size, risky files, approvals, gate signals, and next action
+  gate [options] -- <cmd>    Approval gate for high-risk commands
+                             prompts by policy/risk and logs decisions
+                             --risk-override <level> for explicit false-positive override
+                             --allowlist <path> to use custom regex allowlist
+  pr-review [options] [pr]   Review PR with diff navigation + evidence bundle
+                             --pick / --file <path> select focused file
+                             --list-hunks [--file <path>] prints semantic hunk targets
+                             --hunk <path:line[:col]> renders one focused semantic hunk
+                             --loop key-driven review (next/prev/select/evidence/decision)
+                             --loop-script "n,e,q" for deterministic non-interactive review
+                             --decision <approve|request-changes|comment>
+                             --inline <path:line[:LEFT|RIGHT]> with --post for hunk comments
+                             --evidence writes markdown with latest verify/security snapshot; --post submits review/comment
+  pr-notify [options]        Poll GitHub PR review requests and notify locally
+                             --watch --interval <sec> for continuous polling
+                             --ci-status shows current-branch CI and latest local build-watch progress; --max-polls <N> bounds watch loops
+  workflow [options]         Run project workflows from .yen/workflows/*.toml
+                             discover/list/show/run/trust/untrust/trusted subcommands
+                             discover/list/show/run accept [path|ssh://user@host/abs/path]
+                             discover [path] [--format text|json] reports native task sources without executing them
+                             run <name> keeps authored workflows authoritative; run --native <task-id> [--watch --watch-interval <sec> --max-runs <N>] executes one discovered native task explicitly
+                             ssh targets now support explicit remote workflow/native-task execution plus trust/untrust; --watch stays local-only and risk metadata stays remote-probe-driven
+                             local execution still writes summary/details/semantic reports and supports trust/approval gating
+  timeline [options]         Show recent IDE timeline/audit events
+  non-interference [options] Track terminal SLO samples + guardrail freeze state
+                             status [--window-days N] shows rolling error-budget summary
+                             record --metric <name> --value <number> [--source <name>]
+                             freeze --reason <text> and unfreeze manage manual override
+
+Notes:
+  - History, profiling, and benchmark data lives in ~/.config/yen/ide by default.
+  - .env loading only accepts KEY=VALUE / export KEY=VALUE lines.
+  - Untrusted projects require confirmation before env exports are emitted.
+  - LSP runtime uses a local trusted supervisor: it runs an installed reference server when resolution succeeds, or falls back to the placeholder socket daemon with explicit resolver guidance.
+  - Diagnostics output is read from the per-project LSP diagnostics snapshot when present, and search now includes diagnostics as a first-class source.
+  - Sharing is integration-first: it prefers local upterm, falls back to tmate, encrypts share tokens with a passphrase, and never stores raw terminal output by default.
+  - Devcontainer execution never auto-runs; it requires explicit project trust and rejects unsafe spec flags unless --allow-unsafe is set.
+  - VS Code import writes only deterministic project-local artifacts under .yen/ and supports a dry-run diff report.
+  - AST output is labeled separately from LSP so syntax-aware fallback results never look like live language-server responses.
+  - Debugger execution now supports local and ssh://... workspaces plus tracked devcontainer execution on the shared trust/timeline/state model; attach-to-pid flows, TypeScript direct-file launch, Go package debug, Rust package debug, and zero-config adapter installs beyond the shipped Python/Node/LLDB baseline stay blocked until they can be made honest.
+  - Workflow execution for untrusted projects requires explicit trust approval.
+EOF
+}
+
+notify_local() {
+    local title="$1"
+    local message="$2"
+    command -v osascript >/dev/null 2>&1 || return 0
+    # Route through DistributedNotificationCenter so YEN.app picks it up
+    # and displays with the proper YEN icon (not the generic Script Editor icon).
+    # Uses the build notification channel — same as .claude/hooks/notify-complete.sh.
+    local payload="${title}
+${message}"
+    local surface_id="${YEN_SURFACE_ID:-}"
+    export YEN_IDE_NOTIFY_PAYLOAD="${payload}"
+    export YEN_IDE_NOTIFY_USER_INFO="{\"schema_version\":\"1\",\"service\":\"build\",\"surface_id\":\"${surface_id}\"}"
+    osascript -l JavaScript -e '
+        ObjC.import("Foundation"); ObjC.import("stdlib");
+        var payload = $.NSProcessInfo.processInfo.environment.objectForKey("YEN_IDE_NOTIFY_PAYLOAD").js;
+        var userInfo = $();
+        var raw = $.NSProcessInfo.processInfo.environment.objectForKey("YEN_IDE_NOTIFY_USER_INFO").js;
+        if (raw && raw.length > 0) { try { userInfo = $(JSON.parse(raw)); } catch (e) {} }
+        $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately(
+            "com.yenchat.yen.buildNotification", payload, userInfo, true
+        );
+    ' 2>/dev/null || true
+    unset YEN_IDE_NOTIFY_PAYLOAD YEN_IDE_NOTIFY_USER_INFO
+}
+
+append_if_missing() {
+    local file="$1"
+    local value="$2"
+    grep -Fxq -- "${value}" "${file}" 2>/dev/null && return 0
+    printf "%s\n" "${value}" >> "${file}"
+}
+
+resolve_pr_number() {
+    local raw="$1"
+    if [[ -n "${raw}" ]]; then
+        if [[ "${raw}" =~ ^[0-9]+$ ]]; then
+            printf "%s\n" "${raw}"
+            return 0
+        fi
+        local maybe
+        maybe=$(printf "%s" "${raw}" | sed -nE 's#.*/pull/([0-9]+).*#\1#p')
+        if [[ -n "${maybe}" ]]; then
+            printf "%s\n" "${maybe}"
+            return 0
+        fi
+    fi
+
+    gh pr view --json number --jq '.number' 2>/dev/null || true
+}
+
+jq_escape_string() {
+    printf "%s" "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+gh_repo_slug() {
+    gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true
+}
+
+pr_ci_state_file() {
+    local root="$1"
+    printf "%s/pr-ci-%s.env\n" "${IDE_STATE_DIR}" "$(project_hash_for_root "${root}")"
+}
+
+current_branch_ci_snapshot() {
+    local repo="$1"
+    local payload=""
+    local status=0
+
+    set +e
+    payload=$(gh pr view --json number,title,url,isDraft,headRefName,statusCheckRollup 2>/dev/null)
+    status=$?
+    set -e
+
+    if [[ "${status}" -ne 0 || -z "${payload}" ]]; then
+        cat << EOF
+available=no
+repo=$(watch_state_clean_value "${repo}")
+reason=No current-branch pull request detected.
+pr_number=0
+title=
+url=
+branch=
+is_draft=no
+checks_state=unavailable
+checks_total=0
+checks_passing=0
+checks_pending=0
+checks_failing=0
+completed=no
+EOF
+        return 0
+    fi
+
+    PR_CI_REPO="${repo}" PR_CI_PAYLOAD="${payload}" python3 - <<'PY'
+import json
+import os
+import re
+
+
+def clean(value):
+    return re.sub(r"[\t\r\n]+", " ", str(value or "")).strip()
+
+
+def flatten_nodes(raw):
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict):
+        for key in ("nodes", "edges", "contexts", "results", "items"):
+            value = raw.get(key)
+            if isinstance(value, list):
+                if key == "edges":
+                    return [entry.get("node") for entry in value if isinstance(entry, dict) and entry.get("node")]
+                return value
+            if isinstance(value, dict):
+                nested = flatten_nodes(value)
+                if nested:
+                    return nested
+    return []
+
+
+payload = json.loads(os.environ.get("PR_CI_PAYLOAD", "{}") or "{}")
+checks = {
+    "state": "unavailable",
+    "passing": 0,
+    "pending": 0,
+    "failing": 0,
+    "total": 0,
+}
+for item in flatten_nodes(payload.get("statusCheckRollup")):
+    if not isinstance(item, dict):
+        continue
+    state = (
+        item.get("conclusion")
+        or item.get("status")
+        or item.get("state")
+        or item.get("rollupState")
+        or ""
+    ).upper()
+    if not state:
+        continue
+    checks["total"] += 1
+    if state in {"SUCCESS", "SUCCESSFUL", "PASS", "PASSED", "EXPECTED", "NEUTRAL", "SKIPPED"}:
+        checks["passing"] += 1
+    elif state in {"PENDING", "QUEUED", "IN_PROGRESS", "WAITING", "REQUESTED"}:
+        checks["pending"] += 1
+    else:
+        checks["failing"] += 1
+
+if checks["total"] > 0:
+    if checks["failing"] > 0:
+        checks["state"] = "failing"
+    elif checks["pending"] > 0:
+        checks["state"] = "pending"
+    else:
+        checks["state"] = "passing"
+
+print("available=yes")
+print(f"repo={clean(os.environ.get('PR_CI_REPO', ''))}")
+print("reason=" + clean(
+    "Current branch pull request detected."
+    if checks["total"] > 0
+    else "Current branch pull request has no reported status checks."
+))
+print(f"pr_number={int(payload.get('number') or 0)}")
+print(f"title={clean(payload.get('title') or '')}")
+print(f"url={clean(payload.get('url') or '')}")
+print(f"branch={clean(payload.get('headRefName') or '')}")
+print(f"is_draft={'yes' if payload.get('isDraft') else 'no'}")
+print(f"checks_state={checks['state']}")
+print(f"checks_total={checks['total']}")
+print(f"checks_passing={checks['passing']}")
+print(f"checks_pending={checks['pending']}")
+print(f"checks_failing={checks['failing']}")
+print(f"completed={'yes' if checks['state'] in {'passing', 'failing'} and checks['total'] > 0 else 'no'}")
+PY
+}
+
+render_local_build_watch_summary() {
+    local root="$1"
+    local snapshot=""
+    local active=""
+    local state=""
+    local label=""
+    local branch=""
+    local iteration=""
+    local last_outcome=""
+
+    snapshot=$(watch_state_latest_snapshot_for_root "${root}")
+    if [[ -z "${snapshot}" ]]; then
+        echo "Local build watch: none recorded"
+        return 0
+    fi
+
+    active=$(doctor_snapshot_value "${snapshot}" "active")
+    state=$(doctor_snapshot_value "${snapshot}" "state")
+    label=$(doctor_snapshot_value "${snapshot}" "label")
+    branch=$(doctor_snapshot_value "${snapshot}" "branch")
+    iteration=$(doctor_snapshot_value "${snapshot}" "iteration")
+    last_outcome=$(doctor_snapshot_value "${snapshot}" "last_outcome")
+
+    echo "Local build watch: ${state:-unavailable} (${label:-unknown}; active=${active:-no}; iteration=${iteration:-0}; branch=${branch:-unknown}; last=${last_outcome:-unknown})"
+}
+
+record_pr_ci_transition() {
+    local root="$1"
+    local snapshot="$2"
+    local state_file=""
+    local previous=""
+    local previous_state=""
+    local previous_number=""
+    local current_available=""
+    local current_state=""
+    local current_number=""
+    local current_title=""
+    local current_repo=""
+    local current_completed=""
+    local current_url=""
+
+    state_file=$(pr_ci_state_file "${root}")
+    if [[ -f "${state_file}" ]]; then
+        previous=$(cat "${state_file}")
+        previous_state=$(doctor_snapshot_value "${previous}" "checks_state")
+        previous_number=$(doctor_snapshot_value "${previous}" "pr_number")
+    fi
+
+    current_available=$(doctor_snapshot_value "${snapshot}" "available")
+    current_state=$(doctor_snapshot_value "${snapshot}" "checks_state")
+    current_number=$(doctor_snapshot_value "${snapshot}" "pr_number")
+    current_title=$(doctor_snapshot_value "${snapshot}" "title")
+    current_repo=$(doctor_snapshot_value "${snapshot}" "repo")
+    current_completed=$(doctor_snapshot_value "${snapshot}" "completed")
+    current_url=$(doctor_snapshot_value "${snapshot}" "url")
+
+    if [[ "${current_available}" == "yes" ]]; then
+        if [[ "${current_state}" != "${previous_state}" || "${current_number}" != "${previous_number}" ]]; then
+            timeline_log "pr-ci" "${root}" "${current_state}" "repo=${current_repo};pr=${current_number};url=${current_url};pass=$(doctor_snapshot_value "${snapshot}" "checks_passing");pending=$(doctor_snapshot_value "${snapshot}" "checks_pending");fail=$(doctor_snapshot_value "${snapshot}" "checks_failing")"
+            if [[ "${current_completed}" == "yes" && "${current_state}" != "${previous_state}" && ( "${current_state}" == "passing" || "${current_state}" == "failing" ) ]]; then
+                notify_local "YEN PR CI ${current_state}" "${current_repo} #${current_number}: ${current_title}"
+            fi
+        fi
+    elif [[ -n "${previous_state}" && "${previous_state}" != "unavailable" ]]; then
+        timeline_log "pr-ci" "${root}" "unavailable" "reason=$(doctor_snapshot_value "${snapshot}" "reason")"
+    fi
+
+    atomic_write_text "${state_file}" "${snapshot}"
+}
+
+fetch_pr_file_diff_via_api() {
+    local repo_slug="$1"
+    local pr_number="$2"
+    local target_file="$3"
+
+    if [[ -z "${repo_slug}" || -z "${pr_number}" || -z "${target_file}" ]]; then
+        return 1
+    fi
+
+    local escaped_target
+    escaped_target=$(jq_escape_string "${target_file}")
+    local patch
+    patch=$(gh api "repos/${repo_slug}/pulls/${pr_number}/files?per_page=100" \
+        --paginate \
+        --jq ".[] | select(.filename == \"${escaped_target}\" or (.previous_filename // \"\") == \"${escaped_target}\") | .patch" 2>/dev/null || true)
+    if [[ -z "${patch}" ]]; then
+        return 1
+    fi
+
+    printf "diff --git a/%s b/%s\n" "${target_file}" "${target_file}"
+    printf "%s\n" "${patch}"
+}
+
+extract_pr_file_diff() {
+    local full_diff="$1"
+    local target_file="$2"
+    printf "%s\n" "${full_diff}" | awk -v target="${target_file}" '
+        BEGIN {
+            in_block = 0
+            found = 0
+        }
+        {
+            if (index($0, "diff --git ") == 1) {
+                apath = $3
+                bpath = $4
+                sub(/^a\//, "", apath)
+                sub(/^b\//, "", bpath)
+                in_block = (apath == target || bpath == target)
+                if (in_block) {
+                    found = 1
+                }
+            }
+            if (in_block) {
+                print
+            }
+        }
+        END {
+            if (!found) {
+                exit 1
+            }
+        }
+    '
+}
+
+submit_pr_inline_comment() {
+    local repo_slug="$1"
+    local pr_number="$2"
+    local head_oid="$3"
+    local target_path="$4"
+    local target_line="$5"
+    local target_side="$6"
+    local body_file="$7"
+
+    if [[ ! -f "${body_file}" ]]; then
+        yen_error "Inline comment body file not found: ${body_file}"
+        return 1
+    fi
+
+    local body
+    body=$(cat "${body_file}")
+    if [[ -z "${body}" ]]; then
+        yen_error "Inline comment body is empty."
+        return 1
+    fi
+
+    gh api "repos/${repo_slug}/pulls/${pr_number}/comments" \
+        -f body="${body}" \
+        -f commit_id="${head_oid}" \
+        -f path="${target_path}" \
+        -F line="${target_line}" \
+        -f side="${target_side}" >/dev/null
+}
+
+select_pr_file_interactive() {
+    local files="$1"
+    local selected=""
+
+    if [[ -z "${files}" ]]; then
+        return 1
+    fi
+
+    if command -v fzf >/dev/null 2>&1; then
+        selected=$(printf "%s\n" "${files}" | fzf --height=40% --reverse --prompt="PR file> " --border 2>/dev/null || true)
+        if [[ -n "${selected}" ]]; then
+            printf "%s\n" "${selected}"
+            return 0
+        fi
+        return 1
+    fi
+
+    echo ""
+    yen_header "PR Files"
+    printf "%s\n" "${files}" | nl -ba
+    echo ""
+    read -r -p "Select file number for diff view: " pick
+    if [[ ! "${pick}" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
+    selected=$(printf "%s\n" "${files}" | sed -n "${pick}p")
+    [[ -n "${selected}" ]] || return 1
+    printf "%s\n" "${selected}"
+}
+
+agent_review_notes_markdown_for_root() {
+    local root="$1"
+    local max_notes="${2:-4}"
+    local agents_state_dir="${YEN_AGENTS_STATE_DIR:-$HOME/.config/yen/agents}"
+    local notes_dir="${agents_state_dir}/notes"
+
+    [[ -d "${notes_dir}" ]] || return 0
+
+    AGENT_REVIEW_ROOT="${root}" \
+    AGENT_REVIEW_NOTES_DIR="${notes_dir}" \
+    AGENT_REVIEW_MAX="${max_notes}" \
+    python3 - <<'PY'
+import os
+import pathlib
+import sys
+
+
+def clean(value):
+    return str(value or "").replace("\t", " ").replace("\r", " ").replace("\n", " ").strip()
+
+
+def read_kv(path):
+    payload = {}
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return payload
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+root = os.path.realpath(os.environ.get("AGENT_REVIEW_ROOT", "").strip())
+notes_dir = pathlib.Path(os.environ.get("AGENT_REVIEW_NOTES_DIR", "").strip())
+try:
+    max_notes = max(1, int(os.environ.get("AGENT_REVIEW_MAX", "4") or "4"))
+except Exception:
+    max_notes = 4
+
+rows = []
+if root and notes_dir.is_dir():
+    for state_path in notes_dir.glob("*.state"):
+        payload = read_kv(state_path)
+        if not payload:
+            continue
+        project_root = payload.get("project_root", "").strip()
+        if not project_root or os.path.realpath(project_root) != root:
+            continue
+        kind = payload.get("kind", "").strip()
+        if kind not in {"approval", "handoff"}:
+            continue
+        message = ""
+        message_path = state_path.with_suffix(".txt")
+        if message_path.is_file():
+            try:
+                message = message_path.read_text(encoding="utf-8")
+            except Exception:
+                message = ""
+        rows.append(
+            {
+                "noteId": payload.get("note_id", state_path.stem),
+                "createdAt": clean(payload.get("created_at")),
+                "actor": clean(payload.get("actor")),
+                "kind": kind,
+                "decision": clean(payload.get("decision")),
+                "template": clean(payload.get("template")),
+                "title": clean(payload.get("title")),
+                "sessionId": clean(payload.get("session_id")),
+                "slotId": clean(payload.get("slot_id")),
+                "linkValidated": payload.get("link_validated", "") == "yes",
+                "message": clean(message),
+            }
+        )
+
+rows.sort(key=lambda item: (item.get("createdAt") or "", item.get("noteId") or ""), reverse=True)
+rows = rows[:max_notes]
+
+if not rows:
+    raise SystemExit(0)
+
+print("## Agent Handoff Context")
+print("")
+for row in rows:
+    label = row["kind"]
+    if row["kind"] == "approval" and row.get("decision"):
+        label = f"{label}:{row['decision']}"
+    extras = []
+    if row.get("actor"):
+        extras.append(f"actor={row['actor']}")
+    if row.get("slotId"):
+        extras.append(f"slot={row['slotId']}")
+    if row.get("sessionId"):
+        extras.append(f"session={row['sessionId']}")
+    if row.get("template"):
+        extras.append(f"template={row['template']}")
+    if row.get("linkValidated"):
+        extras.append("link=validated")
+    suffix = f" | {'; '.join(extras)}" if extras else ""
+    print(f"- {row.get('createdAt') or '-'} | {label} | {row.get('title') or '-'}{suffix}")
+    print(f"  - Message: {row.get('message') or '-'}")
+print("")
+PY
+}
+
+write_pr_evidence_bundle() {
+    local root="$1"
+    local pr_number="$2"
+    local pr_title="$3"
+    local pr_url="$4"
+    local pr_author="$5"
+    local pr_base="$6"
+    local pr_head="$7"
+    local pr_changed="$8"
+    local pr_add="$9"
+    local pr_del="${10}"
+    local files="${11}"
+    local selected_file="${12}"
+    local focus_target="${13}"
+    local focus_hunk_header="${14}"
+    local evidence_file="${15}"
+
+    local latest_verify=""
+    latest_verify=$(latest_verify_summary_for_root "${root}" || true)
+    local latest_verify_status_section=""
+    latest_verify_status_section=$(render_verify_status_markdown_section_for_root "${root}" || true)
+    local evidence_status_section=""
+    local evidence_status_timeline=""
+    local original_timeline_file="${IDE_TIMELINE_FILE}"
+    local timeline_tail=""
+    timeline_tail=$(tail -n 120 "${IDE_TIMELINE_FILE}" 2>/dev/null | awk -F'\t' -v root="${root}" '$3 == root' | tail -n 20)
+    local review_context_json=""
+    local review_markdown=""
+    local agent_notes_markdown=""
+    local -a review_targets=()
+    local file_line=""
+
+    if declare -F review_context_json_for_targets >/dev/null 2>&1; then
+        if [[ -n "${focus_target}" ]]; then
+            review_targets+=("${focus_target}")
+        elif [[ -n "${selected_file}" ]]; then
+            review_targets+=("${selected_file}")
+        fi
+        if [[ ${#review_targets[@]} -eq 0 ]]; then
+            while IFS= read -r file_line; do
+                [[ -n "${file_line}" ]] && review_targets+=("${file_line}")
+                [[ ${#review_targets[@]} -ge 6 ]] && break
+            done << EOF
+${files}
+EOF
+        fi
+        if [[ ${#review_targets[@]} -gt 0 ]]; then
+            review_context_json=$(review_context_json_for_targets "${root}" "${review_targets[@]}")
+            review_markdown=$(review_context_markdown_section_from_json "${review_context_json}" "Review Routing" "6" || true)
+        fi
+    fi
+
+    agent_notes_markdown=$(agent_review_notes_markdown_for_root "${root}" "4" || true)
+
+    if declare -F render_evidence_status_markdown_section_for_root >/dev/null 2>&1; then
+        evidence_status_timeline=$(mktemp)
+        if [[ -f "${IDE_TIMELINE_FILE}" ]]; then
+            cp "${IDE_TIMELINE_FILE}" "${evidence_status_timeline}"
+        fi
+        printf "%s\tpr-review\t%s\tpr=%s\tfile=%s;target=%s;evidence=yes;post=no\n" \
+            "$(iso_now)" "${root}" "${pr_number}" "${selected_file}" "${focus_target}" >> "${evidence_status_timeline}"
+        IDE_TIMELINE_FILE="${evidence_status_timeline}"
+        evidence_status_section=$(render_evidence_status_markdown_section_for_root "${root}" || true)
+        IDE_TIMELINE_FILE="${original_timeline_file}"
+        rm -f "${evidence_status_timeline}"
+    fi
+
+    {
+        echo "# YEN IDE PR Review Evidence"
+        echo ""
+        echo "- Generated: $(iso_now)"
+        echo "- Project root: ${root}"
+        echo "- PR: #${pr_number}"
+        echo "- Title: ${pr_title}"
+        echo "- URL: ${pr_url}"
+        echo "- Author: ${pr_author}"
+        echo "- Base -> Head: ${pr_base} -> ${pr_head}"
+        echo "- Diff stats: ${pr_add} additions, ${pr_del} deletions, ${pr_changed} files"
+        if [[ -n "${selected_file}" ]]; then
+            echo "- Focus file: ${selected_file}"
+        fi
+        if [[ -n "${focus_target}" ]]; then
+            echo "- Focus target: ${focus_target}"
+        fi
+        if [[ -n "${focus_hunk_header}" ]]; then
+            echo "- Focus hunk: ${focus_hunk_header}"
+        fi
+        echo ""
+        echo "## Changed Files"
+        printf "%s\n" "${files}" | head -n 120 | sed 's/^/- /'
+        echo ""
+
+        if [[ -n "${review_markdown}" ]]; then
+            printf "%s\n" "${review_markdown}"
+        fi
+
+        if [[ -n "${agent_notes_markdown}" ]]; then
+            printf "%s\n" "${agent_notes_markdown}"
+        fi
+
+        if [[ -n "${evidence_status_section}" ]]; then
+            printf "%s\n\n" "${evidence_status_section}"
+        fi
+
+        if [[ -n "${latest_verify_status_section}" ]]; then
+            printf "%s\n\n" "${latest_verify_status_section}"
+        fi
+
+        if [[ -n "${latest_verify}" ]]; then
+            echo "## Latest Verify Summary Path"
+            echo ""
+            echo "- ${latest_verify}"
+            echo ""
+            if [[ -f "${latest_verify}" ]]; then
+                echo "## Latest Verify Summary (TSV)"
+                echo ""
+                echo '```tsv'
+                cat "${latest_verify}"
+                echo '```'
+                echo ""
+            fi
+        fi
+
+        if [[ -n "${timeline_tail}" ]]; then
+            echo "## Recent IDE Timeline Events"
+            echo ""
+            echo '```text'
+            printf "%s\n" "${timeline_tail}"
+            echo '```'
+            echo ""
+        fi
+    } > "${evidence_file}"
+}
+
+write_pr_decision_template() {
+    local mode="$1"
+    local root="$2"
+    local pr_number="$3"
+    local pr_title="$4"
+    local pr_url="$5"
+    local selected_file="$6"
+    local focus_target="$7"
+    local evidence_file="$8"
+    local user_note="$9"
+    local output_file="${10}"
+
+    local heading="Comment"
+    case "${mode}" in
+        approve)
+            heading="Approve"
+            ;;
+        request-changes|request_changes)
+            heading="Request Changes"
+            ;;
+        comment)
+            heading="Comment"
+            ;;
+    esac
+
+    {
+        echo "[${heading}] PR #${pr_number}: ${pr_title}"
+        echo ""
+        if [[ -n "${selected_file}" ]]; then
+            echo "- Focus file: ${selected_file}"
+        fi
+        if [[ -n "${focus_target}" ]]; then
+            echo "- Focus target: ${focus_target}"
+        fi
+        if [[ -n "${evidence_file}" ]]; then
+            echo "- Evidence bundle: ${evidence_file}"
+        fi
+        echo "- Project root: ${root}"
+        echo "- Generated: $(iso_now)"
+        echo ""
+        if [[ -n "${user_note}" ]]; then
+            echo "${user_note}"
+            echo ""
+        fi
+        case "${mode}" in
+            approve)
+                echo "Verification and targeted review checks look good from this terminal-native review pass."
+                ;;
+            request-changes|request_changes)
+                echo "Please address the highlighted issues before merge. See focus file and evidence for context."
+                ;;
+            comment)
+                echo "Review context attached for visibility. Leaving this as a comment-only pass."
+                ;;
+        esac
+        echo ""
+        echo "PR: ${pr_url}"
+    } > "${output_file}"
+}
+
+submit_pr_decision() {
+    local pr_number="$1"
+    local mode="$2"
+    local body_file="$3"
+
+    case "${mode}" in
+        approve)
+            gh pr review "${pr_number}" --approve --body-file "${body_file}"
+            ;;
+        request-changes|request_changes)
+            gh pr review "${pr_number}" --request-changes --body-file "${body_file}"
+            ;;
+        comment)
+            gh pr comment "${pr_number}" --body-file "${body_file}"
+            ;;
+        *)
+            yen_error "Unsupported decision mode: ${mode}"
+            return 1
+            ;;
+    esac
+}
+
+parse_inline_ref() {
+    local ref="$1"
+    if [[ "${ref}" =~ ^(.+):([0-9]+):([Ll][Ee][Ff][Tt]|[Rr][Ii][Gg][Hh][Tt])$ ]]; then
+        printf "%s\t%s\t%s\n" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$(printf "%s" "${BASH_REMATCH[3]}" | tr '[:lower:]' '[:upper:]')"
+        return 0
+    fi
+    if [[ "${ref}" =~ ^(.+):([0-9]+)$ ]]; then
+        printf "%s\t%s\tRIGHT\n" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+        return 0
+    fi
+    return 1
+}
+
+cmd_pr_review() {
+    local pr_arg=""
+    local pick="0"
+    local loop_mode="0"
+    local loop_script=""
+    local file_override=""
+    local hunk_ref=""
+    local list_hunks="0"
+    local no_diff="0"
+    local make_evidence="0"
+    local explicit_evidence="0"
+    local post_evidence="0"
+    local decision_mode=""
+    local user_note=""
+    local inline_ref=""
+    local inline_body=""
+    local focus_target=""
+    local focus_hunk_header=""
+    local hunk_path=""
+    local hunk_line=""
+    local hunk_col="1"
+    local review_context_json=""
+    local review_context_block=""
+    local -a review_targets=()
+    local root
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --pick)
+                pick="1"
+                ;;
+            --loop)
+                loop_mode="1"
+                ;;
+            --loop-script=*)
+                loop_script="${1#*=}"
+                ;;
+            --loop-script)
+                shift
+                loop_script="${1:-}"
+                ;;
+            --file)
+                shift
+                file_override="${1:-}"
+                ;;
+            --list-hunks)
+                list_hunks="1"
+                ;;
+            --hunk)
+                shift
+                hunk_ref="${1:-}"
+                ;;
+            --no-diff)
+                no_diff="1"
+                ;;
+            --decision)
+                shift
+                decision_mode="${1:-}"
+                ;;
+            --note)
+                shift
+                user_note="${1:-}"
+                ;;
+            --inline)
+                shift
+                inline_ref="${1:-}"
+                ;;
+            --inline-body|--comment-body)
+                shift
+                inline_body="${1:-}"
+                ;;
+            --evidence)
+                make_evidence="1"
+                explicit_evidence="1"
+                ;;
+            --post)
+                post_evidence="1"
+                make_evidence="1"
+                ;;
+            *)
+                if [[ -z "${pr_arg}" ]]; then
+                    pr_arg="$1"
+                else
+                    yen_error "Unknown pr-review option/arg: $1"
+                    exit 1
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -n "${decision_mode}" ]]; then
+        decision_mode=$(printf "%s" "${decision_mode}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+        case "${decision_mode}" in
+            approve|request-changes|comment)
+                ;;
+            *)
+                yen_error "Invalid decision mode: ${decision_mode} (use approve|request-changes|comment)"
+                exit 1
+                ;;
+        esac
+    fi
+
+    if [[ -n "${loop_script}" && "${loop_mode}" != "1" ]]; then
+        yen_error "--loop-script requires --loop."
+        exit 1
+    fi
+
+    if [[ "${loop_mode}" == "1" && "${list_hunks}" == "1" ]]; then
+        yen_error "--loop cannot be combined with --list-hunks."
+        exit 1
+    fi
+    if [[ "${loop_mode}" == "1" && -n "${hunk_ref}" ]]; then
+        yen_error "--loop cannot be combined with --hunk."
+        exit 1
+    fi
+    if [[ "${list_hunks}" == "1" && ("${make_evidence}" == "1" || "${post_evidence}" == "1" || -n "${decision_mode}" || -n "${inline_ref}") ]]; then
+        yen_error "--list-hunks is read-only and cannot be combined with evidence, posting, decisions, or inline comments."
+        exit 1
+    fi
+    if [[ -n "${hunk_ref}" && "${no_diff}" == "1" ]]; then
+        yen_error "--hunk cannot be combined with --no-diff."
+        exit 1
+    fi
+
+    if ! command -v gh >/dev/null 2>&1; then
+        yen_error "GitHub CLI (gh) is required for pr-review."
+        exit 1
+    fi
+
+    root=$(find_project_root "${PWD}")
+    local pr_number
+    pr_number=$(resolve_pr_number "${pr_arg}")
+    if [[ -z "${pr_number}" ]]; then
+        yen_error "Could not resolve PR number. Pass one explicitly: yen ide pr-review <number>"
+        exit 1
+    fi
+    local repo_slug
+    repo_slug=$(gh_repo_slug)
+    if [[ -z "${repo_slug}" ]]; then
+        yen_error "Unable to resolve GitHub repository context for pr-review."
+        exit 1
+    fi
+
+    local meta
+    meta=$(gh pr view "${pr_number}" \
+        --json number,title,url,headRefName,baseRefName,headRefOid,author,changedFiles,additions,deletions \
+        --jq '[.number,.title,.url,.headRefName,.baseRefName,.headRefOid,.author.login,.changedFiles,.additions,.deletions] | @tsv' 2>/dev/null || true)
+    if [[ -z "${meta}" ]]; then
+        yen_error "Unable to load PR #${pr_number}. Verify repo context and gh authentication."
+        exit 1
+    fi
+
+    local pr_title
+    local pr_url
+    local pr_head
+    local pr_base
+    local pr_head_oid
+    local pr_author
+    local pr_changed
+    local pr_add
+    local pr_del
+    IFS=$'\t' read -r _ pr_title pr_url pr_head pr_base pr_head_oid pr_author pr_changed pr_add pr_del << EOF
+${meta}
+EOF
+
+    local files
+    files=$(gh pr diff "${pr_number}" --name-only 2>/dev/null || true)
+
+    echo ""
+    yen_header "IDE PR Review"
+    echo "PR:         #${pr_number}"
+    echo "Title:      ${pr_title}"
+    echo "Author:     ${pr_author}"
+    echo "Base->Head: ${pr_base} -> ${pr_head}"
+    echo "Diff stats: +${pr_add} / -${pr_del} across ${pr_changed} files"
+    echo "URL:        ${pr_url}"
+    echo ""
+
+    local -a file_list=()
+    local fline=""
+    while IFS= read -r fline; do
+        [[ -n "${fline}" ]] && file_list+=("${fline}")
+    done << EOF
+${files}
+EOF
+
+    if [[ "${loop_mode}" == "1" && "${no_diff}" == "1" ]]; then
+        yen_error "--loop cannot be combined with --no-diff."
+        exit 1
+    fi
+    if [[ "${loop_mode}" == "1" && -n "${decision_mode}" ]]; then
+        yen_error "--loop cannot be combined with --decision. Use loop actions (a/r/c) instead."
+        exit 1
+    fi
+
+    if [[ "${loop_mode}" == "1" && -z "${loop_script}" && (! -t 0 || ! -t 1) ]]; then
+        yen_error "--loop requires an interactive terminal."
+        exit 1
+    fi
+
+    local selected_file="${file_override}"
+    if [[ -n "${hunk_ref}" ]]; then
+        local parsed_hunk=""
+        parsed_hunk=$(yen_git_review_parse_location_ref "${hunk_ref}" || true)
+        if [[ -z "${parsed_hunk}" ]]; then
+            yen_error "Invalid --hunk value '${hunk_ref}'. Use path:line[:col]."
+            exit 1
+        fi
+        IFS=$'\t' read -r hunk_path hunk_line hunk_col << EOF
+${parsed_hunk}
+EOF
+        if [[ -n "${selected_file}" && "${selected_file}" != "${hunk_path}" ]]; then
+            yen_error "--file and --hunk must point to the same file."
+            exit 1
+        fi
+        selected_file="${hunk_path}"
+        focus_target="${hunk_path}:${hunk_line}:${hunk_col}"
+    fi
+
+    if [[ -z "${selected_file}" && "${pick}" == "1" ]]; then
+        selected_file=$(select_pr_file_interactive "${files}" || true)
+        if [[ -z "${selected_file}" ]]; then
+            yen_error "No file selected."
+            exit 1
+        fi
+    fi
+
+    if [[ "${list_hunks}" != "1" && "${no_diff}" != "1" && -z "${selected_file}" && ${#file_list[@]} -gt 0 ]]; then
+        selected_file="${file_list[0]}"
+    fi
+
+    if declare -F review_context_json_for_targets >/dev/null 2>&1; then
+        if [[ -n "${focus_target}" ]]; then
+            review_targets+=("${focus_target}")
+        elif [[ -n "${selected_file}" ]]; then
+            review_targets+=("${selected_file}")
+        else
+            local context_file=""
+            for context_file in "${file_list[@]}"; do
+                review_targets+=("${context_file}")
+                [[ ${#review_targets[@]} -ge 5 ]] && break
+            done
+        fi
+        if [[ ${#review_targets[@]} -gt 0 ]]; then
+            review_context_json=$(review_context_json_for_targets "${root}" "${review_targets[@]}")
+            review_context_block=$(review_context_text_block_from_json "${review_context_json}" "5" "  " || true)
+        fi
+    fi
+
+    if [[ -n "${review_context_block}" ]]; then
+        echo "Review routing:"
+        printf "%s\n" "${review_context_block}"
+        echo ""
+    fi
+
+    local inline_path=""
+    local inline_line=""
+    local inline_side=""
+    if [[ -n "${inline_ref}" ]]; then
+        local parsed_inline
+        parsed_inline=$(parse_inline_ref "${inline_ref}" || true)
+        if [[ -z "${parsed_inline}" ]]; then
+            yen_error "Invalid --inline value '${inline_ref}'. Use path:line[:LEFT|RIGHT]."
+            exit 1
+        fi
+        IFS=$'\t' read -r inline_path inline_line inline_side << EOF
+${parsed_inline}
+EOF
+        if [[ -z "${selected_file}" ]]; then
+            selected_file="${inline_path}"
+        fi
+        if [[ -z "${inline_body}" ]]; then
+            inline_body="${user_note}"
+        fi
+        if [[ "${post_evidence}" == "1" && -z "${decision_mode}" && "${explicit_evidence}" != "1" ]]; then
+            make_evidence="0"
+        fi
+    fi
+
+    local full_diff_fallback=""
+    local file_diff=""
+    local script_mode="0"
+    local -a scripted_actions=()
+    local script_index=0
+    if [[ -n "${loop_script}" ]]; then
+        script_mode="1"
+        IFS=',' read -r -a scripted_actions <<< "${loop_script}"
+    fi
+
+    if [[ "${list_hunks}" == "1" ]]; then
+        if [[ -z "${full_diff_fallback}" ]]; then
+            full_diff_fallback=$(gh pr diff "${pr_number}" 2>/dev/null || true)
+        fi
+        local hunk_rows=""
+        hunk_rows=$(printf "%s\n" "${full_diff_fallback}" | yen_git_review_emit_hunk_rows "${selected_file}")
+        echo "PR Review Hunk Targets"
+        if [[ -n "${selected_file}" ]]; then
+            echo "File: ${selected_file}"
+        fi
+        echo ""
+        yen_git_review_print_hunk_rows_table "${hunk_rows}"
+        echo ""
+        timeline_log "pr-review-hunks" "${root}" "pr=${pr_number}" "file=${selected_file};target=${focus_target}"
+        return 0
+    fi
+
+    if [[ "${loop_mode}" == "1" ]]; then
+        if [[ ${#file_list[@]} -eq 0 ]]; then
+            yen_error "No changed files found for interactive review."
+            exit 1
+        fi
+
+        local file_index="0"
+        if [[ -n "${selected_file}" ]]; then
+            local idx
+            for idx in "${!file_list[@]}"; do
+                if [[ "${file_list[$idx]}" == "${selected_file}" ]]; then
+                    file_index="${idx}"
+                    break
+                fi
+            done
+        fi
+
+        local loop_done="0"
+        while [[ "${loop_done}" != "1" ]]; do
+            selected_file="${file_list[$file_index]}"
+            file_diff=$(fetch_pr_file_diff_via_api "${repo_slug}" "${pr_number}" "${selected_file}" || true)
+            if [[ -z "${file_diff}" ]]; then
+                if [[ -z "${full_diff_fallback}" ]]; then
+                    full_diff_fallback=$(gh pr diff "${pr_number}" 2>/dev/null || true)
+                fi
+                file_diff=$(extract_pr_file_diff "${full_diff_fallback}" "${selected_file}" || true)
+            fi
+            echo "Focused diff [$((file_index + 1))/${#file_list[@]}]: ${selected_file}"
+            echo ""
+            if [[ -n "${file_diff}" ]]; then
+                yen_git_review_show_diff_text "${file_diff}"
+            else
+                yen_warn "No focused diff block found for file: ${selected_file}"
+            fi
+
+            echo ""
+            local action=""
+            if [[ "${script_mode}" == "1" ]]; then
+                if [[ "${script_index}" -lt "${#scripted_actions[@]}" ]]; then
+                    action=$(trim "${scripted_actions[$script_index]}")
+                    script_index=$((script_index + 1))
+                else
+                    action="q"
+                fi
+                echo "pr-review(script)> ${action}"
+            else
+                echo "Actions: [n]ext [p]rev [s]elect [e]vidence [a]pprove [r]equest-changes [c]omment [q]uit"
+                echo "Script actions: s:<index> f:<path> (use with --loop-script)"
+                printf "pr-review> "
+                read -r action
+            fi
+            case "${action}" in
+                n|N|next)
+                    file_index=$((file_index + 1))
+                    if [[ "${file_index}" -ge "${#file_list[@]}" ]]; then
+                        file_index="0"
+                    fi
+                    ;;
+                p|P|prev)
+                    if [[ "${file_index}" -le 0 ]]; then
+                        file_index=$((${#file_list[@]} - 1))
+                    else
+                        file_index=$((file_index - 1))
+                    fi
+                    ;;
+                s|S|select)
+                    if [[ "${script_mode}" == "1" ]]; then
+                        yen_warn "Scripted mode requires explicit s:<index> or f:<path> selection."
+                    else
+                        local picked
+                        picked=$(select_pr_file_interactive "${files}" || true)
+                        if [[ -n "${picked}" ]]; then
+                            local i
+                            for i in "${!file_list[@]}"; do
+                                if [[ "${file_list[$i]}" == "${picked}" ]]; then
+                                    file_index="${i}"
+                                    break
+                                fi
+                            done
+                        fi
+                    fi
+                    ;;
+                s:*)
+                    local raw_index="${action#s:}"
+                    if [[ "${raw_index}" =~ ^[0-9]+$ ]] && [[ "${raw_index}" -ge 1 ]] && [[ "${raw_index}" -le "${#file_list[@]}" ]]; then
+                        file_index=$((raw_index - 1))
+                    else
+                        yen_warn "Invalid scripted select index: ${raw_index}"
+                    fi
+                    ;;
+                f:*)
+                    local requested_path="${action#f:}"
+                    local found_index="-1"
+                    local i_match
+                    for i_match in "${!file_list[@]}"; do
+                        if [[ "${file_list[$i_match]}" == "${requested_path}" ]]; then
+                            found_index="${i_match}"
+                            break
+                        fi
+                    done
+                    if [[ "${found_index}" -ge 0 ]]; then
+                        file_index="${found_index}"
+                    else
+                        yen_warn "Scripted file not found in PR diff: ${requested_path}"
+                    fi
+                    ;;
+                e|E|evidence)
+                    make_evidence="1"
+                    ;;
+                a|A|approve)
+                    decision_mode="approve"
+                    ;;
+                r|R|request|request-changes)
+                    decision_mode="request-changes"
+                    ;;
+                c|C|comment)
+                    decision_mode="comment"
+                    ;;
+                q|Q|quit)
+                    loop_done="1"
+                    ;;
+                *)
+                    ;;
+            esac
+
+            if [[ "${make_evidence}" == "1" ]]; then
+                local ts_ev
+                ts_ev=$(date -u +"%Y%m%dT%H%M%SZ")
+                local ev_path="${IDE_EVIDENCE_DIR}/pr-${pr_number}-${ts_ev}.md"
+                write_pr_evidence_bundle \
+                    "${root}" "${pr_number}" "${pr_title}" "${pr_url}" "${pr_author}" "${pr_base}" "${pr_head}" \
+                    "${pr_changed}" "${pr_add}" "${pr_del}" "${files}" "${selected_file}" "${focus_target}" "${focus_hunk_header}" "${ev_path}"
+                yen_success "Wrote PR evidence bundle: ${ev_path}"
+                timeline_log "pr-evidence" "${root}" "pr=${pr_number}" "file=${selected_file};target=${focus_target};path=${ev_path}"
+                make_evidence="0"
+            fi
+
+            if [[ -n "${decision_mode}" ]]; then
+                local ts_dec
+                ts_dec=$(date -u +"%Y%m%dT%H%M%SZ")
+                local decision_file="${IDE_EVIDENCE_DIR}/pr-${pr_number}-decision-${decision_mode}-${ts_dec}.md"
+                write_pr_decision_template \
+                    "${decision_mode}" "${root}" "${pr_number}" "${pr_title}" "${pr_url}" "${selected_file}" "${focus_target}" "" "${user_note}" "${decision_file}"
+                yen_success "Wrote PR decision template: ${decision_file}"
+                if [[ "${post_evidence}" == "1" ]]; then
+                    submit_pr_decision "${pr_number}" "${decision_mode}" "${decision_file}"
+                    yen_success "Posted ${decision_mode} review for PR #${pr_number}"
+                fi
+                timeline_log "pr-decision" "${root}" "pr=${pr_number};mode=${decision_mode}" "file=${selected_file};target=${focus_target};post=${post_evidence};artifact=${decision_file}"
+                decision_mode=""
+            fi
+        done
+    elif [[ "${no_diff}" != "1" && -n "${selected_file}" ]]; then
+        file_diff=$(fetch_pr_file_diff_via_api "${repo_slug}" "${pr_number}" "${selected_file}" || true)
+        if [[ -z "${file_diff}" ]]; then
+            if [[ -z "${full_diff_fallback}" ]]; then
+                full_diff_fallback=$(gh pr diff "${pr_number}" 2>/dev/null || true)
+            fi
+            file_diff=$(extract_pr_file_diff "${full_diff_fallback}" "${selected_file}" || true)
+        fi
+        if [[ -z "${file_diff}" ]]; then
+            yen_warn "No focused diff block found for file: ${selected_file}"
+        elif [[ -n "${hunk_ref}" ]]; then
+            local hunk_rows=""
+            local matched_row=""
+            local focused_hunk_diff=""
+            hunk_rows=$(printf "%s\n" "${file_diff}" | yen_git_review_emit_hunk_rows "${selected_file}")
+            matched_row=$(printf "%s\n" "${hunk_rows}" | yen_git_review_find_hunk_row_for_line "${selected_file}" "${hunk_line}" || true)
+            if [[ -z "${matched_row}" ]]; then
+                yen_error "No focused diff hunk found for ${selected_file}:${hunk_line}:${hunk_col}."
+                exit 1
+            fi
+            IFS=$'\t' read -r _ _ _ _ _ _ focus_target focus_hunk_header << EOF
+${matched_row}
+EOF
+            focused_hunk_diff=$(printf "%s\n" "${file_diff}" | yen_git_review_extract_hunk_from_file_diff "${hunk_line}" || true)
+            if [[ -z "${focused_hunk_diff}" ]]; then
+                yen_error "Unable to isolate focused diff hunk for ${focus_target}."
+                exit 1
+            fi
+            echo "Focused hunk: ${focus_target}"
+            echo "Header:       ${focus_hunk_header}"
+            echo ""
+            yen_git_review_show_diff_text "${focused_hunk_diff}"
+        else
+            echo "Focused diff: ${selected_file}"
+            echo ""
+            yen_git_review_show_diff_text "${file_diff}"
+        fi
+    fi
+
+    local evidence_file=""
+    if [[ "${make_evidence}" == "1" ]]; then
+        local timestamp
+        timestamp=$(date -u +"%Y%m%dT%H%M%SZ")
+        evidence_file="${IDE_EVIDENCE_DIR}/pr-${pr_number}-${timestamp}.md"
+        write_pr_evidence_bundle \
+            "${root}" "${pr_number}" "${pr_title}" "${pr_url}" "${pr_author}" "${pr_base}" "${pr_head}" \
+            "${pr_changed}" "${pr_add}" "${pr_del}" "${files}" "${selected_file}" "${focus_target}" "${focus_hunk_header}" "${evidence_file}"
+        yen_success "Wrote PR evidence bundle: ${evidence_file}"
+        timeline_log "pr-evidence" "${root}" "pr=${pr_number}" "file=${selected_file};target=${focus_target};path=${evidence_file}"
+    fi
+
+    if [[ -n "${decision_mode}" ]]; then
+        local timestamp_decision
+        timestamp_decision=$(date -u +"%Y%m%dT%H%M%SZ")
+        local decision_file="${IDE_EVIDENCE_DIR}/pr-${pr_number}-decision-${decision_mode}-${timestamp_decision}.md"
+        write_pr_decision_template \
+            "${decision_mode}" "${root}" "${pr_number}" "${pr_title}" "${pr_url}" "${selected_file}" "${focus_target}" "${evidence_file}" "${user_note}" "${decision_file}"
+        yen_success "Wrote PR decision template: ${decision_file}"
+        if [[ "${post_evidence}" == "1" ]]; then
+            submit_pr_decision "${pr_number}" "${decision_mode}" "${decision_file}"
+            yen_success "Posted ${decision_mode} review for PR #${pr_number}"
+        fi
+        timeline_log "pr-decision" "${root}" "pr=${pr_number};mode=${decision_mode}" "file=${selected_file};target=${focus_target};post=${post_evidence};artifact=${decision_file}"
+    elif [[ "${post_evidence}" == "1" ]]; then
+        if [[ -z "${evidence_file}" || ! -f "${evidence_file}" ]]; then
+            if [[ -n "${inline_ref}" ]]; then
+                :
+            else
+                yen_error "Evidence file missing; cannot post PR comment (use --evidence or --decision)."
+                exit 1
+            fi
+        else
+            gh pr comment "${pr_number}" --body-file "${evidence_file}"
+            yen_success "Posted evidence comment to PR #${pr_number}"
+        fi
+    fi
+
+    if [[ -n "${inline_ref}" ]]; then
+        local timestamp_inline
+        timestamp_inline=$(date -u +"%Y%m%dT%H%M%SZ")
+        local inline_file="${IDE_EVIDENCE_DIR}/pr-${pr_number}-inline-${timestamp_inline}.md"
+        {
+            echo "Inline review comment for PR #${pr_number}"
+            echo ""
+            echo "- File: ${inline_path}"
+            echo "- Line: ${inline_line}"
+            echo "- Side: ${inline_side}"
+            echo "- URL: ${pr_url}"
+            echo ""
+            if [[ -n "${inline_body}" ]]; then
+                echo "${inline_body}"
+            else
+                echo "TODO: add inline comment text."
+            fi
+        } > "${inline_file}"
+        yen_success "Wrote inline comment template: ${inline_file}"
+
+        if [[ "${post_evidence}" == "1" ]]; then
+            if [[ -z "${inline_body}" ]]; then
+                yen_error "--post with --inline requires --inline-body (or --note)."
+                exit 1
+            fi
+            submit_pr_inline_comment "${repo_slug}" "${pr_number}" "${pr_head_oid}" "${inline_path}" "${inline_line}" "${inline_side}" "${inline_file}"
+            yen_success "Posted inline comment to PR #${pr_number} (${inline_path}:${inline_line}:${inline_side})"
+            timeline_log "pr-inline-comment" "${root}" "pr=${pr_number};posted=yes" "path=${inline_path};line=${inline_line};side=${inline_side};artifact=${inline_file}"
+        else
+            timeline_log "pr-inline-comment" "${root}" "pr=${pr_number};posted=no" "path=${inline_path};line=${inline_line};side=${inline_side};artifact=${inline_file}"
+        fi
+    fi
+
+    timeline_log "pr-review" "${root}" "pr=${pr_number}" "file=${selected_file};target=${focus_target};evidence=${make_evidence};post=${post_evidence}"
+}
+
+cmd_pr_notify() {
+    local watch="0"
+    local interval="120"
+    local quiet="0"
+    local ci_status="0"
+    local max_notify="3"
+    local max_polls=""
+    local poll_count="0"
+    local root=""
+    local seen_file=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --watch)
+                watch="1"
+                ;;
+            --once)
+                watch="0"
+                ;;
+            --interval)
+                shift
+                interval="${1:-120}"
+                ;;
+            --quiet)
+                quiet="1"
+                ;;
+            --ci-status)
+                ci_status="1"
+                ;;
+            --max-notify)
+                shift
+                max_notify="${1:-3}"
+                ;;
+            --max-polls)
+                shift
+                max_polls="${1:-}"
+                ;;
+            *)
+                yen_error "Unknown pr-notify option: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if ! ide_watch_validate_interval "${interval}"; then
+        exit 1
+    fi
+    if [[ -n "${max_polls}" ]] && ! ide_watch_validate_max_runs "${max_polls}"; then
+        exit 1
+    fi
+    if [[ "${watch}" != "1" && -n "${max_polls}" ]]; then
+        yen_error "--max-polls requires --watch."
+        exit 1
+    fi
+
+    if ! command -v gh >/dev/null 2>&1; then
+        yen_error "GitHub CLI (gh) is required for pr-notify."
+        exit 1
+    fi
+
+    root=$(find_project_root "${PWD}")
+    seen_file=$(pr_seen_file "${root}")
+    [[ -f "${seen_file}" ]] || : > "${seen_file}"
+
+    while true; do
+        poll_count=$((poll_count + 1))
+        local repo
+        repo=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true)
+        if [[ -z "${repo}" ]]; then
+            if [[ "${quiet}" != "1" ]]; then
+                yen_warn "gh repo context unavailable. Run inside a GitHub repo with gh auth."
+            fi
+            return 1
+        fi
+
+        local rows
+        rows=$(gh pr list \
+            --search "review-requested:@me state:open" \
+            --json number,title,url,updatedAt \
+            --limit 50 \
+            --jq '.[] | "\(.number)\t\(.title)\t\(.url)\t\(.updatedAt)"' 2>/dev/null || true)
+
+        if [[ "${quiet}" != "1" ]]; then
+            echo ""
+            yen_header "PR Review Notifications"
+            echo "Repo: ${repo}"
+        fi
+
+        if [[ -z "${rows}" ]]; then
+            if [[ "${quiet}" != "1" ]]; then
+                echo "No open PR review requests for @me."
+                echo ""
+            fi
+        else
+            local notify_count="0"
+            if [[ "${quiet}" != "1" ]]; then
+                printf "%-6s %-45s %s\n" "PR" "TITLE" "URL"
+            fi
+
+            while IFS=$'\t' read -r number title url updated; do
+                [[ -z "${number}" ]] && continue
+                if [[ "${quiet}" != "1" ]]; then
+                    printf "#%-5s %-45s %s\n" "${number}" "$(printf "%s" "${title}" | cut -c1-45)" "${url}"
+                fi
+
+                local key="${repo}#${number}"
+                if ! grep -Fxq -- "${key}" "${seen_file}" 2>/dev/null; then
+                    if [[ "${notify_count}" -lt "${max_notify}" ]]; then
+                        notify_local "YEN PR Review Requested" "${repo} #${number}: ${title}"
+                        timeline_log "pr-notify" "${root}" "new=${number}" "repo=${repo};title=${title}"
+                        notify_count=$((notify_count + 1))
+                    fi
+                    append_if_missing "${seen_file}" "${key}"
+                fi
+            done << EOF
+${rows}
+EOF
+            if [[ "${quiet}" != "1" ]]; then
+                echo ""
+            fi
+        fi
+
+        if [[ "${ci_status}" == "1" ]]; then
+            local ci_snapshot=""
+            ci_snapshot=$(current_branch_ci_snapshot "${repo}")
+            record_pr_ci_transition "${root}" "${ci_snapshot}"
+            if [[ "${quiet}" != "1" ]]; then
+                echo "Current Branch CI"
+                echo "Repo: ${repo}"
+                echo "Status: $(doctor_snapshot_value "${ci_snapshot}" "checks_state")"
+                echo "Reason: $(doctor_snapshot_value "${ci_snapshot}" "reason")"
+                if [[ "$(doctor_snapshot_value "${ci_snapshot}" "available")" == "yes" ]]; then
+                    echo "PR: #$(doctor_snapshot_value "${ci_snapshot}" "pr_number") $(doctor_snapshot_value "${ci_snapshot}" "title")"
+                    echo "Branch: $(doctor_snapshot_value "${ci_snapshot}" "branch")"
+                    echo "Checks: pass=$(doctor_snapshot_value "${ci_snapshot}" "checks_passing") pending=$(doctor_snapshot_value "${ci_snapshot}" "checks_pending") fail=$(doctor_snapshot_value "${ci_snapshot}" "checks_failing") total=$(doctor_snapshot_value "${ci_snapshot}" "checks_total")"
+                    if [[ -n "$(doctor_snapshot_value "${ci_snapshot}" "url")" ]]; then
+                        echo "URL: $(doctor_snapshot_value "${ci_snapshot}" "url")"
+                    fi
+                fi
+                render_local_build_watch_summary "${root}"
+                echo ""
+            fi
+        fi
+
+        [[ "${watch}" == "1" ]] || break
+        if [[ -n "${max_polls}" && "${poll_count}" -ge "${max_polls}" ]]; then
+            break
+        fi
+        sleep "${interval}"
+    done
+}
+
+policy_mode_for_root() {
+    local root="$1"
+    local policy_file="${root}/.yen/policy.toml"
+    local mode="prompt-high"
+    if [[ -f "${policy_file}" ]]; then
+        local parsed
+        parsed=$(sed -nE 's/^[[:space:]]*(gate_mode|mode)[[:space:]]*=[[:space:]]*"([^"]+)".*/\2/p' "${policy_file}" | head -n 1)
+        if [[ -n "${parsed}" ]]; then
+            mode="${parsed}"
+        fi
+    fi
+    printf "%s\n" "${mode}"
+}
+
+gate_allowlist_file_for_root() {
+    local root="$1"
+    printf "%s/.yen/gate-allowlist\n" "${root}"
+}
+
+command_matches_allowlist() {
+    local command_text="$1"
+    local allowlist_file="$2"
+    [[ -f "${allowlist_file}" ]] || return 1
+
+    local pattern=""
+    while IFS= read -r pattern || [[ -n "${pattern}" ]]; do
+        pattern=$(trim "${pattern}")
+        [[ -z "${pattern}" ]] && continue
+        [[ "${pattern#\#}" != "${pattern}" ]] && continue
+        if printf "%s\n" "${command_text}" | grep -Eq -- "${pattern}"; then
+            return 0
+        fi
+    done < "${allowlist_file}"
+    return 1
+}
+
+classify_risk() {
+    local command_text="$1"
+    local allowlist_file="$2"
+    local lower
+    local score=0
+    local reasons="baseline"
+    local level="low"
+    lower=$(printf "%s" "${command_text}" | tr '[:upper:]' '[:lower:]')
+
+    if [[ -n "${allowlist_file}" ]] && command_matches_allowlist "${command_text}" "${allowlist_file}"; then
+        printf "low|0|allowlisted-pattern\n"
+        return 0
+    fi
+
+    if [[ "${lower}" == *"rm -rf"* ]] || [[ "${lower}" == *"rm -fr"* ]] || [[ "${lower}" == *"mkfs"* ]] || [[ "${lower}" == *"diskutil erase"* ]] || [[ "${lower}" == *":(){ :|:& };:"* ]]; then
+        score=$((score + 95))
+        reasons="${reasons},destructive-or-disk-command"
+    fi
+    if [[ "${lower}" == *"git reset --hard"* ]] || [[ "${lower}" == *"git clean -fdx"* ]] || [[ "${lower}" == *"git push --force"* ]] || [[ "${lower}" == *"chmod -r "* ]] || [[ "${lower}" == *"chown -r "* ]]; then
+        score=$((score + 70))
+        reasons="${reasons},history-or-permission-rewrite"
+    fi
+    if [[ "${lower}" == sudo* ]] || [[ "${lower}" == *" sudo "* ]]; then
+        score=$((score + 60))
+        reasons="${reasons},elevated-privilege"
+    fi
+    if [[ "${lower}" == *"curl "*'| sh'* ]] || [[ "${lower}" == *"curl "*'| bash'* ]] || [[ "${lower}" == *"wget "*'| sh'* ]] || [[ "${lower}" == *"wget "*'| bash'* ]]; then
+        score=$((score + 75))
+        reasons="${reasons},remote-script-execution"
+    fi
+    if [[ "${lower}" == *"git rebase"* ]] || [[ "${lower}" == *"git cherry-pick"* ]] || [[ "${lower}" == *"docker system prune"* ]] || [[ "${lower}" == *"npm publish"* ]] || [[ "${lower}" == *"bun publish"* ]] || [[ "${lower}" == *"pnpm publish"* ]] || [[ "${lower}" == *"yarn publish"* ]]; then
+        score=$((score + 35))
+        reasons="${reasons},state-mutating-command"
+    fi
+    if [[ "${lower}" == *"git push"* ]] || [[ "${lower}" == *"terraform apply"* ]] || [[ "${lower}" == *"kubectl delete"* ]]; then
+        score=$((score + 30))
+        reasons="${reasons},remote-or-cluster-impact"
+    fi
+
+    if [[ "${score}" -ge 85 ]]; then
+        level="critical"
+    elif [[ "${score}" -ge 55 ]]; then
+        level="high"
+    elif [[ "${score}" -ge 25 ]]; then
+        level="medium"
+    else
+        level="low"
+    fi
+
+    printf "%s|%s|%s\n" "${level}" "${score}" "${reasons}"
+}
+
+needs_approval_for() {
+    local policy_mode="$1"
+    local risk_level="$2"
+    case "${policy_mode}" in
+        prompt-all)
+            return 0
+            ;;
+        disabled|off|allow|none)
+            return 1
+            ;;
+        prompt-medium|strict)
+            [[ "${risk_level}" == "medium" || "${risk_level}" == "high" || "${risk_level}" == "critical" ]]
+            return $?
+            ;;
+        prompt-high|auto|default)
+            [[ "${risk_level}" == "high" || "${risk_level}" == "critical" ]]
+            return $?
+            ;;
+        *)
+            [[ "${risk_level}" == "high" || "${risk_level}" == "critical" ]]
+            return $?
+            ;;
+    esac
+}
+
+detect_go_module_dirs() {
+    local root="$1"
+    find "${root}" -maxdepth 3 \
+        \( -type d \( \
+            -name .git -o \
+            -name .hg -o \
+            -name .svn -o \
+            -name .next -o \
+            -name .turbo -o \
+            -name .venv -o \
+            -name .yarn -o \
+            -name .tmp -o \
+            -name .temp -o \
+            -name .scratch -o \
+            -name DerivedData -o \
+            -name __pycache__ -o \
+            -name build -o \
+            -name dist -o \
+            -name ghostty -o \
+            -name node_modules -o \
+            -name scratch -o \
+            -name 'scratch-*' -o \
+            -name temp -o \
+            -name 'temp-*' -o \
+            -name tmp -o \
+            -name 'tmp-*' -o \
+            -name vendor -o \
+            -name venv -o \
+            -name zig-out \
+        \) -prune \) -o \
+        \( -type f -name go.mod -print \) 2>/dev/null | sed "s|/go.mod$||" | sort -u
+}
+
+has_package_script() {
+    local root="$1"
+    local script_name="$2"
+    local pkg="${root}/package.json"
+    [[ -f "${pkg}" ]] || return 1
+    grep -q "\"${script_name}\"[[:space:]]*:" "${pkg}" 2>/dev/null
+}
+
+detect_node_package_manager() {
+    local root="$1"
+    if command -v bun >/dev/null 2>&1 && [[ -f "${root}/bun.lockb" || -f "${root}/bun.lock" ]]; then
+        printf "bun\n"
+        return 0
+    fi
+    if command -v pnpm >/dev/null 2>&1 && [[ -f "${root}/pnpm-lock.yaml" ]]; then
+        printf "pnpm\n"
+        return 0
+    fi
+    if command -v yarn >/dev/null 2>&1 && [[ -f "${root}/yarn.lock" ]]; then
+        printf "yarn\n"
+        return 0
+    fi
+    if command -v npm >/dev/null 2>&1; then
+        printf "npm\n"
+        return 0
+    fi
+    printf "none\n"
+}
+
+failing_step_ids_from_summary() {
+    local summary_path="$1"
+    [[ -f "${summary_path}" ]] || return 0
+    awk -F'\t' 'NF >= 3 && $3 != "0" { print $2 }' "${summary_path}" 2>/dev/null | sort -u
+}
+
+cmd_gate() {
+    local assume_yes="0"
+    local dry_run="0"
+    local policy_override=""
+    local risk_override=""
+    local allowlist_file_override=""
+    local cmd_argv=()
+    local root
+    local policy_mode
+    local allowlist_file=""
+    local command_text=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --yes|-y)
+                assume_yes="1"
+                ;;
+            --dry-run)
+                dry_run="1"
+                ;;
+            --policy)
+                shift
+                policy_override="${1:-}"
+                ;;
+            --risk-override)
+                shift
+                risk_override="${1:-}"
+                ;;
+            --allowlist)
+                shift
+                allowlist_file_override="${1:-}"
+                ;;
+            --)
+                shift
+                cmd_argv=("$@")
+                break
+                ;;
+            *)
+                cmd_argv+=("$1")
+                ;;
+        esac
+        shift
+    done
+
+    if [[ ${#cmd_argv[@]} -eq 0 ]]; then
+        yen_error "gate requires a command. Example: yen ide gate -- git reset --hard"
+        exit 1
+    fi
+
+    local part
+    for part in "${cmd_argv[@]}"; do
+        if [[ -n "${command_text}" ]]; then
+            command_text="${command_text} "
+        fi
+        command_text="${command_text}${part}"
+    done
+
+    root=$(find_project_root "${PWD}")
+    policy_mode=$(policy_mode_for_root "${root}")
+    if [[ -n "${policy_override}" ]]; then
+        policy_mode="${policy_override}"
+    fi
+    allowlist_file=$(gate_allowlist_file_for_root "${root}")
+    if [[ -n "${allowlist_file_override}" ]]; then
+        allowlist_file="${allowlist_file_override}"
+    fi
+
+    local risk_info
+    local risk_level
+    local risk_score
+    local risk_reason
+    risk_info=$(classify_risk "${command_text}" "${allowlist_file}")
+    risk_level="${risk_info%%|*}"
+    local rest="${risk_info#*|}"
+    risk_score="${rest%%|*}"
+    risk_reason="${rest#*|}"
+
+    if [[ -n "${risk_override}" ]]; then
+        risk_override=$(printf "%s" "${risk_override}" | tr '[:upper:]' '[:lower:]')
+        case "${risk_override}" in
+            low|medium|high|critical)
+                risk_level="${risk_override}"
+                risk_reason="${risk_reason},override=${risk_override}"
+                ;;
+            *)
+                yen_error "Invalid --risk-override '${risk_override}'. Use low|medium|high|critical."
+                exit 1
+                ;;
+        esac
+    fi
+
+    local needs_prompt="0"
+    if needs_approval_for "${policy_mode}" "${risk_level}"; then
+        needs_prompt="1"
+    fi
+
+    local approved="yes"
+    if [[ "${needs_prompt}" == "1" && "${assume_yes}" != "1" ]]; then
+        if [[ -t 0 ]]; then
+            echo ""
+            yen_header "IDE Approval Gate"
+            echo "Policy:      ${policy_mode}"
+            echo "Risk:        ${risk_level} (score=${risk_score}; ${risk_reason})"
+            echo "Project:     ${root}"
+            echo "Command:"
+            echo "  ${command_text}"
+            echo ""
+            read -r -p "Approve command? [y/N] " gate_answer
+            case "${gate_answer}" in
+                y|Y|yes|YES)
+                    approved="yes"
+                    ;;
+                *)
+                    approved="no"
+                    ;;
+            esac
+        else
+            approved="no"
+        fi
+    fi
+
+    if [[ "${approved}" != "yes" ]]; then
+        timeline_log "gate" "${root}" "denied" "policy=${policy_mode};risk=${risk_level};score=${risk_score};reason=${risk_reason};cmd=${command_text}"
+        yen_error "Command denied by approval gate."
+        yen_info "If this is a false positive: use --risk-override low (or configure .yen/gate-allowlist)."
+        exit 1
+    fi
+
+    timeline_log "gate" "${root}" "approved" "policy=${policy_mode};risk=${risk_level};score=${risk_score};reason=${risk_reason};cmd=${command_text}"
+
+    if [[ "${dry_run}" == "1" ]]; then
+        yen_info "Dry run: command approved (not executed)."
+        echo "Gate summary: policy=${policy_mode} risk=${risk_level} score=${risk_score}"
+        return 0
+    fi
+
+    set +e
+    "${cmd_argv[@]}"
+    local cmd_status=$?
+    set -e
+    timeline_log "gate-exec" "${root}" "status=${cmd_status}" "risk=${risk_level};score=${risk_score};cmd=${command_text}"
+    return "${cmd_status}"
+}
+
+cmd_non_interference() {
+    local subcommand="status"
+    local window_days
+    window_days=$(non_interference_default_window_days)
+
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            status|record|freeze|unfreeze)
+                subcommand="$1"
+                shift
+                ;;
+        esac
+    fi
+
+    case "${subcommand}" in
+        status)
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --window-days)
+                        shift
+                        window_days="${1:-}"
+                        ;;
+                    *)
+                        yen_error "Unknown non-interference status option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+
+            if [[ ! "${window_days}" =~ ^[0-9]+$ ]] || [[ "${window_days}" -lt 1 ]]; then
+                yen_error "Invalid --window-days '${window_days}'. Use a positive integer."
+                exit 1
+            fi
+
+            ensure_state_dirs
+
+            local summary
+            local active
+            local mode
+            local total
+            local breaches
+            local ratio
+            local budget
+            local min_samples
+            local cutoff_epoch
+            local rows=""
+            local freeze_label="inactive"
+            local freeze_reason=""
+            local freeze_at=""
+
+            summary=$(evaluate_non_interference_budget "${window_days}" "0")
+            IFS='|' read -r active mode total breaches ratio budget min_samples << EOF
+${summary}
+EOF
+
+            cutoff_epoch=$(( $(date +%s) - (window_days * 86400) ))
+            rows=$(awk -F'\t' -v cutoff="${cutoff_epoch}" '
+                NF >= 6 && $2 ~ /^[0-9]+$/ && $2 >= cutoff {
+                    metric = $3
+                    total[metric] += 1
+                    if ($6 == "breach") {
+                        breach[metric] += 1
+                    }
+                    latest_value[metric] = $4
+                    threshold[metric] = $5
+                    latest_ts[metric] = $1
+                }
+                END {
+                    for (metric in total) {
+                        b = breach[metric] + 0
+                        rate = (total[metric] > 0) ? ((b / total[metric]) * 100.0) : 0
+                        printf "%s\t%d\t%d\t%.2f\t%s\t%s\t%s\n", metric, total[metric], b, rate, latest_value[metric], threshold[metric], latest_ts[metric]
+                    }
+                }
+            ' "${IDE_NON_INTERFERENCE_SLO_FILE}" 2>/dev/null | sort || true)
+
+            if [[ "${active}" == "1" ]]; then
+                freeze_label="active"
+            fi
+
+            if [[ -f "${IDE_NON_INTERFERENCE_FREEZE_FILE}" ]]; then
+                freeze_reason=$(non_interference_freeze_field "reason" 2>/dev/null || true)
+                freeze_at=$(non_interference_freeze_field "activated_at" 2>/dev/null || true)
+            fi
+
+            echo ""
+            yen_header "Non-Interference Guardrails"
+            echo "Window: ${window_days} day(s)"
+            echo "Error budget: ${budget} (minimum samples: ${min_samples})"
+            echo "Samples: ${total} | Breaches: ${breaches} | Breach ratio: ${ratio}"
+            echo "Feature freeze: ${freeze_label} (mode=${mode})"
+            if [[ -n "${freeze_reason}" ]]; then
+                echo "Freeze reason: ${freeze_reason}"
+            fi
+            if [[ -n "${freeze_at}" ]]; then
+                echo "Freeze activated: ${freeze_at}"
+            fi
+
+            if [[ -z "${rows}" ]]; then
+                echo "No SLO samples in the selected window."
+                echo ""
+                return 0
+            fi
+
+            echo ""
+            printf "%-28s %-7s %-8s %-10s %-10s %-10s %s\n" "METRIC" "SAMPLES" "BREACH" "RATE(%)" "LATEST" "THRESHOLD" "LAST_SEEN"
+            while IFS=$'\t' read -r metric m_total m_breach m_rate latest threshold last_ts; do
+                [[ -z "${metric}" ]] && continue
+                printf "%-28s %-7s %-8s %-10s %-10s %-10s %s\n" "${metric}" "${m_total}" "${m_breach}" "${m_rate}" "${latest}" "${threshold}" "${last_ts}"
+            done << EOF
+${rows}
+EOF
+            echo ""
+            ;;
+        record)
+            local metric=""
+            local raw_metric=""
+            local value=""
+            local threshold=""
+            local source_name="manual"
+            local project_path=""
+            local root=""
+            local sample_status="pass"
+            local now_epoch
+            local now_iso
+            local was_frozen="0"
+            local summary=""
+            local active=""
+            local mode=""
+            local total=""
+            local breaches=""
+            local ratio=""
+            local budget=""
+            local min_samples=""
+            local source_sanitized=""
+            local threshold_sanitized=""
+
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --metric)
+                        shift
+                        raw_metric="${1:-}"
+                        ;;
+                    --value)
+                        shift
+                        value="${1:-}"
+                        ;;
+                    --source)
+                        shift
+                        source_name="${1:-manual}"
+                        ;;
+                    --project)
+                        shift
+                        project_path="${1:-}"
+                        ;;
+                    --window-days)
+                        shift
+                        window_days="${1:-}"
+                        ;;
+                    *)
+                        yen_error "Unknown non-interference record option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+
+            if [[ -z "${raw_metric}" ]]; then
+                yen_error "record requires --metric <name>."
+                exit 1
+            fi
+            if [[ -z "${value}" ]]; then
+                yen_error "record requires --value <number>."
+                exit 1
+            fi
+            if ! is_number_value "${value}"; then
+                yen_error "Invalid --value '${value}'. Must be numeric."
+                exit 1
+            fi
+            if [[ ! "${window_days}" =~ ^[0-9]+$ ]] || [[ "${window_days}" -lt 1 ]]; then
+                yen_error "Invalid --window-days '${window_days}'. Use a positive integer."
+                exit 1
+            fi
+
+            metric=$(normalize_non_interference_metric "${raw_metric}" || true)
+            if [[ -z "${metric}" ]]; then
+                yen_error "Unknown metric '${raw_metric}'. Use key-to-echo-p95-ms|key-to-echo-p99-ms|search-latency-ms|lsp-start-ms|verify-duration-ms|orchestration-latency-ms|startup-regression-ms|idle-cpu-overhead-pct|idle-extra-rss-mib."
+                exit 1
+            fi
+
+            threshold=$(non_interference_metric_threshold "${metric}" || true)
+            if [[ -z "${threshold}" ]] || ! is_number_value "${threshold}"; then
+                yen_error "Metric threshold for '${metric}' is not configured as numeric."
+                exit 1
+            fi
+            if float_gt "${value}" "${threshold}"; then
+                sample_status="breach"
+            fi
+
+            ensure_state_dirs
+            root=$(find_project_root "${project_path}")
+            now_epoch=$(date +%s)
+            now_iso=$(iso_now)
+            source_sanitized=$(printf "%s" "${source_name}" | tr '\t\r\n' '   ')
+            threshold_sanitized=$(printf "%s" "${threshold}" | tr '\t\r\n' ' ')
+
+            if [[ -f "${IDE_NON_INTERFERENCE_FREEZE_FILE}" ]]; then
+                was_frozen="1"
+            fi
+
+            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+                "${now_iso}" "${now_epoch}" "${metric}" "${value}" "${threshold_sanitized}" "${sample_status}" "${source_sanitized}" "${root}" >> "${IDE_NON_INTERFERENCE_SLO_FILE}"
+
+            timeline_log "non-interference-slo" "${root}" "${sample_status}" "metric=${metric};value=${value};threshold=${threshold};source=${source_sanitized}"
+
+            summary=$(evaluate_non_interference_budget "${window_days}" "1")
+            IFS='|' read -r active mode total breaches ratio budget min_samples << EOF
+${summary}
+EOF
+
+            if [[ "${active}" == "1" && "${was_frozen}" != "1" ]]; then
+                timeline_log "non-interference-freeze" "${root}" "active" "mode=${mode};window_days=${window_days};ratio=${ratio};budget=${budget};samples=${total};breaches=${breaches}"
+            fi
+            if [[ "${active}" != "1" && "${was_frozen}" == "1" ]]; then
+                timeline_log "non-interference-freeze" "${root}" "cleared" "mode=${mode};window_days=${window_days};ratio=${ratio};budget=${budget};samples=${total};breaches=${breaches}"
+            fi
+
+            if [[ "${sample_status}" == "breach" ]]; then
+                yen_warn "Recorded SLO breach (${metric}=${value}, threshold=${threshold})."
+            else
+                yen_info "Recorded SLO sample (${metric}=${value}, threshold=${threshold})."
+            fi
+            echo "Feature freeze: $([[ "${active}" == "1" ]] && echo "active" || echo "inactive") (mode=${mode})"
+            ;;
+        freeze)
+            local reason="manual-operator-override"
+            local root=""
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --reason)
+                        shift
+                        reason="${1:-manual-operator-override}"
+                        ;;
+                    --project)
+                        shift
+                        root=$(find_project_root "${1:-}")
+                        ;;
+                    *)
+                        yen_error "Unknown non-interference freeze option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+            ensure_state_dirs
+            if [[ -z "${root}" ]]; then
+                root=$(find_project_root "")
+            fi
+            reason=$(printf "%s" "${reason}" | tr '\t\r\n' '   ')
+            write_non_interference_manual_freeze "${reason}"
+            timeline_log "non-interference-freeze" "${root}" "active" "mode=manual;reason=${reason}"
+            yen_warn "Manual non-interference freeze enabled."
+            ;;
+        unfreeze)
+            local root=""
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --project)
+                        shift
+                        root=$(find_project_root "${1:-}")
+                        ;;
+                    *)
+                        yen_error "Unknown non-interference unfreeze option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+            ensure_state_dirs
+            if [[ -z "${root}" ]]; then
+                root=$(find_project_root "")
+            fi
+            rm -f "${IDE_NON_INTERFERENCE_FREEZE_FILE}"
+            timeline_log "non-interference-freeze" "${root}" "cleared" "mode=manual;reason=operator-unfreeze"
+            yen_info "Non-interference freeze cleared."
+            ;;
+        *)
+            yen_error "Unknown non-interference command: ${subcommand}"
+            exit 1
+            ;;
+    esac
+}
+
+cmd_timeline() {
+    local limit="40"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --limit)
+                shift
+                limit="${1:-40}"
+                ;;
+            *)
+                yen_error "Unknown timeline option: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    ensure_state_dirs
+    if [[ ! -s "${IDE_TIMELINE_FILE}" ]]; then
+        yen_info "IDE timeline is empty."
+        return 0
+    fi
+
+    echo ""
+    yen_header "IDE Timeline"
+    printf "%-21s %-12s %-8s %-38s %s\n" "TIME" "EVENT" "STATUS" "PROJECT" "DETAIL"
+    tail -n "${limit}" "${IDE_TIMELINE_FILE}" | while IFS=$'\t' read -r t e p s d; do
+        printf "%-21s %-12s %-8s %-38s %s\n" "${t}" "${e}" "${s}" "${p}" "${d}"
+    done
+    echo ""
+}
+
+main() {
+    ensure_state_dirs
+    case "${1:-}" in
+        ""|-h|--help|help)
+            show_help
+            ;;
+        detect|project)
+            shift
+            cmd_detect "$@"
+            ;;
+        doctor)
+            shift
+            cmd_doctor "$@"
+            ;;
+        trust)
+            shift
+            cmd_trust "$@"
+            ;;
+        env)
+            shift
+            cmd_env "$@"
+            ;;
+        ast)
+            shift
+            cmd_ast "$@"
+            ;;
+        share)
+            shift
+            cmd_share "$@"
+            ;;
+        devcontainer)
+            shift
+            cmd_devcontainer "$@"
+            ;;
+        vscode)
+            shift
+            cmd_vscode "$@"
+            ;;
+        lsp)
+            shift
+            cmd_lsp "$@"
+            ;;
+        history)
+            shift
+            cmd_history "$@"
+            ;;
+        replay)
+            shift
+            cmd_replay "$@"
+            ;;
+        profile)
+            shift
+            cmd_profile "$@"
+            ;;
+        benchmark)
+            shift
+            cmd_benchmark "$@"
+            ;;
+        debug)
+            shift
+            cmd_debug "$@"
+            ;;
+        open)
+            shift
+            cmd_open "$@"
+            ;;
+        ports)
+            shift
+            cmd_ports "$@"
+            ;;
+        parse)
+            shift
+            cmd_parse "$@"
+            ;;
+        search)
+            shift
+            cmd_search "$@"
+            ;;
+        explain)
+            shift
+            cmd_explain "$@"
+            ;;
+        format|fmt)
+            shift
+            cmd_quality_action "format" "$@"
+            ;;
+        lint)
+            shift
+            cmd_quality_action "lint" "$@"
+            ;;
+        fix)
+            shift
+            cmd_quality_action "fix" "$@"
+            ;;
+        test)
+            shift
+            cmd_test "$@"
+            ;;
+        verify)
+            shift
+            cmd_verify "$@"
+            ;;
+        merge-readiness|merge_ready|merge-ready)
+            shift
+            cmd_merge_readiness "$@"
+            ;;
+        gate)
+            shift
+            cmd_gate "$@"
+            ;;
+        pr-review|review-pr)
+            shift
+            cmd_pr_review "$@"
+            ;;
+        pr-notify|pr-watch)
+            shift
+            cmd_pr_notify "$@"
+            ;;
+        workflow|workflows)
+            shift
+            cmd_workflow "$@"
+            ;;
+        timeline)
+            shift
+            cmd_timeline "$@"
+            ;;
+        non-interference|noninterference|slo)
+            shift
+            cmd_non_interference "$@"
+            ;;
+        *)
+            yen_error "Unknown ide command: $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

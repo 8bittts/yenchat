@@ -1,0 +1,8 @@
+    private static let directImageFileTypes: [(type: NSPasteboard.PasteboardType, ext: String)] = [
+        (.png, "png"),
+        (.init(UTType.gif.identifier), "gif"),
+        (.init(UTType.jpeg.identifier), "jpg"),
+    ]
+    private static let opinionatedClipboardImageDirectoryName = "com.yenchat.yen.clipboard-images"
+    private static let opinionatedClipboardImagePrefix = "com.yenchat.yen.clipboard-image-"
+    private static let opinionatedClipboardImageMaximumAge: TimeInterval = 60 * 60 * 24

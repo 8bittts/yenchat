@@ -1,0 +1,28 @@
+# Units of work declared by scripts/03-verify-components.sh.
+#
+# Each id must record exactly one gate_unit_ran (with a measured quantity) or
+# gate_unit_skipped (with a reason) before the script reaches gate_end. The old
+# "(16 checks)" summary counted `CHECKS=$((CHECKS + 1))` statements in the source
+# text, all of which sat at column 0 outside every guard — so the number was a
+# constant of the file and stayed 16 whether a check ran or self-skipped.
+#
+# `xcode-regression` is the unit whose silent success started this: it was the
+# most expensive slice in the gate and emitted nothing at all on the RAN path.
+
+shell-compat
+version-json
+cli-syntax
+terminal-prereqs
+native-helper-sources
+lua-plugin-syntax
+yazi-flavor-assets
+yazi-launch-surface
+removed-gh-guard
+regression-tests
+xcode-regression
+privileged-surface
+non-concurrency-allowlist
+weather-removal-guard
+theme-manifest
+view-modifier-lint
+overlay-recurrence

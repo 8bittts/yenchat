@@ -1,0 +1,812 @@
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+    branches: [main]
+
+  workflow_dispatch: {}
+
+name: Release Tip
+
+# We must only run one release workflow at a time to prevent corrupting
+# our release artifacts.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.repository_owner == 'yen-org' &&
+        github.ref_name == 'main'
+      )
+    runs-on: namespace-profile-yen-sm
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+      build: ${{ steps.extract_build_info.outputs.build }}
+      commit: ${{ steps.extract_build_info.outputs.commit }}
+      commit_long: ${{ steps.extract_build_info.outputs.commit_long }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Important so that build number generation works
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@0b0e072294b088b73964f1d72dfdac0951439dbd # v31.8.4
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+        with:
+          name: yen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - name: Extract build info
+        id: extract_build_info
+        run: |
+          YEN_BUILD=$(git rev-list --count HEAD)
+          YEN_COMMIT=$(git rev-parse --short HEAD)
+          YEN_COMMIT_LONG=$(git rev-parse HEAD)
+          echo "build=$YEN_BUILD" >> $GITHUB_OUTPUT
+          echo "commit=$YEN_COMMIT" >> $GITHUB_OUTPUT
+          echo "commit_long=$YEN_COMMIT_LONG" >> $GITHUB_OUTPUT
+      - name: Check if tip already exists
+        id: check
+        run: |
+          YEN_COMMIT_LONG=$(git rev-parse HEAD)
+          if nix develop -c nu .github/scripts/yen-tip $YEN_COMMIT_LONG; then
+            echo "Tip release already exists for commit $YEN_COMMIT_LONG"
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "No tip release found for commit $YEN_COMMIT_LONG"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
+  tag:
+    runs-on: namespace-profile-yen-sm
+    needs: [setup, build-macos]
+    if: needs.setup.outputs.should_skip != 'true'
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Tip Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -fa tip -m "Latest Continuous Release" ${GITHUB_SHA}
+          git push --force origin tip
+
+  sentry-dsym-debug-slow:
+    runs-on: namespace-profile-yen-sm
+    needs: [setup, build-macos-debug-slow]
+    if: needs.setup.outputs.should_skip != 'true'
+    env:
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Install sentry-cli
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Download dSYM
+        run: |
+          curl -L https://tip.files.yen.dev/${YEN_COMMIT_LONG}/yen-macos-universal-debug-slow-dsym.zip > dsym.zip
+
+      - name: Upload dSYM to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          sentry-cli dif upload --project yen --wait dsym.zip
+
+  sentry-dsym-debug-fast:
+    runs-on: namespace-profile-yen-sm
+    needs: [setup, build-macos-debug-fast]
+    if: needs.setup.outputs.should_skip != 'true'
+    env:
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Install sentry-cli
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Download dSYM
+        run: |
+          curl -L https://tip.files.yen.dev/${YEN_COMMIT_LONG}/yen-macos-universal-debug-fast-dsym.zip > dsym.zip
+
+      - name: Upload dSYM to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          sentry-cli dif upload --project yen --wait dsym.zip
+
+  sentry-dsym:
+    runs-on: namespace-profile-yen-sm
+    needs: [setup, build-macos]
+    if: needs.setup.outputs.should_skip != 'true'
+    env:
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Install sentry-cli
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Download dSYM
+        run: |
+          curl -L https://tip.files.yen.dev/${YEN_COMMIT_LONG}/yen-macos-universal-dsym.zip > dsym.zip
+
+      - name: Upload dSYM to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          sentry-cli dif upload --project yen --wait dsym.zip
+
+  source-tarball:
+    needs: [setup]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        )
+      )
+    runs-on: namespace-profile-yen-md
+    env:
+      ZIG_LOCAL_CACHE_DIR: /zig/local-cache
+      ZIG_GLOBAL_CACHE_DIR: /zig/global-cache
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Setup Cache
+        uses: namespacelabs/nscloud-cache-action@446d8f390563cd54ca27e8de5bdb816f63c0b706 # v1.2.21
+        with:
+          path: |
+            /nix
+            /zig
+      - uses: cachix/install-nix-action@0b0e072294b088b73964f1d72dfdac0951439dbd # v31.8.4
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+        with:
+          name: yen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - name: Create Tarball
+        run: |
+          rm -rf zig-out/dist
+          nix develop -c zig build distcheck
+          cp zig-out/dist/*.tar.gz yen-source.tar.gz
+
+      - name: Sign Tarball
+        run: |
+          echo -n "${{ secrets.MINISIGN_KEY }}" > minisign.key
+          echo -n "${{ secrets.MINISIGN_PASSWORD }}" > minisign.password
+          nix develop -c minisign -S -m yen-source.tar.gz -s minisign.key < minisign.password
+
+      - name: Update Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          name: 'YEN Tip ("Nightly")'
+          prerelease: true
+          tag_name: tip
+          target_commitish: ${{ github.sha }}
+          files: |
+            yen-source.tar.gz
+            yen-source.tar.gz.minisig
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+  build-macos:
+    needs: [setup]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        )
+      )
+
+    runs-on: namespace-profile-yen-macos-tahoe
+    timeout-minutes: 90
+    env:
+      YEN_BUILD: ${{ needs.setup.outputs.build }}
+      YEN_COMMIT: ${{ needs.setup.outputs.commit }}
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Important so that build number generation works
+          fetch-depth: 0
+
+      # TODO(tahoe): https://github.com/NixOS/nix/issues/13342
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          determinate: true
+      - uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+        with:
+          name: yen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: XCode Select
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app
+
+      - name: Xcode Version
+        run: xcodebuild -version
+
+      # Setup Sparkle
+      - name: Setup Sparkle
+        env:
+          SPARKLE_VERSION: 2.7.3
+        run: |
+          mkdir -p .action/sparkle
+          cd .action/sparkle
+          curl -L https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-for-Swift-Package-Manager.zip > sparkle.zip
+          unzip sparkle.zip
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      # YENKit is the framework that is built from Zig for our native
+      # Mac app to access. Build this in release mode.
+      - name: Build YENKit
+        run: nix develop -c zig build -Doptimize=ReleaseFast -Demit-macos-app=false
+
+      # The native app is built with native XCode tooling. This also does
+      # codesigning. IMPORTANT: this must NOT run in a Nix environment.
+      # Nix breaks xcodebuild so this has to be run outside.
+      - name: Build YEN.app
+        run: |
+          cd macos
+          xcodebuild -target YEN -configuration Release
+
+      # We inject the "build number" as simply the number of commits since HEAD.
+      # This will be a monotonically always increasing build number that we use.
+      - name: Update Info.plist
+        env:
+          SPARKLE_KEY_PUB: ${{ secrets.PROD_MACOS_SPARKLE_KEY_PUB }}
+        run: |
+          # Version Info
+          /usr/libexec/PlistBuddy -c "Set :YENCommit $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $YEN_BUILD" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+          # Updater
+          /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $SPARKLE_KEY_PUB" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :SUEnableAutomaticChecks" "macos/build/Release/YEN.app/Contents/Info.plist"
+          # CRITICAL: Ensure SUFeedURL is present (fallback feed URL for Sparkle)
+          # Delegate method provides dynamic feed URL, but Info.plist ensures Sparkle always has a URL
+          /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist" || \
+          /usr/libexec/PlistBuddy -c "Add :SUFeedURL string https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+      - name: Codesign app bundle
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          # Turn our base64-encoded certificate back to a regular .p12 file
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          # We need to create a new keychain, otherwise using the certificate will prompt
+          # with a UI dialog asking for the certificate password, which we can't
+          # use in a headless CI environment
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+
+          # Codesign Sparkle. Some notes here:
+          #   - The XPC services aren't used since we don't sandbox YEN,
+          #     but since they're part of the build, they still need to be
+          #     codesigned.
+          #   - The binaries in the "Versions" folders need to NOT be symlinks.
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework"
+
+          # Codesign the app bundle
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime --entitlements "macos/YEN.entitlements" macos/build/Release/YEN.app
+
+      - name: Create DMG
+        env:
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+        run: |
+          npm install --global create-dmg
+          create-dmg \
+            --identity="$MACOS_CERTIFICATE_NAME" \
+            ./macos/build/Release/YEN.app \
+            ./
+          mv ./YEN*.dmg ./YEN.dmg
+
+      - name: "Notarize DMG"
+        env:
+          APPLE_NOTARIZATION_ISSUER: ${{ secrets.APPLE_NOTARIZATION_ISSUER }}
+          APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+          APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+        run: |
+          # Store the notarization credentials so that we can prevent a UI password dialog
+          # from blocking the CI
+          echo "Create keychain profile"
+          echo "$APPLE_NOTARIZATION_KEY" > notarization_key.p8
+          xcrun notarytool store-credentials "notarytool-profile" --key notarization_key.p8 --key-id "$APPLE_NOTARIZATION_KEY_ID" --issuer "$APPLE_NOTARIZATION_ISSUER"
+          rm notarization_key.p8
+
+          # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
+          # you're curious
+          echo "Notarize dmg"
+          xcrun notarytool submit "YEN.dmg" --keychain-profile "notarytool-profile" --wait
+
+          # Finally, we need to "attach the staple" to our executable, which will allow our app to be
+          # validated by macOS even when an internet connection is not available. We do this to
+          # both the app and the dmg
+          echo "Attach staple"
+          xcrun stapler staple "YEN.dmg"
+          xcrun stapler staple "macos/build/Release/YEN.app"
+
+      # Zip up the app and symbols
+      - name: Zip App
+        run: |
+          cd macos/build/Release
+          zip -9 -r --symlinks ../../../yen-macos-universal.zip YEN.app
+          zip -9 -r --symlinks ../../../yen-macos-universal-dsym.zip YEN.app.dSYM/
+
+      # Update Release
+      - name: Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          name: 'YEN Tip ("Nightly")'
+          prerelease: true
+          tag_name: tip
+          target_commitish: ${{ github.sha }}
+          files: |
+            yen-macos-universal.zip
+            YEN.dmg
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+      # Create our appcast for Sparkle
+      - name: Generate Appcast
+        if: |
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        env:
+          SPARKLE_KEY: ${{ secrets.PROD_MACOS_SPARKLE_KEY }}
+        run: |
+          echo $SPARKLE_KEY > signing.key
+          sign_update -f signing.key YEN.dmg > sign_update.txt
+          curl -L https://tip.files.yen.org/appcast.xml > appcast.xml
+          python3 ./dist/macos/update_appcast_tip.py
+          test -f appcast_new.xml
+
+      # Upload our binaries first
+      - name: Prep R2 Storage
+        run: |
+          mkdir blob
+          mkdir -p blob/${YEN_COMMIT_LONG}
+          cp yen-macos-universal.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal.zip
+          cp yen-macos-universal-dsym.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal-dsym.zip
+          cp YEN.dmg blob/${YEN_COMMIT_LONG}/YEN.dmg
+
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: yen-tip
+          source-dir: blob
+          destination-dir: ./
+
+      # Now upload our appcast. This ensures that the appcast never
+      # gets out of sync with the binaries.
+      - name: Prep R2 Storage for Appcast
+        if: |
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        run: |
+          rm -r blob
+          mkdir blob
+          cp appcast_new.xml blob/appcast.xml
+
+      - name: Upload Appcast to R2
+        if: |
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: yen-tip
+          source-dir: blob
+          destination-dir: ./
+
+      - name: Echo Release URLs
+        run: |
+          echo "Release URLs:"
+          echo "  App Bundle: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal.zip"
+          echo "  Debug Symbols: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal-dsym.zip"
+          echo "  DMG: https://tip.files.yen.org/${YEN_COMMIT_LONG}/YEN.dmg"
+
+  build-macos-debug-slow:
+    needs: [setup]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        )
+      )
+
+    runs-on: namespace-profile-yen-macos-tahoe
+    timeout-minutes: 90
+    env:
+      YEN_BUILD: ${{ needs.setup.outputs.build }}
+      YEN_COMMIT: ${{ needs.setup.outputs.commit }}
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Important so that build number generation works
+          fetch-depth: 0
+
+      # TODO(tahoe): https://github.com/NixOS/nix/issues/13342
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          determinate: true
+      - uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+        with:
+          name: yen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: XCode Select
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app
+
+      - name: Xcode Version
+        run: xcodebuild -version
+
+      # Setup Sparkle
+      - name: Setup Sparkle
+        env:
+          SPARKLE_VERSION: 2.7.3
+        run: |
+          mkdir -p .action/sparkle
+          cd .action/sparkle
+          curl -L https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-for-Swift-Package-Manager.zip > sparkle.zip
+          unzip sparkle.zip
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      # YENKit is the framework that is built from Zig for our native
+      # Mac app to access. Build this in release mode.
+      - name: Build YENKit
+        run: nix develop -c zig build -Doptimize=Debug -Demit-macos-app=false
+
+      # The native app is built with native XCode tooling. This also does
+      # codesigning. IMPORTANT: this must NOT run in a Nix environment.
+      # Nix breaks xcodebuild so this has to be run outside.
+      - name: Build YEN.app
+        run: |
+          cd macos
+          xcodebuild -target YEN -configuration Release
+
+      # We inject the "build number" as simply the number of commits since HEAD.
+      # This will be a monotonically always increasing build number that we use.
+      - name: Update Info.plist
+        env:
+          SPARKLE_KEY_PUB: ${{ secrets.PROD_MACOS_SPARKLE_KEY_PUB }}
+        run: |
+          # Version Info
+          /usr/libexec/PlistBuddy -c "Set :YENCommit $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $YEN_BUILD" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+          # Updater
+          /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $SPARKLE_KEY_PUB" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :SUEnableAutomaticChecks" "macos/build/Release/YEN.app/Contents/Info.plist"
+          # CRITICAL: Ensure SUFeedURL is present (fallback feed URL for Sparkle)
+          # Delegate method provides dynamic feed URL, but Info.plist ensures Sparkle always has a URL
+          /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist" || \
+          /usr/libexec/PlistBuddy -c "Add :SUFeedURL string https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+      - name: Codesign app bundle
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          # Turn our base64-encoded certificate back to a regular .p12 file
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          # We need to create a new keychain, otherwise using the certificate will prompt
+          # with a UI dialog asking for the certificate password, which we can't
+          # use in a headless CI environment
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+
+          # Codesign Sparkle. Some notes here:
+          #   - The XPC services aren't used since we don't sandbox YEN,
+          #     but since they're part of the build, they still need to be
+          #     codesigned.
+          #   - The binaries in the "Versions" folders need to NOT be symlinks.
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework"
+
+          # Codesign the app bundle
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime --entitlements "macos/YEN.entitlements" macos/build/Release/YEN.app
+
+      - name: "Notarize app bundle"
+        env:
+          APPLE_NOTARIZATION_ISSUER: ${{ secrets.APPLE_NOTARIZATION_ISSUER }}
+          APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+          APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+        run: |
+          # Store the notarization credentials so that we can prevent a UI password dialog
+          # from blocking the CI
+          echo "Create keychain profile"
+          echo "$APPLE_NOTARIZATION_KEY" > notarization_key.p8
+          xcrun notarytool store-credentials "notarytool-profile" --key notarization_key.p8 --key-id "$APPLE_NOTARIZATION_KEY_ID" --issuer "$APPLE_NOTARIZATION_ISSUER"
+          rm notarization_key.p8
+
+          # We can't notarize an app bundle directly, but we need to compress it as an archive.
+          # Therefore, we create a zip file containing our app bundle, so that we can send it to the
+          # notarization service
+          echo "Creating temp notarization archive"
+          ditto -c -k --keepParent "macos/build/Release/YEN.app" "notarization.zip"
+
+          # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
+          # you're curious
+          echo "Notarize app"
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          # Finally, we need to "attach the staple" to our executable, which will allow our app to be
+          # validated by macOS even when an internet connection is not available.
+          echo "Attach staple"
+          xcrun stapler staple "macos/build/Release/YEN.app"
+
+      # Zip up the app
+      - name: Zip App
+        run: |
+          cd macos/build/Release
+          zip -9 -r --symlinks ../../../yen-macos-universal-debug-slow.zip YEN.app
+          zip -9 -r --symlinks ../../../yen-macos-universal-debug-slow-dsym.zip YEN.app.dSYM/
+
+      # Update Release
+      - name: Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          name: 'YEN Tip ("Nightly")'
+          prerelease: true
+          tag_name: tip
+          target_commitish: ${{ github.sha }}
+          files: yen-macos-universal-debug-slow.zip
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+      # Update Blob Storage
+      - name: Prep R2 Storage
+        run: |
+          mkdir blob
+          mkdir -p blob/${YEN_COMMIT_LONG}
+          cp yen-macos-universal-debug-slow.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal-debug-slow.zip
+          cp yen-macos-universal-debug-slow-dsym.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal-debug-slow-dsym.zip
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: yen-tip
+          source-dir: blob
+          destination-dir: ./
+
+      - name: Echo Release URLs
+        run: |
+          echo "Release URLs:"
+          echo "  App Bundle: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal-debug-slow.zip"
+          echo "  Debug Symbols: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal-debug-slow-dsym.zip"
+
+  build-macos-debug-fast:
+    needs: [setup]
+    if: |
+      needs.setup.outputs.should_skip != 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.repository_owner == 'yen-org' &&
+          github.ref_name == 'main'
+        )
+      )
+
+    runs-on: namespace-profile-yen-macos-tahoe
+    timeout-minutes: 90
+    env:
+      YEN_BUILD: ${{ needs.setup.outputs.build }}
+      YEN_COMMIT: ${{ needs.setup.outputs.commit }}
+      YEN_COMMIT_LONG: ${{ needs.setup.outputs.commit_long }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          # Important so that build number generation works
+          fetch-depth: 0
+
+      # TODO(tahoe): https://github.com/NixOS/nix/issues/13342
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          determinate: true
+      - uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+        with:
+          name: yen
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
+      - name: XCode Select
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app
+
+      - name: Xcode Version
+        run: xcodebuild -version
+
+      # Setup Sparkle
+      - name: Setup Sparkle
+        env:
+          SPARKLE_VERSION: 2.7.3
+        run: |
+          mkdir -p .action/sparkle
+          cd .action/sparkle
+          curl -L https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-for-Swift-Package-Manager.zip > sparkle.zip
+          unzip sparkle.zip
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      # YENKit is the framework that is built from Zig for our native
+      # Mac app to access. Build this in release mode.
+      - name: Build YENKit
+        run: nix develop -c zig build -Doptimize=ReleaseSafe -Demit-macos-app=false
+
+      # The native app is built with native XCode tooling. This also does
+      # codesigning. IMPORTANT: this must NOT run in a Nix environment.
+      # Nix breaks xcodebuild so this has to be run outside.
+      - name: Build YEN.app
+        run: |
+          cd macos
+          xcodebuild -target YEN -configuration Release
+
+      # We inject the "build number" as simply the number of commits since HEAD.
+      # This will be a monotonically always increasing build number that we use.
+      - name: Update Info.plist
+        env:
+          SPARKLE_KEY_PUB: ${{ secrets.PROD_MACOS_SPARKLE_KEY_PUB }}
+        run: |
+          # Version Info
+          /usr/libexec/PlistBuddy -c "Set :YENCommit $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $YEN_BUILD" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $YEN_COMMIT" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+          # Updater
+          /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $SPARKLE_KEY_PUB" "macos/build/Release/YEN.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :SUEnableAutomaticChecks" "macos/build/Release/YEN.app/Contents/Info.plist"
+          # CRITICAL: Ensure SUFeedURL is present (fallback feed URL for Sparkle)
+          # Delegate method provides dynamic feed URL, but Info.plist ensures Sparkle always has a URL
+          /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist" || \
+          /usr/libexec/PlistBuddy -c "Add :SUFeedURL string https://yen.chat/stable/appcast.xml" "macos/build/Release/YEN.app/Contents/Info.plist"
+
+      - name: Codesign app bundle
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
+          MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
+          MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
+        run: |
+          # Turn our base64-encoded certificate back to a regular .p12 file
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+
+          # We need to create a new keychain, otherwise using the certificate will prompt
+          # with a UI dialog asking for the certificate password, which we can't
+          # use in a headless CI environment
+          security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
+
+          # Codesign Sparkle. Some notes here:
+          #   - The XPC services aren't used since we don't sandbox YEN,
+          #     but since they're part of the build, they still need to be
+          #     codesigned.
+          #   - The binaries in the "Versions" folders need to NOT be symlinks.
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime "macos/build/Release/YEN.app/Contents/Frameworks/Sparkle.framework"
+
+          # Codesign the app bundle
+          /usr/bin/codesign --verbose -f -s "$MACOS_CERTIFICATE_NAME" -o runtime --entitlements "macos/YEN.entitlements" macos/build/Release/YEN.app
+
+      - name: "Notarize app bundle"
+        env:
+          APPLE_NOTARIZATION_ISSUER: ${{ secrets.APPLE_NOTARIZATION_ISSUER }}
+          APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+          APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+        run: |
+          # Store the notarization credentials so that we can prevent a UI password dialog
+          # from blocking the CI
+          echo "Create keychain profile"
+          echo "$APPLE_NOTARIZATION_KEY" > notarization_key.p8
+          xcrun notarytool store-credentials "notarytool-profile" --key notarization_key.p8 --key-id "$APPLE_NOTARIZATION_KEY_ID" --issuer "$APPLE_NOTARIZATION_ISSUER"
+          rm notarization_key.p8
+
+          # We can't notarize an app bundle directly, but we need to compress it as an archive.
+          # Therefore, we create a zip file containing our app bundle, so that we can send it to the
+          # notarization service
+          echo "Creating temp notarization archive"
+          ditto -c -k --keepParent "macos/build/Release/YEN.app" "notarization.zip"
+
+          # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
+          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
+          # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
+          # you're curious
+          echo "Notarize app"
+          xcrun notarytool submit "notarization.zip" --keychain-profile "notarytool-profile" --wait
+
+          # Finally, we need to "attach the staple" to our executable, which will allow our app to be
+          # validated by macOS even when an internet connection is not available.
+          echo "Attach staple"
+          xcrun stapler staple "macos/build/Release/YEN.app"
+
+      # Zip up the app
+      - name: Zip App
+        run: |
+          cd macos/build/Release
+          zip -9 -r --symlinks ../../../yen-macos-universal-debug-fast.zip YEN.app
+          zip -9 -r --symlinks ../../../yen-macos-universal-debug-fast-dsym.zip YEN.app.dSYM/
+
+      # Update Release
+      - name: Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          name: 'YEN Tip ("Nightly")'
+          prerelease: true
+          tag_name: tip
+          target_commitish: ${{ github.sha }}
+          files: yen-macos-universal-debug-fast.zip
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+      # Update Blob Storage
+      - name: Prep R2 Storage
+        run: |
+          mkdir blob
+          mkdir -p blob/${YEN_COMMIT_LONG}
+          cp yen-macos-universal-debug-fast.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal-debug-fast.zip
+          cp yen-macos-universal-debug-fast-dsym.zip blob/${YEN_COMMIT_LONG}/yen-macos-universal-debug-fast-dsym.zip
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.CF_R2_TIP_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.CF_R2_TIP_AWS_KEY }}
+          r2-secret-access-key: ${{ secrets.CF_R2_TIP_SECRET_KEY }}
+          r2-bucket: yen-tip
+          source-dir: blob
+          destination-dir: ./
+
+      - name: Echo Release URLs
+        run: |
+          echo "Release URLs:"
+          echo "  App Bundle: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal-debug-fast.zip"
+          echo "  Debug Symbols: https://tip.files.yen.org/${YEN_COMMIT_LONG}/yen-macos-universal-debug-fast-dsym.zip"

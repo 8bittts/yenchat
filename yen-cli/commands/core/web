@@ -1,0 +1,356 @@
+#!/bin/bash
+# YEN native browser command bridge.
+
+source "${YEN_LIB}/init.sh"
+
+usage() {
+    cat << 'EOF'
+Usage:
+  yen web open [--window|--split|--target window|--target split] [url]
+  yen web back [--automatic|--window|--split|--focused|--target target]
+  yen web forward [--automatic|--window|--split|--focused|--target target]
+  yen web reload [--automatic|--window|--split|--focused|--target target]
+  yen web close [--automatic|--window|--split|--focused|--target target]
+  yen web status [--automatic|--window|--split|--focused|--target target]
+
+Notes:
+  open without a URL opens https://yen.chat/docs.
+  remote HTTP URLs are blocked by the app-side browser URL policy.
+  --split requires an active YEN terminal window; the browser window remains the default target.
+  stateful command targets are automatic, window, split, or focused; automatic uses an open split first, then the browser window.
+  when the CLI can identify the intended app copy, status prints acknowledged_executable=<path>.
+EOF
+}
+
+is_yen_running() {
+    pgrep -x YEN >/dev/null 2>&1 && return 0
+    pgrep -f "/YEN.app/Contents/MacOS/YEN" >/dev/null 2>&1 && return 0
+    pgrep -f "/YEN.app/Contents/MacOS/yen" >/dev/null 2>&1 && return 0
+    return 1
+}
+
+trim_whitespace() {
+    printf "%s" "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+canonical_executable_path() {
+    local path="$1"
+    local dir
+    local base
+
+    [[ -x "${path}" ]] || return 1
+    dir=$(cd "$(dirname "${path}")" 2>/dev/null && pwd -P) || return 1
+    base=$(basename "${path}")
+    printf "%s/%s\n" "${dir}" "${base}"
+}
+
+resource_root() {
+    local root=""
+    local command_dir=""
+
+    if [[ -n "${YEN_RESOURCES:-}" ]]; then
+        root="${YEN_RESOURCES}"
+    elif [[ -n "${YEN_LIB:-}" ]]; then
+        root="${YEN_LIB%/lib}"
+    else
+        command_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd -P) || return 1
+        root=$(cd "${command_dir}/../.." 2>/dev/null && pwd -P) || return 1
+    fi
+
+    cd "${root}" 2>/dev/null && pwd -P
+}
+
+resolve_target_executable_path() {
+    local explicit=""
+    local root=""
+    local app_path=""
+    local candidate=""
+    local repo_root=""
+
+    if [[ "${YEN_WEB_ALLOW_TARGET_EXECUTABLE_PATH:-}" == "1" ]]; then
+        explicit=$(trim_whitespace "${YEN_WEB_TARGET_EXECUTABLE_PATH:-}")
+        if [[ -n "${explicit}" ]]; then
+            printf "%s\n" "${explicit}"
+            return 0
+        fi
+    fi
+
+    root=$(resource_root) || return 1
+    case "${root}" in
+        */YEN.app/Contents/Resources)
+            app_path="${root%/Contents/Resources}"
+            candidate="${app_path}/Contents/MacOS/yen"
+            canonical_executable_path "${candidate}" && return 0
+            return 1
+            ;;
+    esac
+
+    if [[ "$(basename "${root}")" == "yen-cli" ]]; then
+        repo_root=$(cd "${root}/.." 2>/dev/null && pwd -P) || return 1
+        candidate="${repo_root}/yen-terminal/ghostty/zig-out/YEN.app/Contents/MacOS/yen"
+        canonical_executable_path "${candidate}" && return 0
+    fi
+
+    return 1
+}
+
+post_web_command() {
+    local action="$1"
+    local url="$2"
+    local presentation="$3"
+    local response_path="$4"
+    local target="$5"
+    local target_executable_path=""
+
+    command -v osascript >/dev/null 2>&1 || {
+        echo "yen web: osascript is required to contact YEN.app" >&2
+        return 1
+    }
+
+    target_executable_path=$(resolve_target_executable_path || true)
+
+    export YEN_WEB_ACTION="${action}"
+    export YEN_WEB_URL="${url}"
+    export YEN_WEB_PRESENTATION="${presentation}"
+    export YEN_WEB_RESPONSE_PATH="${response_path}"
+    export YEN_WEB_TARGET="${target}"
+    export YEN_WEB_TARGET_EXECUTABLE_PATH="${target_executable_path}"
+
+    osascript -l JavaScript -e '
+        ObjC.import("Foundation");
+        var env = $.NSProcessInfo.processInfo.environment;
+        function envString(name) {
+            var value = env.objectForKey(name);
+            return value ? value.js : "";
+        }
+        var action = envString("YEN_WEB_ACTION");
+        var url = envString("YEN_WEB_URL");
+        var presentation = envString("YEN_WEB_PRESENTATION");
+        var responsePath = envString("YEN_WEB_RESPONSE_PATH");
+        var target = envString("YEN_WEB_TARGET");
+        var targetExecutablePath = envString("YEN_WEB_TARGET_EXECUTABLE_PATH");
+        var schemaVersion = targetExecutablePath.length > 0 ? "2" : "1";
+        var userInfo = {
+            "schema_version": schemaVersion,
+            "action": action,
+            "presentation": presentation,
+            "response_path": responsePath
+        };
+        if (url.length > 0) {
+            userInfo.url = url;
+        }
+        if (target.length > 0) {
+            userInfo.target = target;
+        }
+        if (targetExecutablePath.length > 0) {
+            userInfo.target_executable_path = targetExecutablePath;
+        }
+        $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately(
+            "com.yenchat.yen.webCommand", "", $(userInfo), true
+        );
+    ' >/dev/null 2>&1
+    local status=$?
+
+    unset YEN_WEB_ACTION YEN_WEB_URL YEN_WEB_PRESENTATION YEN_WEB_RESPONSE_PATH YEN_WEB_TARGET
+    unset YEN_WEB_TARGET_EXECUTABLE_PATH
+    return "${status}"
+}
+
+read_response() {
+    local response_path="$1"
+    python3 - "${response_path}" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+except Exception as exc:
+    print(f"yen web: could not read app response: {exc}", file=sys.stderr)
+    sys.exit(3)
+
+message = str(payload.get("message", "")).strip()
+accepted = bool(payload.get("accepted", False))
+acknowledged_executable_path = str(payload.get("acknowledged_executable_path", "")).strip()
+if accepted:
+    if message:
+        print(message)
+    if acknowledged_executable_path:
+        print(f"acknowledged_executable={acknowledged_executable_path}")
+    sys.exit(0)
+
+if message:
+    print(f"yen web: {message}", file=sys.stderr)
+else:
+    print("yen web: command was rejected", file=sys.stderr)
+sys.exit(2)
+PY
+}
+
+send_and_wait() {
+    local action="$1"
+    local url="$2"
+    local presentation="$3"
+    local target="$4"
+    local response_path
+    local attempts
+
+    if ! is_yen_running; then
+        echo "yen web: YEN.app is not running, so no browser command can be received" >&2
+        return 1
+    fi
+
+    response_path=$(mktemp "/tmp/yen-web-command.XXXXXX") || return 1
+    : > "${response_path}"
+
+    if ! post_web_command "${action}" "${url}" "${presentation}" "${response_path}" "${target}"; then
+        rm -f "${response_path}"
+        echo "yen web: failed to send browser command" >&2
+        return 1
+    fi
+
+    attempts=0
+    while [[ ${attempts} -lt 20 ]]; do
+        if [[ -s "${response_path}" ]]; then
+            read_response "${response_path}"
+            local status=$?
+            rm -f "${response_path}"
+            return "${status}"
+        fi
+        attempts=$((attempts + 1))
+        sleep 0.1
+    done
+
+    rm -f "${response_path}"
+    echo "yen web: YEN.app did not acknowledge the browser command" >&2
+    return 1
+}
+
+parse_open() {
+    local presentation="window"
+    local url=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --window)
+                presentation="window"
+                ;;
+            --split)
+                presentation="split"
+                ;;
+            --target)
+                shift
+                case "${1:-}" in
+                    window|split)
+                        presentation="$1"
+                        ;;
+                    *)
+                        echo "yen web: --target must be window or split" >&2
+                        return 2
+                        ;;
+                esac
+                ;;
+            -h|--help)
+                usage
+                return 0
+                ;;
+            -*)
+                echo "yen web: unknown option for open: $1" >&2
+                return 2
+                ;;
+            *)
+                if [[ -n "${url}" ]]; then
+                    echo "yen web: open accepts one URL" >&2
+                    return 2
+                fi
+                url="$1"
+                ;;
+        esac
+        shift
+    done
+
+    send_and_wait "open" "${url}" "${presentation}" ""
+}
+
+parse_targeted_action() {
+    local action="$1"
+    local target="automatic"
+    shift
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --automatic)
+                target="automatic"
+                ;;
+            --window)
+                target="window"
+                ;;
+            --split)
+                target="split"
+                ;;
+            --focused)
+                target="focused"
+                ;;
+            --target)
+                shift
+                case "${1:-}" in
+                    automatic|window|split|focused)
+                        target="$1"
+                        ;;
+                    *)
+                        echo "yen web: --target must be window, split, focused, or automatic" >&2
+                        return 2
+                        ;;
+                esac
+                ;;
+            -h|--help)
+                usage
+                return 0
+                ;;
+            -*)
+                echo "yen web: unknown option for ${action}: $1" >&2
+                return 2
+                ;;
+            *)
+                echo "yen web: ${action} does not accept positional arguments" >&2
+                return 2
+                ;;
+        esac
+        shift
+    done
+
+    if [[ "${action}" == "status" ]] && ! is_yen_running; then
+        echo "YEN.app: not running"
+        return 0
+    fi
+
+    send_and_wait "${action}" "" "window" "${target}"
+}
+
+main() {
+    local action="${1:-}"
+    [[ $# -gt 0 ]] && shift
+
+    case "${action}" in
+        -h|--help|"")
+            usage
+            ;;
+        open)
+            parse_open "$@"
+            ;;
+        back|forward|reload|close)
+            parse_targeted_action "${action}" "$@"
+            ;;
+        status)
+            parse_targeted_action "status" "$@"
+            ;;
+        *)
+            echo "yen web: unknown command: ${action}" >&2
+            usage >&2
+            return 2
+            ;;
+    esac
+}
+
+main "$@"

@@ -1,0 +1,59 @@
+#!/bin/bash
+# yen-yazi-edit - editor wrapper for Yazi edit/open-with paths.
+#
+# We route through a wrapper instead of invoking $EDITOR directly so we can
+# enforce compatibility flags for specific editors without changing user config.
+
+set -u
+
+editor_cmd="${EDITOR:-vi}"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+helper_candidates=()
+helper_path=""
+
+if [ -n "${YEN_LIB:-}" ]; then
+    helper_candidates+=("${YEN_LIB}/ide/editor-handoff.sh")
+fi
+helper_candidates+=("${script_dir}/../lib/ide/editor-handoff.sh")
+helper_candidates+=("${script_dir}/../../../yen-cli/lib/ide/editor-handoff.sh")
+
+for helper_path in "${helper_candidates[@]}"; do
+    if [ -f "${helper_path}" ]; then
+        # shellcheck source=/dev/null
+        . "${helper_path}"
+        break
+    fi
+done
+
+# Preserve quoted argv without evaluating shell metacharacters from EDITOR.
+editor_argv=()
+if declare -F editor_handoff_split_command >/dev/null 2>&1; then
+    if ! editor_handoff_split_command "$editor_cmd"; then
+        printf 'yen-yazi-edit: %s\n' "${EDITOR_HANDOFF_NOTE:-Unable to parse editor command.}" >&2
+        exit 1
+    fi
+    editor_argv=("${EDITOR_HANDOFF_SPLIT_ARGV[@]}")
+else
+    printf 'yen-yazi-edit: shared editor handoff helper is unavailable.\n' >&2
+    exit 1
+fi
+
+editor_bin="${editor_argv[0]}"
+editor_name="${editor_bin##*/}"
+
+# micro defaults to no line wrapping and enables a line-number ruler. In Yazi
+# edit/open flows we want wrapped lines and clean copy output without gutter
+# text, so enforce those session-only settings.
+if [ "$editor_name" = "micro" ]; then
+    exec "${editor_argv[@]}" -ruler false -softwrap true -wordwrap true -- "$@"
+fi
+
+if declare -F editor_handoff_build_plan >/dev/null 2>&1 && [ "$#" -eq 1 ]; then
+    if editor_handoff_build_plan "$1" "$PWD" "$editor_cmd" "0"; then
+        exec "${EDITOR_HANDOFF_COMMAND_ARGV[@]}"
+    fi
+    printf 'yen-yazi-edit: %s\n' "${EDITOR_HANDOFF_NOTE:-Unable to resolve editor handoff target.}" >&2
+    exit 1
+fi
+
+exec "${editor_argv[@]}" -- "$@"

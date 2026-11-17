@@ -1,0 +1,423 @@
+#!/bin/bash
+# YEN Update Command
+# Check for the latest version of YEN.app
+
+source "${YEN_LIB}/init.sh"
+
+# Version check URL
+VERSION_URL="${YEN_UPDATE_VERSION_URL:-https://yen.chat/stable/version.json}"
+VERSION_SIG_URL="${YEN_UPDATE_SIGNATURE_URL:-https://yen.chat/stable/version.sig}"
+STATE_FILE="${YEN_UPDATE_STATE_FILE:-$HOME/Library/Application Support/com.yenchat.yen/update-seen-version}"
+
+TMP_DIR=""
+VERSION_JSON_FILE=""
+VERSION_SIG_FILE=""
+
+cleanup_tmp() {
+    if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+        rm -rf "$TMP_DIR"
+    fi
+}
+trap cleanup_tmp EXIT
+
+# Find installed app Info.plist
+find_info_plist() {
+    if [[ -n "${YEN_UPDATE_INFO_PLIST:-}" && -f "$YEN_UPDATE_INFO_PLIST" ]]; then
+        echo "$YEN_UPDATE_INFO_PLIST"
+        return 0
+    fi
+
+    if [[ -n "${YEN_RESOURCES:-}" && -f "${YEN_RESOURCES}/../Info.plist" ]]; then
+        echo "${YEN_RESOURCES}/../Info.plist"
+        return 0
+    fi
+
+    if [[ -f "/Applications/YEN.app/Contents/Info.plist" ]]; then
+        echo "/Applications/YEN.app/Contents/Info.plist"
+        return 0
+    fi
+
+    if [[ -f "$HOME/Applications/YEN.app/Contents/Info.plist" ]]; then
+        echo "$HOME/Applications/YEN.app/Contents/Info.plist"
+        return 0
+    fi
+
+    return 1
+}
+
+# Get current installed version
+get_current_version() {
+    if [[ -n "${YEN_UPDATE_CURRENT_VERSION:-}" ]]; then
+        echo "$YEN_UPDATE_CURRENT_VERSION"
+        return 0
+    fi
+
+    local version=""
+    local plist_path
+    plist_path=$(find_info_plist || true)
+
+    if [[ -n "$plist_path" ]]; then
+        version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist_path" 2>/dev/null || true)
+    fi
+
+    echo "$version"
+}
+
+get_public_key_base64() {
+    if [[ -n "${YEN_UPDATE_PUBLIC_KEY_BASE64:-}" ]]; then
+        echo "$YEN_UPDATE_PUBLIC_KEY_BASE64" | tr -d '[:space:]'
+        return 0
+    fi
+
+    local plist_path
+    plist_path=$(find_info_plist || true)
+    if [[ -z "$plist_path" ]]; then
+        return 1
+    fi
+
+    /usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$plist_path" 2>/dev/null | tr -d '[:space:]'
+}
+
+decode_base64_to_file() {
+    local input="$1"
+    local output="$2"
+
+    if printf "%s" "$input" | base64 --decode > "$output" 2>/dev/null; then
+        return 0
+    fi
+    if printf "%s" "$input" | base64 -d > "$output" 2>/dev/null; then
+        return 0
+    fi
+    if printf "%s" "$input" | base64 -D > "$output" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+normalize_signature_body() {
+    local raw="$1"
+    local extracted
+
+    extracted=$(printf "%s" "$raw" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p' | head -1)
+    if [[ -n "$extracted" ]]; then
+        printf "%s" "$extracted" | tr -d '[:space:]'
+    else
+        printf "%s" "$raw" | tr -d '[:space:]'
+    fi
+}
+
+resolve_update_openssl() {
+    local candidate
+    local path_candidate
+
+    for candidate in \
+        "${YEN_UPDATE_OPENSSL_BIN:-}" \
+        "${YEN_SIGNATURE_OPENSSL_BIN:-}" \
+        "/opt/homebrew/bin/openssl" \
+        "/opt/homebrew/opt/openssl@3/bin/openssl" \
+        "/usr/local/bin/openssl" \
+        "/usr/local/opt/openssl@3/bin/openssl" \
+        "/opt/local/bin/openssl"
+    do
+        [[ -n "$candidate" ]] || continue
+        [[ -x "$candidate" ]] || continue
+        if "$candidate" pkeyutl -help 2>&1 | grep -q -- '-rawin'; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    path_candidate=$(command -v openssl 2>/dev/null || true)
+    if [[ -n "$path_candidate" && -x "$path_candidate" ]] && "$path_candidate" pkeyutl -help 2>&1 | grep -q -- '-rawin'; then
+        echo "$path_candidate"
+        return 0
+    fi
+
+    if [[ -x /usr/bin/openssl ]] && /usr/bin/openssl pkeyutl -help 2>&1 | grep -q -- '-rawin'; then
+        echo "/usr/bin/openssl"
+        return 0
+    fi
+
+    return 1
+}
+
+# Fetch latest version info from yen.chat
+fetch_latest_version() {
+    TMP_DIR=$(mktemp -d)
+    VERSION_JSON_FILE="$TMP_DIR/version.json"
+    VERSION_SIG_FILE="$TMP_DIR/version.sig"
+
+    if ! curl -fsSL --connect-timeout 10 --max-time 15 "$VERSION_URL" -o "$VERSION_JSON_FILE" 2>/dev/null; then
+        return 1
+    fi
+
+    if ! curl -fsSL --connect-timeout 10 --max-time 15 "$VERSION_SIG_URL" -o "$VERSION_SIG_FILE" 2>/dev/null; then
+        return 1
+    fi
+
+    return 0
+}
+
+verify_signed_metadata() {
+    local openssl_bin
+    openssl_bin=$(resolve_update_openssl || true)
+    if [[ -z "$openssl_bin" ]]; then
+        yen_error "OpenSSL with Ed25519 raw verification support is required for signed update verification."
+        return 1
+    fi
+    if ! command -v xxd >/dev/null 2>&1; then
+        yen_error "xxd is required for signed update verification."
+        return 1
+    fi
+
+    local pub_key_b64
+    pub_key_b64=$(get_public_key_base64 || true)
+    if [[ -z "$pub_key_b64" ]]; then
+        yen_error "Missing SUPublicEDKey; cannot verify update metadata."
+        return 1
+    fi
+
+    local raw_sig
+    raw_sig=$(cat "$VERSION_SIG_FILE" 2>/dev/null || true)
+    local sig_body
+    sig_body=$(normalize_signature_body "$raw_sig")
+    if [[ -z "$sig_body" ]]; then
+        yen_error "Missing update metadata signature."
+        return 1
+    fi
+
+    if ! printf "%s" "$sig_body" | grep -Eq '^[A-Za-z0-9+/=]+$'; then
+        yen_error "Update metadata signature is not valid base64."
+        return 1
+    fi
+
+    local verify_dir
+    verify_dir=$(mktemp -d)
+    local pub_raw="$verify_dir/public-key.raw"
+    local pub_der="$verify_dir/public-key.der"
+    local pub_pem="$verify_dir/public-key.pem"
+    local sig_bin="$verify_dir/signature.bin"
+    local openssl_log="$verify_dir/openssl.log"
+
+    if ! decode_base64_to_file "$pub_key_b64" "$pub_raw"; then
+        rm -rf "$verify_dir"
+        yen_error "Could not decode SUPublicEDKey."
+        return 1
+    fi
+    if ! decode_base64_to_file "$sig_body" "$sig_bin"; then
+        rm -rf "$verify_dir"
+        yen_error "Could not decode update metadata signature."
+        return 1
+    fi
+
+    local pub_size
+    pub_size=$(wc -c < "$pub_raw" | tr -d '[:space:]')
+    if [[ "$pub_size" != "32" ]]; then
+        rm -rf "$verify_dir"
+        yen_error "SUPublicEDKey has invalid length ($pub_size)."
+        return 1
+    fi
+
+    local sig_size
+    sig_size=$(wc -c < "$sig_bin" | tr -d '[:space:]')
+    if [[ "$sig_size" != "64" ]]; then
+        rm -rf "$verify_dir"
+        yen_error "Update metadata signature has invalid length ($sig_size)."
+        return 1
+    fi
+
+    local pub_hex
+    pub_hex=$(xxd -p "$pub_raw" | tr -d '\n')
+    printf "302a300506032b6570032100%s" "$pub_hex" | xxd -r -p > "$pub_der"
+
+    if "$openssl_bin" pkeyutl -verify -rawin -pubin -keyform DER -inkey "$pub_der" -in "$VERSION_JSON_FILE" -sigfile "$sig_bin" >/dev/null 2>"$openssl_log"; then
+        rm -rf "$verify_dir"
+        return 0
+    fi
+
+    if ! "$openssl_bin" pkey -pubin -inform DER -in "$pub_der" -out "$pub_pem" >/dev/null 2>"$openssl_log"; then
+        rm -rf "$verify_dir"
+        yen_error "Could not construct Ed25519 public key for verification."
+        return 1
+    fi
+
+    if ! "$openssl_bin" pkeyutl -verify -rawin -pubin -inkey "$pub_pem" -in "$VERSION_JSON_FILE" -sigfile "$sig_bin" >/dev/null 2>"$openssl_log"; then
+        rm -rf "$verify_dir"
+        yen_error "Signed update metadata verification failed."
+        return 1
+    fi
+
+    rm -rf "$verify_dir"
+    return 0
+}
+
+read_seen_version() {
+    if [[ -f "$STATE_FILE" ]]; then
+        cat "$STATE_FILE" 2>/dev/null | tr -d '[:space:]'
+    fi
+}
+
+remember_seen_version() {
+    local latest_version="$1"
+    mkdir -p "$(dirname "$STATE_FILE")"
+    printf "%s\n" "$latest_version" > "$STATE_FILE"
+}
+
+enforce_replay_guard() {
+    local latest_version="$1"
+    local seen_version=""
+
+    if [[ "${YEN_UPDATE_ALLOW_ROLLBACK:-0}" == "1" ]]; then
+        return 0
+    fi
+
+    seen_version=$(read_seen_version || true)
+    if [[ -n "$seen_version" ]] && version_lt "$latest_version" "$seen_version"; then
+        yen_error "Signed metadata is older than last trusted version ($seen_version)."
+        yen_info "This may indicate stale or replayed metadata."
+        return 1
+    fi
+
+    if [[ -z "$seen_version" ]] || version_lt "$seen_version" "$latest_version"; then
+        remember_seen_version "$latest_version"
+    fi
+
+    return 0
+}
+
+# Parse version field from JSON
+parse_version_field() {
+    local json_file="$1"
+    local field="$2"
+
+    if command -v jq &>/dev/null; then
+        jq -r --arg field "$field" '.[$field] // empty' "$json_file" 2>/dev/null
+    else
+        # Basic fallback parsing
+        grep -o "\"$field\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$json_file" | sed 's/.*: *"\([^"]*\)".*/\1/'
+    fi
+}
+
+# Compare version strings (returns 0 if v1 < v2, 1 if v1 >= v2)
+version_lt() {
+    local v1="$1"
+    local v2="$2"
+
+    # Use sort -V for version comparison
+    if [[ "$(printf '%s\n%s' "$v1" "$v2" | sort -V | head -1)" == "$v1" && "$v1" != "$v2" ]]; then
+        return 0  # v1 < v2
+    else
+        return 1  # v1 >= v2
+    fi
+}
+
+# Show help
+show_help() {
+    yen_header "YEN Update"
+    echo "Check for the latest signed YEN release metadata"
+    echo ""
+    printf "${ORANGE}Usage:${RESET}\n"
+    echo "  update         Check for updates"
+    echo "  update --help  Show this help"
+    echo ""
+    printf "${ORANGE}How updates work:${RESET}\n"
+    echo "  This command verifies signed release metadata."
+    echo "  Installation remains in-app via Sparkle."
+}
+
+# Main update check
+check_for_updates() {
+    yen_header "YEN Update Check"
+
+    # Get current version
+    local current_version
+    current_version=$(get_current_version)
+
+    if [[ -z "$current_version" ]]; then
+        yen_warn "Could not determine current version."
+        yen_info "Is YEN.app installed in /Applications?"
+        exit 1
+    fi
+
+    printf "${ORANGE}Current version:${RESET} %s\n" "$current_version"
+    echo ""
+
+    # Fetch latest version
+    yen_info "Checking yen.chat for updates..."
+
+    if ! fetch_latest_version; then
+        yen_error "Could not connect to yen.chat"
+        yen_info "Check your internet connection and try again."
+        exit 1
+    fi
+
+    if ! verify_signed_metadata; then
+        exit 1
+    fi
+
+    yen_success "Signed metadata verified."
+    echo ""
+
+    # Parse version info
+    local latest_version
+    local release_notes
+    local release_date
+
+    latest_version=$(parse_version_field "$VERSION_JSON_FILE" "version")
+    release_notes=$(parse_version_field "$VERSION_JSON_FILE" "notes")
+    release_date=$(parse_version_field "$VERSION_JSON_FILE" "releaseDate")
+
+    if [[ -z "$latest_version" ]]; then
+        yen_error "Could not parse version info"
+        exit 1
+    fi
+
+    if ! enforce_replay_guard "$latest_version"; then
+        exit 1
+    fi
+
+    printf "${ORANGE}Latest version:${RESET}  %s" "$latest_version"
+    if [[ -n "$release_date" ]]; then
+        printf " ${GRAY}(%s)${RESET}" "$release_date"
+    fi
+    echo ""
+    echo ""
+
+    # Compare versions
+    if version_lt "$current_version" "$latest_version"; then
+        # Update available
+        yen_success "Update available!"
+        echo ""
+
+        if [[ -n "$release_notes" ]]; then
+            printf "${ORANGE}What's new:${RESET} %s\n" "$release_notes"
+            echo ""
+        fi
+
+        yen_info "Look for the update notification in the app window."
+        yen_info "Click it to download and install automatically."
+    elif version_lt "$latest_version" "$current_version"; then
+        # Local install is ahead of published release metadata.
+        yen_success "You're ahead of the latest published release."
+        echo ""
+        yen_info "Installed version: $current_version"
+        yen_info "Published latest:  $latest_version"
+        yen_info "No update needed right now."
+    else
+        # Exactly up to date
+        yen_success "You're up to date!"
+        echo ""
+        yen_info "YEN $current_version matches the latest version."
+    fi
+}
+
+# Parse arguments
+case "${1:-}" in
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        check_for_updates
+        ;;
+esac

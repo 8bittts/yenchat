@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>YEN Settings redesign · Overview</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { place-items: start center; padding-top: 76px; }
+  .doc { width: min(980px, 100%); padding: 34px 40px 40px; }
+  .doc h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .doc .lede { font-size: 15px; color: var(--label-2); margin: 0 0 28px; max-width: 62ch; }
+  .doc h2 { font-size: 17px; margin: 34px 0 12px; letter-spacing: -0.01em; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { display: block; color: inherit; text-decoration: none; border-radius: 20px; padding: 18px; background: var(--group-bg); border: 0.5px solid var(--group-edge); transition: transform 0.18s ease; }
+  .card:hover { transform: translateY(-2px); }
+  .card .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); }
+  .card h3 { margin: 6px 0 6px; font-size: 16px; }
+  .card p { margin: 0 0 10px; color: var(--label-2); }
+  .card .open { color: var(--accent); font-weight: 600; }
+  .mini { height: 96px; border-radius: 12px; margin-bottom: 14px; background: var(--fill); position: relative; overflow: hidden; }
+  .mini i { position: absolute; display: block; border-radius: 6px; background: var(--fill-2); }
+  .mini .g { background: var(--control-bg); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14); }
+  .mini .t { background: #262b36; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-top: 0.5px solid var(--separator); }
+  th { font-size: 12px; color: var(--label-2); font-weight: 600; border-top: 0; }
+  td:first-child { width: 30%; font-weight: 500; }
+  td small { color: var(--label-2); font-size: 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .cols .group-card { padding: 4px 4px; }
+  ul.tight { margin: 0; padding: 10px 14px 12px 30px; }
+  ul.tight li { margin: 3px 0; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="review-bar glass">
+  <span>YEN Settings redesign</span>
+  <span class="sep"></span>
+  <a href="index.html" aria-current="page">Overview</a>
+  <a href="view-a-panes.html">A · Panes</a>
+  <a href="view-b-sidebar.html">B · Sidebar</a>
+  <a href="view-c-studio.html">C · Studio</a>
+  <span class="sep"></span>
+  <span class="segmented">
+    <button type="button" data-appearance-set="auto" aria-pressed="true">Auto</button>
+    <button type="button" data-appearance-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-appearance-set="dark" aria-pressed="false">Dark</button>
+  </span>
+</div>
+
+<main class="window doc">
+  <h1>YEN Settings, redesigned</h1>
+  <p class="lede">Three interactive views of one consolidated settings set. Each uses the same five panes and the same 36 rows; only the shell differs. Every control works, and every change shows in the terminal preview.</p>
+
+  <div class="cards">
+    <a class="card" href="view-a-panes.html">
+      <div class="mini"><i class="g" style="left:22%;top:10px;width:56%;height:22px;border-radius:11px"></i><i class="t" style="left:8%;top:44px;width:84%;height:20px"></i><i style="left:8%;top:72px;width:84%;height:30px"></i></div>
+      <span class="tag">VIEW A</span>
+      <h3>Panes</h3>
+      <p>The classic macOS settings window. A glass toolbar of five panes, the pane name in the title, grouped forms below.</p>
+      <span class="open">Open view A →</span>
+    </a>
+    <a class="card" href="view-b-sidebar.html">
+      <div class="mini"><i class="g" style="left:5%;top:8px;width:24%;height:80px;border-radius:9px"></i><i class="t" style="left:35%;top:22px;width:58%;height:26px"></i><i style="left:35%;top:56px;width:58%;height:32px"></i></div>
+      <span class="tag">VIEW B</span>
+      <h3>Sidebar</h3>
+      <p>The System Settings idiom. A floating glass sidebar with colored icons, a large title, and one calm content column.</p>
+      <span class="open">Open view B →</span>
+    </a>
+    <a class="card" href="view-c-studio.html">
+      <div class="mini" style="background:#262b36"><i class="g" style="right:5%;top:8px;width:30%;height:80px;border-radius:9px"></i><i class="g" style="left:5%;bottom:8px;width:56%;height:22px;border-radius:9px"></i></div>
+      <span class="tag">VIEW C</span>
+      <h3>Studio</h3>
+      <p>The window is a live terminal. A glass inspector and a theme dock float over it, so each change is seen where it lands.</p>
+      <span class="open">Open view C →</span>
+    </a>
+  </div>
+
+  <h2>How the three compare</h2>
+  <div class="group-card">
+    <table>
+      <tr><th></th><th>A · Panes</th><th>B · Sidebar</th><th>C · Studio</th></tr>
+      <tr><td>Closest Apple reference</td><td>Safari and Xcode Settings</td><td>System Settings</td><td>Inspector over a canvas</td></tr>
+      <tr><td>Where Liquid Glass sits</td><td>The pane toolbar</td><td>The sidebar</td><td>The inspector and the theme dock</td></tr>
+      <tr><td>20 themes</td><td>One 5 × 4 grid with a Dark and Light filter</td><td>Two labeled grids, 14 dark and 6 light</td><td>A dock of 20 swatches applied to the whole window</td></tr>
+      <tr><td>Strength</td><td>Follows the HIG settings pattern most literally</td><td>Familiar to every Mac user, roomiest forms</td><td>Nothing to imagine: the preview is the window</td></tr>
+      <tr><td>Cost</td><td>Fixed width; long panes scroll</td><td>Largest window for the same content</td><td>Departs from the HIG settings pattern; most to build</td></tr>
+    </table>
+  </div>
+
+  <h2>What every view removes</h2>
+  <div class="cols">
+    <div class="group-card">
+      <ul class="tight">
+        <li><b>Search.</b> Five panes and 36 rows fit on screen; nothing is deep enough to hunt for.</li>
+        <li><b>Import and Export.</b> <code>config.yen</code> is already a portable text file.</li>
+        <li><b>Per-pane Reset.</b> One Reset All Settings row remains, in General.</li>
+        <li><b>The Close button and the footer status bar.</b> The window closes like any other, and feedback sits beside the control it describes.</li>
+        <li><b>The shortcut filter field.</b> Five category tabs replace it.</li>
+      </ul>
+    </div>
+    <div class="group-card">
+      <ul class="tight">
+        <li><b>Layout tiles.</b> They are actions, and they stay in the File menu and the command palette.</li>
+        <li><b>The sound search popover and per-stream volume.</b> A pop-up button lists the 14 system sounds; volume follows the system.</li>
+        <li><b>Window Border scope, radius, two palette menus, outline style and the preview strip.</b> A switch, a color choice and a weight remain.</li>
+        <li><b>Separate X and Y padding with a slider, a field and a stepper each.</b> One Padding stepper remains.</li>
+        <li><b>The Local Speech re-check button.</b> Status refreshes on its own.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>What is merged</h2>
+  <div class="group-card">
+    <table>
+      <tr><th>Today</th><th>Redesign</th></tr>
+      <tr><td>General, Themes</td><td><b>Appearance</b>: theme, text, cursor and window in one pane, beside a live preview</td></tr>
+      <tr><td>General, Workspace</td><td><b>General</b>: startup, selection, workspace and links. <small>Tab Sidebar Enabled and Mode become one Off, Floating or Docked menu.</small></td></tr>
+      <tr><td>Sounds</td><td><b>Notifications</b> and <b>Dictation</b>, two panes named for what they hold</td></tr>
+      <tr><td>Delivery mode, sound and volume per stream</td><td>One sound menu per stream; None turns it off</td></tr>
+      <tr><td>Keyboard</td><td><b>Shortcuts</b>: click the shortcut itself to record; locked rows show a lock</td></tr>
+    </table>
+  </div>
+
+  <h2>Reviewed against Apple's current guidance</h2>
+  <div class="group-card">
+    <table>
+      <tr><th>Element</th><th>Guidance</th><th>In the redesign</th></tr>
+      <tr><td>Glass</td><td>Liquid Glass forms the navigation and control layer. Do not use it in the content layer.</td><td>Glass on the toolbar, sidebar, inspector and dock only. Forms use a standard material.</td></tr>
+      <tr><td>Window</td><td>Title names the visible pane. Minimize and zoom are dimmed. Reopen on the last pane.</td><td>All three views follow it; A uses the toolbar of panes the HIG describes.</td></tr>
+      <tr><td>Forms</td><td>Grouped forms with taller rows, rounder sections, title-style section headers.</td><td>46 pt rows, 16 pt section corners, concentric with a 26 pt window corner.</td></tr>
+      <tr><td>Controls</td><td>Rounder standard controls. Use color sparingly so controls stay legible.</td><td>Capsule switches, sliders, segmented controls and pop-up buttons. One accent color.</td></tr>
+      <tr><td>Hierarchy</td><td>Use a checkbox or indentation for dependent settings.</td><td>Dependent rows are indented and appear only when their parent is on.</td></tr>
+      <tr><td>Help</td><td>Tooltips stay under 75 characters. Essential text belongs in the interface.</td><td>One short line under a label where a setting needs it. No tooltips carry meaning.</td></tr>
+      <tr><td>Accessibility</td><td>4.5:1 text contrast. Never signal by color alone. Avoid timed messages.</td><td>Status uses a dot plus a word in a label color. No auto-dismissing footer.</td></tr>
+      <tr><td>Settings count</td><td>Minimize the number of settings. Put task-specific options in the task.</td><td>36 rows where there were about 70 controls.</td></tr>
+    </table>
+  </div>
+</main>
+
+<script>
+  document.querySelectorAll("[data-appearance-set]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const value = btn.dataset.appearanceSet;
+      if (value === "auto") document.documentElement.removeAttribute("data-appearance");
+      else document.documentElement.setAttribute("data-appearance", value);
+      document.querySelectorAll("[data-appearance-set]").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    });
+  });
+</script>
+</body>
+</html>

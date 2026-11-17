@@ -1,0 +1,4249 @@
+#!/bin/bash
+# YEN Agents Command
+# Multi-agent adapter board with first-party claude/codex profiles and workspace templates.
+
+source "${YEN_LIB}/init.sh"
+
+if [[ -f "${YEN_LIB}/ide/workspace-identity.sh" ]]; then
+    source "${YEN_LIB}/ide/workspace-identity.sh"
+fi
+
+if [[ -f "${YEN_LIB}/ide/reports.sh" ]]; then
+    source "${YEN_LIB}/ide/reports.sh"
+fi
+
+AGENTS_STATE_DIR="${YEN_AGENTS_STATE_DIR:-$HOME/.config/yen/agents}"
+AGENTS_WORKSPACE_STATE_DIR="${AGENTS_STATE_DIR}/workspaces"
+AGENTS_SESSION_STATE_DIR="${AGENTS_STATE_DIR}/sessions"
+AGENTS_NOTE_STATE_DIR="${AGENTS_STATE_DIR}/notes"
+AGENTS_EXPORT_DIR="${AGENTS_STATE_DIR}/exports"
+AGENTS_TIMELINE_FILE="${AGENTS_STATE_DIR}/timeline.log"
+AGENTS_RETENTION_DAYS="${YEN_AGENTS_RETENTION_DAYS:-7}"
+AGENTS_ARCHIVE_DIR="${YEN_AGENTS_ARCHIVE_DIR:-}"
+IDE_STATE_DIR="${YEN_IDE_STATE_DIR:-$HOME/.config/yen/ide}"
+IDE_TIMELINE_FILE="${IDE_STATE_DIR}/timeline.log"
+
+ensure_agents_state_dirs() {
+    mkdir -p "${AGENTS_WORKSPACE_STATE_DIR}" "${AGENTS_SESSION_STATE_DIR}" "${AGENTS_NOTE_STATE_DIR}" "${AGENTS_EXPORT_DIR}"
+    agents_prune_retention_best_effort
+}
+
+trim() {
+    printf "%s" "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+find_project_root() {
+    local start="${1:-$PWD}"
+    local path="${start}"
+
+    if [[ ! -d "${path}" ]]; then
+        path="$(dirname "${path}")"
+    fi
+    path=$(cd "${path}" 2>/dev/null && pwd -P || printf "%s" "${start}")
+
+    while true; do
+        if [[ -e "${path}/.git" ]] || [[ -f "${path}/package.json" ]] || [[ -f "${path}/go.mod" ]] || [[ -f "${path}/Cargo.toml" ]] || [[ -d "${path}/.yen" ]]; then
+            printf "%s\n" "${path}"
+            return 0
+        fi
+        if [[ "${path}" == "/" ]]; then
+            printf "%s\n" "${start}"
+            return 0
+        fi
+        path="$(dirname "${path}")"
+    done
+}
+
+project_hash() {
+    local root="$1"
+    if command -v shasum >/dev/null 2>&1; then
+        printf "%s" "${root}" | shasum -a 256 | awk '{print $1}'
+        return 0
+    fi
+    if command -v openssl >/dev/null 2>&1; then
+        printf "%s" "${root}" | openssl dgst -sha256 | awk '{print $2}'
+        return 0
+    fi
+    if command -v md5 >/dev/null 2>&1; then
+        md5 -q -s "${root}"
+        return 0
+    fi
+    printf "%s\n" "${root}" | tr -cd '[:alnum:]' | cut -c1-32
+}
+
+workspace_state_file() {
+    local root="$1"
+    local template_name="$2"
+    local hash
+    hash=$(project_hash "${root}")
+    printf "%s/%s-%s.state\n" "${AGENTS_WORKSPACE_STATE_DIR}" "${hash}" "${template_name}"
+}
+
+agents_short_hash_for_root() {
+    project_hash "$1" | cut -c1-12
+}
+
+agents_iso_now() {
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+agents_workspace_identity_for_root() {
+    local root="$1"
+    local identity=""
+    if declare -F workspace_identity_build_local_identity >/dev/null 2>&1; then
+        identity=$(workspace_identity_build_local_identity "${root}" 2>/dev/null || true)
+        if [[ -n "${identity}" ]]; then
+            printf "%s\n" "${identity}"
+            return 0
+        fi
+    fi
+    printf "%s\n" "${root}"
+}
+
+agents_git_branch_for_root() {
+    local root="$1"
+    local branch=""
+
+    if [[ ! -d "${root}/.git" ]] && [[ ! -f "${root}/.git" ]]; then
+        printf -- "-\n"
+        return 0
+    fi
+
+    branch=$(git -C "${root}" symbolic-ref --quiet --short HEAD 2>/dev/null | head -n 1)
+    if [[ -n "${branch}" ]]; then
+        printf "%s\n" "${branch}"
+        return 0
+    fi
+
+    branch=$(git -C "${root}" rev-parse --short HEAD 2>/dev/null | head -n 1)
+    if [[ -n "${branch}" ]]; then
+        printf "detached@%s\n" "${branch}"
+        return 0
+    fi
+
+    printf -- "-\n"
+}
+
+agents_git_dirty_state_for_root() {
+    local root="$1"
+
+    if [[ ! -d "${root}/.git" ]] && [[ ! -f "${root}/.git" ]]; then
+        printf "not-git\n"
+        return 0
+    fi
+
+    if [[ -n "$(git -C "${root}" status --porcelain --untracked-files=normal 2>/dev/null)" ]]; then
+        printf "dirty\n"
+    else
+        printf "clean\n"
+    fi
+}
+
+generate_agents_session_id() {
+    local stamp=""
+    local nonce=""
+    stamp=$(date -u +"%Y%m%dT%H%M%SZ")
+    nonce=$(printf "%06d" $(( RANDOM % 1000000 )))
+    printf "agt-%s-%s-%s\n" "${stamp}" "$$" "${nonce}"
+}
+
+generate_agents_export_suffix() {
+    local stamp=""
+    local nonce=""
+    stamp=$(date -u +"%Y%m%dT%H%M%SZ")
+    nonce=$(printf "%06d" $(( RANDOM % 1000000 )))
+    printf "%s-%s\n" "${stamp}" "${nonce}"
+}
+
+generate_agents_note_id() {
+    local stamp=""
+    local nonce=""
+    stamp=$(date -u +"%Y%m%dT%H%M%SZ")
+    nonce=$(printf "%06d" $(( RANDOM % 1000000 )))
+    printf "agn-%s-%s-%s\n" "${stamp}" "$$" "${nonce}"
+}
+
+session_state_file() {
+    local session_id="$1"
+    printf "%s/%s.state\n" "${AGENTS_SESSION_STATE_DIR}" "${session_id}"
+}
+
+session_state_value() {
+    local session_id="$1"
+    local key="$2"
+    local state_file=""
+    state_file=$(session_state_file "${session_id}")
+    [[ -f "${state_file}" ]] || return 0
+    sed -nE "s/^${key}=(.*)$/\\1/p" "${state_file}" | head -n 1
+}
+
+note_state_file() {
+    local note_id="$1"
+    printf "%s/%s.state\n" "${AGENTS_NOTE_STATE_DIR}" "${note_id}"
+}
+
+note_message_file() {
+    local note_id="$1"
+    printf "%s/%s.txt\n" "${AGENTS_NOTE_STATE_DIR}" "${note_id}"
+}
+
+write_agents_session_state() {
+    local session_id="$1"
+    local slot_id="$2"
+    local adapter="$3"
+    local workspace_identity="$4"
+    local project_root="$5"
+    local branch="$6"
+    local dirty_state="$7"
+    local launch_mode="$8"
+    local lifecycle_state="$9"
+    local started_at="${10}"
+    local stopped_at="${11}"
+    local exit_code="${12}"
+    local binary_name="${13}"
+    local binary_path="${14}"
+    local probe_cmd="${15}"
+    local probe_status="${16}"
+    local probe_version="${17}"
+    local declared_capabilities="${18}"
+    local launch_result="${19}"
+    local fallback_state="${20}"
+    local state_file=""
+
+    state_file=$(session_state_file "${session_id}")
+    cat > "${state_file}" << EOF
+session_id=${session_id}
+slot_id=${slot_id}
+adapter=${adapter}
+workspace_identity=${workspace_identity}
+project_root=${project_root}
+branch=${branch}
+dirty_state=${dirty_state}
+launch_mode=${launch_mode}
+lifecycle_state=${lifecycle_state}
+started_at=${started_at}
+stopped_at=${stopped_at}
+exit_code=${exit_code}
+binary_name=${binary_name}
+binary_path=${binary_path}
+probe_command=${probe_cmd}
+probe_status=${probe_status}
+probe_version=${probe_version}
+declared_capabilities=${declared_capabilities}
+launch_result=${launch_result}
+fallback_state=${fallback_state}
+EOF
+}
+
+agents_write_session_state_best_effort() {
+    write_agents_session_state "$@" 2>/dev/null || true
+}
+
+resolve_adapter_binary_path() {
+    local binary_name="$1"
+    command -v "${binary_name}" 2>/dev/null | head -n 1
+}
+
+agents_redact_file_to_stdout() {
+    local path="$1"
+    python3 - "${path}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+
+patterns = [
+    (
+        re.compile(r'(?i)\b(authorization\s*[:=]\s*bearer\s+)([^\s"\'`,;]+)'),
+        lambda match: f"{match.group(1)}[REDACTED:bearer-token]",
+    ),
+    (
+        re.compile(r'(?i)\b(password|passwd|token|secret|api[_-]?key|access[_-]?key|refresh[_-]?token|session[_-]?token)\b(\s*[:=]\s*)([^\s,"\';]+)'),
+        lambda match: f"{match.group(1)}{match.group(2)}[REDACTED:secret]",
+    ),
+    (
+        re.compile(r'\bghp_[A-Za-z0-9]{20,}\b'),
+        lambda match: "[REDACTED:github-token]",
+    ),
+    (
+        re.compile(r'\bgithub_pat_[A-Za-z0-9_]{20,}\b'),
+        lambda match: "[REDACTED:github-token]",
+    ),
+    (
+        re.compile(r'\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b'),
+        lambda match: "[REDACTED:api-key]",
+    ),
+    (
+        re.compile(r'\bAIza[0-9A-Za-z\-_]{35}\b'),
+        lambda match: "[REDACTED:api-key]",
+    ),
+    (
+        re.compile(r'\bAKIA[0-9A-Z]{16}\b'),
+        lambda match: "[REDACTED:aws-access-key]",
+    ),
+    (
+        re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{10,}\b'),
+        lambda match: "[REDACTED:slack-token]",
+    ),
+]
+
+for pattern, replacer in patterns:
+    text = pattern.sub(replacer, text)
+
+sys.stdout.write(text)
+PY
+}
+
+agents_redact_text_best_effort() {
+    local input="$1"
+    local output=""
+    local temp_file=""
+    temp_file=$(mktemp)
+    printf "%s" "${input}" > "${temp_file}"
+    if output=$(agents_redact_file_to_stdout "${temp_file}" 2>/dev/null); then
+        rm -f "${temp_file}"
+        printf "%s" "${output}"
+        return 0
+    fi
+    rm -f "${temp_file}"
+    printf "%s" "${input}"
+}
+
+agents_redact_file_in_place_best_effort() {
+    local path="$1"
+    local temp_file=""
+    [[ -f "${path}" ]] || return 0
+
+    temp_file=$(mktemp)
+    if agents_redact_file_to_stdout "${path}" > "${temp_file}" 2>/dev/null; then
+        mv "${temp_file}" "${path}"
+        return 0
+    fi
+    rm -f "${temp_file}"
+    return 0
+}
+
+agents_prune_retention() {
+    local retention_days="${AGENTS_RETENTION_DAYS:-7}"
+    if [[ ! "${retention_days}" =~ ^[0-9]+$ ]]; then
+        retention_days="7"
+    fi
+    if [[ "${retention_days}" -lt 1 ]]; then
+        retention_days="7"
+    fi
+
+    AGENTS_SESSION_STATE_DIR="${AGENTS_SESSION_STATE_DIR}" \
+    AGENTS_NOTE_STATE_DIR="${AGENTS_NOTE_STATE_DIR}" \
+    AGENTS_EXPORT_DIR="${AGENTS_EXPORT_DIR}" \
+    AGENTS_TIMELINE_FILE="${AGENTS_TIMELINE_FILE}" \
+    AGENTS_ARCHIVE_DIR="${AGENTS_ARCHIVE_DIR}" \
+    AGENTS_RETENTION_DAYS="${retention_days}" \
+    python3 - <<'PY'
+import os
+import shutil
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+retention_days = int(os.environ.get("AGENTS_RETENTION_DAYS", "7") or "7")
+archive_root = os.environ.get("AGENTS_ARCHIVE_DIR", "").strip()
+session_dir = Path(os.environ["AGENTS_SESSION_STATE_DIR"])
+note_dir = Path(os.environ["AGENTS_NOTE_STATE_DIR"])
+export_dir = Path(os.environ["AGENTS_EXPORT_DIR"])
+timeline_path = Path(os.environ["AGENTS_TIMELINE_FILE"])
+
+cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+archive_base = Path(archive_root) if archive_root else None
+
+
+def archive_or_delete(path: Path, subdir: str):
+    if archive_base is not None:
+        target_dir = archive_base / subdir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / path.name
+        if target.exists():
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            target = target_dir / f"{path.name}.{stamp}"
+        shutil.move(str(path), str(target))
+    else:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return
+
+
+def prune_dir(root: Path, pattern: str, subdir: str):
+    if not root.exists():
+        return
+    for path in root.glob(pattern):
+        try:
+            modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        except FileNotFoundError:
+            continue
+        if modified < cutoff:
+            archive_or_delete(path, subdir)
+
+
+def parse_iso8601(value: str):
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def append_archived_timeline(lines):
+    if archive_base is None or not lines:
+        return
+    target_dir = archive_base / "timeline"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / "timeline.log"
+    with open(target, "a", encoding="utf-8") as handle:
+        if target.exists() and target.stat().st_size > 0:
+            handle.write("\n")
+        handle.write("\n".join(lines))
+
+
+prune_dir(session_dir, "*.state", "sessions")
+prune_dir(note_dir, "*.state", "notes")
+prune_dir(note_dir, "*.txt", "notes")
+prune_dir(export_dir, "*", "exports")
+
+if timeline_path.exists():
+    keep = []
+    expired = []
+    with open(timeline_path, "r", encoding="utf-8") as handle:
+        for raw in handle:
+            line = raw.rstrip("\n")
+            if not line:
+                continue
+            timestamp = parse_iso8601(line.split("\t", 1)[0])
+            if timestamp is None or timestamp >= cutoff:
+                keep.append(line)
+            else:
+                expired.append(line)
+    append_archived_timeline(expired)
+    with open(timeline_path, "w", encoding="utf-8") as handle:
+        if keep:
+            handle.write("\n".join(keep))
+            handle.write("\n")
+PY
+}
+
+agents_prune_retention_best_effort() {
+    agents_prune_retention 2>/dev/null || true
+}
+
+write_agents_note_files() {
+    local note_id="$1"
+    local actor="$2"
+    local kind="$3"
+    local decision="$4"
+    local template_name="$5"
+    local title="$6"
+    local link_validated="$7"
+    local workspace_identity="$8"
+    local project_root="$9"
+    local session_id="${10}"
+    local slot_id="${11}"
+    local created_at="${12}"
+    local message="${13}"
+    local state_file=""
+    local message_file=""
+
+    state_file=$(note_state_file "${note_id}")
+    message_file=$(note_message_file "${note_id}")
+
+    cat > "${state_file}" << EOF
+note_id=${note_id}
+actor=${actor}
+kind=${kind}
+decision=${decision}
+template=${template_name}
+title=${title}
+link_validated=${link_validated}
+workspace_identity=${workspace_identity}
+project_root=${project_root}
+session_id=${session_id}
+slot_id=${slot_id}
+created_at=${created_at}
+EOF
+    printf "%s" "${message}" > "${message_file}"
+}
+
+agents_find_latest_session_for_workspace_slot() {
+    local workspace_identity="$1"
+    local project_root="$2"
+    local slot_id="$3"
+    python3 - "${AGENTS_SESSION_STATE_DIR}" "${AGENTS_TIMELINE_FILE}" "${workspace_identity}" "${project_root}" "${slot_id}" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+session_dir, timeline_path, workspace_identity, project_root, slot_id = sys.argv[1:6]
+best = None
+
+
+def parse_kv_lines(path):
+    payload = {}
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            for raw in handle:
+                line = raw.rstrip("\n")
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                payload[key] = value
+    except OSError:
+        return {}
+    return payload
+
+
+def parse_detail(detail):
+    payload = {}
+    for item in detail.split(";"):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def workspace_matches(payload_workspace, payload_project):
+    if payload_workspace:
+        return payload_workspace in {workspace_identity, project_root}
+    if payload_project:
+        return payload_project == project_root
+    return False
+
+
+for path in sorted(Path(session_dir).glob("*.state")):
+    payload = parse_kv_lines(path)
+    if not workspace_matches(payload.get("workspace_identity", ""), payload.get("project_root", "")):
+        continue
+    if payload.get("slot_id", "") != slot_id:
+        continue
+    try:
+        mtime_key = int(os.path.getmtime(path) * 1_000_000)
+    except OSError:
+        mtime_key = 0
+    rank = (
+        payload.get("started_at", ""),
+        payload.get("stopped_at", ""),
+        mtime_key,
+        path.stem,
+    )
+    if best is None or rank > best[0]:
+        best = (rank, path.stem)
+
+if best is None and timeline_path and os.path.exists(timeline_path):
+    try:
+        with open(timeline_path, "r", encoding="utf-8") as handle:
+            for line_number, raw in enumerate(handle):
+                parts = raw.rstrip("\n").split("\t", 4)
+                if len(parts) < 5:
+                    continue
+                timestamp, event, root_key, _status, detail_text = parts
+                if root_key != project_root:
+                    continue
+                if event not in {"session-start", "session-stop"}:
+                    continue
+                detail = parse_detail(detail_text)
+                if detail.get("slot", "") != slot_id:
+                    continue
+                if not workspace_matches(detail.get("workspace_identity", ""), root_key):
+                    continue
+                session_id = detail.get("session", "")
+                if not session_id:
+                    continue
+                rank = (
+                    detail.get("started_at", "") or timestamp,
+                    detail.get("stopped_at", "") or timestamp,
+                    line_number,
+                    session_id,
+                )
+                if best is None or rank > best[0]:
+                    best = (rank, session_id)
+    except OSError:
+        pass
+
+print(best[1] if best else "")
+PY
+}
+
+agents_session_metadata_for_id() {
+    local session_id="$1"
+    local project_root="$2"
+    local workspace_identity="$3"
+    local state_file=""
+
+    state_file=$(session_state_file "${session_id}")
+    if [[ -f "${state_file}" ]]; then
+        cat "${state_file}"
+        return 0
+    fi
+
+    python3 - "${AGENTS_TIMELINE_FILE}" "${session_id}" "${project_root}" "${workspace_identity}" <<'PY'
+import os
+import sys
+
+timeline_path, session_id, project_root, workspace_identity = sys.argv[1:5]
+best = None
+
+
+def parse_detail(detail):
+    payload = {}
+    for item in detail.split(";"):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def workspace_matches(payload_workspace, payload_project):
+    if payload_workspace:
+        return payload_workspace in {workspace_identity, project_root}
+    if payload_project:
+        return payload_project == project_root
+    return False
+
+
+if timeline_path and os.path.exists(timeline_path):
+    try:
+        with open(timeline_path, "r", encoding="utf-8") as handle:
+            for line_number, raw in enumerate(handle):
+                parts = raw.rstrip("\n").split("\t", 4)
+                if len(parts) < 5:
+                    continue
+                timestamp, event, root_key, _status, detail_text = parts
+                if root_key != project_root:
+                    continue
+                if event not in {"session-start", "session-stop"}:
+                    continue
+                detail = parse_detail(detail_text)
+                if detail.get("session", "") != session_id:
+                    continue
+                if not workspace_matches(detail.get("workspace_identity", ""), root_key):
+                    continue
+                rank = (
+                    detail.get("started_at", "") or timestamp,
+                    detail.get("stopped_at", "") or timestamp,
+                    line_number,
+                )
+                payload = {
+                    "session_id": session_id,
+                    "slot_id": detail.get("slot", ""),
+                    "adapter": detail.get("adapter", ""),
+                    "workspace_identity": detail.get("workspace_identity", "") or project_root,
+                    "project_root": project_root,
+                    "branch": detail.get("branch", ""),
+                    "dirty_state": detail.get("dirty", ""),
+                    "launch_mode": detail.get("launch_mode", ""),
+                }
+                if best is None or rank > best[0]:
+                    best = (rank, payload)
+    except OSError:
+        pass
+
+if best is not None:
+    for key, value in best[1].items():
+        print(f"{key}={value}")
+PY
+}
+
+agents_note_template_defaults() {
+    local template_name="$1"
+    case "${template_name}" in
+        review-approved)
+            printf "approval|approved|Approved for review|Manual review completed; ready for the next review or merge step.\n"
+            ;;
+        review-rejected)
+            printf "approval|rejected|Changes required before review|Manual review found follow-up work before the next review or merge step.\n"
+            ;;
+        handoff-review)
+            printf "handoff||Review handoff|Handing off the current workspace state for review.\n"
+            ;;
+        handoff-merge)
+            printf "handoff||Merge handoff|Handing off the current workspace state for merge-readiness or ship review.\n"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+agents_note_display_text() {
+    printf "%s" "$1" | tr '\t\r\n' '   ' | sed 's/;/,/g;s/^[[:space:]]*//;s/[[:space:]]*$//'
+}
+
+agents_note_default_title() {
+    local kind="$1"
+    local decision="$2"
+    local message="$3"
+    local preview=""
+
+    preview=$(agents_note_display_text "$(printf "%s" "${message}" | head -n 1)")
+    if [[ -n "${preview}" && ${#preview} -gt 72 ]]; then
+        preview="${preview:0:69}..."
+    fi
+
+    case "${kind}" in
+        approval)
+            case "${decision}" in
+                approved)
+                    printf "Approved\n"
+                    return 0
+                    ;;
+                rejected)
+                    printf "Changes required\n"
+                    return 0
+                    ;;
+                *)
+                    printf "Approval note\n"
+                    return 0
+                    ;;
+            esac
+            ;;
+        handoff)
+            printf "Handoff\n"
+            return 0
+            ;;
+    esac
+
+    if [[ -n "${preview}" ]]; then
+        printf "%s\n" "${preview}"
+        return 0
+    fi
+    printf "Note\n"
+}
+
+agents_timeline_log() {
+    local event="$1"
+    local project_root="$2"
+    local status="$3"
+    local detail="$4"
+    detail=$(printf "%s" "${detail}" | tr '\t\r\n' '   ')
+    printf "%s\t%s\t%s\t%s\t%s\n" "$(agents_iso_now)" "${event}" "${project_root}" "${status}" "${detail}" >> "${AGENTS_TIMELINE_FILE}"
+}
+
+agents_timeline_log_best_effort() {
+    agents_timeline_log "$@" 2>/dev/null || true
+}
+
+agents_report_snapshot_default() {
+    local prefix="$1"
+    cat << EOF
+${prefix}_status=never-run
+${prefix}_last_run_at=
+${prefix}_summary=
+${prefix}_details=
+${prefix}_semantic=
+${prefix}_failures=0
+${prefix}_warns=0
+${prefix}_executed=0
+EOF
+}
+
+agents_verify_snapshot_for_root() {
+    local root="$1"
+    if declare -F verify_snapshot_for_root >/dev/null 2>&1; then
+        verify_snapshot_for_root "${root}" 2>/dev/null || agents_report_snapshot_default "verify"
+        return 0
+    fi
+    agents_report_snapshot_default "verify"
+}
+
+agents_test_snapshot_for_root() {
+    local root="$1"
+    if declare -F test_snapshot_for_root >/dev/null 2>&1; then
+        test_snapshot_for_root "${root}" 2>/dev/null || agents_report_snapshot_default "test"
+        return 0
+    fi
+    agents_report_snapshot_default "test"
+}
+
+agents_snapshot_value() {
+    local snapshot="$1"
+    local key="$2"
+    printf "%s\n" "${snapshot}" | sed -nE "s/^${key}=(.*)$/\\1/p" | head -n 1
+}
+
+agents_render_snapshot_summary() {
+    local snapshot="$1"
+    local prefix="$2"
+    local status=""
+    local last_run=""
+    local semantic=""
+    local failures=""
+    local warns=""
+    local summary=""
+    local extras=""
+
+    status=$(agents_snapshot_value "${snapshot}" "${prefix}_status")
+    last_run=$(agents_snapshot_value "${snapshot}" "${prefix}_last_run_at")
+    semantic=$(agents_snapshot_value "${snapshot}" "${prefix}_semantic")
+    failures=$(agents_snapshot_value "${snapshot}" "${prefix}_failures")
+    warns=$(agents_snapshot_value "${snapshot}" "${prefix}_warns")
+    summary=$(agents_snapshot_value "${snapshot}" "${prefix}_summary")
+
+    [[ -z "${status}" ]] && status="never-run"
+    [[ -z "${failures}" ]] && failures="0"
+    [[ -z "${warns}" ]] && warns="0"
+
+    if [[ "${status}" == "never-run" ]]; then
+        printf "never-run\n"
+        return 0
+    fi
+
+    extras="failures=${failures};warns=${warns}"
+    if [[ -n "${semantic}" ]]; then
+        extras="${extras};semantic=${semantic}"
+    fi
+    if [[ -n "${last_run}" ]]; then
+        extras="${extras};last=${last_run}"
+    fi
+    if [[ -n "${summary}" ]]; then
+        extras="${extras};summary=${summary}"
+    fi
+
+    printf "%s (%s)\n" "${status}" "${extras}"
+}
+
+agents_evidence_status_default_json() {
+    printf '%s\n' '{"schemaVersion":1,"overall":{"label":"exported-with-gaps","reason":"Shared evidence status is unavailable.","gapArtifacts":["verify","test","quality","workflow","merge-readiness","pr-review"]},"artifacts":{"verify":{"label":"unverified"},"test":{"label":"unverified"},"quality":{"label":"missing-report"},"workflow":{"label":"missing-report"},"merge-readiness":{"label":"missing-report"},"pr-review":{"label":"missing-report"}}}'
+}
+
+agents_evidence_status_json_for_root() {
+    local root="$1"
+    if declare -F evidence_status_json_for_root >/dev/null 2>&1; then
+        evidence_status_json_for_root "${root}" 2>/dev/null || agents_evidence_status_default_json
+        return 0
+    fi
+    agents_evidence_status_default_json
+}
+
+agents_evidence_status_env_lines() {
+    local payload="$1"
+    EVIDENCE_STATUS_PAYLOAD="${payload}" python3 - <<'PY'
+import json
+import os
+
+payload = os.environ.get("EVIDENCE_STATUS_PAYLOAD", "")
+try:
+    data = json.loads(payload)
+except Exception:
+    data = {}
+
+overall = ((data.get("overall") or {}).get("label")) or "exported-with-gaps"
+artifacts = data.get("artifacts") or {}
+print(f"overall={overall}")
+for key in ("verify", "test", "quality", "workflow", "merge-readiness", "pr-review"):
+    value = ((artifacts.get(key) or {}).get("label")) or "missing-report"
+    print(f"{key}={value}")
+PY
+}
+
+agents_evidence_status_env_value() {
+    local env_lines="$1"
+    local key="$2"
+    printf "%s\n" "${env_lines}" | sed -nE "s/^${key}=(.*)$/\\1/p" | head -n 1
+}
+
+agents_linked_evidence_default_json() {
+    cat <<'EOF'
+{"schemaVersion":1,"quality":{"available":false,"reason":"No reusable local quality report artifacts have been recorded for this workspace."},"workflow":{"available":false,"reason":"No reusable local workflow report artifacts have been recorded for this workspace."},"mergeReadiness":{"available":false,"reason":"No local merge-readiness snapshot has been recorded for this workspace."},"prReview":{"available":false,"reason":"No local PR review artifacts have been recorded for this workspace."},"currentBranchCi":{"available":false,"reason":"No current-branch CI snapshot has been recorded for this workspace."},"localBuildWatch":{"available":false,"reason":"No local build-watch snapshot has been recorded for this workspace."}}
+EOF
+}
+
+agents_linked_evidence_json_for_root() {
+    local root="$1"
+    if declare -F linked_evidence_json_for_root >/dev/null 2>&1; then
+        linked_evidence_json_for_root "${root}" 2>/dev/null || agents_linked_evidence_default_json
+        return 0
+    fi
+    agents_linked_evidence_default_json
+}
+
+agents_linked_evidence_env_lines() {
+    local payload="$1"
+    LINKED_EVIDENCE_PAYLOAD="${payload}" python3 - <<'PY'
+import json
+import os
+
+payload = os.environ.get("LINKED_EVIDENCE_PAYLOAD", "")
+try:
+    data = json.loads(payload)
+except Exception:
+    data = {}
+
+merge_readiness = data.get("mergeReadiness") or {}
+pr_review = data.get("prReview") or {}
+current_branch_ci = data.get("currentBranchCi") or {}
+local_build_watch = data.get("localBuildWatch") or {}
+quality = data.get("quality") or {}
+workflow = data.get("workflow") or {}
+
+print(f"quality_available={'yes' if quality.get('available') else 'no'}")
+print(f"quality_action={quality.get('action') or ''}")
+print(f"quality_candidate={quality.get('candidate') or ''}")
+print(f"quality_scope={quality.get('scope') or ''}")
+print(f"quality_summary={quality.get('summaryPath') or ''}")
+print(f"workflow_available={'yes' if workflow.get('available') else 'no'}")
+print(f"workflow_name={workflow.get('name') or ''}")
+print(f"workflow_kind={workflow.get('kind') or ''}")
+print(f"workflow_location={workflow.get('location') or ''}")
+print(f"workflow_summary={workflow.get('summaryPath') or ''}")
+print(f"merge_ready_available={'yes' if merge_readiness.get('available') else 'no'}")
+print(f"merge_ready_last={merge_readiness.get('lastSeenAt') or ''}")
+print(f"merge_ready_pr={merge_readiness.get('prNumber') or 0}")
+print(f"merge_ready_verify={merge_readiness.get('verifyStatus') or ''}")
+print(f"review_available={'yes' if pr_review.get('available') else 'no'}")
+print(f"review_last={pr_review.get('lastSeenAt') or ''}")
+print(f"review_pr={pr_review.get('prNumber') or 0}")
+print(f"review_path={((pr_review.get('evidenceBundle') or {}).get('path')) or ''}")
+print(f"review_file={((pr_review.get('lastReview') or {}).get('file')) or ''}")
+print(f"review_target={(((pr_review.get('lastReview') or {}).get('semanticLocation') or {}).get('target')) or ((pr_review.get('lastReview') or {}).get('target')) or ''}")
+print(f"review_decision_available={'yes' if ((pr_review.get('decision') or {}).get('available')) else 'no'}")
+print(f"review_decision_mode={((pr_review.get('decision') or {}).get('mode')) or ''}")
+print(f"review_decision_path={((pr_review.get('decision') or {}).get('artifactPath')) or ''}")
+print(f"review_decision_target={(((pr_review.get('decision') or {}).get('semanticLocation') or {}).get('target')) or ((pr_review.get('decision') or {}).get('target')) or ''}")
+print(f"review_inline_available={'yes' if ((pr_review.get('inlineComment') or {}).get('available')) else 'no'}")
+print(f"review_inline_path={((pr_review.get('inlineComment') or {}).get('path')) or ''}")
+print(f"review_inline_line={((pr_review.get('inlineComment') or {}).get('line')) or 0}")
+print(f"review_inline_side={((pr_review.get('inlineComment') or {}).get('side')) or ''}")
+print(f"review_inline_artifact={((pr_review.get('inlineComment') or {}).get('artifactPath')) or ''}")
+print(f"review_inline_target={(((pr_review.get('inlineComment') or {}).get('semanticLocation') or {}).get('target')) or ''}")
+print(f"ci_available={'yes' if current_branch_ci.get('available') else 'no'}")
+print(f"ci_state={current_branch_ci.get('checksState') or ''}")
+print(f"ci_pr={current_branch_ci.get('prNumber') or 0}")
+print(f"ci_branch={current_branch_ci.get('branch') or ''}")
+print(f"watch_available={'yes' if local_build_watch.get('available') else 'no'}")
+print(f"watch_state={local_build_watch.get('state') or ''}")
+print(f"watch_kind={local_build_watch.get('kind') or ''}")
+print(f"watch_branch={local_build_watch.get('branch') or ''}")
+print(f"watch_iteration={local_build_watch.get('iteration') or 0}")
+print(f"watch_last={local_build_watch.get('lastOutcome') or ''}")
+PY
+}
+
+agents_linked_evidence_env_value() {
+    local env_lines="$1"
+    local key="$2"
+    printf "%s\n" "${env_lines}" | sed -nE "s/^${key}=(.*)$/\\1/p" | head -n 1
+}
+
+agents_context_json_for_root() {
+    local root="$1"
+    local workspace_identity="$2"
+    local branch="$3"
+    local dirty_state="$4"
+    local verify_snapshot="$5"
+    local test_snapshot="$6"
+
+    AGENTS_CONTEXT_VERIFY_SNAPSHOT="${verify_snapshot}" \
+    AGENTS_CONTEXT_TEST_SNAPSHOT="${test_snapshot}" \
+    python3 - "${root}" "${workspace_identity}" "${branch}" "${dirty_state}" << 'PY'
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+root, workspace_identity, branch, dirty_state = sys.argv[1:5]
+
+
+def parse_kv_lines(text):
+    payload = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def parse_snapshot(text, prefix):
+    payload = parse_kv_lines(text)
+    return {
+        "status": payload.get(f"{prefix}_status", "never-run"),
+        "lastRunAt": payload.get(f"{prefix}_last_run_at", ""),
+        "summary": payload.get(f"{prefix}_summary", ""),
+        "details": payload.get(f"{prefix}_details", ""),
+        "semantic": payload.get(f"{prefix}_semantic", ""),
+        "failures": int(payload.get(f"{prefix}_failures", "0") or "0"),
+        "warns": int(payload.get(f"{prefix}_warns", "0") or "0"),
+        "executed": int(payload.get(f"{prefix}_executed", "0") or "0"),
+    }
+
+
+def git_repo_exists(path):
+    return os.path.isdir(os.path.join(path, ".git")) or os.path.isfile(os.path.join(path, ".git"))
+
+
+def git_command(path, *args):
+    return subprocess.run(
+        ["git", "-C", path, *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def parse_status_line(line):
+    if len(line) < 3:
+        return None
+    xy = line[:2]
+    path_text = line[3:]
+    previous_path = ""
+    if " -> " in path_text:
+        previous_path, path_text = path_text.split(" -> ", 1)
+    return {
+        "xy": xy,
+        "path": path_text,
+        "previousPath": previous_path,
+    }
+
+
+def build_git_snapshot(path):
+    if not git_repo_exists(path):
+        return {
+            "tracked": False,
+            "head": "",
+            "shortHead": "",
+            "changedCounts": {},
+            "changedFiles": [],
+        }
+
+    head = ""
+    short_head = ""
+    head_proc = git_command(path, "rev-parse", "HEAD")
+    if head_proc.returncode == 0:
+        head = head_proc.stdout.strip()
+    short_proc = git_command(path, "rev-parse", "--short", "HEAD")
+    if short_proc.returncode == 0:
+        short_head = short_proc.stdout.strip()
+
+    status_proc = git_command(path, "status", "--porcelain=1", "--untracked-files=all")
+    changed_files = []
+    counts = {
+        "modified": 0,
+        "added": 0,
+        "deleted": 0,
+        "renamed": 0,
+        "untracked": 0,
+        "other": 0,
+    }
+    for raw in status_proc.stdout.splitlines():
+        parsed = parse_status_line(raw)
+        if parsed is None:
+            continue
+        xy = parsed["xy"]
+        status_code = xy.replace(" ", "")
+        bucket = "other"
+        if xy == "??":
+            bucket = "untracked"
+        elif "R" in status_code:
+            bucket = "renamed"
+        elif "D" in status_code:
+            bucket = "deleted"
+        elif "A" in status_code:
+            bucket = "added"
+        elif "M" in status_code:
+            bucket = "modified"
+        counts[bucket] += 1
+        parsed["category"] = bucket
+        changed_files.append(parsed)
+
+    return {
+        "tracked": True,
+        "head": head,
+        "shortHead": short_head,
+        "changedCounts": counts,
+        "changedFiles": changed_files,
+    }
+
+
+DEPENDENCY_MARKERS = {
+    "package.json",
+    "bun.lock",
+    "bun.lockb",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "go.mod",
+    "go.sum",
+    "Cargo.toml",
+    "Cargo.lock",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "Pipfile",
+    "Pipfile.lock",
+    "poetry.lock",
+    "Gemfile",
+    "Gemfile.lock",
+}
+
+
+def infer_risk_flags(git_snapshot, verify_snapshot, test_snapshot):
+    flags = []
+    paths = [item["path"] for item in git_snapshot["changedFiles"]]
+
+    def add_flag(flag_id, severity, detail):
+        if any(existing["id"] == flag_id for existing in flags):
+            return
+        flags.append({"id": flag_id, "severity": severity, "detail": detail})
+
+    if dirty_state == "dirty":
+        add_flag("dirty-worktree", "warn", "Workspace has uncommitted changes.")
+    if verify_snapshot["status"] in {"never-run", "report-missing"}:
+        add_flag("unverified", "warn", "No reusable verify snapshot is available.")
+    elif verify_snapshot["status"] == "failing":
+        add_flag("verify-failing", "high", "Latest verify snapshot is failing.")
+    elif verify_snapshot["status"] == "warnings":
+        add_flag("verify-warnings", "warn", "Latest verify snapshot has warnings.")
+
+    if test_snapshot["status"] in {"never-run", "report-missing"}:
+        add_flag("untested", "warn", "No reusable test snapshot is available.")
+    elif test_snapshot["status"] == "failing":
+        add_flag("test-failures", "high", "Latest test snapshot is failing.")
+    elif test_snapshot["status"] == "warnings":
+        add_flag("test-warnings", "warn", "Latest test snapshot has warnings.")
+
+    if any(Path(item).name in DEPENDENCY_MARKERS for item in paths):
+        add_flag("dependency-change", "warn", "Dependency manifest or lockfile changed.")
+    if any(
+        "migration" in item.lower() or "migrations/" in item.lower() or "supabase/" in item.lower()
+        for item in paths
+    ):
+        add_flag("migration-touch", "high", "Database or migration paths changed.")
+    if any(
+        token in item.lower()
+        for item in paths
+        for token in ("auth", "oauth", "session", "permission", "policy", "role")
+    ):
+        add_flag("auth-touch", "high", "Authentication, authorization, or policy paths changed.")
+    if any(
+        token in item.lower()
+        for item in paths
+        for token in (".env", "config", "settings", "version.json", "appcast", "plist")
+    ):
+        add_flag("config-touch", "warn", "Configuration-bearing paths changed.")
+    if any(item["category"] in {"deleted", "renamed"} for item in git_snapshot["changedFiles"]):
+        add_flag("destructive-file-op", "high", "Deleted or renamed files are present in the worktree.")
+
+    return flags
+
+
+def changed_summary(counts):
+    ordered = []
+    for key in ("modified", "added", "deleted", "renamed", "untracked", "other"):
+        value = counts.get(key, 0)
+        if value:
+            ordered.append(f"{key}={value}")
+    return "; ".join(ordered) if ordered else "clean"
+
+
+def risk_summary(flags):
+    counts = {}
+    labels = []
+    for flag in flags:
+        severity = flag.get("severity") or "unknown"
+        counts[severity] = counts.get(severity, 0) + 1
+        labels.append(f"{flag.get('id') or 'unknown'}({severity})")
+    return {
+        "count": len(flags),
+        "bySeverity": counts,
+        "ids": [flag.get("id") or "" for flag in flags],
+        "summaryText": ", ".join(labels) if labels else "none",
+    }
+
+
+verify_snapshot = parse_snapshot(os.environ.get("AGENTS_CONTEXT_VERIFY_SNAPSHOT", ""), "verify")
+test_snapshot = parse_snapshot(os.environ.get("AGENTS_CONTEXT_TEST_SNAPSHOT", ""), "test")
+git_snapshot = build_git_snapshot(root)
+short_head = git_snapshot.get("shortHead") or git_snapshot.get("head") or "-"
+context_key = f"{workspace_identity}|{branch or '-'}|{short_head}"
+flags = infer_risk_flags(git_snapshot, verify_snapshot, test_snapshot)
+
+payload = {
+    "schemaVersion": 1,
+    "repoSnapshot": {
+        "branch": branch,
+        "dirtyState": dirty_state,
+        "head": git_snapshot.get("head", ""),
+        "shortHead": git_snapshot.get("shortHead", ""),
+        "tracked": git_snapshot.get("tracked", False),
+        "changedSummary": changed_summary(git_snapshot.get("changedCounts", {})),
+        "changedCounts": git_snapshot.get("changedCounts", {}),
+        "changedFiles": git_snapshot.get("changedFiles", []),
+        "contextKey": context_key,
+    },
+    "riskFlags": flags,
+    "riskSummary": risk_summary(flags),
+}
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+}
+
+agents_context_env_lines() {
+    local payload="$1"
+    AGENTS_CONTEXT_PAYLOAD="${payload}" python3 - <<'PY'
+import json
+import os
+
+payload = os.environ.get("AGENTS_CONTEXT_PAYLOAD", "")
+try:
+    data = json.loads(payload)
+except Exception:
+    data = {}
+
+repo = data.get("repoSnapshot") or {}
+risk_summary = data.get("riskSummary") or {}
+
+print(f"context_key={repo.get('contextKey') or ''}")
+print(f"repo_branch={repo.get('branch') or ''}")
+print(f"repo_head={repo.get('shortHead') or repo.get('head') or ''}")
+print(f"repo_changes={repo.get('changedSummary') or ''}")
+print(f"risk_count={risk_summary.get('count') or 0}")
+print(f"risk_summary={risk_summary.get('summaryText') or 'none'}")
+PY
+}
+
+agents_context_env_value() {
+    local env_lines="$1"
+    local key="$2"
+    printf "%s\n" "${env_lines}" | sed -nE "s/^${key}=(.*)$/\\1/p" | head -n 1
+}
+
+agents_timeline_detail_value() {
+    local detail="$1"
+    local key="$2"
+    printf "%s\n" "${detail}" | tr ';' '\n' | sed -nE "s/^${key}=(.*)$/\\1/p" | head -n 1
+}
+
+agents_timeline_source_tag() {
+    local event="$1"
+    local detail="$2"
+    local actor=""
+    local slot=""
+    local adapter=""
+
+    if [[ "${event}" == "note" ]]; then
+        actor=$(agents_timeline_detail_value "${detail}" "actor")
+        if [[ -n "${actor}" ]]; then
+            printf "%s\n" "${actor}"
+            return 0
+        fi
+        printf "human\n"
+        return 0
+    fi
+
+    if [[ "${event}" == "session-start" || "${event}" == "session-stop" ]]; then
+        slot=$(agents_timeline_detail_value "${detail}" "slot")
+        adapter=$(agents_timeline_detail_value "${detail}" "adapter")
+        if [[ -n "${slot}" ]]; then
+            printf "agent:%s\n" "${slot}"
+            return 0
+        fi
+        if [[ -n "${adapter}" ]]; then
+            printf "agent:%s\n" "${adapter}"
+            return 0
+        fi
+    fi
+
+    printf "system\n"
+}
+
+agents_note_metadata_value() {
+    local note_id="$1"
+    local key="$2"
+    local state_file=""
+    state_file=$(note_state_file "${note_id}")
+    [[ -f "${state_file}" ]] || return 0
+    sed -nE "s/^${key}=(.*)$/\\1/p" "${state_file}" | head -n 1
+}
+
+agents_note_preview_for_id() {
+    local note_id="$1"
+    local message_file=""
+    local preview=""
+    message_file=$(note_message_file "${note_id}")
+    [[ -f "${message_file}" ]] || return 0
+    preview=$(agents_note_display_text "$(head -n 1 "${message_file}" 2>/dev/null)")
+    if [[ ${#preview} -gt 96 ]]; then
+        preview="${preview:0:93}..."
+    fi
+    printf "%s\n" "${preview}"
+}
+
+agents_note_title_for_id() {
+    local note_id="$1"
+    local title=""
+    title=$(agents_note_metadata_value "${note_id}" "title")
+    [[ -n "${title}" ]] || return 0
+    printf "%s\n" "$(agents_note_display_text "${title}")"
+}
+
+agents_session_exit_status_label() {
+    local exit_code="${1:-0}"
+    if [[ "${exit_code}" -eq 0 ]]; then
+        printf "success\n"
+        return 0
+    fi
+    if [[ "${exit_code}" -ge 128 ]]; then
+        printf "interrupted\n"
+        return 0
+    fi
+    printf "failed\n"
+}
+
+agents_write_filtered_timeline_file() {
+    local root="$1"
+    local limit="$2"
+    local out_file="$3"
+    local event_filter="${4:-}"
+    local source_filter="${5:-}"
+    local kind_filter="${6:-}"
+
+    if [[ -s "${AGENTS_TIMELINE_FILE}" ]]; then
+        awk -F'\t' \
+            -v root="${root}" \
+            -v event_filter="${event_filter}" \
+            -v source_filter="${source_filter}" \
+            -v kind_filter="${kind_filter}" '
+function detail_value(detail, key,    parts, i, pair, n) {
+    n = split(detail, parts, ";")
+    for (i = 1; i <= n; i++) {
+        split(parts[i], pair, "=")
+        if (pair[1] == key) {
+            sub(/^[[:space:]]+/, "", pair[2])
+            sub(/[[:space:]]+$/, "", pair[2])
+            return pair[2]
+        }
+    }
+    return ""
+}
+function source_tag(event, detail,    actor, slot, adapter) {
+    if (event == "note") {
+        actor = detail_value(detail, "actor")
+        if (actor != "") {
+            return actor
+        }
+        return "human"
+    }
+    if (event == "session-start" || event == "session-stop") {
+        slot = detail_value(detail, "slot")
+        adapter = detail_value(detail, "adapter")
+        if (slot != "") {
+            return "agent:" slot
+        }
+        if (adapter != "") {
+            return "agent:" adapter
+        }
+    }
+    return "system"
+}
+$3 == root {
+    if (event_filter != "" && $2 != event_filter) {
+        next
+    }
+    if (kind_filter != "" && detail_value($5, "kind") != kind_filter) {
+        next
+    }
+    if (source_filter != "" && source_tag($2, $5) != source_filter) {
+        next
+    }
+    print $0
+}' "${AGENTS_TIMELINE_FILE}" | tail -n "${limit}" > "${out_file}"
+        return 0
+    fi
+
+    : > "${out_file}"
+}
+
+agents_write_adapter_summary_file() {
+    local filtered_file="$1"
+    local out_file="$2"
+    local adapter_names=""
+    local adapter_name=""
+
+    : > "${out_file}"
+    adapter_names=$(awk -F'\t' '{print $5}' "${filtered_file}" 2>/dev/null | tr ';' '\n' | sed -nE 's/^adapter=(.*)$/\1/p' | sort -u)
+
+    while IFS= read -r adapter_name; do
+        [[ -z "${adapter_name}" ]] && continue
+        local row=""
+        local name=""
+        local binary_name=""
+        local binary_path=""
+        local probe_cmd=""
+        local capabilities=""
+        local probe_info=""
+        local adapter_status=""
+        local adapter_version=""
+
+        row=$(find_adapter_row "${adapter_name}" || true)
+        if [[ -z "${row}" ]]; then
+            printf "%s\t-\t\t\tunknown\t-\t-\n" "${adapter_name}" >> "${out_file}"
+            continue
+        fi
+
+        IFS=$'\t' read -r name binary_name probe_cmd capabilities << EOF
+${row}
+EOF
+        binary_path=$(resolve_adapter_binary_path "${binary_name}")
+        probe_info=$(probe_adapter_status "${binary_name}" "${probe_cmd}")
+        IFS='|' read -r adapter_status adapter_version << EOF
+${probe_info}
+EOF
+        printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "${name}" "${binary_name}" "${binary_path}" "${probe_cmd}" "${adapter_status}" "${adapter_version}" "${capabilities}" >> "${out_file}"
+    done << EOF
+${adapter_names}
+EOF
+}
+
+render_agents_export_bundle() {
+    local filtered_file="$1"
+    local adapter_file="$2"
+    local project_root="$3"
+    local workspace_identity="$4"
+    local branch="$5"
+    local dirty_state="$6"
+    local format="$7"
+
+    AGENTS_VERIFY_SNAPSHOT="${AGENTS_VERIFY_SNAPSHOT:-}" \
+    AGENTS_TEST_SNAPSHOT="${AGENTS_TEST_SNAPSHOT:-}" \
+    AGENTS_EVIDENCE_STATUS_JSON="${AGENTS_EVIDENCE_STATUS_JSON:-}" \
+    AGENTS_LINKED_EVIDENCE_JSON="${AGENTS_LINKED_EVIDENCE_JSON:-}" \
+    AGENTS_CONTEXT_JSON="${AGENTS_CONTEXT_JSON:-}" \
+    python3 - "${filtered_file}" "${AGENTS_SESSION_STATE_DIR}" "${AGENTS_NOTE_STATE_DIR}" "${AGENTS_TIMELINE_FILE}" "${adapter_file}" "${project_root}" "${workspace_identity}" "${branch}" "${dirty_state}" "${format}" << 'PY'
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+(
+    filtered_file,
+    session_dir,
+    note_dir,
+    timeline_file,
+    adapter_file,
+    project_root,
+    workspace_identity,
+    branch,
+    dirty_state,
+    output_format,
+) = sys.argv[1:11]
+
+
+def parse_kv_lines(text):
+    payload = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def parse_snapshot(text, prefix):
+    payload = parse_kv_lines(text)
+    return {
+        "status": payload.get(f"{prefix}_status", "never-run"),
+        "lastRunAt": payload.get(f"{prefix}_last_run_at", ""),
+        "summary": payload.get(f"{prefix}_summary", ""),
+        "details": payload.get(f"{prefix}_details", ""),
+        "semantic": payload.get(f"{prefix}_semantic", ""),
+        "failures": int(payload.get(f"{prefix}_failures", "0") or "0"),
+        "warns": int(payload.get(f"{prefix}_warns", "0") or "0"),
+        "executed": int(payload.get(f"{prefix}_executed", "0") or "0"),
+    }
+
+
+def parse_json_payload(text, fallback):
+    raw = str(text or "").strip()
+    if not raw:
+        return fallback
+    try:
+        return json.loads(raw)
+    except Exception:
+        return fallback
+
+
+def parse_detail(detail):
+    payload = {}
+    for item in detail.split(";"):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def workspace_matches(payload_workspace, payload_project):
+    if payload_workspace:
+        return payload_workspace in {workspace_identity, project_root}
+    if payload_project:
+        return payload_project == project_root
+    return False
+
+
+_timeline_session_states = None
+
+
+def timeline_session_states():
+    global _timeline_session_states
+    if _timeline_session_states is not None:
+        return _timeline_session_states
+
+    session_map = {}
+    if os.path.exists(timeline_file):
+        with open(timeline_file, "r", encoding="utf-8") as handle:
+            for line_number, raw in enumerate(handle):
+                raw = raw.rstrip("\n")
+                if not raw:
+                    continue
+                parts = raw.split("\t", 4)
+                if len(parts) < 5:
+                    continue
+                timestamp, event, root_key, status, detail_text = parts
+                if root_key != project_root:
+                    continue
+                if event not in {"session-start", "session-stop"}:
+                    continue
+                detail = parse_detail(detail_text)
+                session_id = detail.get("session", "")
+                if not session_id:
+                    continue
+                if not workspace_matches(detail.get("workspace_identity", ""), root_key):
+                    continue
+                payload = session_map.setdefault(
+                    session_id,
+                    {
+                        "session_id": session_id,
+                        "slot_id": "",
+                        "adapter": "",
+                        "workspace_identity": "",
+                        "project_root": root_key,
+                        "branch": "",
+                        "dirty_state": "",
+                        "launch_mode": "",
+                        "lifecycle_state": "",
+                        "started_at": "",
+                        "stopped_at": "",
+                        "exit_code": "0",
+                        "binary_name": "",
+                        "binary_path": "",
+                        "probe_command": "",
+                        "probe_status": "",
+                        "probe_version": "",
+                        "declared_capabilities": "",
+                        "launch_result": "",
+                        "fallback_state": "",
+                        "_mtimeNs": 0,
+                    },
+                )
+                for detail_key, payload_key in (
+                    ("slot", "slot_id"),
+                    ("adapter", "adapter"),
+                    ("branch", "branch"),
+                    ("dirty", "dirty_state"),
+                    ("launch_mode", "launch_mode"),
+                    ("binary_name", "binary_name"),
+                    ("binary_path", "binary_path"),
+                    ("probe_command", "probe_command"),
+                    ("probe_status", "probe_status"),
+                    ("probe_version", "probe_version"),
+                    ("declared_capabilities", "declared_capabilities"),
+                    ("launch_result", "launch_result"),
+                    ("fallback_state", "fallback_state"),
+                ):
+                    if detail_key in detail:
+                        payload[payload_key] = detail[detail_key]
+                payload["workspace_identity"] = (
+                    detail.get("workspace_identity", "") or payload.get("workspace_identity", "") or root_key
+                )
+                payload["project_root"] = root_key
+                if "started_at" in detail:
+                    payload["started_at"] = detail["started_at"] or payload.get("started_at", "")
+                elif event == "session-start" and not payload.get("started_at", ""):
+                    payload["started_at"] = timestamp
+                if event == "session-start":
+                    payload["lifecycle_state"] = "running"
+                if event == "session-stop":
+                    payload["lifecycle_state"] = "stopped"
+                    payload["stopped_at"] = detail.get("stopped_at", "") or timestamp
+                    status_fields = parse_detail(status)
+                    if "exit" in status_fields:
+                        payload["exit_code"] = status_fields["exit"]
+                payload["_mtimeNs"] = max(int(payload.get("_mtimeNs", 0) or 0), line_number)
+
+    _timeline_session_states = session_map
+    return _timeline_session_states
+
+
+def note_payload_with_schema(note_payload):
+    if note_payload is None:
+        return None
+    row = dict(note_payload)
+    row["schemaVersion"] = 1
+    return row
+
+
+def session_state_with_schema(session_state):
+    if session_state is None:
+        return None
+    declared_capabilities = session_state.get("declared_capabilities", "")
+    return {
+        "schemaVersion": 1,
+        "sessionId": session_state.get("session_id", ""),
+        "slotId": session_state.get("slot_id", ""),
+        "adapter": session_state.get("adapter", ""),
+        "workspaceIdentity": session_state.get("workspace_identity", ""),
+        "projectRoot": session_state.get("project_root", ""),
+        "branch": session_state.get("branch", ""),
+        "dirtyState": session_state.get("dirty_state", ""),
+        "launchMode": session_state.get("launch_mode", ""),
+        "lifecycleState": session_state.get("lifecycle_state", ""),
+        "startedAt": session_state.get("started_at", ""),
+        "stoppedAt": session_state.get("stopped_at", ""),
+        "exitCode": int(session_state.get("exit_code", "0") or "0"),
+        "binaryName": session_state.get("binary_name", ""),
+        "binaryPath": session_state.get("binary_path", ""),
+        "probeCommand": session_state.get("probe_command", ""),
+        "probeStatus": session_state.get("probe_status", ""),
+        "probeVersion": session_state.get("probe_version", ""),
+        "declaredCapabilities": declared_capabilities,
+        "capabilitiesList": [item for item in declared_capabilities.split(",") if item],
+        "launchResult": session_state.get("launch_result", ""),
+        "fallbackState": session_state.get("fallback_state", ""),
+    }
+
+
+def event_source_kind(source_tag):
+    if source_tag.startswith("agent:"):
+        return "agent"
+    if source_tag in {"human", "supervisor", "system"}:
+        return source_tag
+    return "system"
+
+
+def event_family_and_action(event):
+    mapping = {
+        "session-start": ("session", "start"),
+        "session-stop": ("session", "stop"),
+        "template-apply": ("template", "apply"),
+        "note": ("note", "record"),
+        "export": ("artifact", "export"),
+    }
+    return mapping.get(event, ("system", event))
+
+
+def event_outcome(event, status, detail, status_fields):
+    if event == "session-start":
+        return status or "started"
+    if event == "session-stop":
+        return status_fields.get("status", "stopped")
+    if event == "note":
+        if status.startswith("approval="):
+            return status.split("=", 1)[1]
+        return detail.get("decision") or detail.get("kind") or status or "recorded"
+    if event == "template-apply":
+        return status or "applied"
+    if event == "export":
+        return "exported"
+    return status or "recorded"
+
+
+def event_target(detail, session_id, note_id):
+    slot_id = detail.get("slot", "")
+    template_name = detail.get("template", "")
+    if note_id:
+        target_kind = "note"
+        label = note_id
+    elif template_name:
+        target_kind = "template"
+        label = template_name
+    elif slot_id:
+        target_kind = "slot"
+        label = slot_id
+    elif session_id:
+        target_kind = "session"
+        label = session_id
+    else:
+        target_kind = "workspace"
+        label = ""
+
+    return {
+        "kind": target_kind,
+        "label": label,
+        "sessionId": session_id,
+        "slotId": slot_id,
+        "templateName": template_name,
+        "noteId": note_id,
+    }
+
+
+def read_session_state(session_id):
+    if not session_id:
+        return None
+    path = os.path.join(session_dir, f"{session_id}.state")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return parse_kv_lines(handle.read())
+    return timeline_session_states().get(session_id)
+
+
+def read_note_payload(note_id):
+    if not note_id:
+        return None
+    state_path = os.path.join(note_dir, f"{note_id}.state")
+    message_path = os.path.join(note_dir, f"{note_id}.txt")
+    if not os.path.exists(state_path):
+        return None
+    with open(state_path, "r", encoding="utf-8") as handle:
+        payload = parse_kv_lines(handle.read())
+    message = ""
+    if os.path.exists(message_path):
+        with open(message_path, "r", encoding="utf-8") as handle:
+            message = handle.read()
+    return {
+        "noteId": payload.get("note_id", note_id),
+        "actor": payload.get("actor", ""),
+        "kind": payload.get("kind", ""),
+        "decision": payload.get("decision", ""),
+        "template": payload.get("template", ""),
+        "title": payload.get("title", ""),
+        "linkValidated": payload.get("link_validated", "") == "yes",
+        "workspaceIdentity": payload.get("workspace_identity", ""),
+        "projectRoot": payload.get("project_root", ""),
+        "sessionId": payload.get("session_id", ""),
+        "slotId": payload.get("slot_id", ""),
+        "createdAt": payload.get("created_at", ""),
+        "message": message,
+    }
+
+
+def event_source_tag(event, detail):
+    if event == "note":
+        actor = detail.get("actor", "")
+        return actor or "human"
+    if event in {"session-start", "session-stop"}:
+        slot = detail.get("slot", "")
+        adapter = detail.get("adapter", "")
+        if slot:
+            return f"agent:{slot}"
+        if adapter:
+            return f"agent:{adapter}"
+    return "system"
+
+
+def normalize_event(time, event, root_key, status, detail_text):
+    detail = parse_detail(detail_text)
+    session_id = detail.get("session", "")
+    note_id = detail.get("note_id", "")
+    source_tag = event_source_tag(event, detail)
+    source_kind = event_source_kind(source_tag)
+    status_fields = parse_detail(status)
+    family, action = event_family_and_action(event)
+    outcome = event_outcome(event, status, detail, status_fields)
+    row = {
+        "schemaVersion": 1,
+        "time": time,
+        "timestamp": time,
+        "event": event,
+        "eventName": event,
+        "eventFamily": family,
+        "eventAction": action,
+        "eventOutcome": outcome,
+        "projectRoot": root_key,
+        "status": status,
+        "statusFields": status_fields,
+        "detail": detail_text,
+        "detailFields": detail,
+        "sessionId": session_id,
+        "noteId": note_id,
+        "slotId": detail.get("slot", ""),
+        "templateName": detail.get("template", ""),
+        "adapter": detail.get("adapter", ""),
+        "branch": detail.get("branch", ""),
+        "dirtyState": detail.get("dirty", ""),
+        "launchMode": detail.get("launch_mode", ""),
+        "workspaceIdentity": detail.get("workspace_identity", workspace_identity),
+        "source": {
+            "tag": source_tag,
+            "kind": source_kind,
+            "actor": detail.get("actor", ""),
+            "slotId": detail.get("slot", ""),
+            "adapter": detail.get("adapter", ""),
+        },
+        "target": event_target(detail, session_id, note_id),
+    }
+    session_state = read_session_state(session_id)
+    if session_state is not None:
+        row["sessionState"] = session_state_with_schema(session_state)
+    note_payload = read_note_payload(note_id)
+    if note_payload is not None:
+        row["note"] = note_payload_with_schema(note_payload)
+    row["sourceTag"] = source_tag
+    return row
+
+
+def read_events():
+    rows = []
+    if not os.path.exists(filtered_file):
+        return rows
+    with open(filtered_file, "r", encoding="utf-8") as handle:
+        for raw in handle:
+            raw = raw.rstrip("\n")
+            if not raw:
+                continue
+            parts = raw.split("\t", 4)
+            if len(parts) < 5:
+                continue
+            rows.append(normalize_event(*parts))
+    return rows
+
+
+def read_adapters():
+    rows = []
+    if not os.path.exists(adapter_file):
+        return rows
+    with open(adapter_file, "r", encoding="utf-8") as handle:
+        for raw in handle:
+            raw = raw.rstrip("\n")
+            if not raw:
+                continue
+            parts = raw.split("\t")
+            if len(parts) < 7:
+                continue
+            (
+                name,
+                binary_name,
+                binary_path,
+                probe_command,
+                status,
+                version,
+                capabilities,
+            ) = parts[:7]
+            rows.append(
+                {
+                    "name": name,
+                    "binary": binary_name,
+                    "binaryPath": binary_path,
+                    "probeCommand": probe_command,
+                    "status": status,
+                    "version": version,
+                    "probeStatus": status,
+                    "probeVersion": version,
+                    "capabilities": capabilities,
+                    "declaredCapabilities": capabilities,
+                    "capabilitiesList": [item for item in capabilities.split(",") if item],
+                }
+            )
+    return rows
+
+
+def session_sort_key(row):
+    return (
+        row.get("startedAt", ""),
+        row.get("stoppedAt", ""),
+        int(row.get("_mtimeNs", 0) or 0),
+        row.get("sessionId", ""),
+    )
+
+
+def summarize_grouped_sessions(grouped):
+    summaries = {}
+    for adapter_name, sessions in grouped.items():
+        session_rows = list(sessions.values())
+        session_rows.sort(key=session_sort_key)
+        summaries[adapter_name] = {
+            "sessionCount": len(session_rows),
+            "latestSession": session_rows[-1] if session_rows else None,
+        }
+    return summaries
+
+
+def session_row_from_session_state(session_state):
+    if not session_state:
+        return None
+    adapter_name = session_state.get("adapter", "")
+    session_id = session_state.get("sessionId", "")
+    if not adapter_name or not session_id:
+        return None
+    return {
+        "sessionId": session_id,
+        "slotId": session_state.get("slotId", ""),
+        "launchMode": session_state.get("launchMode", ""),
+        "launchResult": session_state.get("launchResult", ""),
+        "fallbackState": session_state.get("fallbackState", ""),
+        "lifecycleState": session_state.get("lifecycleState", ""),
+        "startedAt": session_state.get("startedAt", ""),
+        "stoppedAt": session_state.get("stoppedAt", ""),
+        "exitCode": session_state.get("exitCode", 0),
+        "binaryName": session_state.get("binaryName", ""),
+        "binaryPath": session_state.get("binaryPath", ""),
+        "probeCommand": session_state.get("probeCommand", ""),
+        "probeStatus": session_state.get("probeStatus", ""),
+        "probeVersion": session_state.get("probeVersion", ""),
+        "declaredCapabilities": session_state.get("declaredCapabilities", ""),
+        "capabilitiesList": session_state.get("capabilitiesList", []),
+        "_mtimeNs": int(session_state.get("_mtimeNs", 0) or 0),
+    }
+
+
+def merge_grouped_session_state(grouped, session_state):
+    row = session_row_from_session_state(session_state)
+    if row is None:
+        return
+    adapter_name = session_state.get("adapter", "")
+    grouped.setdefault(adapter_name, {})[row["sessionId"]] = row
+
+
+def build_grouped_adapter_sessions_from_events(events):
+    grouped = {}
+    for event in events:
+        session_state = event.get("sessionState")
+        if session_state:
+            merge_grouped_session_state(grouped, session_state)
+    return grouped
+
+
+def build_grouped_adapter_sessions_from_persisted():
+    grouped = {}
+    session_root = Path(session_dir)
+    if not session_root.exists():
+        return grouped
+
+    for path in sorted(session_root.glob("*.state")):
+        try:
+            payload = parse_kv_lines(path.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if not payload:
+            continue
+
+        payload_workspace = payload.get("workspace_identity", "")
+        payload_project = payload.get("project_root", "")
+        workspace_matches = False
+        if payload_workspace:
+            workspace_matches = payload_workspace in {workspace_identity, project_root}
+        elif payload_project:
+            workspace_matches = payload_project == project_root
+        else:
+            continue
+        if not workspace_matches:
+            continue
+
+        session_state = session_state_with_schema(payload)
+        try:
+            session_state["_mtimeNs"] = path.stat().st_mtime_ns
+        except OSError:
+            session_state["_mtimeNs"] = 0
+        merge_grouped_session_state(grouped, session_state)
+
+    return grouped
+
+
+def build_grouped_adapter_sessions_from_timeline():
+    grouped = {}
+    for payload in timeline_session_states().values():
+        session_state = session_state_with_schema(payload)
+        session_state["_mtimeNs"] = int(payload.get("_mtimeNs", 0) or 0)
+        merge_grouped_session_state(grouped, session_state)
+    return grouped
+
+
+def merge_grouped_adapter_sessions(*groups):
+    merged = {}
+    for group in groups:
+        for adapter_name, sessions in group.items():
+            adapter_group = merged.setdefault(adapter_name, {})
+            for session_id, session_row in sessions.items():
+                adapter_group[session_id] = session_row
+    return merged
+
+
+def git_repo_exists(root):
+    return os.path.isdir(os.path.join(root, ".git")) or os.path.isfile(os.path.join(root, ".git"))
+
+
+def git_command(root, *args):
+    return subprocess.run(
+        ["git", "-C", root, *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def parse_status_line(line):
+    if len(line) < 3:
+        return None
+    xy = line[:2]
+    path_text = line[3:]
+    previous_path = ""
+    if " -> " in path_text:
+        previous_path, path_text = path_text.split(" -> ", 1)
+    return {
+        "xy": xy,
+        "path": path_text,
+        "previousPath": previous_path,
+    }
+
+
+def build_git_snapshot(root):
+    if not git_repo_exists(root):
+        return {
+            "tracked": False,
+            "head": "",
+            "shortHead": "",
+            "changedCounts": {},
+            "changedFiles": [],
+        }
+
+    head = ""
+    short_head = ""
+    head_proc = git_command(root, "rev-parse", "HEAD")
+    if head_proc.returncode == 0:
+        head = head_proc.stdout.strip()
+    short_proc = git_command(root, "rev-parse", "--short", "HEAD")
+    if short_proc.returncode == 0:
+        short_head = short_proc.stdout.strip()
+
+    status_proc = git_command(root, "status", "--porcelain=1", "--untracked-files=all")
+    changed_files = []
+    counts = {
+        "modified": 0,
+        "added": 0,
+        "deleted": 0,
+        "renamed": 0,
+        "untracked": 0,
+        "other": 0,
+    }
+    for raw in status_proc.stdout.splitlines():
+        parsed = parse_status_line(raw)
+        if parsed is None:
+            continue
+        xy = parsed["xy"]
+        status_code = xy.replace(" ", "")
+        bucket = "other"
+        if xy == "??":
+            bucket = "untracked"
+        elif "R" in status_code:
+            bucket = "renamed"
+        elif "D" in status_code:
+            bucket = "deleted"
+        elif "A" in status_code:
+            bucket = "added"
+        elif "M" in status_code:
+            bucket = "modified"
+        counts[bucket] += 1
+        parsed["category"] = bucket
+        changed_files.append(parsed)
+
+    return {
+        "tracked": True,
+        "head": head,
+        "shortHead": short_head,
+        "changedCounts": counts,
+        "changedFiles": changed_files,
+    }
+
+
+DEPENDENCY_MARKERS = {
+    "package.json",
+    "bun.lock",
+    "bun.lockb",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "go.mod",
+    "go.sum",
+    "Cargo.toml",
+    "Cargo.lock",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "Pipfile",
+    "Pipfile.lock",
+    "poetry.lock",
+    "Gemfile",
+    "Gemfile.lock",
+}
+
+
+def infer_risk_flags(git_snapshot, verify_snapshot, test_snapshot):
+    flags = []
+    paths = [item["path"] for item in git_snapshot["changedFiles"]]
+
+    def add_flag(flag_id, severity, detail):
+        if any(existing["id"] == flag_id for existing in flags):
+            return
+        flags.append({"id": flag_id, "severity": severity, "detail": detail})
+
+    if dirty_state == "dirty":
+        add_flag("dirty-worktree", "warn", "Workspace has uncommitted changes.")
+    if verify_snapshot["status"] in {"never-run", "report-missing"}:
+        add_flag("unverified", "warn", "No reusable verify snapshot is available.")
+    elif verify_snapshot["status"] == "failing":
+        add_flag("verify-failing", "high", "Latest verify snapshot is failing.")
+    elif verify_snapshot["status"] == "warnings":
+        add_flag("verify-warnings", "warn", "Latest verify snapshot has warnings.")
+
+    if test_snapshot["status"] in {"never-run", "report-missing"}:
+        add_flag("untested", "warn", "No reusable test snapshot is available.")
+    elif test_snapshot["status"] == "failing":
+        add_flag("test-failures", "high", "Latest test snapshot is failing.")
+    elif test_snapshot["status"] == "warnings":
+        add_flag("test-warnings", "warn", "Latest test snapshot has warnings.")
+
+    if any(Path(path).name in DEPENDENCY_MARKERS for path in paths):
+        add_flag("dependency-change", "warn", "Dependency manifest or lockfile changed.")
+    if any(
+        "migration" in path.lower() or "migrations/" in path.lower() or "supabase/" in path.lower()
+        for path in paths
+    ):
+        add_flag("migration-touch", "high", "Database or migration paths changed.")
+    if any(
+        token in path.lower()
+        for path in paths
+        for token in ("auth", "oauth", "session", "permission", "policy", "role")
+    ):
+        add_flag("auth-touch", "high", "Authentication, authorization, or policy paths changed.")
+    if any(
+        token in path.lower()
+        for path in paths
+        for token in (".env", "config", "settings", "version.json", "appcast", "plist")
+    ):
+        add_flag("config-touch", "warn", "Configuration-bearing paths changed.")
+    if any(item["category"] in {"deleted", "renamed"} for item in git_snapshot["changedFiles"]):
+        add_flag("destructive-file-op", "high", "Deleted or renamed files are present in the worktree.")
+
+    return flags
+
+
+def build_gaps(events, evidence_status):
+    gaps = []
+    artifacts = (evidence_status or {}).get("artifacts") or {}
+    has_human_approval = any(
+        event.get("note", {}).get("kind") == "approval"
+        for event in events
+    )
+    if not events:
+        gaps.append("no-agent-events")
+    for artifact_name in ("verify", "test", "quality", "workflow", "merge-readiness", "pr-review"):
+        label = ((artifacts.get(artifact_name) or {}).get("label")) or "missing-report"
+        if label != "available":
+            gaps.append(f"{artifact_name}:{label}")
+    if not has_human_approval:
+        gaps.append("human-approvals:missing-report")
+    return gaps
+
+
+def changed_summary(counts):
+    ordered = []
+    for key in ("modified", "added", "deleted", "renamed", "untracked", "other"):
+        value = counts.get(key, 0)
+        if value:
+            ordered.append(f"{key}={value}")
+    return "; ".join(ordered) if ordered else "clean"
+
+
+events = read_events()
+adapters = read_adapters()
+adapter_sessions = summarize_grouped_sessions(
+    merge_grouped_adapter_sessions(
+        build_grouped_adapter_sessions_from_events(events),
+        build_grouped_adapter_sessions_from_timeline(),
+        build_grouped_adapter_sessions_from_persisted(),
+    )
+)
+
+for adapter in adapters:
+    session_summary = adapter_sessions.get(adapter.get("name", ""), {})
+    adapter["sessionCount"] = session_summary.get("sessionCount", 0)
+    adapter["latestSession"] = session_summary.get("latestSession")
+    latest_session = adapter.get("latestSession") or {}
+    captured_adapter_metadata = any(
+        latest_session.get(key, "") != ""
+        for key in (
+            "binaryName",
+            "probeCommand",
+            "probeStatus",
+            "probeVersion",
+            "launchResult",
+            "fallbackState",
+        )
+    )
+    if captured_adapter_metadata:
+        adapter["binary"] = latest_session.get("binaryName", "") or adapter.get("binary", "")
+        adapter["binaryPath"] = latest_session.get("binaryPath", "")
+        adapter["probeCommand"] = latest_session.get("probeCommand", "")
+        adapter["status"] = latest_session.get("probeStatus", "")
+        adapter["version"] = latest_session.get("probeVersion", "")
+        adapter["probeStatus"] = latest_session.get("probeStatus", "")
+        adapter["probeVersion"] = latest_session.get("probeVersion", "")
+        adapter["declaredCapabilities"] = latest_session.get("declaredCapabilities", "")
+        adapter["capabilitiesList"] = latest_session.get("capabilitiesList", [])
+        if adapter["declaredCapabilities"]:
+            adapter["capabilities"] = adapter["declaredCapabilities"]
+
+known_adapter_names = {adapter.get("name", "") for adapter in adapters}
+for adapter_name, session_summary in adapter_sessions.items():
+    if adapter_name in known_adapter_names:
+        continue
+    latest_session = session_summary.get("latestSession") or {}
+    declared_capabilities = latest_session.get("declaredCapabilities", "")
+    adapters.append(
+        {
+            "name": adapter_name,
+            "binary": latest_session.get("binaryName", "") or adapter_name,
+            "binaryPath": latest_session.get("binaryPath", ""),
+            "probeCommand": latest_session.get("probeCommand", ""),
+            "status": latest_session.get("probeStatus", "") or "unknown",
+            "version": latest_session.get("probeVersion", "") or "-",
+            "probeStatus": latest_session.get("probeStatus", "") or "unknown",
+            "probeVersion": latest_session.get("probeVersion", "") or "-",
+            "capabilities": declared_capabilities,
+            "declaredCapabilities": declared_capabilities,
+            "capabilitiesList": latest_session.get("capabilitiesList", []),
+            "sessionCount": session_summary.get("sessionCount", 0),
+            "latestSession": latest_session,
+        }
+    )
+
+adapters.sort(key=lambda adapter: adapter.get("name", ""))
+verify_snapshot = parse_snapshot(os.environ.get("AGENTS_VERIFY_SNAPSHOT", ""), "verify")
+test_snapshot = parse_snapshot(os.environ.get("AGENTS_TEST_SNAPSHOT", ""), "test")
+evidence_status = parse_json_payload(
+    os.environ.get("AGENTS_EVIDENCE_STATUS_JSON", ""),
+    {"schemaVersion": 1, "overall": {"label": "exported-with-gaps"}, "artifacts": {}},
+)
+linked_evidence = parse_json_payload(
+    os.environ.get("AGENTS_LINKED_EVIDENCE_JSON", ""),
+    {
+        "schemaVersion": 1,
+        "quality": {"available": False},
+        "workflow": {"available": False},
+        "mergeReadiness": {"available": False},
+        "prReview": {"available": False},
+        "currentBranchCi": {"available": False},
+        "localBuildWatch": {"available": False},
+    },
+)
+default_git_snapshot = build_git_snapshot(project_root)
+default_short_head = default_git_snapshot.get("shortHead") or default_git_snapshot.get("head") or "-"
+context_payload = parse_json_payload(os.environ.get("AGENTS_CONTEXT_JSON", ""), {})
+git_snapshot = (context_payload.get("repoSnapshot") or {
+    "branch": branch,
+    "dirtyState": dirty_state,
+    "head": default_git_snapshot.get("head", ""),
+    "shortHead": default_git_snapshot.get("shortHead", ""),
+    "tracked": default_git_snapshot.get("tracked", False),
+    "changedSummary": changed_summary(default_git_snapshot.get("changedCounts", {})),
+    "changedCounts": default_git_snapshot.get("changedCounts", {}),
+    "changedFiles": default_git_snapshot.get("changedFiles", []),
+    "contextKey": f"{workspace_identity}|{branch or '-'}|{default_short_head}",
+})
+risk_flags = context_payload.get("riskFlags") or infer_risk_flags(git_snapshot, verify_snapshot, test_snapshot)
+risk_summary = context_payload.get("riskSummary") or {
+    "count": len(risk_flags),
+    "bySeverity": {},
+    "ids": [flag.get("id") or "" for flag in risk_flags],
+    "summaryText": ", ".join(
+        f"{flag.get('id') or 'unknown'}({flag.get('severity') or 'unknown'})"
+        for flag in risk_flags
+    ) if risk_flags else "none",
+}
+gaps = build_gaps(events, evidence_status)
+notes = []
+for event in events:
+    if "note" not in event:
+        continue
+    note_entry = dict(event["note"])
+    note_entry["time"] = event["time"]
+    note_entry["status"] = event["status"]
+    notes.append(note_entry)
+approvals = [note for note in notes if note.get("kind") == "approval"]
+handoffs = [note for note in notes if note.get("kind") == "handoff"]
+freeform_notes = [note for note in notes if note.get("kind") == "note"]
+
+payload = {
+    "schemaVersion": 1,
+    "schemaKind": "agents-export",
+    "schemas": {
+        "adapter": 1,
+        "event": 1,
+        "evidenceStatus": int((evidence_status.get("schemaVersion") or 1)),
+        "linkedEvidence": int((linked_evidence.get("schemaVersion") or 1)),
+        "note": 1,
+        "sessionState": 1,
+    },
+    "eventTaxonomy": {
+        "stableEventNames": ["session-start", "session-stop", "template-apply", "note", "export"],
+        "stableSourceKinds": ["agent", "human", "supervisor", "system"],
+        "stableEventFamilies": ["session", "template", "note", "artifact", "system"],
+    },
+    "generatedAt": os.environ.get("AGENTS_EXPORT_GENERATED_AT", ""),
+    "projectRoot": project_root,
+    "workspaceIdentity": workspace_identity,
+    "repoSnapshot": git_snapshot,
+    "adapters": adapters,
+    "verification": {
+        "verify": verify_snapshot,
+        "test": test_snapshot,
+    },
+    "evidenceStatus": evidence_status,
+    "linkedEvidence": linked_evidence,
+    "notes": notes,
+    "approvals": approvals,
+    "handoffs": handoffs,
+    "riskSummary": risk_summary,
+    "riskFlags": risk_flags,
+    "evidenceGaps": gaps,
+    "events": events,
+}
+
+if output_format == "json":
+    json.dump(payload, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    raise SystemExit(0)
+
+
+def md_line(text=""):
+    sys.stdout.write(text)
+    sys.stdout.write("\n")
+
+
+md_line("# Agent Export Bundle")
+md_line()
+md_line(f"- Generated at: {payload['generatedAt']}")
+md_line(f"- Project: {project_root}")
+md_line(f"- Workspace: {workspace_identity}")
+md_line()
+md_line("## Repo Snapshot")
+md_line(f"- Branch: {branch}")
+md_line(f"- Dirty state: {dirty_state}")
+md_line(f"- HEAD: {git_snapshot['shortHead'] or git_snapshot['head'] or '-'}")
+md_line(f"- Changes: {payload['repoSnapshot']['changedSummary']}")
+md_line(f"- Context key: {payload['repoSnapshot'].get('contextKey') or '-'}")
+md_line()
+md_line("## Adapter Sessions")
+if adapters:
+    for adapter in adapters:
+        latest_session = adapter.get("latestSession") or {}
+        md_line(
+            f"- Adapter: {adapter['name']} | binary={adapter['binary']} | path={adapter.get('binaryPath') or '-'} | "
+            f"probe={adapter.get('probeStatus') or adapter['status']} | version={adapter.get('probeVersion') or adapter['version']} | "
+            f"launch={latest_session.get('launchResult') or '-'} | fallback={latest_session.get('fallbackState') or '-'} | "
+            f"session-count={adapter.get('sessionCount') or 0} | capabilities={adapter['capabilities']}"
+        )
+else:
+    md_line("- No adapter sessions were captured for this workspace in the selected timeline window.")
+md_line(f"- Timeline events included: {len(events)}")
+md_line()
+md_line("## Evidence Status")
+overall_status = (evidence_status.get("overall") or {})
+md_line(
+    f"- Bundle: {overall_status.get('label') or 'available'} | reason={overall_status.get('reason') or '-'}"
+)
+for artifact_name in ("verify", "test", "quality", "workflow", "merge-readiness", "pr-review"):
+    artifact = (evidence_status.get("artifacts") or {}).get(artifact_name) or {}
+    extras = []
+    if artifact.get("rawStatus"):
+        extras.append(f"raw={artifact['rawStatus']}")
+    if artifact.get("lastSeenAt"):
+        extras.append(f"last={artifact['lastSeenAt']}")
+    if artifact.get("linkTarget"):
+        extras.append(f"artifact={artifact['linkTarget']}")
+    if artifact.get("semantic"):
+        extras.append(f"semantic={artifact['semantic']}")
+    extras.append(f"reason={artifact.get('reason') or '-'}")
+    md_line(
+        f"- {artifact.get('displayName') or artifact_name}: {artifact.get('label') or 'available'} | {' | '.join(extras)}"
+    )
+md_line()
+md_line("## Linked IDE Evidence")
+quality = linked_evidence.get("quality") or {}
+md_line(
+    f"- Quality reports: {'available' if quality.get('available') else 'missing'} | "
+    f"last={quality.get('lastSeenAt') or '-'} | "
+    f"action={quality.get('action') or '-'} | "
+    f"candidate={quality.get('candidate') or '-'} | "
+    f"scope={quality.get('scope') or '-'} | "
+    f"summary={quality.get('summaryPath') or '-'} | "
+    f"details={quality.get('detailsPath') or '-'} | "
+    f"semantic={quality.get('semanticPath') or '-'}"
+)
+workflow = linked_evidence.get("workflow") or {}
+md_line(
+    f"- Workflow reports: {'available' if workflow.get('available') else 'missing'} | "
+    f"last={workflow.get('lastSeenAt') or '-'} | "
+    f"name={workflow.get('name') or '-'} | "
+    f"kind={workflow.get('kind') or '-'} | "
+    f"location={workflow.get('location') or '-'} | "
+    f"summary={workflow.get('summaryPath') or '-'} | "
+    f"details={workflow.get('detailsPath') or '-'} | "
+    f"semantic={workflow.get('semanticPath') or '-'}"
+)
+merge_readiness = linked_evidence.get("mergeReadiness") or {}
+md_line(
+    f"- Merge readiness: {'available' if merge_readiness.get('available') else 'missing'} | "
+    f"last={merge_readiness.get('lastSeenAt') or '-'} | "
+    f"pr={merge_readiness.get('prNumber') or 0} | "
+    f"verify={merge_readiness.get('verifyStatus') or '-'} | "
+    f"format={merge_readiness.get('format') or '-'}"
+)
+pr_review = linked_evidence.get("prReview") or {}
+pr_review_last = pr_review.get("lastReview") or {}
+pr_review_bundle = pr_review.get("evidenceBundle") or {}
+pr_review_decision = pr_review.get("decision") or {}
+pr_review_inline = pr_review.get("inlineComment") or {}
+pr_review_target = (
+    ((pr_review_last.get("semanticLocation") or {}).get("target"))
+    or pr_review_last.get("target")
+    or ((pr_review_bundle.get("semanticLocation") or {}).get("target"))
+    or pr_review_bundle.get("target")
+    or "-"
+)
+md_line(
+    f"- PR review: {'available' if pr_review.get('available') else 'missing'} | "
+    f"last={pr_review.get('lastSeenAt') or '-'} | "
+    f"pr={pr_review.get('prNumber') or 0} | "
+    f"file={pr_review_last.get('file') or '-'} | "
+    f"target={pr_review_target} | "
+    f"bundle={pr_review_bundle.get('path') or '-'}"
+)
+md_line(
+    f"- PR review decision: {'available' if pr_review_decision.get('available') else 'missing'} | "
+    f"mode={pr_review_decision.get('mode') or '-'} | "
+    f"target={((pr_review_decision.get('semanticLocation') or {}).get('target')) or '-'} | "
+    f"artifact={pr_review_decision.get('artifactPath') or '-'}"
+)
+md_line(
+    f"- PR review inline: {'available' if pr_review_inline.get('available') else 'missing'} | "
+    f"target={((pr_review_inline.get('semanticLocation') or {}).get('target')) or '-'} | "
+    f"path={pr_review_inline.get('path') or '-'} | "
+    f"line={pr_review_inline.get('line') or 0} | "
+    f"side={pr_review_inline.get('side') or '-'} | "
+    f"artifact={pr_review_inline.get('artifactPath') or '-'}"
+)
+current_branch_ci = linked_evidence.get("currentBranchCi") or {}
+md_line(
+    f"- Current branch CI: {'available' if current_branch_ci.get('available') else 'missing'} | "
+    f"last={current_branch_ci.get('lastSeenAt') or '-'} | "
+    f"state={current_branch_ci.get('checksState') or '-'} | "
+    f"pr={current_branch_ci.get('prNumber') or 0} | "
+    f"branch={current_branch_ci.get('branch') or '-'} | "
+    f"checks=pass:{current_branch_ci.get('checksPassing') or 0}/pending:{current_branch_ci.get('checksPending') or 0}/fail:{current_branch_ci.get('checksFailing') or 0}"
+)
+local_build_watch = linked_evidence.get("localBuildWatch") or {}
+md_line(
+    f"- Local build watch: {'available' if local_build_watch.get('available') else 'missing'} | "
+    f"state={local_build_watch.get('state') or '-'} | "
+    f"kind={local_build_watch.get('kind') or '-'} | "
+    f"branch={local_build_watch.get('branch') or '-'} | "
+    f"iteration={local_build_watch.get('iteration') or 0} | "
+    f"last={local_build_watch.get('lastOutcome') or '-'}"
+)
+md_line()
+md_line("## Verification")
+for label, snapshot in (("Verify", verify_snapshot), ("Test", test_snapshot)):
+    md_line(
+        f"- {label}: {snapshot['status']} | failures={snapshot['failures']} | warns={snapshot['warns']} | last={snapshot['lastRunAt'] or '-'}"
+    )
+    md_line(f"  - Summary: {snapshot['summary'] or '-'}")
+    md_line(f"  - Details: {snapshot['details'] or '-'}")
+    md_line(f"  - Semantic: {snapshot['semantic'] or '-'}")
+md_line()
+md_line("## Diff Summary")
+if git_snapshot["changedFiles"]:
+    for item in git_snapshot["changedFiles"][:20]:
+        rename_suffix = f" (from {item['previousPath']})" if item["previousPath"] else ""
+        md_line(f"- [{item['category']}] {item['path']}{rename_suffix}")
+else:
+    md_line("- No changed files detected.")
+md_line()
+md_line("## Risk Flags")
+md_line(
+    f"- Summary: {risk_summary.get('summaryText') or 'none'} | count={risk_summary.get('count') or 0}"
+)
+if risk_flags:
+    for flag in risk_flags:
+        md_line(f"- {flag['id']} ({flag['severity']}): {flag['detail']}")
+else:
+    md_line("- No explicit risk flags inferred from the current repo snapshot.")
+md_line()
+md_line("## Approvals")
+if approvals:
+    for approval in approvals:
+        md_line(
+            f"- {approval.get('title') or approval.get('decision') or 'comment'} | actor={approval.get('actor') or '-'} | "
+            f"slot={approval.get('slotId') or '-'} | session={approval.get('sessionId') or '-'} | "
+            f"template={approval.get('template') or '-'} | validated={'yes' if approval.get('linkValidated') else 'no'} | "
+            f"message={approval.get('message', '').replace(chr(10), ' ').strip() or '-'}"
+        )
+else:
+    md_line("- None recorded in the current local export baseline.")
+md_line()
+md_line("## Handoffs")
+if handoffs:
+    for note in handoffs:
+        md_line(
+            f"- {note.get('title') or 'handoff'} | actor={note.get('actor') or '-'} | "
+            f"slot={note.get('slotId') or '-'} | session={note.get('sessionId') or '-'} | "
+            f"template={note.get('template') or '-'} | validated={'yes' if note.get('linkValidated') else 'no'} | "
+            f"message={note.get('message', '').replace(chr(10), ' ').strip() or '-'}"
+        )
+else:
+    md_line("- None recorded in the current local handoff baseline.")
+md_line()
+md_line("## Human Notes")
+if freeform_notes:
+    for note in freeform_notes:
+        md_line(
+            f"- {note.get('title') or note.get('kind') or 'note'} | actor={note.get('actor') or '-'} | "
+            f"decision={note.get('decision') or '-'} | slot={note.get('slotId') or '-'} | "
+            f"template={note.get('template') or '-'} | validated={'yes' if note.get('linkValidated') else 'no'} | "
+            f"session={note.get('sessionId') or '-'} | message={note.get('message', '').replace(chr(10), ' ').strip() or '-'}"
+        )
+else:
+    md_line("- None recorded outside approvals and handoffs.")
+md_line()
+md_line("## Evidence Gaps")
+for gap in gaps:
+    md_line(f"- {gap}")
+md_line()
+md_line("## Timeline Events")
+if events:
+    for event in events:
+        target = event["slotId"] or event["templateName"] or "-"
+        md_line(
+            f"- {event['time']} | {event['event']} | source={event['sourceTag']} | "
+            f"{event['status']} | target={target} | adapter={event['adapter'] or '-'}"
+        )
+else:
+    md_line("- No agent events recorded for this workspace.")
+PY
+}
+
+render_agents_timeline_json() {
+    local filtered_file="$1"
+    local project_root="$2"
+    local workspace_identity="$3"
+
+    AGENTS_VERIFY_SNAPSHOT="${AGENTS_VERIFY_SNAPSHOT:-}" \
+    AGENTS_TEST_SNAPSHOT="${AGENTS_TEST_SNAPSHOT:-}" \
+    AGENTS_EVIDENCE_STATUS_JSON="${AGENTS_EVIDENCE_STATUS_JSON:-}" \
+    AGENTS_LINKED_EVIDENCE_JSON="${AGENTS_LINKED_EVIDENCE_JSON:-}" \
+    AGENTS_CONTEXT_JSON="${AGENTS_CONTEXT_JSON:-}" \
+    python3 - "${filtered_file}" "${AGENTS_SESSION_STATE_DIR}" "${AGENTS_NOTE_STATE_DIR}" "${AGENTS_TIMELINE_FILE}" "${project_root}" "${workspace_identity}" << 'PY'
+import json
+import os
+import sys
+
+filtered_file, session_dir, note_dir, timeline_file, project_root, workspace_identity = sys.argv[1:7]
+
+
+def parse_kv_lines(text):
+    payload = {}
+    for line in text.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def parse_snapshot(text, prefix):
+    payload = parse_kv_lines(text)
+    return {
+        "status": payload.get(f"{prefix}_status", "never-run"),
+        "lastRunAt": payload.get(f"{prefix}_last_run_at", ""),
+        "summary": payload.get(f"{prefix}_summary", ""),
+        "details": payload.get(f"{prefix}_details", ""),
+        "semantic": payload.get(f"{prefix}_semantic", ""),
+        "failures": int(payload.get(f"{prefix}_failures", "0") or "0"),
+        "warns": int(payload.get(f"{prefix}_warns", "0") or "0"),
+        "executed": int(payload.get(f"{prefix}_executed", "0") or "0"),
+    }
+
+
+def parse_json_payload(text, fallback):
+    raw = str(text or "").strip()
+    if not raw:
+        return fallback
+    try:
+        return json.loads(raw)
+    except Exception:
+        return fallback
+
+
+def parse_detail(detail):
+    payload = {}
+    for item in detail.split(";"):
+        item = item.strip()
+        if not item or "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        payload[key] = value
+    return payload
+
+
+def workspace_matches(payload_workspace, payload_project):
+    if payload_workspace:
+        return payload_workspace in {workspace_identity, project_root}
+    if payload_project:
+        return payload_project == project_root
+    return False
+
+
+_timeline_session_states = None
+
+
+def timeline_session_states():
+    global _timeline_session_states
+    if _timeline_session_states is not None:
+        return _timeline_session_states
+
+    session_map = {}
+    if os.path.exists(timeline_file):
+        with open(timeline_file, "r", encoding="utf-8") as handle:
+            for line_number, raw in enumerate(handle):
+                raw = raw.rstrip("\n")
+                if not raw:
+                    continue
+                parts = raw.split("\t", 4)
+                if len(parts) < 5:
+                    continue
+                timestamp, event, root_key, status, detail_text = parts
+                if root_key != project_root:
+                    continue
+                if event not in {"session-start", "session-stop"}:
+                    continue
+                detail = parse_detail(detail_text)
+                session_id = detail.get("session", "")
+                if not session_id:
+                    continue
+                if not workspace_matches(detail.get("workspace_identity", ""), root_key):
+                    continue
+                payload = session_map.setdefault(
+                    session_id,
+                    {
+                        "session_id": session_id,
+                        "slot_id": "",
+                        "adapter": "",
+                        "workspace_identity": "",
+                        "project_root": root_key,
+                        "branch": "",
+                        "dirty_state": "",
+                        "launch_mode": "",
+                        "lifecycle_state": "",
+                        "started_at": "",
+                        "stopped_at": "",
+                        "exit_code": "0",
+                        "binary_name": "",
+                        "binary_path": "",
+                        "probe_command": "",
+                        "probe_status": "",
+                        "probe_version": "",
+                        "declared_capabilities": "",
+                        "launch_result": "",
+                        "fallback_state": "",
+                        "_mtimeNs": 0,
+                    },
+                )
+                for detail_key, payload_key in (
+                    ("slot", "slot_id"),
+                    ("adapter", "adapter"),
+                    ("branch", "branch"),
+                    ("dirty", "dirty_state"),
+                    ("launch_mode", "launch_mode"),
+                    ("binary_name", "binary_name"),
+                    ("binary_path", "binary_path"),
+                    ("probe_command", "probe_command"),
+                    ("probe_status", "probe_status"),
+                    ("probe_version", "probe_version"),
+                    ("declared_capabilities", "declared_capabilities"),
+                    ("launch_result", "launch_result"),
+                    ("fallback_state", "fallback_state"),
+                ):
+                    if detail_key in detail:
+                        payload[payload_key] = detail[detail_key]
+                payload["workspace_identity"] = (
+                    detail.get("workspace_identity", "") or payload.get("workspace_identity", "") or root_key
+                )
+                payload["project_root"] = root_key
+                if "started_at" in detail:
+                    payload["started_at"] = detail["started_at"] or payload.get("started_at", "")
+                elif event == "session-start" and not payload.get("started_at", ""):
+                    payload["started_at"] = timestamp
+                if event == "session-start":
+                    payload["lifecycle_state"] = "running"
+                if event == "session-stop":
+                    payload["lifecycle_state"] = "stopped"
+                    payload["stopped_at"] = detail.get("stopped_at", "") or timestamp
+                    status_fields = parse_detail(status)
+                    if "exit" in status_fields:
+                        payload["exit_code"] = status_fields["exit"]
+                payload["_mtimeNs"] = max(int(payload.get("_mtimeNs", 0) or 0), line_number)
+
+    _timeline_session_states = session_map
+    return _timeline_session_states
+
+
+def note_payload_with_schema(note_payload):
+    if note_payload is None:
+        return None
+    row = dict(note_payload)
+    row["schemaVersion"] = 1
+    return row
+
+
+def session_state_with_schema(session_state):
+    if session_state is None:
+        return None
+    declared_capabilities = session_state.get("declared_capabilities", "")
+    return {
+        "schemaVersion": 1,
+        "sessionId": session_state.get("session_id", ""),
+        "slotId": session_state.get("slot_id", ""),
+        "adapter": session_state.get("adapter", ""),
+        "workspaceIdentity": session_state.get("workspace_identity", ""),
+        "projectRoot": session_state.get("project_root", ""),
+        "branch": session_state.get("branch", ""),
+        "dirtyState": session_state.get("dirty_state", ""),
+        "launchMode": session_state.get("launch_mode", ""),
+        "lifecycleState": session_state.get("lifecycle_state", ""),
+        "startedAt": session_state.get("started_at", ""),
+        "stoppedAt": session_state.get("stopped_at", ""),
+        "exitCode": int(session_state.get("exit_code", "0") or "0"),
+        "binaryName": session_state.get("binary_name", ""),
+        "binaryPath": session_state.get("binary_path", ""),
+        "probeCommand": session_state.get("probe_command", ""),
+        "probeStatus": session_state.get("probe_status", ""),
+        "probeVersion": session_state.get("probe_version", ""),
+        "declaredCapabilities": declared_capabilities,
+        "capabilitiesList": [item for item in declared_capabilities.split(",") if item],
+        "launchResult": session_state.get("launch_result", ""),
+        "fallbackState": session_state.get("fallback_state", ""),
+    }
+
+
+def event_source_kind(source_tag):
+    if source_tag.startswith("agent:"):
+        return "agent"
+    if source_tag in {"human", "supervisor", "system"}:
+        return source_tag
+    return "system"
+
+
+def event_family_and_action(event):
+    mapping = {
+        "session-start": ("session", "start"),
+        "session-stop": ("session", "stop"),
+        "template-apply": ("template", "apply"),
+        "note": ("note", "record"),
+        "export": ("artifact", "export"),
+    }
+    return mapping.get(event, ("system", event))
+
+
+def event_outcome(event, status, detail, status_fields):
+    if event == "session-start":
+        return status or "started"
+    if event == "session-stop":
+        return status_fields.get("status", "stopped")
+    if event == "note":
+        if status.startswith("approval="):
+            return status.split("=", 1)[1]
+        return detail.get("decision") or detail.get("kind") or status or "recorded"
+    if event == "template-apply":
+        return status or "applied"
+    if event == "export":
+        return "exported"
+    return status or "recorded"
+
+
+def event_target(detail, session_id, note_id):
+    slot_id = detail.get("slot", "")
+    template_name = detail.get("template", "")
+    if note_id:
+        target_kind = "note"
+        label = note_id
+    elif template_name:
+        target_kind = "template"
+        label = template_name
+    elif slot_id:
+        target_kind = "slot"
+        label = slot_id
+    elif session_id:
+        target_kind = "session"
+        label = session_id
+    else:
+        target_kind = "workspace"
+        label = ""
+
+    return {
+        "kind": target_kind,
+        "label": label,
+        "sessionId": session_id,
+        "slotId": slot_id,
+        "templateName": template_name,
+        "noteId": note_id,
+    }
+
+
+def read_session_state(session_id):
+    if not session_id:
+        return None
+    path = os.path.join(session_dir, f"{session_id}.state")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            return parse_kv_lines(handle.read())
+    return timeline_session_states().get(session_id)
+
+
+def read_note_payload(note_id):
+    if not note_id:
+        return None
+    state_path = os.path.join(note_dir, f"{note_id}.state")
+    message_path = os.path.join(note_dir, f"{note_id}.txt")
+    if not os.path.exists(state_path):
+        return None
+    with open(state_path, "r", encoding="utf-8") as handle:
+        payload = parse_kv_lines(handle.read())
+    message = ""
+    if os.path.exists(message_path):
+        with open(message_path, "r", encoding="utf-8") as handle:
+            message = handle.read()
+    return {
+        "noteId": payload.get("note_id", note_id),
+        "actor": payload.get("actor", ""),
+        "kind": payload.get("kind", ""),
+        "decision": payload.get("decision", ""),
+        "template": payload.get("template", ""),
+        "title": payload.get("title", ""),
+        "linkValidated": payload.get("link_validated", "") == "yes",
+        "workspaceIdentity": payload.get("workspace_identity", ""),
+        "projectRoot": payload.get("project_root", ""),
+        "sessionId": payload.get("session_id", ""),
+        "slotId": payload.get("slot_id", ""),
+        "createdAt": payload.get("created_at", ""),
+        "message": message,
+    }
+
+
+def event_source_tag(event, detail):
+    if event == "note":
+        actor = detail.get("actor", "")
+        return actor or "human"
+    if event in {"session-start", "session-stop"}:
+        slot = detail.get("slot", "")
+        adapter = detail.get("adapter", "")
+        if slot:
+            return f"agent:{slot}"
+        if adapter:
+            return f"agent:{adapter}"
+    return "system"
+
+
+rows = []
+if os.path.exists(filtered_file):
+    with open(filtered_file, "r", encoding="utf-8") as handle:
+        for raw in handle:
+            raw = raw.rstrip("\n")
+            if not raw:
+                continue
+            parts = raw.split("\t", 4)
+            if len(parts) < 5:
+                continue
+            time, event, root_key, status, detail_text = parts
+            detail = parse_detail(detail_text)
+            session_id = detail.get("session", "")
+            note_id = detail.get("note_id", "")
+            source_tag = event_source_tag(event, detail)
+            source_kind = event_source_kind(source_tag)
+            status_fields = parse_detail(status)
+            family, action = event_family_and_action(event)
+            outcome = event_outcome(event, status, detail, status_fields)
+            row = {
+                "schemaVersion": 1,
+                "time": time,
+                "timestamp": time,
+                "event": event,
+                "eventName": event,
+                "eventFamily": family,
+                "eventAction": action,
+                "eventOutcome": outcome,
+                "projectRoot": root_key,
+                "status": status,
+                "statusFields": status_fields,
+                "detail": detail_text,
+                "detailFields": detail,
+                "sessionId": session_id,
+                "noteId": note_id,
+                "slotId": detail.get("slot", ""),
+                "templateName": detail.get("template", ""),
+                "adapter": detail.get("adapter", ""),
+                "branch": detail.get("branch", ""),
+                "dirtyState": detail.get("dirty", ""),
+                "launchMode": detail.get("launch_mode", ""),
+                "workspaceIdentity": detail.get("workspace_identity", workspace_identity),
+                "sourceTag": source_tag,
+                "source": {
+                    "tag": source_tag,
+                    "kind": source_kind,
+                    "actor": detail.get("actor", ""),
+                    "slotId": detail.get("slot", ""),
+                    "adapter": detail.get("adapter", ""),
+                },
+                "target": event_target(detail, session_id, note_id),
+            }
+            session_state = read_session_state(session_id)
+            if session_state is not None:
+                row["sessionState"] = session_state_with_schema(session_state)
+            note_payload = read_note_payload(note_id)
+            if note_payload is not None:
+                row["note"] = note_payload_with_schema(note_payload)
+            rows.append(row)
+
+evidence_status = parse_json_payload(
+    os.environ.get("AGENTS_EVIDENCE_STATUS_JSON", ""),
+    {"schemaVersion": 1, "overall": {"label": "exported-with-gaps"}, "artifacts": {}},
+)
+linked_evidence = parse_json_payload(
+    os.environ.get("AGENTS_LINKED_EVIDENCE_JSON", ""),
+    {
+        "schemaVersion": 1,
+        "quality": {"available": False},
+        "workflow": {"available": False},
+        "mergeReadiness": {"available": False},
+        "prReview": {"available": False},
+        "currentBranchCi": {"available": False},
+        "localBuildWatch": {"available": False},
+    },
+)
+context_payload = parse_json_payload(
+    os.environ.get("AGENTS_CONTEXT_JSON", ""),
+    {
+        "repoSnapshot": {
+            "branch": "",
+            "dirtyState": "",
+            "head": "",
+            "shortHead": "",
+            "tracked": False,
+            "changedSummary": "clean",
+            "changedCounts": {},
+            "changedFiles": [],
+            "contextKey": f"{workspace_identity}|-|-",
+        },
+        "riskFlags": [],
+        "riskSummary": {"count": 0, "bySeverity": {}, "ids": [], "summaryText": "none"},
+    },
+)
+
+payload = {
+    "schemaVersion": 1,
+    "schemaKind": "agents-timeline",
+    "schemas": {
+        "event": 1,
+        "evidenceStatus": int((evidence_status.get("schemaVersion") or 1)),
+        "linkedEvidence": int((linked_evidence.get("schemaVersion") or 1)),
+        "note": 1,
+        "sessionState": 1,
+    },
+    "eventTaxonomy": {
+        "stableEventNames": ["session-start", "session-stop", "template-apply", "note", "export"],
+        "stableSourceKinds": ["agent", "human", "supervisor", "system"],
+        "stableEventFamilies": ["session", "template", "note", "artifact", "system"],
+    },
+    "projectRoot": project_root,
+    "workspaceIdentity": workspace_identity,
+    "repoSnapshot": context_payload.get("repoSnapshot") or {},
+    "evidence": {
+        "verify": parse_snapshot(os.environ.get("AGENTS_VERIFY_SNAPSHOT", ""), "verify"),
+        "test": parse_snapshot(os.environ.get("AGENTS_TEST_SNAPSHOT", ""), "test"),
+    },
+    "evidenceStatus": evidence_status,
+    "linkedEvidence": linked_evidence,
+    "riskSummary": context_payload.get("riskSummary") or {},
+    "riskFlags": context_payload.get("riskFlags") or [],
+    "events": rows,
+}
+
+json.dump(payload, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+}
+
+adapter_catalog() {
+    cat << 'EOF'
+claude	claude	claude --version	chat,edit,exec,review
+codex	codex	codex --version	chat,edit,exec,review
+EOF
+}
+
+workspace_builtin_catalog() {
+    cat << 'EOF'
+pair-coding	Two-agent pair coding with supervisor slot	claude,codex,supervisor	1	builtin
+review-loop	Primary coder + reviewer handoff loop	codex,claude,supervisor	1	builtin
+EOF
+}
+
+find_adapter_row() {
+    local name="$1"
+    local row=""
+    while IFS= read -r row; do
+        [[ -z "${row}" ]] && continue
+        local adapter_name=""
+        IFS=$'\t' read -r adapter_name _ << EOF
+${row}
+EOF
+        if [[ "${adapter_name}" == "${name}" ]]; then
+            printf "%s\n" "${row}"
+            return 0
+        fi
+    done << EOF
+$(adapter_catalog)
+EOF
+    return 1
+}
+
+probe_adapter_status() {
+    local binary_name="$1"
+    local probe_cmd="$2"
+    local status="missing"
+    local version="-"
+
+    if ! command -v "${binary_name}" >/dev/null 2>&1; then
+        printf "%s|%s\n" "${status}" "${version}"
+        return 0
+    fi
+
+    local probe_output=""
+    local probe_status=0
+    set +e
+    probe_output=$(eval "${probe_cmd}" 2>/dev/null | head -n 1)
+    probe_status=$?
+    set -e
+
+    if [[ "${probe_status}" -eq 0 ]]; then
+        status="ready"
+        if [[ -n "${probe_output}" ]]; then
+            version="${probe_output}"
+        else
+            version="unknown"
+        fi
+    else
+        status="probe-failed"
+        version="exit=${probe_status}"
+    fi
+
+    printf "%s|%s\n" "${status}" "${version}"
+}
+
+parse_workspace_template_file() {
+    local path="$1"
+    local fallback_name="$2"
+    local name=""
+    local description=""
+    local slots=""
+    local schema_version=""
+    local source="project"
+
+    [[ -f "${path}" ]] || return 1
+
+    name=$(sed -nE 's/^[[:space:]]*name[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "${path}" | head -n 1)
+    description=$(sed -nE 's/^[[:space:]]*description[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "${path}" | head -n 1)
+    slots=$(sed -nE 's/^[[:space:]]*slots[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "${path}" | head -n 1)
+    schema_version=$(sed -nE 's/^[[:space:]]*schema_version[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "${path}" | head -n 1)
+
+    if [[ -z "${name}" ]]; then
+        name="${fallback_name}"
+    fi
+    if [[ -z "${description}" ]]; then
+        description="Workspace template from ${path}"
+    fi
+    if [[ -z "${schema_version}" ]]; then
+        yen_error "Workspace template '${path}' is missing required 'schema_version'."
+        return 2
+    fi
+    if [[ "${schema_version}" != "1" ]]; then
+        yen_error "Workspace template '${path}' has unsupported schema_version='${schema_version}'. Expected '1'."
+        return 2
+    fi
+    if [[ -z "${slots}" ]]; then
+        yen_error "Workspace template '${path}' is missing required 'slots'."
+        return 2
+    fi
+
+    printf "%s\t%s\t%s\t%s\t%s\n" "${name}" "${description}" "${slots}" "${schema_version}" "${source}"
+}
+
+find_workspace_template() {
+    local root="$1"
+    local template_name="$2"
+    local project_file="${root}/.yen/workspaces/${template_name}.toml"
+    local row=""
+
+    if [[ -f "${project_file}" ]]; then
+        parse_workspace_template_file "${project_file}" "${template_name}"
+        return $?
+    fi
+
+    while IFS= read -r row; do
+        [[ -z "${row}" ]] && continue
+        local name=""
+        IFS=$'\t' read -r name _ << EOF
+${row}
+EOF
+        if [[ "${name}" == "${template_name}" ]]; then
+            printf "%s\n" "${row}"
+            return 0
+        fi
+    done << EOF
+$(workspace_builtin_catalog)
+EOF
+    return 1
+}
+
+print_workspace_plan_rows() {
+    local slots_csv="$1"
+    local rows_file="$2"
+    local token=""
+
+    : > "${rows_file}"
+    while IFS= read -r token; do
+        token=$(trim "${token}")
+        [[ -z "${token}" ]] && continue
+
+        if [[ "${token}" == "supervisor" ]]; then
+            printf "%s\t%s\t%s\n" "${token}" "ready" "reserved supervisor slot" >> "${rows_file}"
+            continue
+        fi
+
+        local adapter_row=""
+        adapter_row=$(find_adapter_row "${token}" || true)
+        if [[ -z "${adapter_row}" ]]; then
+            printf "%s\t%s\t%s\n" "${token}" "degraded" "unknown slot/adapter" >> "${rows_file}"
+            continue
+        fi
+
+        local _name=""
+        local binary_name=""
+        local _probe=""
+        local _caps=""
+        IFS=$'\t' read -r _name binary_name _probe _caps << EOF
+${adapter_row}
+EOF
+        if command -v "${binary_name}" >/dev/null 2>&1; then
+            printf "%s\t%s\t%s\n" "${token}" "ready" "adapter binary available" >> "${rows_file}"
+        else
+            printf "%s\t%s\t%s\n" "${token}" "degraded" "binary '${binary_name}' not found" >> "${rows_file}"
+        fi
+    done << EOF
+$(printf "%s" "${slots_csv}" | tr ',' '\n')
+EOF
+}
+
+apply_workspace_template() {
+    local root="$1"
+    local template_name="$2"
+    local dry_run="$3"
+    local from_open="$4"
+
+    local row=""
+    local name=""
+    local description=""
+    local slots=""
+    local schema_version=""
+    local source=""
+    local signature=""
+    local state_file=""
+    local current_signature=""
+    local plan_file=""
+    local degraded_count=0
+    local ready_count=0
+    local slot=""
+    local status=""
+    local detail=""
+    local workspace_identity=""
+    local timeline_status="applied"
+
+    row=$(find_workspace_template "${root}" "${template_name}" || true)
+    if [[ -z "${row}" ]]; then
+        yen_error "Unknown workspace template '${template_name}'. Run: yen agents templates list"
+        return 1
+    fi
+
+    IFS=$'\t' read -r name description slots schema_version source << EOF
+${row}
+EOF
+
+    workspace_identity=$(agents_workspace_identity_for_root "${root}")
+    signature="${schema_version}|${slots}"
+    state_file=$(workspace_state_file "${root}" "${name}")
+    plan_file=$(mktemp)
+    print_workspace_plan_rows "${slots}" "${plan_file}"
+
+    while IFS=$'\t' read -r slot status detail; do
+        [[ -z "${slot}" ]] && continue
+        if [[ "${status}" == "degraded" ]]; then
+            degraded_count=$((degraded_count + 1))
+        else
+            ready_count=$((ready_count + 1))
+        fi
+    done < "${plan_file}"
+
+    if [[ -f "${state_file}" ]]; then
+        current_signature=$(sed -nE 's/^template_signature=(.*)$/\1/p' "${state_file}" | head -n 1)
+    fi
+
+    echo ""
+    yen_header "Workspace Template"
+    echo "Project:      ${root}"
+    echo "Template:     ${name}"
+    echo "Schema:       ${schema_version}"
+    echo "Source:       ${source}"
+    echo "Description:  ${description}"
+    echo ""
+    printf "%-14s %-10s %s\n" "SLOT" "STATUS" "DETAIL"
+    while IFS=$'\t' read -r slot status detail; do
+        [[ -z "${slot}" ]] && continue
+        printf "%-14s %-10s %s\n" "${slot}" "${status}" "${detail}"
+    done < "${plan_file}"
+    echo ""
+
+    if [[ "${dry_run}" == "1" ]]; then
+        yen_info "Dry run: template plan rendered with no side effects."
+        if [[ "${degraded_count}" -gt 0 ]]; then
+            yen_warn "Plan is degraded (${degraded_count} slot(s) not materialized). Run: yen agents list"
+        fi
+        rm -f "${plan_file}"
+        return 0
+    fi
+
+    if [[ "${current_signature}" == "${signature}" ]]; then
+        yen_info "Workspace template '${name}' already applied (idempotent)."
+        agents_timeline_log_best_effort "template-apply" "${root}" "unchanged" "template=${name};source=${source};schema=${schema_version};slots=${slots};ready=${ready_count};degraded=${degraded_count};workspace_identity=${workspace_identity}"
+        rm -f "${plan_file}"
+        return 0
+    fi
+
+    cat > "${state_file}" << EOF
+template_name=${name}
+template_signature=${signature}
+schema_version=${schema_version}
+slots=${slots}
+source=${source}
+applied_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+project_root=${root}
+EOF
+
+    yen_success "Applied workspace template '${name}'."
+    if [[ "${degraded_count}" -gt 0 ]]; then
+        timeline_status="degraded"
+        yen_warn "Applied in degraded mode (${degraded_count} slot(s) unresolved)."
+        yen_info "Run: yen agents list"
+    fi
+
+    agents_timeline_log_best_effort "template-apply" "${root}" "${timeline_status}" "template=${name};source=${source};schema=${schema_version};slots=${slots};ready=${ready_count};degraded=${degraded_count};workspace_identity=${workspace_identity}"
+
+    if [[ "${from_open}" == "1" ]]; then
+        if [[ "${ready_count}" -eq 0 ]]; then
+            yen_warn "No ready adapter slots were found for this template."
+        else
+            yen_info "Template applied. Open each ready slot in separate tabs/splits with:"
+            while IFS=$'\t' read -r slot status detail; do
+                [[ -z "${slot}" ]] && continue
+                if [[ "${status}" == "ready" && "${slot}" != "supervisor" ]]; then
+                    echo "  - yen agents open ${slot}"
+                fi
+            done < "${plan_file}"
+        fi
+    fi
+
+    rm -f "${plan_file}"
+    return 0
+}
+
+show_help() {
+    cat << 'EOF'
+Usage: yen agents <command> [options]
+
+Commands:
+  list                                 List installed adapter profiles and probe status
+  open <adapter|profile> [-- args..]   Launch adapter session with fail-open fallback
+                                       --profile <name> selects adapter or workspace profile
+                                       --project <path> for workspace-profile resolution
+                                       --dry-run prints launch/fallback/template action
+  timeline [--project P] [--limit N]   Show recent agent sessions for the workspace
+                                       --tail N alias; --event NAME; --source TAG; --kind KIND
+                                       --format text|json includes latest IDE verify/test evidence
+  note [--message TEXT] [--project P]  Record a local human/supervisor note for the workspace
+                                       --actor human|supervisor; --kind note|approval|handoff
+                                       --decision approved|rejected|comment; optional --slot/--session
+                                       --template review-approved|review-rejected|handoff-review|handoff-merge
+                                       --title TEXT; --validate-link enforces session/slot coherence
+                                       slot-only validation binds the latest known workspace session
+  export [--project P] [--limit N]     Write an agent evidence bundle for the workspace
+                                       --format markdown|json; --output PATH or - for stdout
+                                       export includes explicit adapter path/probe/launch/fallback fields
+  templates list [--project <path>]    List built-in + project workspace templates
+  templates show <name> [--project P]  Show resolved template details
+  templates apply <name> [--project P] Apply template state (idempotent)
+                                       --dry-run validates and prints plan only
+
+Built-in adapter profiles:
+  - claude
+  - codex
+
+Built-in workspace templates:
+  - pair-coding
+  - review-loop
+
+Notes:
+  - `list` shows adapter identity, binary, capabilities, and version probe result.
+  - If adapter launch is unavailable, `open` degrades to normal shell session
+    in interactive TTY mode (or exits cleanly in non-interactive mode).
+  - Saved `note` / `export` artifacts redact common secret patterns and prune
+    local history after 7 days by default; `YEN_AGENTS_ARCHIVE_DIR` opts into
+    archival and `YEN_AGENTS_RETENTION_DAYS` overrides the positive-day window.
+  - Timeline/export now also link local quality/workflow reports,
+    merge-readiness, PR-review, current branch PR/CI, and build-watch
+    evidence when those IDE artifacts exist.
+  - Project templates live at `.yen/workspaces/*.toml` and must declare:
+    `schema_version = 1` and `slots = "claude,codex,supervisor"` (example).
+EOF
+}
+
+note_help() {
+    cat << 'EOF'
+Usage: yen agents note [options]
+
+Record a local human/supervisor note, approval, or handoff for the workspace.
+
+Required:
+  --message TEXT       Note body (use "-" to read from stdin).
+                       Optional when --template supplies a default message.
+
+Common:
+  --template NAME      review-approved | review-rejected | handoff-review | handoff-merge
+  --actor ROLE         human (default) | supervisor
+  --kind KIND          note (default) | approval | handoff
+  --decision DECISION  approved | rejected | comment
+  --title TEXT         Optional short title
+  --slot SLOT          Bind to a workspace slot (e.g. claude, codex)
+  --session ID         Bind to a specific session id
+  --validate-link      Enforce session/slot coherence with the latest workspace state
+  --project PATH       Target workspace path (defaults to current repo)
+
+Examples:
+  yen agents note --message "Reviewed and approved" --kind approval
+  yen agents note --template handoff-review --slot codex --validate-link
+  echo "details..." | yen agents note --message - --kind handoff
+EOF
+}
+
+cmd_note() {
+    local actor="human"
+    local kind="note"
+    local kind_explicit="0"
+    local decision=""
+    local decision_explicit="0"
+    local template_name=""
+    local title=""
+    local validate_link="0"
+    local link_validated="no"
+    local project_target=""
+    local session_id=""
+    local slot_id=""
+    local message=""
+    local template_row=""
+    local template_kind=""
+    local template_decision=""
+    local template_title=""
+    local template_message=""
+    local root=""
+    local workspace_identity=""
+    local note_id=""
+    local created_at=""
+    local status_label="note"
+    local session_metadata=""
+
+    if [[ $# -eq 0 ]]; then
+        note_help
+        return 0
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help|help)
+                note_help
+                return 0
+                ;;
+            --actor)
+                shift
+                actor="${1:-}"
+                ;;
+            --kind)
+                shift
+                kind="${1:-}"
+                kind_explicit="1"
+                ;;
+            --decision)
+                shift
+                decision="${1:-}"
+                decision_explicit="1"
+                ;;
+            --template)
+                shift
+                template_name="${1:-}"
+                ;;
+            --title)
+                shift
+                title="${1:-}"
+                ;;
+            --validate-link)
+                validate_link="1"
+                ;;
+            --project|--path)
+                shift
+                project_target="${1:-}"
+                ;;
+            --session)
+                shift
+                session_id="${1:-}"
+                ;;
+            --slot)
+                shift
+                slot_id="${1:-}"
+                ;;
+            --message)
+                shift
+                message="${1:-}"
+                ;;
+            *)
+                yen_error "Unknown note option: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ "${message}" == "-" ]]; then
+        message=$(cat)
+    fi
+
+    if [[ -n "${template_name}" ]]; then
+        template_row=$(agents_note_template_defaults "${template_name}" || true)
+        if [[ -z "${template_row}" ]]; then
+            yen_error "Unknown note template: ${template_name}."
+            exit 1
+        fi
+        IFS='|' read -r template_kind template_decision template_title template_message << EOF
+${template_row}
+EOF
+        if [[ "${kind_explicit}" == "1" && "${kind}" != "${template_kind}" ]]; then
+            yen_error "Template '${template_name}' requires --kind ${template_kind}."
+            exit 1
+        fi
+        if [[ "${decision_explicit}" == "1" && -n "${template_decision}" && "${decision}" != "${template_decision}" ]]; then
+            yen_error "Template '${template_name}' requires --decision ${template_decision}."
+            exit 1
+        fi
+        kind="${template_kind}"
+        [[ -z "${decision}" ]] && decision="${template_decision}"
+        [[ -z "${title}" ]] && title="${template_title}"
+        [[ -z "${message}" ]] && message="${template_message}"
+    fi
+
+    message=$(agents_redact_text_best_effort "${message}")
+    title=$(agents_redact_text_best_effort "${title}")
+    message=$(trim "${message}")
+    title=$(agents_note_display_text "$(trim "${title}")")
+
+    if [[ -z "${message}" ]]; then
+        yen_error "note requires --message TEXT unless --template supplies a default."
+        exit 1
+    fi
+
+    case "${actor}" in
+        human|supervisor)
+            ;;
+        *)
+            yen_error "note supports --actor human|supervisor."
+            exit 1
+            ;;
+    esac
+
+    case "${kind}" in
+        note|approval|handoff)
+            ;;
+        *)
+            yen_error "note supports --kind note|approval|handoff."
+            exit 1
+            ;;
+    esac
+
+    if [[ -n "${decision}" ]]; then
+        case "${decision}" in
+            approved|rejected|comment)
+                ;;
+            *)
+                yen_error "note supports --decision approved|rejected|comment."
+                exit 1
+                ;;
+        esac
+    fi
+
+    if [[ -n "${decision}" && "${kind}" != "approval" ]]; then
+        yen_error "--decision is only valid with --kind approval."
+        exit 1
+    fi
+
+    title=$(trim "${title}")
+    if [[ -z "${title}" ]]; then
+        title=$(agents_note_default_title "${kind}" "${decision}" "${message}")
+    fi
+
+    root=$(find_project_root "${project_target}")
+    workspace_identity=$(agents_workspace_identity_for_root "${root}")
+    note_id=$(generate_agents_note_id)
+    created_at=$(agents_iso_now)
+
+    if [[ -n "${session_id}" ]]; then
+        session_metadata=$(agents_session_metadata_for_id "${session_id}" "${root}" "${workspace_identity}")
+        if [[ -z "${session_metadata}" ]]; then
+            yen_error "Unknown session '${session_id}'."
+            exit 1
+        fi
+    fi
+
+    if [[ -n "${session_id}" && -z "${slot_id}" ]]; then
+        slot_id=$(printf "%s\n" "${session_metadata}" | sed -nE 's/^slot_id=(.*)$/\1/p' | head -n 1)
+    fi
+
+    if [[ "${validate_link}" == "1" ]]; then
+        if [[ -n "${session_id}" ]]; then
+            local session_workspace=""
+            local session_slot=""
+            session_workspace=$(printf "%s\n" "${session_metadata}" | sed -nE 's/^workspace_identity=(.*)$/\1/p' | head -n 1)
+            session_slot=$(printf "%s\n" "${session_metadata}" | sed -nE 's/^slot_id=(.*)$/\1/p' | head -n 1)
+            if [[ -n "${session_workspace}" && "${session_workspace}" != "${workspace_identity}" && "${session_workspace}" != "${root}" ]]; then
+                yen_error "Session '${session_id}' belongs to a different workspace."
+                exit 1
+            fi
+            if [[ -n "${slot_id}" && -n "${session_slot}" && "${slot_id}" != "${session_slot}" ]]; then
+                yen_error "Session '${session_id}' is linked to slot '${session_slot}', not '${slot_id}'."
+                exit 1
+            fi
+            [[ -z "${slot_id}" ]] && slot_id="${session_slot}"
+            link_validated="yes"
+        elif [[ -n "${slot_id}" ]]; then
+            session_id=$(agents_find_latest_session_for_workspace_slot "${workspace_identity}" "${root}" "${slot_id}")
+            if [[ -z "${session_id}" ]]; then
+                yen_error "No known session for slot '${slot_id}' in this workspace."
+                exit 1
+            fi
+            session_metadata=$(agents_session_metadata_for_id "${session_id}" "${root}" "${workspace_identity}")
+            link_validated="yes"
+        fi
+    fi
+
+    if [[ "${kind}" == "approval" ]]; then
+        [[ -z "${decision}" ]] && decision="comment"
+        status_label="approval=${decision}"
+    else
+        status_label="${kind}"
+    fi
+
+    write_agents_note_files "${note_id}" "${actor}" "${kind}" "${decision}" "${template_name}" "${title}" "${link_validated}" "${workspace_identity}" "${root}" "${session_id}" "${slot_id}" "${created_at}" "${message}"
+    agents_timeline_log "note" "${root}" "${status_label}" "note_id=${note_id};actor=${actor};kind=${kind};decision=${decision};template=${template_name};link_validated=${link_validated};session=${session_id};slot=${slot_id};workspace_identity=${workspace_identity}"
+
+    if [[ -t 1 ]]; then
+        yen_success "Recorded agent note: ${note_id}"
+    else
+        printf '%s\n' "Recorded agent note: ${note_id}"
+    fi
+}
+
+cmd_export() {
+    local limit="40"
+    local format="markdown"
+    local output_path=""
+    local project_target=""
+    local root=""
+    local workspace_identity=""
+    local branch=""
+    local dirty_state=""
+    local verify_snapshot=""
+    local test_snapshot=""
+    local filtered_file=""
+    local adapter_file=""
+    local rendered_file=""
+    local evidence_status_json=""
+    local linked_evidence_json=""
+    local context_json=""
+    local export_suffix=""
+    local extension="md"
+    local hash=""
+    local emit_status="0"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --limit)
+                shift
+                limit="${1:-40}"
+                ;;
+            --format)
+                shift
+                format="${1:-markdown}"
+                ;;
+            --output)
+                shift
+                output_path="${1:-}"
+                ;;
+            --project|--path)
+                shift
+                project_target="${1:-}"
+                ;;
+            *)
+                yen_error "Unknown export option: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ ! "${limit}" =~ ^[0-9]+$ ]] || [[ "${limit}" -lt 1 ]]; then
+        yen_error "export requires --limit <positive integer>."
+        exit 1
+    fi
+
+    if [[ "${format}" != "markdown" && "${format}" != "json" ]]; then
+        yen_error "export supports --format markdown|json."
+        exit 1
+    fi
+
+    root=$(find_project_root "${project_target}")
+    workspace_identity=$(agents_workspace_identity_for_root "${root}")
+    branch=$(agents_git_branch_for_root "${root}")
+    dirty_state=$(agents_git_dirty_state_for_root "${root}")
+    verify_snapshot=$(agents_verify_snapshot_for_root "${root}")
+    test_snapshot=$(agents_test_snapshot_for_root "${root}")
+    evidence_status_json=$(agents_evidence_status_json_for_root "${root}")
+    linked_evidence_json=$(agents_linked_evidence_json_for_root "${root}")
+    context_json=$(agents_context_json_for_root \
+        "${root}" \
+        "${workspace_identity}" \
+        "${branch}" \
+        "${dirty_state}" \
+        "${verify_snapshot}" \
+        "${test_snapshot}")
+    filtered_file=$(mktemp)
+    adapter_file=$(mktemp)
+    rendered_file=$(mktemp)
+    agents_write_filtered_timeline_file "${root}" "${limit}" "${filtered_file}"
+    agents_write_adapter_summary_file "${filtered_file}" "${adapter_file}"
+
+    AGENTS_EXPORT_GENERATED_AT="$(agents_iso_now)" \
+    AGENTS_VERIFY_SNAPSHOT="${verify_snapshot}" \
+    AGENTS_TEST_SNAPSHOT="${test_snapshot}" \
+    AGENTS_EVIDENCE_STATUS_JSON="${evidence_status_json}" \
+    AGENTS_LINKED_EVIDENCE_JSON="${linked_evidence_json}" \
+    AGENTS_CONTEXT_JSON="${context_json}" \
+    render_agents_export_bundle \
+        "${filtered_file}" \
+        "${adapter_file}" \
+        "${root}" \
+        "${workspace_identity}" \
+        "${branch}" \
+        "${dirty_state}" \
+        "${format}" > "${rendered_file}"
+    agents_redact_file_in_place_best_effort "${rendered_file}"
+
+    if [[ -z "${output_path}" ]]; then
+        export_suffix=$(generate_agents_export_suffix)
+        hash=$(agents_short_hash_for_root "${root}")
+        [[ "${format}" == "json" ]] && extension="json"
+        output_path="${AGENTS_EXPORT_DIR}/agents-export-${export_suffix}-${hash}.${extension}"
+    fi
+
+    if [[ "${output_path}" == "-" ]]; then
+        if cat "${rendered_file}"; then
+            agents_timeline_log_best_effort "export" "${root}" "format=${format}" "path=-;workspace_identity=${workspace_identity};limit=${limit}"
+            emit_status="0"
+        else
+            emit_status="$?"
+        fi
+        rm -f "${filtered_file}" "${adapter_file}" "${rendered_file}"
+        return "${emit_status}"
+    fi
+
+    mkdir -p "$(dirname "${output_path}")"
+    cp "${rendered_file}" "${output_path}"
+    if [[ -t 1 ]]; then
+        yen_success "Wrote agent export bundle: ${output_path}"
+    else
+        printf '%s\n' "Wrote agent export bundle: ${output_path}"
+    fi
+    agents_timeline_log_best_effort "export" "${root}" "format=${format}" "path=${output_path};workspace_identity=${workspace_identity};limit=${limit}"
+
+    rm -f "${filtered_file}" "${adapter_file}" "${rendered_file}"
+}
+
+cmd_timeline() {
+    local limit="20"
+    local format="text"
+    local project_target=""
+    local event_filter=""
+    local source_filter=""
+    local kind_filter=""
+    local root=""
+    local workspace_identity=""
+    local verify_snapshot=""
+    local test_snapshot=""
+    local evidence_status_json=""
+    local evidence_status_env=""
+    local linked_evidence_json=""
+    local linked_evidence_env=""
+    local context_json=""
+    local context_env=""
+    local filtered_file=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --limit)
+                shift
+                limit="${1:-20}"
+                ;;
+            --tail)
+                shift
+                limit="${1:-20}"
+                ;;
+            --format)
+                shift
+                format="${1:-text}"
+                ;;
+            --event)
+                shift
+                event_filter="${1:-}"
+                ;;
+            --source)
+                shift
+                source_filter="${1:-}"
+                ;;
+            --kind)
+                shift
+                kind_filter="${1:-}"
+                ;;
+            --project|--path)
+                shift
+                project_target="${1:-}"
+                ;;
+            *)
+                yen_error "Unknown timeline option: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ ! "${limit}" =~ ^[0-9]+$ ]] || [[ "${limit}" -lt 1 ]]; then
+        yen_error "timeline requires --limit <positive integer>."
+        exit 1
+    fi
+
+    if [[ "${format}" != "text" && "${format}" != "json" ]]; then
+        yen_error "timeline supports --format text|json."
+        exit 1
+    fi
+
+    root=$(find_project_root "${project_target}")
+    workspace_identity=$(agents_workspace_identity_for_root "${root}")
+    verify_snapshot=$(agents_verify_snapshot_for_root "${root}")
+    test_snapshot=$(agents_test_snapshot_for_root "${root}")
+    evidence_status_json=$(agents_evidence_status_json_for_root "${root}")
+    evidence_status_env=$(agents_evidence_status_env_lines "${evidence_status_json}")
+    linked_evidence_json=$(agents_linked_evidence_json_for_root "${root}")
+    linked_evidence_env=$(agents_linked_evidence_env_lines "${linked_evidence_json}")
+    context_json=$(agents_context_json_for_root \
+        "${root}" \
+        "${workspace_identity}" \
+        "$(agents_git_branch_for_root "${root}")" \
+        "$(agents_git_dirty_state_for_root "${root}")" \
+        "${verify_snapshot}" \
+        "${test_snapshot}")
+    context_env=$(agents_context_env_lines "${context_json}")
+    filtered_file=$(mktemp)
+
+    agents_write_filtered_timeline_file "${root}" "${limit}" "${filtered_file}" "${event_filter}" "${source_filter}" "${kind_filter}"
+
+    if [[ "${format}" == "json" ]]; then
+        AGENTS_VERIFY_SNAPSHOT="${verify_snapshot}" \
+        AGENTS_TEST_SNAPSHOT="${test_snapshot}" \
+        AGENTS_EVIDENCE_STATUS_JSON="${evidence_status_json}" \
+        AGENTS_LINKED_EVIDENCE_JSON="${linked_evidence_json}" \
+        AGENTS_CONTEXT_JSON="${context_json}" \
+        render_agents_timeline_json "${filtered_file}" "${root}" "${workspace_identity}"
+        rm -f "${filtered_file}"
+        return 0
+    fi
+
+    echo ""
+    yen_header "Agent Timeline"
+    echo "Project:      ${root}"
+    echo "Workspace:    ${workspace_identity}"
+    echo "Context:      $(agents_context_env_value "${context_env}" "context_key")"
+    echo "Changes:      $(agents_context_env_value "${context_env}" "repo_changes")"
+    echo "Risks:        $(agents_context_env_value "${context_env}" "risk_summary")"
+    echo "Evidence:     $(agents_evidence_status_env_value "${evidence_status_env}" "overall")"
+    echo "Verify:       $(agents_render_snapshot_summary "${verify_snapshot}" "verify") | evidence=$(agents_evidence_status_env_value "${evidence_status_env}" "verify")"
+    echo "Test:         $(agents_render_snapshot_summary "${test_snapshot}" "test") | evidence=$(agents_evidence_status_env_value "${evidence_status_env}" "test")"
+    echo "Quality:      $(agents_evidence_status_env_value "${evidence_status_env}" "quality")"
+    echo "Workflow:     $(agents_evidence_status_env_value "${evidence_status_env}" "workflow")"
+    echo "Quality Link: $(agents_linked_evidence_env_value "${linked_evidence_env}" "quality_available") | action=$(agents_linked_evidence_env_value "${linked_evidence_env}" "quality_action") | candidate=$(agents_linked_evidence_env_value "${linked_evidence_env}" "quality_candidate") | scope=$(agents_linked_evidence_env_value "${linked_evidence_env}" "quality_scope") | summary=$(agents_linked_evidence_env_value "${linked_evidence_env}" "quality_summary")"
+    echo "Workflow Link: $(agents_linked_evidence_env_value "${linked_evidence_env}" "workflow_available") | name=$(agents_linked_evidence_env_value "${linked_evidence_env}" "workflow_name") | kind=$(agents_linked_evidence_env_value "${linked_evidence_env}" "workflow_kind") | location=$(agents_linked_evidence_env_value "${linked_evidence_env}" "workflow_location") | summary=$(agents_linked_evidence_env_value "${linked_evidence_env}" "workflow_summary")"
+    echo "Merge Ready:  $(agents_evidence_status_env_value "${evidence_status_env}" "merge-readiness")"
+    echo "PR Review:    $(agents_evidence_status_env_value "${evidence_status_env}" "pr-review")"
+    echo "Merge Link:   $(agents_linked_evidence_env_value "${linked_evidence_env}" "merge_ready_available") | pr=$(agents_linked_evidence_env_value "${linked_evidence_env}" "merge_ready_pr") | verify=$(agents_linked_evidence_env_value "${linked_evidence_env}" "merge_ready_verify") | last=$(agents_linked_evidence_env_value "${linked_evidence_env}" "merge_ready_last")"
+    echo "Review Link:  $(agents_linked_evidence_env_value "${linked_evidence_env}" "review_available") | pr=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_pr") | file=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_file") | target=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_target") | bundle=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_path")"
+    echo "Review Dec.:  $(agents_linked_evidence_env_value "${linked_evidence_env}" "review_decision_available") | mode=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_decision_mode") | target=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_decision_target") | artifact=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_decision_path")"
+    echo "Review Inline: $(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_available") | target=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_target") | path=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_path") | line=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_line") | side=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_side") | artifact=$(agents_linked_evidence_env_value "${linked_evidence_env}" "review_inline_artifact")"
+    echo "Current CI:   $(agents_linked_evidence_env_value "${linked_evidence_env}" "ci_available") | state=$(agents_linked_evidence_env_value "${linked_evidence_env}" "ci_state") | pr=$(agents_linked_evidence_env_value "${linked_evidence_env}" "ci_pr") | branch=$(agents_linked_evidence_env_value "${linked_evidence_env}" "ci_branch")"
+    echo "Build Watch:  $(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_available") | state=$(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_state") | kind=$(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_kind") | branch=$(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_branch") | iteration=$(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_iteration") | last=$(agents_linked_evidence_env_value "${linked_evidence_env}" "watch_last")"
+    [[ -n "${event_filter}" ]] && echo "Event:        ${event_filter}"
+    [[ -n "${source_filter}" ]] && echo "Source:       ${source_filter}"
+    [[ -n "${kind_filter}" ]] && echo "Kind:         ${kind_filter}"
+    echo ""
+
+    if [[ ! -s "${filtered_file}" ]]; then
+        yen_info "No agent timeline entries for this workspace."
+        echo ""
+        rm -f "${filtered_file}"
+        return 0
+    fi
+
+    printf "%-21s %-14s %-14s %-18s %-16s %-10s %-14s %-10s %s\n" "TIME" "EVENT" "SOURCE" "STATUS" "SLOT/TEMPLATE" "ADAPTER" "BRANCH" "DIRTY" "DETAIL"
+    while IFS=$'\t' read -r t e p s d; do
+        local slot_or_template=""
+        local adapter=""
+        local branch=""
+        local dirty=""
+        local note_id=""
+        local detail_display="${d}"
+        local source_tag=""
+
+        slot_or_template=$(agents_timeline_detail_value "${d}" "slot")
+        [[ -z "${slot_or_template}" ]] && slot_or_template=$(agents_timeline_detail_value "${d}" "template")
+        adapter=$(agents_timeline_detail_value "${d}" "adapter")
+        branch=$(agents_timeline_detail_value "${d}" "branch")
+        dirty=$(agents_timeline_detail_value "${d}" "dirty")
+        note_id=$(agents_timeline_detail_value "${d}" "note_id")
+        source_tag=$(agents_timeline_source_tag "${e}" "${d}")
+
+        if [[ -n "${note_id}" ]]; then
+            local note_preview=""
+            local note_title=""
+            local note_actor=""
+            note_preview=$(agents_note_preview_for_id "${note_id}")
+            note_title=$(agents_note_title_for_id "${note_id}")
+            note_actor=$(agents_note_metadata_value "${note_id}" "actor")
+            [[ -z "${slot_or_template}" ]] && slot_or_template="${note_title:-${note_actor:-note}}"
+            if [[ -n "${note_title}" ]]; then
+                detail_display="${d};title=${note_title}"
+            fi
+            if [[ -n "${note_preview}" ]]; then
+                detail_display="${detail_display};message=${note_preview}"
+            fi
+        fi
+
+        [[ -z "${slot_or_template}" ]] && slot_or_template="-"
+        [[ -z "${adapter}" ]] && adapter="-"
+        [[ -z "${branch}" ]] && branch="-"
+        [[ -z "${dirty}" ]] && dirty="-"
+        [[ -z "${source_tag}" ]] && source_tag="system"
+
+        printf "%-21s %-14s %-14s %-18s %-16s %-10s %-14s %-10s %s\n" "${t}" "${e}" "${source_tag}" "${s}" "${slot_or_template}" "${adapter}" "${branch}" "${dirty}" "${detail_display}"
+    done < "${filtered_file}"
+    echo ""
+
+    rm -f "${filtered_file}"
+}
+
+cmd_list() {
+    if [[ $# -gt 0 ]]; then
+        yen_error "Unknown agents list option: $1"
+        exit 1
+    fi
+
+    echo ""
+    yen_header "Agent Adapters"
+    printf "%-8s %-14s %-12s %-28s %s\n" "NAME" "BINARY" "STATUS" "CAPABILITIES" "VERSION"
+
+    local row=""
+    while IFS= read -r row; do
+        [[ -z "${row}" ]] && continue
+        local name=""
+        local binary_name=""
+        local probe_cmd=""
+        local capabilities=""
+        local probe_info=""
+        local adapter_status=""
+        local adapter_version=""
+
+        IFS=$'\t' read -r name binary_name probe_cmd capabilities << EOF
+${row}
+EOF
+
+        probe_info=$(probe_adapter_status "${binary_name}" "${probe_cmd}")
+        IFS='|' read -r adapter_status adapter_version << EOF
+${probe_info}
+EOF
+
+        printf "%-8s %-14s %-12s %-28s %s\n" "${name}" "${binary_name}" "${adapter_status}" "${capabilities}" "${adapter_version}"
+    done << EOF
+$(adapter_catalog)
+EOF
+    echo ""
+}
+
+cmd_templates() {
+    local sub="${1:-list}"
+    local project_target=""
+    local template_name=""
+    local dry_run="0"
+    local root=""
+    local row=""
+    local seen_file=""
+
+    shift || true
+    case "${sub}" in
+        list|ls)
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --project|--path)
+                        shift
+                        project_target="${1:-}"
+                        ;;
+                    *)
+                        yen_error "Unknown templates list option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+
+            root=$(find_project_root "${project_target}")
+            seen_file=$(mktemp)
+            : > "${seen_file}"
+
+            echo ""
+            yen_header "Workspace Templates"
+            echo "Project: ${root}"
+            echo ""
+            printf "%-16s %-8s %-10s %-28s %s\n" "NAME" "SCHEMA" "SOURCE" "SLOTS" "DESCRIPTION"
+
+            if [[ -d "${root}/.yen/workspaces" ]]; then
+                while IFS= read -r line; do
+                    [[ -z "${line}" ]] && continue
+                    local parsed
+                    local name=""
+                    local description=""
+                    local slots=""
+                    local schema=""
+                    local source=""
+                    parsed=$(parse_workspace_template_file "${line}" "$(basename "${line}" .toml)" || true)
+                    [[ -z "${parsed}" ]] && continue
+                    IFS=$'\t' read -r name description slots schema source << EOF
+${parsed}
+EOF
+                    echo "${name}" >> "${seen_file}"
+                    printf "%-16s %-8s %-10s %-28s %s\n" "${name}" "${schema}" "${source}" "${slots}" "${description}"
+                done < <(find "${root}/.yen/workspaces" -maxdepth 1 -type f -name '*.toml' 2>/dev/null | sort)
+            fi
+
+            while IFS= read -r row; do
+                [[ -z "${row}" ]] && continue
+                local name=""
+                local description=""
+                local slots=""
+                local schema=""
+                local source=""
+                IFS=$'\t' read -r name description slots schema source << EOF
+${row}
+EOF
+                if grep -Fxq -- "${name}" "${seen_file}" 2>/dev/null; then
+                    continue
+                fi
+                printf "%-16s %-8s %-10s %-28s %s\n" "${name}" "${schema}" "${source}" "${slots}" "${description}"
+            done << EOF
+$(workspace_builtin_catalog)
+EOF
+
+            rm -f "${seen_file}"
+            echo ""
+            ;;
+        show)
+            if [[ $# -lt 1 ]]; then
+                yen_error "templates show requires a template name."
+                exit 1
+            fi
+            template_name="$1"
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --project|--path)
+                        shift
+                        project_target="${1:-}"
+                        ;;
+                    *)
+                        yen_error "Unknown templates show option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+            root=$(find_project_root "${project_target}")
+            row=$(find_workspace_template "${root}" "${template_name}" || true)
+            if [[ -z "${row}" ]]; then
+                yen_error "Unknown workspace template '${template_name}'. Run: yen agents templates list"
+                exit 1
+            fi
+            IFS=$'\t' read -r template_name description _slots _schema _source << EOF
+${row}
+EOF
+            apply_workspace_template "${root}" "${template_name}" "1" "0"
+            ;;
+        apply)
+            if [[ $# -lt 1 ]]; then
+                yen_error "templates apply requires a template name."
+                exit 1
+            fi
+            template_name="$1"
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --project|--path)
+                        shift
+                        project_target="${1:-}"
+                        ;;
+                    --dry-run)
+                        dry_run="1"
+                        ;;
+                    *)
+                        yen_error "Unknown templates apply option: $1"
+                        exit 1
+                        ;;
+                esac
+                shift
+            done
+            root=$(find_project_root "${project_target}")
+            apply_workspace_template "${root}" "${template_name}" "${dry_run}" "0"
+            ;;
+        *)
+            yen_error "Unknown templates subcommand: ${sub}"
+            exit 1
+            ;;
+    esac
+}
+
+cmd_open() {
+    local profile_name=""
+    local dry_run="0"
+    local passthrough=()
+    local project_target=""
+    local root=""
+    local workspace_identity=""
+    local branch=""
+    local dirty_state=""
+    local launch_mode="adapter"
+    local session_id=""
+    local started_at=""
+    local stopped_at=""
+    local exit_code=0
+    local exit_label=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --profile)
+                shift
+                profile_name="${1:-}"
+                ;;
+            --project|--path)
+                shift
+                project_target="${1:-}"
+                ;;
+            --dry-run)
+                dry_run="1"
+                ;;
+            --)
+                shift
+                while [[ $# -gt 0 ]]; do
+                    passthrough+=("$1")
+                    shift
+                done
+                break
+                ;;
+            *)
+                if [[ -z "${profile_name}" ]]; then
+                    profile_name="$1"
+                else
+                    passthrough+=("$1")
+                fi
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -z "${profile_name}" ]]; then
+        yen_error "open requires an adapter/profile. Example: yen agents open claude"
+        exit 1
+    fi
+
+    root=$(find_project_root "${project_target}")
+
+    local row=""
+    row=$(find_adapter_row "${profile_name}" || true)
+    if [[ -z "${row}" ]]; then
+        # Treat unknown adapter name as workspace profile.
+        apply_workspace_template "${root}" "${profile_name}" "${dry_run}" "1"
+        return $?
+    fi
+
+    local name=""
+    local binary_name=""
+    local probe_cmd=""
+    local capabilities=""
+    local binary_path=""
+    local probe_info=""
+    local probe_status=""
+    local probe_version=""
+    local launch_result=""
+    local fallback_state="none"
+    IFS=$'\t' read -r name binary_name probe_cmd capabilities << EOF
+${row}
+EOF
+
+    binary_path=$(resolve_adapter_binary_path "${binary_name}")
+    probe_info=$(probe_adapter_status "${binary_name}" "${probe_cmd}")
+    IFS='|' read -r probe_status probe_version << EOF
+${probe_info}
+EOF
+
+    workspace_identity=$(agents_workspace_identity_for_root "${root}")
+    branch=$(agents_git_branch_for_root "${root}")
+    dirty_state=$(agents_git_dirty_state_for_root "${root}")
+
+    if ! command -v "${binary_name}" >/dev/null 2>&1; then
+        yen_warn "Adapter '${name}' is unavailable (binary '${binary_name}' not found)."
+        if [[ "${dry_run}" == "1" ]]; then
+            yen_info "Dry run: would fall back to normal shell session."
+            return 0
+        fi
+
+        if [[ -t 0 && -t 1 ]]; then
+            launch_mode="shell-fallback"
+            launch_result="fallback"
+            fallback_state="binary-missing"
+            session_id=$(generate_agents_session_id)
+            started_at=$(agents_iso_now)
+            agents_write_session_state_best_effort "${session_id}" "${profile_name}" "${name}" "${workspace_identity}" "${root}" "${branch}" "${dirty_state}" "${launch_mode}" "running" "${started_at}" "" "" "${binary_name}" "${binary_path}" "${probe_cmd}" "${probe_status}" "${probe_version}" "${capabilities}" "${launch_result}" "${fallback_state}"
+            agents_timeline_log_best_effort "session-start" "${root}" "fallback" "session=${session_id};slot=${profile_name};adapter=${name};branch=${branch};dirty=${dirty_state};launch_mode=${launch_mode};workspace_identity=${workspace_identity};started_at=${started_at};binary_name=${binary_name};binary_path=${binary_path};probe_command=${probe_cmd};probe_status=${probe_status};probe_version=${probe_version};declared_capabilities=${capabilities};launch_result=${launch_result};fallback_state=${fallback_state}"
+            yen_warn "Falling back to normal shell session (fail-open)."
+            set +e
+            "${SHELL:-/bin/bash}" -l
+            exit_code=$?
+            set -e
+            exit_label=$(agents_session_exit_status_label "${exit_code}")
+            stopped_at=$(agents_iso_now)
+            agents_write_session_state_best_effort "${session_id}" "${profile_name}" "${name}" "${workspace_identity}" "${root}" "${branch}" "${dirty_state}" "${launch_mode}" "stopped" "${started_at}" "${stopped_at}" "${exit_code}" "${binary_name}" "${binary_path}" "${probe_cmd}" "${probe_status}" "${probe_version}" "${capabilities}" "${launch_result}" "${fallback_state}"
+            agents_timeline_log_best_effort "session-stop" "${root}" "status=${exit_label};exit=${exit_code}" "session=${session_id};slot=${profile_name};adapter=${name};branch=${branch};dirty=${dirty_state};launch_mode=${launch_mode};workspace_identity=${workspace_identity};started_at=${started_at};stopped_at=${stopped_at};binary_name=${binary_name};binary_path=${binary_path};probe_command=${probe_cmd};probe_status=${probe_status};probe_version=${probe_version};declared_capabilities=${capabilities};launch_result=${launch_result};fallback_state=${fallback_state}"
+            return "${exit_code}"
+        fi
+
+        yen_info "Non-interactive mode: exiting cleanly without adapter launch."
+        return 0
+    fi
+
+    if [[ "${dry_run}" == "1" ]]; then
+        local cmd_preview="${binary_name}"
+        local arg
+        for arg in "${passthrough[@]}"; do
+            cmd_preview="${cmd_preview} ${arg}"
+        done
+        yen_info "Dry run: would launch '${name}' via: ${cmd_preview}"
+        return 0
+    fi
+
+    session_id=$(generate_agents_session_id)
+    started_at=$(agents_iso_now)
+    launch_result="launched"
+    agents_write_session_state_best_effort "${session_id}" "${profile_name}" "${name}" "${workspace_identity}" "${root}" "${branch}" "${dirty_state}" "${launch_mode}" "running" "${started_at}" "" "" "${binary_name}" "${binary_path}" "${probe_cmd}" "${probe_status}" "${probe_version}" "${capabilities}" "${launch_result}" "${fallback_state}"
+    agents_timeline_log_best_effort "session-start" "${root}" "launched" "session=${session_id};slot=${profile_name};adapter=${name};branch=${branch};dirty=${dirty_state};launch_mode=${launch_mode};workspace_identity=${workspace_identity};started_at=${started_at};binary_name=${binary_name};binary_path=${binary_path};probe_command=${probe_cmd};probe_status=${probe_status};probe_version=${probe_version};declared_capabilities=${capabilities};launch_result=${launch_result};fallback_state=${fallback_state}"
+
+    set +e
+    "${binary_name}" "${passthrough[@]}"
+    exit_code=$?
+    set -e
+
+    exit_label=$(agents_session_exit_status_label "${exit_code}")
+    stopped_at=$(agents_iso_now)
+    agents_write_session_state_best_effort "${session_id}" "${profile_name}" "${name}" "${workspace_identity}" "${root}" "${branch}" "${dirty_state}" "${launch_mode}" "stopped" "${started_at}" "${stopped_at}" "${exit_code}" "${binary_name}" "${binary_path}" "${probe_cmd}" "${probe_status}" "${probe_version}" "${capabilities}" "${launch_result}" "${fallback_state}"
+    agents_timeline_log_best_effort "session-stop" "${root}" "status=${exit_label};exit=${exit_code}" "session=${session_id};slot=${profile_name};adapter=${name};branch=${branch};dirty=${dirty_state};launch_mode=${launch_mode};workspace_identity=${workspace_identity};started_at=${started_at};stopped_at=${stopped_at};binary_name=${binary_name};binary_path=${binary_path};probe_command=${probe_cmd};probe_status=${probe_status};probe_version=${probe_version};declared_capabilities=${capabilities};launch_result=${launch_result};fallback_state=${fallback_state}"
+    return "${exit_code}"
+}
+
+main() {
+    case "${1:-}" in
+        ""|-h|--help|help)
+            show_help
+            ;;
+        list|ls|status)
+            shift
+            cmd_list "$@"
+            ;;
+        open|run|start)
+            shift
+            ensure_agents_state_dirs >/dev/null 2>&1 || true
+            cmd_open "$@"
+            ;;
+        timeline)
+            shift
+            ensure_agents_state_dirs >/dev/null 2>&1 || true
+            cmd_timeline "$@"
+            ;;
+        note)
+            shift
+            ensure_agents_state_dirs
+            cmd_note "$@"
+            ;;
+        export)
+            shift
+            ensure_agents_state_dirs >/dev/null 2>&1 || true
+            cmd_export "$@"
+            ;;
+        templates|template|workspace|workspaces)
+            shift
+            ensure_agents_state_dirs >/dev/null 2>&1 || true
+            cmd_templates "$@"
+            ;;
+        *)
+            yen_error "Unknown agents command: $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

@@ -1,0 +1,73 @@
+# Go-To-Market
+
+Public accuracy and legal copy, the release notes page and the content voice of the YEN website.
+
+Design, quality, growth, and release procedures belong to their owners in `00-docs-map.md`.
+
+## Sources of truth
+
+- `app/globals.css` — every token and shared utility.
+- `components/docs/doc-page-shell.tsx`, `PageShell`, `components/shared/{header,footer}.tsx` — page shells.
+- `lib/seo.ts` (`PUBLIC_PAGE_SEO`), `app/sitemap.ts`, `app/robots.ts`, `app/manifest.ts` — metadata and discovery.
+- `lib/library/public-pages.ts` — PSEO registry and eligibility; `lib/library/seo-inventory.ts` — the `/library` view model.
+- `proxy.ts` and `scripts/44-build-web-csp.ts` — host validation and CSP.
+- `app/release/release-notes-copy.ts` — curated release prose; `app/release/release-notes-data.ts` is generated.
+
+## Public Accuracy and Legal Copy
+
+[CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
+
+- Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, Cloudflare DNS. Never claim "no third parties".
+- Shared chrome: header links are Docs and @yenFTW only; footer brand links are Onigiri (blog), Music (`/tunes`), Bitcoin Email (`https://btc.email`, new tab), and JP the Cat (`https://jpthecat.com`, new tab). Footer legal is Terms only (`/terms`, combined privacy and cookie policy; `/privacy` redirects). `/release` stays out of header and footer.
+- Downloads are GitHub Release assets; `/download` redirects to the current DMG and records nothing.
+- Public counts come from manifests or scripts (the curated theme manifest for themes), never from old copy; never advertise retired custom sounds or sound packs.
+- Historical public assets such as `public/skills.md` may stay reachable but are labeled historical.
+- Performance claims: the upstream engine's "about 100x faster than Terminal.app" is its own qualitative claim with no published method; the measured comparison is one workload in its devlog 006 (73 ms versus iTerm2's 470 ms). Never present either as YEN's benchmark, and never call YEN "fastest".
+- Verify source before editing a public surface, and the live `https://yen.chat` response after deploying.
+- A copy correction must also check `public/llms.txt`, `app/manifest.ts`, and `lib/library/public-pages.ts`; these independent surfaces can retain the same stale claim.
+- Settings screenshots and recordings are not current feature evidence; compare their labels and controls with the shipped Settings source before placing them in instructions.
+
+## Release Notes Page (`/release`)
+
+`/release` is the public build history, grouped into Monday-Sunday weeks, newest first, each with one curated story, its build count and latest version.
+It reuses `DocPageShell`, `DocNav` and `DocSection` exactly like `/terms`, stays out of the header, footer, and sitemap.
+
+- [HARD REQUIREMENT] Structure is generated, voice is curated. `bun scripts/gen-release-notes.ts` writes `release-notes-data.ts` from `public/stable/version.json` bump commits; never edit it by hand (Biome ignores it). `RELEASE_COPY` holds each version's factual line and `RELEASE_WEEK_COPY` each week's story; missing copy in either fails generation.
+- [HARD REQUIREMENT] Grouping: Monday-Sunday weeks; provenance sorted by ship day then version, descending; a week spanning two months belongs to the month containing its Thursday.
+- [HARD REQUIREMENT] Each weekly story is for the person deciding whether to update: lead with the change a reader would feel, in the second person, name the meaningful improvements, end on why it matters. Prefer one concrete detail over a category. Never a feature inventory or implementation log.
+- [HARD REQUIREMENT] Paragraphs are separated by a literal `\n\n`, which `release-client.tsx` renders as one `<p>` each: 2-3 for a big week, 1-2 for a thin one.
+- [HARD REQUIREMENT] No hype, emojis, exclamation marks or invented benefits; a thin week stays short. `tests/121` fails on an exclamation mark or summaries regressing toward commit shorthand.
+- [HARD REQUIREMENT] Never name the upstream engine; write "terminal engine". The generator strips it per paragraph as a backstop, and `tests/121` fails if `\bGhostty\b` reaches the data file.
+- Retired features stay out: versions whose final text matches the `RETIRED` pattern, plus the explicit `RELEASE_EXCLUDE` set, are excluded; mixed builds are curated to the surviving part.
+- Keep the hero download CTA, the closing "Ready to try it?" section and every `Download for macOS` → `/download` link.
+- After editing either copy layer, run the generator and `bun run build`, confirm no unused keys, and ship the data and CSP hashes in a `[deploy]` commit.
+
+## Content Voice
+
+Applies to marketing, blog posts, social posts and public docs.
+YEN is a solo-developer product written in the first person ("I built", never "we" for the builder), for engineers who live in the terminal.
+
+- Be technically specific: say how it works ("the hotkey uses a session-level `CGEventTap`"), not "advanced technology".
+- Admit limitations plainly; honesty earns trust.
+- Self-deprecating humor is welcome; corporate distance is not.
+- Contrast philosophies without attacking anyone.
+- Let the joy of building show.
+
+| Channel | Style |
+|---------|-------|
+| Blog (Substack) | Long-form, personal, technical; "Hey folks!" and a "— 8" sign-off |
+| Social | One insight per post, code welcome |
+| Public docs | Clear, scannable, accurate over promotional |
+| `/release` | The weekly story rules above |
+
+Use: "just works", "local-first", "vendor, don't fork", "quiet, methodical work".
+Avoid: "AI-powered" (YEN uses native APIs), "revolutionary", "best-in-class", "seamless experience", "leverage".
+
+Formatting: spaced em dashes ("text — text", never `--`); spaced slashes between words ("hover / definition"); inline code for commands; bold rather than capitals; Oxford comma; paragraphs of three or four sentences.
+
+## Public Manual
+
+`app/docs/docs-client.tsx` owns the task-focused manual; `app/docs/page.tsx` owns its navigation.
+Keep setup, workspace controls, feature limits, and troubleshooting visible; use bundled command help for the exhaustive CLI inventory.
+Preserve useful existing anchors when combining sections, and keep navigation in reading order.
+Historical essays and conceptual product comparisons belong outside the manual.

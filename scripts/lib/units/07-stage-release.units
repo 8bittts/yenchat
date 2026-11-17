@@ -1,0 +1,6 @@
+# Units declared by scripts/07-stage-release.sh.
+#
+# staged-artifacts records how many paths actually reached the index. A staging
+# step that matched nothing used to print its "Staged:" banner regardless.
+
+staged-artifacts

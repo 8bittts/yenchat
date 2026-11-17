@@ -1,0 +1,16 @@
+{
+	"supported-platforms": {
+		"squares": "shared"
+	},
+	"groups": [
+		{
+			"name": "YEN Icon",
+			"layers": [
+				{
+					"name": "YEN",
+					"image-name": "YEN.png"
+				}
+			]
+		}
+	]
+}

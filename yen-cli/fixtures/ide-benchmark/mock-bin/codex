@@ -1,0 +1,6 @@
+#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "codex fixture 1.0.0"
+  exit 0
+fi
+echo "codex-fixture-launch"

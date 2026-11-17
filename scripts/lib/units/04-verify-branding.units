@@ -1,0 +1,13 @@
+# Units declared by scripts/04-verify-branding.sh.
+#
+# The old "(53 checks)" summary counted `check` call sites in the source text,
+# all of them outside every guard, so it printed 53 whether a check ran or
+# self-skipped. That is the shape that let a relocated src/config/Config.zig
+# print a full green run out of a shipping gate.
+#
+# guarded-subjects replaces it with the question that actually matters: did the
+# checks have subjects to check? 58 blocks sit behind `if [ -f "..." ]`, and a
+# collapsed subject set now fails rather than reading as clean.
+
+upstream-path-manifest
+guarded-subjects

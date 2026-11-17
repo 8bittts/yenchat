@@ -1,0 +1,17 @@
+# ripgrep Baseline Tracking
+upstream_repo=https://github.com/BurntSushi/ripgrep
+upstream_version=15.2.0
+last_sync=2026-07-15
+architecture=universal (arm64 + x86_64)
+source_asset_arm64=ripgrep-15.2.0-aarch64-apple-darwin.tar.gz
+source_asset_x86_64=ripgrep-15.2.0-x86_64-apple-darwin.tar.gz
+source_sha256_arm64=3750b2e93f37e0c692657da574d7019a101c0084da05a790c83fd335bad973e4
+source_sha256_x86_64=af7825fcc69a2afc7a7aea55fc9af90e26421d8f20fe59df32e233c0b8a231c1
+source_api_sha256_arm64=3750b2e93f37e0c692657da574d7019a101c0084da05a790c83fd335bad973e4
+source_api_sha256_x86_64=af7825fcc69a2afc7a7aea55fc9af90e26421d8f20fe59df32e233c0b8a231c1
+source_checksums_file=none
+source_checksums_sha256=none
+provenance_verification=github-release-asset-digests
+output_verification=verified
+output_sha256=7f39bf5539a9ca7b280a9d718b9b661cf485af9403f576818e2406f6c93cfb4c
+companion_output_sha256=none

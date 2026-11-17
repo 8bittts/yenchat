@@ -1,0 +1,5 @@
+fixture,category,policy,expected_orientation,expected_duration_s,notes
+landscape.mp4,baseline,render_ok,landscape,1.5,1280x720 upright; downscales to the cap preserving aspect.
+portrait.mp4,orientation,render_ok,portrait,1.5,720x1280 upright; downscales to the cap preserving aspect.
+rotated.mp4,rotation,render_ok,portrait,1.5,Encoded 1280x720 with a 90 degree preferred transform so output is portrait.
+audio-only.m4a,audio,expected_failure,none,1.5,AAC audio with no video track; generator.image throws so the helper exits non-zero.

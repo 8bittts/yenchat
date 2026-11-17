@@ -1,0 +1,56 @@
+    static func opinionatedClipboardImageDirectoryURL(
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        let url = fileManager.temporaryDirectory
+            .appendingPathComponent(opinionatedClipboardImageDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+        return url
+    }
+
+    private static func pruneStaleOpinionatedClipboardImageFiles(
+        fileManager: FileManager = .default,
+        now: Date = .init()
+    ) {
+        guard let rootURL = try? opinionatedClipboardImageDirectoryURL(fileManager: fileManager),
+              let urls = try? fileManager.contentsOfDirectory(
+                at: rootURL,
+                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey],
+                options: [.skipsHiddenFiles]
+              ) else {
+            return
+        }
+
+        let cutoff = now.addingTimeInterval(-opinionatedClipboardImageMaximumAge)
+        for url in urls where url.lastPathComponent.hasPrefix(opinionatedClipboardImagePrefix) {
+            let values = try? url.resourceValues(
+                forKeys: [.contentModificationDateKey, .creationDateKey]
+            )
+            let referenceDate = values?.contentModificationDate ?? values?.creationDate ?? .distantFuture
+            if referenceDate < cutoff {
+                try? fileManager.removeItem(at: url)
+            }
+        }
+    }
+
+    private static func writeClipboardImageData(_ data: Data, ext: String) -> String? {
+        let fileManager = FileManager.default
+        pruneStaleOpinionatedClipboardImageFiles(fileManager: fileManager)
+
+        guard let rootURL = try? opinionatedClipboardImageDirectoryURL(fileManager: fileManager) else {
+            return nil
+        }
+
+        let url = rootURL
+            .appendingPathComponent("\(opinionatedClipboardImagePrefix)\(UUID().uuidString)")
+            .appendingPathExtension(ext)
+
+        do {
+            try data.write(to: url, options: .atomic)
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            return url.path
+        } catch {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+    }

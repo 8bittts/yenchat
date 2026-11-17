@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <rect width="900" height="520" fill="#f8fafc" />
+  <rect x="30" y="30" width="840" height="460" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="4" />
+  <text x="60" y="90" font-family="Georgia" font-size="34" font-weight="700" fill="#0f172a">Text-Heavy Fixture</text>
+  <text x="60" y="140" font-family="Georgia" font-size="22" fill="#334155">
+    <tspan x="60" dy="0">This file tests typographic rendering fidelity.</tspan>
+    <tspan x="60" dy="34">It includes multiple lines, punctuation, and numbers: 0123456789.</tspan>
+    <tspan x="60" dy="34">Edge cases: ligatures fi fl, em-dash -, symbols @#$%^&amp;*().</tspan>
+    <tspan x="60" dy="34">Expected: no clipping and stable line spacing.</tspan>
+  </text>
+</svg>

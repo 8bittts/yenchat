@@ -1,0 +1,65 @@
+#!/bin/bash
+# YEN Config Command
+# Provides config management options (native Settings panel via Cmd+,)
+
+source "${YEN_LIB}/init.sh"
+
+# Handle subcommands
+case "${1:-}" in
+    reset)
+        # Reset config to YEN defaults
+        config_path="${HOME}/Library/Application Support/com.yenchat.yen/config.yen"
+
+        if [[ ! -f "$config_path" ]]; then
+            yen_info "Config file does not exist. Using YEN defaults."
+            exit 0
+        fi
+
+        # Ask for confirmation
+        echo ""
+        yen_warn "This will delete your custom configuration:"
+        echo "  $config_path"
+        echo ""
+        read -p "Reset to YEN defaults? [y/N] " -n 1 -r
+        echo ""
+
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            rm -f "$config_path"
+            yen_success "Config reset to YEN defaults."
+            if yen reload >/dev/null 2>&1; then
+                yen_info "Configuration reloaded"
+            else
+                yen_info "Run 'yen reload' to apply changes"
+            fi
+            yen_info "Select a theme: open Settings (Cmd + ,)"
+        else
+            yen_info "Reset cancelled."
+        fi
+        exit 0
+        ;;
+    ""|--help|-h)
+        # No subcommand or help - show Settings guidance
+        ;;
+    *)
+        yen_error "Unknown subcommand: $1"
+        echo ""
+        echo "Usage: yen config [reset]"
+        echo ""
+        echo "Commands:"
+        echo "  (none)  Show Settings guidance"
+        echo "  reset   Reset config to YEN defaults"
+        exit 1
+        ;;
+esac
+
+# Show guidance to use native Settings panel
+echo ""
+yen_info "Use Cmd+, to open Settings in YEN Terminal"
+echo ""
+echo "  Or edit config directly:"
+echo "  ${HOME}/Library/Application Support/com.yenchat.yen/config.yen"
+echo ""
+echo "Commands:"
+echo "  yen config reset   Reset to YEN defaults"
+echo "  yen reload         Apply config changes"
+echo ""

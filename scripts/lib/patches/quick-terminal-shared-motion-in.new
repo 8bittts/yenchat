@@ -1,0 +1,13 @@
+        SlidingUtilityPanel.transition(
+            .entering,
+            duration: SlidingUtilityPanel.animationDuration(
+                configuredDuration: derivedConfig.quickTerminalAnimationDuration
+            ),
+            changes: {
+                position.setFinal(
+                    in: window.animator(),
+                    on: screen,
+                    terminalSize: derivedConfig.quickTerminalSize,
+                    closedFrame: closedFrame)
+            },
+            completion: {

@@ -1,0 +1,49 @@
+    pub fn tier(self: Action) ActionTier {
+        return switch (self) {
+            .@"show-config", .@"crash-report" => .support,
+            .boo => .internal,
+            else => .public,
+        };
+    }
+
+    fn envFlagEnabled(name: [*:0]const u8) bool {
+        const raw = std.c.getenv(name) orelse return false;
+        const value = std.mem.span(raw);
+        return std.mem.eql(u8, value, "1") or
+            std.ascii.eqlIgnoreCase(value, "true") or
+            std.ascii.eqlIgnoreCase(value, "yes");
+    }
+
+    pub fn supportActionsEnabled() bool {
+        return build_config.is_debug or envFlagEnabled("YEN_CLI_SUPPORT_ACTIONS");
+    }
+
+    pub fn internalActionsEnabled() bool {
+        return build_config.is_debug or envFlagEnabled("YEN_CLI_INTERNAL_ACTIONS");
+    }
+
+    pub fn shouldShowInHelp(self: Action) bool {
+        return switch (self.tier()) {
+            .public => true,
+            .support => supportActionsEnabled(),
+            .internal => false,
+        };
+    }
+
+    pub fn isAllowed(self: Action) bool {
+        return switch (self.tier()) {
+            .public => true,
+            .support => supportActionsEnabled(),
+            .internal => internalActionsEnabled(),
+        };
+    }
+
+    pub fn unblockHint(self: Action) ?[]const u8 {
+        return switch (self.tier()) {
+            .public => null,
+            .support => "YEN_CLI_SUPPORT_ACTIONS=1",
+            .internal => "YEN_CLI_INTERNAL_ACTIONS=1",
+        };
+    }
+
+    pub fn detectSpecialCase(arg: []const u8) ?SpecialCase(Action) {

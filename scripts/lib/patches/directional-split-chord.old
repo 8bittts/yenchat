@@ -1,0 +1,2 @@
+            let appDelegate = NSApp.delegate as? AppDelegate
+            let menuAction = appDelegate?.yenMenuActionSelector(for: event)

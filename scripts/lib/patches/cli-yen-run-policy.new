@@ -1,0 +1,22 @@
+    pub fn run(self: Action, alloc: Allocator) !u8 {
+        if (!self.isAllowed()) {
+            var buffer: [256]u8 = undefined;
+            var stderr_writer = std.Io.File.stderr().writer(global.io(), &buffer);
+            const stderr = &stderr_writer.interface;
+            const hint = self.unblockHint() orelse "";
+            switch (self.tier()) {
+                .support => try stderr.print(
+                    "Error: +{s} is support-only and hidden by default. Re-run with {s}.\\n",
+                    .{ @tagName(self), hint },
+                ),
+                .internal => try stderr.print(
+                    "Error: +{s} is internal-only and blocked in release builds. Re-run with {s}.\\n",
+                    .{ @tagName(self), hint },
+                ),
+                .public => unreachable,
+            }
+            try stderr.flush();
+            return 2;
+        }
+
+        return self.runMain(alloc) catch |err| switch (err) {

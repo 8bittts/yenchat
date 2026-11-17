@@ -1,0 +1,88 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Development
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE and Editor
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Testing and coverage
+coverage/
+.nyc_output/
+# Test suites are not part of the web build. They must be excluded explicitly:
+# Next's production type check walks them, and 26 of them import helpers under
+# `scripts/`, which this file deliberately excludes — so shipping tests without
+# their imports fails the build with TS2307 on a module that only ever existed
+# for local testing.
+tests/
+
+# Documentation and misc (not needed for web deploy)
+README.md
+CLAUDE.md
+CONTRIBUTING.md
+LICENSE
+
+# Build artifacts (Next.js handles these)
+.next/
+out/
+dist/
+build/
+
+# Dependencies (Vercel installs fresh)
+node_modules/
+.pnp
+
+# OS files
+Thumbs.db
+
+# YEN Terminal (Zig project - not needed for web deploy)
+yen-terminal/
+# Go projects (not needed for web deploy)
+pkg/
+# Build tools (Sparkle signing, not needed for web deploy)
+tools/
+# Exclude non-web scripts while retaining the production build entrypoint, its
+# imported deterministic build-ID helper, and the `prepare` script that
+# `bun install` runs on Vercel.
+scripts/*
+!scripts/run-pinned-bun.cjs
+!scripts/setup-hooks.ts
+!scripts/44-build-web-csp.ts
+!scripts/perf-budget.ts
+!scripts/46-scan-bundle-leaks.ts
+!scripts/lib/
+scripts/lib/*
+!scripts/lib/web-build-id.ts
+/_docs/
+
+# Unnecessary files
+tsconfig.tsbuildinfo
+
+# Worktrees live INSIDE this repository by house rule. This project deploys through Vercel's Git
+# integration (`vercel.json` does not set `git.deploymentEnabled: false`), so Vercel CLONES the
+# repository and a gitignored worktree can never reach it — these two lines are defence in depth
+# for the day this project switches to a CLI upload, not a fix for a live leak.
+# The hazard is real only where releases upload the LOCAL CHECKOUT; there `.vercelignore` REPLACES
+# `.gitignore` and a gitignored worktree ships unless named here.
+.worktrees/
+
+# Agent session state and local task metadata. Not source, and the web build reads none of it.
+.claude/
+
+# YEN agent skills. The web build reads none of them, and excluding them lets /ship classify a
+# skill-only commit as not deploy-relevant instead of spending a production build on it. The
+# operator's global configuration backups live in the 8leeai repo under `_global/`, not here.
+/.agents/

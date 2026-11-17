@@ -1,0 +1,2 @@
+        if NSWindow.userTabbingPreference == .always,
+           !window.styleMask.contains(.fullScreen) {

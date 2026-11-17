@@ -1,0 +1,559 @@
+#!/bin/bash
+# YEN CLI - Standalone Command Line Interface
+#
+# Usage:
+#   yen                     Show help
+#   yen <command> [args]    Execute a subcommand
+#   yen help [command]      Show help
+#   yen version             Show version
+#   yen init [shell]        Output shell integration code
+#
+# Standalone CLI entry point; can be invoked from any terminal, not just YEN Terminal.
+#
+# https://yen.chat
+
+set -e
+
+# Query Spotlight for the YEN.app bundle path — shared by the PATH-resolution
+# block below and detect_yen_app (each then applies its own file/dir contract).
+# Prefers /Applications over transient build artifacts. Echoes the bundle path or
+# nothing; always returns 0 so callers under `set -e` never abort on a no-match.
+_yen_spotlight_app() {
+    command -v mdfind >/dev/null 2>&1 || return 0
+    local results app_path
+    results=$(mdfind "kMDItemCFBundleIdentifier == 'com.yenchat.yen'" 2>/dev/null)
+    app_path=$(echo "$results" | grep "^/Applications/" | head -1)
+    [[ -z "$app_path" ]] && app_path=$(echo "$results" | head -1)
+    [[ -n "$app_path" ]] && echo "$app_path"
+    return 0
+}
+
+# =============================================================================
+# PATH RESOLUTION
+# =============================================================================
+# Resources come from the app bundle or a development checkout only.
+YEN_BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Check if we're in the app bundle or development
+if [[ -n "$YEN_LIB" ]]; then
+    # App bundle mode: YEN_LIB is set by terminal config
+    YEN_RESOURCES="${YEN_LIB%/lib}"
+elif [[ -d "${YEN_BIN_DIR}/../lib" ]]; then
+    # Development mode: relative to bin/
+    YEN_RESOURCES="$(cd "${YEN_BIN_DIR}/.." && pwd)"
+elif [[ -f "/Applications/YEN.app/Contents/Resources/bin/yen" ]]; then
+    # Standard install location
+    YEN_RESOURCES="/Applications/YEN.app/Contents/Resources"
+elif [[ -f "$HOME/Applications/YEN.app/Contents/Resources/bin/yen" ]]; then
+    # User-local install location (~/Applications)
+    YEN_RESOURCES="$HOME/Applications/YEN.app/Contents/Resources"
+else
+    # Last resort: Spotlight search (no GNU timeout dependency)
+    _yen_app=$(_yen_spotlight_app)
+    if [[ -n "$_yen_app" ]] && [[ -f "${_yen_app}/Contents/Resources/bin/yen" ]]; then
+        YEN_RESOURCES="${_yen_app}/Contents/Resources"
+    fi
+    unset _yen_app
+    if [[ -z "$YEN_RESOURCES" ]]; then
+        echo "Error: Cannot locate YEN resources" >&2
+        echo "" >&2
+        echo "Possible solutions:" >&2
+        echo "  1. Run 'yen init' to set up shell integration (if YEN.app is installed)" >&2
+        echo "  2. Run directly: /Applications/YEN.app/Contents/Resources/bin/yen" >&2
+        echo "  3. Ensure YEN.app is installed at /Applications or ~/Applications" >&2
+        exit 1
+    fi
+fi
+
+# Export paths for libraries and commands
+export YEN_RESOURCES
+export YEN_LIB="${YEN_RESOURCES}/lib"
+export YEN_CMD_DIR="${YEN_RESOURCES}/commands"
+
+# Source common utilities with error handling
+# CRITICAL: Verify common.sh exists before sourcing to prevent silent failures
+if [[ ! -f "${YEN_LIB}/common.sh" ]]; then
+    echo "Error: common.sh not found at ${YEN_LIB}/common.sh" >&2
+    echo "YEN CLI installation may be corrupted." >&2
+    echo "Expected location: ${YEN_RESOURCES}/lib/common.sh" >&2
+    exit 1
+fi
+
+# Source with explicit error handling (set -e will exit on failure, but we want clear error)
+if ! source "${YEN_LIB}/common.sh" 2>&1; then
+    echo "Error: Failed to source common.sh (syntax error or missing dependencies?)" >&2
+    echo "Location: ${YEN_LIB}/common.sh" >&2
+    exit 1
+fi
+
+# =============================================================================
+# VERSION (read dynamically from version.json)
+# =============================================================================
+
+get_version() {
+    local version_file=""
+
+    # App bundle: version.json is in yen/ subdirectory
+    if [[ -f "${YEN_RESOURCES}/yen/version.json" ]]; then
+        version_file="${YEN_RESOURCES}/yen/version.json"
+    # Development: version.json is in project root (one level up from yen-cli)
+    elif [[ -f "${YEN_RESOURCES}/../public/stable/version.json" ]]; then
+        version_file="${YEN_RESOURCES}/../public/stable/version.json"
+    fi
+
+    if [[ -n "$version_file" ]]; then
+        grep '"version"' "$version_file" | sed 's/.*"\([0-9.]*\)".*/\1/' | head -1
+    else
+        echo "dev"
+    fi
+}
+
+# =============================================================================
+# HELP
+# =============================================================================
+
+show_usage() {
+    cat << 'EOF'
+
+YEN CLI
+
+Usage:
+  yen                          Show this help
+  yen <command>                Run a command
+  yen help [command]           Show command help
+  yen version                  Show version
+  yen init [shell]             Shell integration code
+
+Core:
+  help (commands)  Show help
+  version  Show version
+  init  Print shell integration code
+  ide  IDE helpers (detect/doctor/env/lsp/ast/devcontainer/vscode/history/replay/profile/open/debug/benchmark/ports/parse/search/explain/verify/merge-readiness/gate/pr-review/pr-notify/workflow/timeline/non-interference)
+  agents  Adapter board + workspace templates (list/open/timeline/note/export/templates; timeline supports --tail/--event/--source/--kind)
+  web  Native browser commands (open/back/forward/reload/close/status; open supports --split, stateful supports targets)
+  pane  Report an agent's working directory for this pane (cwd <dir>/--hook/--clear)
+
+Apps:
+  browse (files, fm)  File browser
+
+System Tools:
+  btop (monitor, resources)  System monitor (bundled btop)
+  fastfetch (fetch)  System info display (bundled fastfetch)
+  bios  System info display (YEN BIOS logo)
+
+Git:
+  yengit (lazygit, gitlazy, gityen)  Git TUI (bundled lazygit, primary command)
+
+Settings & Updates:
+  config (settings, prefs, preferences)  Show config file location
+  config reset  Reset to YEN defaults
+  reload  Reload terminal configuration
+  update  Check for updates
+
+Examples:
+  yen browse  Open file browser
+  yen btop  Open system monitor
+  yen fastfetch  Show system information snapshot
+  yen yengit  Open Git TUI (bundled lazygit)
+  yen config  Show config path
+  yen init zsh  Get zsh integration code
+
+Documentation: https://yen.chat/docs
+
+EOF
+}
+
+show_version() {
+    echo "yen $(get_version)"
+    echo ""
+    echo "YEN CLI - Your Personal Terminal Experience"
+    echo "https://yen.chat"
+}
+
+# =============================================================================
+# SHELL INTEGRATION
+# =============================================================================
+
+# Detect YEN.app location — check standard paths first, Spotlight as fallback
+detect_yen_app() {
+    # Standard install locations (fast, no external dependencies)
+    if [[ -d "/Applications/YEN.app/Contents/Resources/bin" ]]; then
+        echo "/Applications/YEN.app"
+        return
+    fi
+    if [[ -d "$HOME/Applications/YEN.app/Contents/Resources/bin" ]]; then
+        echo "$HOME/Applications/YEN.app"
+        return
+    fi
+    # Spotlight fallback for non-standard installs (no GNU timeout dependency)
+    local app_path
+    app_path=$(_yen_spotlight_app)
+    if [[ -n "$app_path" && -d "$app_path/Contents/Resources/bin" ]]; then
+        echo "$app_path"
+        return
+    fi
+    # Final fallback
+    echo "/Applications/YEN.app"
+}
+
+# Non-gated init-output wrapper list: the plain "yen <subcommand>" delegating
+# shortcuts emitted into both shell integrations. This table drives ONLY these
+# wrappers. It is deliberately NOT the source for the two tamper-evidence anchors
+# parsed by scripts/lib/privileged-surface-utils.sh against
+# scripts/lib/privileged-action-surface-baseline.txt — the builtins line in
+# suggest_command() and the routing `case "$cmd" in` in main() must stay
+# hand-written verbatim; do not drive them from here.
+# Rows are "<function> <yen-subcommand>" (bash 3.2: a newline string, not declare -A).
+_YEN_ALIASES='btop btop
+monitor monitor
+fastfetch fastfetch
+fetch fetch
+bios bios
+resources resources
+browse browse
+files browse
+fm browse
+lazygit lazygit
+gitlazy gitlazy
+yengit yengit
+gityen gityen'
+
+# Single source of truth for the "App shortcuts" wrapper block emitted into both
+# the zsh and bash integrations. The plain delegating wrappers are generated from
+# _YEN_ALIASES; the retired-companion shadows and the 'cal' note stay literal
+# because their bodies are not plain wrappers. show_init splices the output
+# verbatim via command substitution so the rendered block is byte-identical across
+# shells. The command-not-found handlers stay per-shell (they differ).
+emit_app_shortcuts() {
+    echo "# App shortcuts"
+    local fn target
+    while read -r fn target; do
+        [[ -z "$fn" ]] && continue
+        printf '%s() { yen %s "$@"; }\n' "$fn" "$target"
+    done <<< "$_YEN_ALIASES"
+    cat << 'SHORTCUTS'
+chat() { echo "chat: retired YEN companion command; use the dedicated app or current workflow instead" >&2; return 127; }
+mail() { echo "mail: retired YEN companion command; use the dedicated app or current workflow instead" >&2; return 127; }
+email() { echo "email: retired YEN companion command; use the dedicated app or current workflow instead" >&2; return 127; }
+calendar() { echo "calendar: retired YEN companion command; use the dedicated app or current workflow instead" >&2; return 127; }
+# Intentionally do NOT override 'cal' (preserve system calendar utility)
+SHORTCUTS
+}
+
+# Emit a per-shell command-not-found handler. $1 = handler function name,
+# $2 = the native "not found" message (contains a literal $cmd the user's shell
+# expands at runtime). zsh and bash differ only in these two values; the body is
+# identical. Unquoted heredoc so $1/$2 interpolate while the runtime shell vars
+# stay escaped (\$) to land verbatim in the user's rc file.
+emit_cnf_handler() {
+    local fn_name="$1" notfound_msg="$2"
+    cat << CNF
+${fn_name}() {
+    local cmd="\$1"
+
+    # Reentrancy guard — if the suggestion probe itself can't resolve 'yen',
+    # the handler would recurse and stream error text back as the "suggestion".
+    if [[ -n "\${_YEN_CNF_ACTIVE:-}" ]]; then
+        echo "${notfound_msg}"
+        return 127
+    fi
+
+    # Skip non-interactive contexts (grep patterns, subshells, etc.)
+    [[ ! -t 1 ]] && { echo "${notfound_msg}"; return 127; }
+
+    # Skip if it looks like an internal operation (flags, paths, special chars)
+    [[ "\$cmd" == -* ]] && { echo "${notfound_msg}"; return 127; }
+    [[ "\$cmd" == */* ]] && { echo "${notfound_msg}"; return 127; }
+    [[ "\$cmd" == *[*?]* ]] && { echo "${notfound_msg}"; return 127; }
+
+    # Bail out unless 'yen' resolves to a real binary in PATH
+    local yen_bin
+    yen_bin=\$(command -v yen 2>/dev/null)
+    if [[ -z "\$yen_bin" || ! -x "\$yen_bin" ]]; then
+        echo "${notfound_msg}"
+        return 127
+    fi
+
+    # Probe for a suggestion with reentrancy guard + stderr suppression
+    local suggestion
+    suggestion=\$(_YEN_CNF_ACTIVE=1 "\$yen_bin" suggest "\$cmd" 2>/dev/null) || true
+    # Collapse to first line, trim whitespace, cap length at 64 chars
+    suggestion=\${suggestion%%\$'\n'*}
+    suggestion="\${suggestion#"\${suggestion%%[![:space:]]*}"}"
+    suggestion="\${suggestion%"\${suggestion##*[![:space:]]}"}"
+    suggestion="\${suggestion:0:64}"
+
+    # Reject unusable suggestions: empty, self-referential ('yen' would produce
+    # 'Did you mean: yen yen'), same-as-input, or anything with shell metachars.
+    if [[ -z "\$suggestion" \
+        || "\$suggestion" == "yen" \
+        || "\$suggestion" == "\$cmd" \
+        || ! "\$suggestion" =~ ^[A-Za-z0-9._-]+\$ ]]; then
+        echo "${notfound_msg}"
+        return 127
+    fi
+
+    echo "yen: command not found: \$cmd"
+    echo "Did you mean: yen \$suggestion"
+    return 127
+}
+CNF
+}
+
+show_init() {
+    local shell="${1:-zsh}"
+    local yen_app
+    yen_app=$(detect_yen_app)
+
+    case "$shell" in
+        zsh)
+            cat << EOF
+# YEN Shell Integration for Zsh
+# Add to your ~/.zshrc:
+
+# Option 1: Add YEN to PATH (recommended)
+export PATH="${yen_app}/Contents/Resources/bin:\$PATH"
+
+# Force PATH resolution to prevent LaunchServices interception
+# This ensures 'yen' resolves from PATH before LaunchServices can intercept
+yen() {
+    command yen "\$@"
+}
+
+$(emit_app_shortcuts)
+
+# Option 2: Or use direct path (if function doesn't work)
+# alias yen="${yen_app}/Contents/Resources/bin/yen"
+
+# Optional: Command-not-found suggestions
+# Only triggers for interactive terminal commands, not internal operations
+EOF
+            emit_cnf_handler command_not_found_handler 'zsh: command not found: $cmd'
+            ;;
+        bash)
+            cat << EOF
+# YEN Shell Integration for Bash
+# Add to your ~/.bashrc (or ~/.bash_profile on macOS):
+
+# Option 1: Add YEN to PATH (recommended)
+export PATH="${yen_app}/Contents/Resources/bin:\$PATH"
+
+# Force PATH resolution to prevent LaunchServices interception
+# This ensures 'yen' resolves from PATH before LaunchServices can intercept
+yen() {
+    command yen "\$@"
+}
+
+$(emit_app_shortcuts)
+
+# Option 2: Or use direct path (if function doesn't work)
+# alias yen="${yen_app}/Contents/Resources/bin/yen"
+
+# Optional: Command-not-found handler
+# Only triggers for interactive terminal commands, not internal operations
+EOF
+            emit_cnf_handler command_not_found_handle 'bash: $cmd: command not found'
+            ;;
+        fish)
+            cat << EOF
+# YEN Shell Integration for Fish
+# Add to your ~/.config/fish/config.fish:
+
+# Add YEN to PATH
+fish_add_path ${yen_app}/Contents/Resources/bin
+EOF
+            ;;
+        *)
+            echo "Unknown shell: $shell"
+            echo "Supported: zsh, bash, fish"
+            exit 1
+            ;;
+    esac
+}
+
+# =============================================================================
+# COMMAND SUGGESTION (for command-not-found)
+# =============================================================================
+
+suggest_command() {
+    local input="$1"
+
+    # Skip empty input
+    [[ -z "$input" ]] && return 0
+
+    # Skip if input looks like a flag or path
+    [[ "$input" == -* ]] && return 0
+    [[ "$input" == /* ]] && return 0
+    [[ "$input" == */* ]] && return 0
+
+    # Skip runaway input — anything longer than any real command name
+    [[ ${#input} -gt 32 ]] && return 0
+
+    # No subshell per candidate on the command-not-found path — pure latency.
+    local commands=()
+    if [[ -d "$YEN_CMD_DIR" ]]; then
+        while IFS= read -r -d '' cmd; do
+            [[ -x "$cmd" ]] || continue
+            commands+=("${cmd##*/}")
+        done < <(find "$YEN_CMD_DIR" -type f -print0 2>/dev/null)
+    fi
+
+    # Add built-in commands and app binaries
+    commands+=(help version init ide agents web pane config reload update btop monitor fastfetch fetch bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
+
+    # Prefix/substring matching; case-insensitivity via `nocasematch` (bash 3.1+,
+    # still Bash 3.x compatible) — no subshell per candidate on this path.
+    local best_match=""
+    local restore_nocasematch=1
+    if shopt -q nocasematch; then
+        restore_nocasematch=0
+    fi
+    shopt -s nocasematch
+
+    for cmd in "${commands[@]}"; do
+        # 'yen' is useless as a suggestion: the handler prepends "yen " already,
+        # so returning it yields "Did you mean: yen yen".
+        [[ "$cmd" == "yen" ]] && continue
+        # Never suggest the input itself.
+        [[ "$cmd" == "$input" ]] && continue
+        # Exact prefix match (highest priority)
+        if [[ "$cmd" == "$input"* ]]; then
+            best_match="$cmd"
+            break
+        fi
+        # Substring match
+        if [[ "$cmd" == *"$input"* ]] && [[ -z "$best_match" ]]; then
+            best_match="$cmd"
+        fi
+    done
+
+    if [[ "$restore_nocasematch" -eq 1 ]]; then
+        shopt -u nocasematch
+    fi
+
+    # Output suggestion if found
+    if [[ -n "$best_match" ]]; then
+        echo "$best_match"
+    fi
+}
+
+# =============================================================================
+# COMMAND ROUTING
+# =============================================================================
+
+route_command() {
+    local cmd="$1"
+    shift
+
+    # Try direct path first (all commands live under core/)
+    local cmd_path="${YEN_CMD_DIR}/core/${cmd}"
+    if [[ -x "$cmd_path" ]]; then
+        exec "$cmd_path" "$@"
+    fi
+
+    # Fallback: search nested directory structure for non-core commands
+    cmd_path=$(/usr/bin/find "${YEN_CMD_DIR}" -name "${cmd}" -type f 2>/dev/null | head -1)
+    if [[ -n "$cmd_path" && -x "$cmd_path" ]]; then
+        exec "$cmd_path" "$@"
+    fi
+
+    # Fallback: check bin/ for YEN app binaries. Only `browse` lacks a core/
+    # script, so it is the only command that reaches this bin/ fallback; the
+    # rest are always caught by the core/ lookup above.
+    local bin_path="${YEN_RESOURCES}/bin/${cmd}"
+    if [[ -x "$bin_path" ]]; then
+        case "$cmd" in
+            browse)
+                exec "$bin_path" "$@"
+                ;;
+        esac
+    fi
+
+    # Command not found
+    printf "\n"
+    printf "${YELLOW}Unknown command:${RESET} ${BOLD}%s${RESET}\n\n" "$cmd"
+    printf "Run ${BOLD}yen help${RESET} to see available commands.\n"
+    printf "\n"
+    exit 1
+}
+
+# =============================================================================
+# COMMAND HELP
+# =============================================================================
+
+show_command_help() {
+    local cmd="$1"
+
+    # Use the existing help system from init.sh
+    source "${YEN_LIB}/init.sh"
+    yen_help "$cmd"
+}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+main() {
+    # No arguments - show usage
+    if [[ $# -eq 0 ]]; then
+        show_usage
+        exit 0
+    fi
+
+    # Parse first argument
+    local cmd="$1"
+    shift
+
+    case "$cmd" in
+        -h|--help|help)
+            if [[ $# -gt 0 ]]; then
+                show_command_help "$1"
+            else
+                show_usage
+            fi
+            ;;
+        -v|--version|version)
+            show_version
+            ;;
+        init)
+            show_init "$@"
+            ;;
+        suggest)
+            suggest_command "$@"
+            ;;
+        # 'cal' intentionally NOT aliased — preserves system calendar utility
+        files|fm)
+            # Alias: files/fm → browse
+            route_command "browse" "$@"
+            ;;
+        monitor|resources)
+            # Alias: monitor/resources → btop
+            route_command "btop" "$@"
+            ;;
+        fetch)
+            # Alias: fetch → fastfetch
+            route_command "fastfetch" "$@"
+            ;;
+        bios)
+            route_command "bios" "$@"
+            ;;
+        gitlazy|gityen)
+            # Alias: gitlazy/gityen → yengit
+            route_command "yengit" "$@"
+            ;;
+        settings|prefs|preferences)
+            # Alias: settings/prefs → config
+            route_command "config" "$@"
+            ;;
+        commands)
+            # Alias: commands → help
+            show_usage
+            ;;
+        *)
+            # Route to subcommand
+            route_command "$cmd" "$@"
+            ;;
+    esac
+}
+
+main "$@"

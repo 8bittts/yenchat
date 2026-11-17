@@ -1,0 +1,10 @@
+# btop Baseline Tracking
+upstream_repo=https://github.com/aristocratos/btop
+upstream_version=v1.4.8
+last_sync=2026-10-25
+architecture=universal (arm64 + x86_64)
+source_archive_url=https://github.com/aristocratos/btop/archive/cf1da5900b1e9eaa1c20fd7148dd812b43340b8a.tar.gz
+source_commit=cf1da5900b1e9eaa1c20fd7148dd812b43340b8a
+source_tarball_sha256=84f8e744785eb29fe5e5c13936dbf9f39bdb3c1c5cc28ec994ddb74529d91190
+output_sha256=c8619003a82938e80fce8280fb24952c5d96fc9759c9460d3d51d896934fac76
+provenance_verification=github-commit-bound-archive

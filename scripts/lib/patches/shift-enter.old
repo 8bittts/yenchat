@@ -1,0 +1,7 @@
+        // Toggle quick terminal (YEN default — Ctrl+`)
+        try self.set.putFlags(
+            alloc,
+            .{ .key = .{ .physical = .backquote }, .mods = .{ .ctrl = true } },
+            .{ .toggle_quick_terminal = {} },
+            .{ .global = true },
+        );

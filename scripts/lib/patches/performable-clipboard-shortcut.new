@@ -1,0 +1,31 @@
+            let appDelegate = NSApp.delegate as? AppDelegate
+            let menuAction = appDelegate?.yenMenuActionSelector(for: event)
+
+            if Self.shouldPerformYENMenuShortcutBeforeTerminalEncoding(
+                menuAction: menuAction,
+                bindingFlags: bindingFlags,
+                keySequenceIsEmpty: keySequence.isEmpty,
+                keyTablesAreEmpty: keyTables.isEmpty
+            ),
+               appDelegate?.performYENBindingMenuKeyEquivalent(with: event) == true {
+                return true
+            }
+
+            // If this is a binding then we want to perform it.
+            if let bindingFlags {
+                if keySequence.isEmpty,
+                   keyTables.isEmpty,
+                   bindingFlags.contains(.performable),
+                   bindingFlags.contains(.consumed),
+                   let selector = Self.performableClipboardSelector(
+                    menuAction: menuAction,
+                    standardClipboardHasContents: NSPasteboard.general.hasOpinionatedStringContents(),
+                    selectionClipboardHasContents: NSPasteboard.yenSelection.hasOpinionatedStringContents()
+                   ) {
+                    NSApp.sendAction(selector, to: self, from: nil)
+                    return true
+                }
+
+                self.keyDown(with: event)
+                return true
+            }

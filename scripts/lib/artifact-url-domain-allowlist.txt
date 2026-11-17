@@ -1,0 +1,19 @@
+# Regex allowlist for artifact URL domain scan in scripts/05-detect-failures.sh
+#
+# Scope:
+# - Applies only to release metadata artifacts scanned by the gate:
+#   public/stable/version.json, public/stable/appcast.xml, and built Info.plist.
+# - Keep this list explicit and minimal. Any new public domain requires
+#   intentional policy review + allowlist update.
+
+# Primary YEN domains
+^yen\.chat$
+^auth\.yen\.chat$
+
+# GitHub Releases origin used in release metadata
+^github\.com$
+
+# Standard XML namespace/DTD domains (Sparkle appcast, Apple Info.plist)
+^purl\.org$
+^www\.andymatuschak\.org$
+^www\.apple\.com$

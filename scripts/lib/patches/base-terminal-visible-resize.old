@@ -1,0 +1,3 @@
+    func windowDidResize(_ notification: Notification) {
+        windowFrameDidChange()
+    }

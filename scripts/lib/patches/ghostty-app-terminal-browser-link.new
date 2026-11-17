@@ -1,0 +1,7 @@
+            if TerminalBrowserLinkRouter.open(url) {
+                return true
+            }
+
+            // Open with the default application for the URL
+            NSWorkspace.shared.open(url)
+            return true

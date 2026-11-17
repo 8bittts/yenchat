@@ -1,0 +1,64 @@
+#!/bin/bash
+# YEN Help Command
+# Display available commands with descriptions
+
+source "${YEN_LIB}/init.sh"
+
+yen_header "YEN Commands"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CORE
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${ORANGE}Core${RESET}\n"
+printf "  ${BOLD}help (commands)${RESET}                    Show help\n"
+printf "  ${BOLD}version${RESET}                            Show version\n"
+printf "  ${BOLD}init${RESET}                               Print shell integration code\n"
+printf "  ${BOLD}ide${RESET}                                IDE helpers (detect/env/lsp/share/ast/devcontainer/vscode/trust/doctor/history/replay/profile/open/debug/benchmark/ports/parse/search/explain/verify/merge-readiness/gate/pr-review/pr-notify/workflow/timeline/non-interference)\n"
+printf "  ${BOLD}agents${RESET}                             Adapter board + workspace templates (list/open/timeline/note/export/templates; timeline supports --tail/--event/--source/--kind)\n"
+printf "  ${BOLD}web${RESET}                                Native browser commands (open/back/forward/reload/close/status; open supports --split, stateful supports targets)\n"
+printf "  ${BOLD}pane${RESET}                               Report an agent's working directory for this pane (cwd <dir>/--hook/--clear)\n"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# APPS
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${ORANGE}Apps${RESET}\n"
+printf "  ${BOLD}browse (files, fm)${RESET}                 File browser (no cd-on-quit)\n"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SYSTEM TOOLS
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${ORANGE}System Tools${RESET}\n"
+printf "  ${BOLD}btop (monitor, resources)${RESET}           System monitor (bundled btop)\n"
+printf "  ${BOLD}fastfetch (fetch)${RESET}                   System info display (bundled fastfetch)\n"
+printf "  ${BOLD}bios${RESET}                                System info display (YEN BIOS logo)\n"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GIT
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${ORANGE}Git${RESET}\n"
+printf "  ${BOLD}yengit (lazygit, gitlazy, gityen)${RESET}   Git TUI (bundled lazygit, primary command)\n"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SETTINGS & UPDATES
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${ORANGE}Settings & Updates${RESET}\n"
+printf "  ${BOLD}Cmd + ,${RESET}                             Open Settings panel (in YEN Terminal)\n"
+printf "  ${BOLD}config (settings, prefs, preferences)${RESET} Show config file location\n"
+printf "  ${BOLD}config reset${RESET}                        Reset to YEN defaults\n"
+printf "  ${BOLD}reload${RESET}                              Reload configuration\n"
+printf "  ${BOLD}update${RESET}                              Check for YEN updates\n"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIPS
+# ─────────────────────────────────────────────────────────────────────────────
+printf "${GRAY}Keyboard shortcuts:${RESET}\n"
+printf "  ${BOLD}y${RESET}                    File browser with cd-on-quit (shell integration)\n"
+printf "  ${BOLD}Option + Space${RESET}    Voice dictation (hold to speak)\n"
+printf "  ${BOLD}Cmd + ,${RESET}           Settings panel\n"
+printf "  ${BOLD}Cmd + Shift + O${RESET}   File browser\n"
+echo ""

@@ -1,0 +1,18 @@
+        // The selection clipboard is only updated for left-click drag when
+        // the left button is released. This is to avoid the clipboard
+        // being updated on every mouse move which would be noisy.
+        // Ensure release-time copy-on-select selection repaint so visual
+        // selection state stays in sync with clipboard updates.
+        var selection_reapplied = false;
+        if (self.config.copy_on_select != .none) {
+            const prev_ = self.io.terminal.screens.active.selection;
+            if (prev_) |prev| {
+                try self.setSelectionAndCopy(terminal.Selection.init(
+                    prev.start(),
+                    prev.end(),
+                    prev.rectangle,
+                ));
+                selection_reapplied = true;
+            }
+        }
+        if (selection_reapplied) try self.queueRender();

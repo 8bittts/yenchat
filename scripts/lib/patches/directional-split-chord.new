@@ -1,0 +1,7 @@
+            let appDelegate = NSApp.delegate as? AppDelegate
+            if let directionalSplitAction = appDelegate?.directionalSplitSelector(for: event) {
+                NSApp.sendAction(directionalSplitAction, to: self, from: nil)
+                return true
+            }
+
+            let menuAction = appDelegate?.yenMenuActionSelector(for: event)

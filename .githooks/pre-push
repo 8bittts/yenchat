@@ -1,0 +1,16 @@
+#!/bin/sh
+# The pre-open-source history (company records and operator-private files) is private.
+# Reject any push whose commits descend from its root commit, to any remote.
+PRIVATE_HISTORY_ROOT=2cd5b3cdf757eb425ce10305f7030d11be1b7aa1
+ZERO=0000000000000000000000000000000000000000
+remote="$1"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ -n "$local_sha" ] || continue
+	[ "$local_sha" = "$ZERO" ] && continue
+	if git merge-base --is-ancestor "$PRIVATE_HISTORY_ROOT" "${local_sha}^{commit}" 2>/dev/null; then
+		printf >&2 '\n[BLOCKED] %s contains the private pre-open-source history; it is never pushed (remote %s).\n\n' "$local_ref" "$remote"
+		exit 1
+	fi
+done
+exit 0

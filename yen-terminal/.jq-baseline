@@ -1,0 +1,15 @@
+# jq Baseline Tracking
+upstream_repo=https://github.com/jqlang/jq
+upstream_version=jq-1.8.2
+last_sync=2026-06-21
+architecture=universal (arm64 + x86_64)
+source_asset_arm64=jq-macos-arm64
+source_asset_x86_64=jq-macos-amd64
+source_sha256_arm64=2d75340ba57a4b4b4c8708a21c2dc8e958a48aaa8bba13b27f77f6e4c0eca07e
+source_sha256_x86_64=e94b266e3c26690550006abe63152b782280f4e14374accdf04cbde844f00bc0
+source_checksums_file=sha256sum.txt
+source_checksums_sha256=dc86824a41c165ece971ff691aff6e08bbfe6e1d1f531688b47ee78c283a85cd
+provenance_verification=published-checksums:sha256sum.txt
+output_sha256=d2c06f2302ac0a9661eba61c01403e438a9ff01d12952acf21b9735497e8df15
+companion_output_sha256=none
+provenance_recorded_at_utc=2026-06-21T10:55:02Z

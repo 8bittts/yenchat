@@ -1,0 +1,11 @@
+# fd Baseline Tracking
+upstream_repo=https://github.com/sharkdp/fd
+upstream_version=v10.5.2
+last_sync=2026-11-07
+architecture=universal (arm64 + x86_64)
+build_method=source (cargo cross-compile)
+source_archive_url=https://github.com/sharkdp/fd/archive/b2a287b3993768e0ec52f0852916917f23fb2a38.tar.gz
+source_commit=b2a287b3993768e0ec52f0852916917f23fb2a38
+source_tarball_sha256=20f9a20cb8ff105680ac55143395997906319047849bda4f2dbbdd1a282f9288
+output_sha256=16a8490a7a29e6250e5970941acc922ab78a5c806bf92c43d63129fc986d7456
+provenance_verification=github-commit-bound-archive

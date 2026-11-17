@@ -1,0 +1,5 @@
+{
+  "name": "yen-ide-benchmark-lsp",
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,15 @@
+    private static func writeClipboardImageData(_ data: Data, ext: String) -> String? {
+        let fileManager = FileManager.default
+        let url = fileManager.temporaryDirectory
+            .appendingPathComponent("com.yenchat.yen.clipboard-image-\(UUID().uuidString)")
+            .appendingPathExtension(ext)
+
+        do {
+            try data.write(to: url, options: .atomic)
+            try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            return url.path
+        } catch {
+            try? fileManager.removeItem(at: url)
+            return nil
+        }
+    }

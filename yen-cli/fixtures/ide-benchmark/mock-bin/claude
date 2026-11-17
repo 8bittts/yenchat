@@ -1,0 +1,6 @@
+#!/bin/bash
+if [[ "$1" == "--version" ]]; then
+  echo "claude fixture 1.0.0"
+  exit 0
+fi
+echo "claude-fixture-launch"

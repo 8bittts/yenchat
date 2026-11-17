@@ -1,0 +1,14 @@
+# Units declared by scripts/10-update-ghostty.sh.
+#
+# This carried the THIRD hand-written completion sentinel; its own comment named
+# the first two and copy-pasted anyway. Without it, a mid-run abort reported a
+# successful vendor bump because bash 3.2's EXIT trap sees $? already 0.
+#
+# download and structural-diff are skipped together on the already-current path:
+# [3a/5] cannot run there because ghostty/ still holds the previous run's applied
+# overlays, so every comparison would be against itself.
+
+download
+structural-diff
+overlays-applied
+tracking-files

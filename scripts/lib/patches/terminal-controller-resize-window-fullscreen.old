@@ -1,0 +1,1 @@
+              !(fullscreenStyle?.isFullscreen ?? false) else { return false }

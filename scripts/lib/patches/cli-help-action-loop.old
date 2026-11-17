@@ -1,0 +1,3 @@
+    inline for (@typeInfo(Action).@"enum".field_names) |field| {
+        try stdout.print("  +{s}\n", .{field});
+    }

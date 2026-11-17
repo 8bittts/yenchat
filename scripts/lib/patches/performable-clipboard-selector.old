@@ -1,0 +1,4 @@
+        var lastPerformKeyEvent: TimeInterval?
+
+        /// Special case handling for some control keys
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {

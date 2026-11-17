@@ -1,0 +1,6 @@
+        // Toggle fullscreen
+        try self.set.put(
+            alloc,
+            .{ .key = .{ .physical = .enter }, .mods = inputpkg.ctrlOrSuper(.{}) },
+            .{ .toggle_fullscreen = {} },
+        );

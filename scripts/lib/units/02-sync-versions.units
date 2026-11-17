@@ -1,0 +1,9 @@
+# Units declared by scripts/02-sync-versions.sh.
+#
+# file-sync counts targets ACTUALLY written. Each target sits behind an
+# `if [ -f ]` with an else-branch that records a skip, so a relocated
+# package.json or Info.plist previously left the sync reporting success while
+# writing nothing.
+
+version-validation
+file-sync

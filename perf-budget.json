@@ -1,0 +1,60 @@
+{
+	"routes": {
+		"/": {
+			"maxJsBytes": 533504,
+			"rendering": "static"
+		},
+		"/_not-found": {
+			"maxJsBytes": 525312,
+			"rendering": "static"
+		},
+		"/alternatives": {
+			"maxJsBytes": 526336,
+			"rendering": "static"
+		},
+		"/alternatives/[slug]": {
+			"maxJsBytes": 526336,
+			"rendering": "static"
+		},
+		"/cookies": {
+			"maxJsBytes": 525312,
+			"rendering": "static"
+		},
+		"/docs": {
+			"maxJsBytes": 532480,
+			"rendering": "static"
+		},
+		"/library": {
+			"maxJsBytes": 528384,
+			"rendering": "dynamic"
+		},
+		"/privacy": {
+			"maxJsBytes": 530432,
+			"rendering": "static"
+		},
+		"/release": {
+			"maxJsBytes": 531456,
+			"rendering": "static"
+		},
+		"/terms": {
+			"maxJsBytes": 530432,
+			"rendering": "static"
+		},
+		"/tunes": {
+			"maxJsBytes": 533504,
+			"rendering": "static"
+		},
+		"/use-cases": {
+			"maxJsBytes": 526336,
+			"rendering": "static"
+		},
+		"/use-cases/[slug]": {
+			"maxJsBytes": 526336,
+			"rendering": "static"
+		},
+		"/yeni": {
+			"maxJsBytes": 532480,
+			"rendering": "static"
+		}
+	}
+}

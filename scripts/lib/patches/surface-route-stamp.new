@@ -1,0 +1,3 @@
+            var surface_cfg = baseConfig ?? SurfaceConfiguration()
+            surface_cfg.setRouteEnvironmentID(self.id)
+            let surface = surface_cfg.withCValue(view: self) { surface_cfg_c in

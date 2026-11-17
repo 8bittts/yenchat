@@ -1,0 +1,8 @@
+# Units declared by scripts/06-verify-download-links.sh.
+#
+# home-client-links counts the assertions that actually passed rather than the
+# assertions written, so a renamed prop or href pattern shrinks the number
+# instead of quietly leaving the check body unentered.
+
+home-client-links
+version-json-url

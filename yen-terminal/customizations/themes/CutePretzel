@@ -1,0 +1,26 @@
+# CutePretzel
+# Cotton rose background with mauve shadow text, sage green and electric rose accents.
+
+background = #ffcfd2
+foreground = #553e4e
+cursor-color = #c03868
+cursor-text = #fff5f6
+selection-background = #553e4e
+selection-foreground = #fff5f6
+
+palette = 0=#553e4e
+palette = 1=#c03868
+palette = 2=#5a8a5a
+palette = 3=#a87830
+palette = 4=#5868a0
+palette = 5=#c04888
+palette = 6=#488878
+palette = 7=#f0e0e2
+palette = 8=#7a6070
+palette = 9=#e0479e
+palette = 10=#7aa87a
+palette = 11=#c09040
+palette = 12=#7080b8
+palette = 13=#d860a0
+palette = 14=#60a090
+palette = 15=#fff5f6

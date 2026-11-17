@@ -1,0 +1,41 @@
+#!/bin/bash
+# yen-quicklook - guarded Quick Look launcher for file browser.
+#
+# qlmanage can crash on some AV media payloads on current macOS builds.
+# Route likely AV media through `open` directly, and use qlmanage for all
+# other types with an automatic fallback.
+
+set -u
+
+target="${1-}"
+if [ -z "$target" ]; then
+    exit 2
+fi
+
+if [ ! -e "$target" ]; then
+    exit 1
+fi
+
+# Fast path for common AV extensions to avoid qlmanage crash paths.
+case "${target##*.}" in
+    [Mm][Pp]4|[Mm]4[Vv]|[Mm][Oo][Vv]|[Mm][Kk][Vv]|[Ww][Ee][Bb][Mm]|[Aa][Vv][Ii]|[Mm][Pp][Ee][Gg]|[Mm][Pp][Gg]|[Tt][Ss]|[Mm]2[Tt][Ss]|[Ww][Mm][Vv]|[Ff][Ll][Vv]|[Oo][Gg][Vv]|[3][Gg][Pp]|[3][Gg]2|[Mm][Pp]3|[Mm]4[Aa]|[Ww][Aa][Vv]|[Aa][Ii][Ff]|[Aa][Ii][Ff][Ff]|[Ff][Ll][Aa][Cc]|[Aa][Aa][Cc]|[Oo][Gg][Gg])
+        exec open -- "$target"
+        ;;
+esac
+
+if command -v mdls >/dev/null 2>&1; then
+    uti_tree="$(mdls -name kMDItemContentTypeTree -raw -- "$target" 2>/dev/null || true)"
+    case "$uti_tree" in
+        *public.movie*|*public.video*|*public.audio*)
+            exec open -- "$target"
+            ;;
+    esac
+fi
+
+qlmanage -p -- "$target" >/dev/null 2>&1
+status=$?
+if [ "$status" -ne 0 ]; then
+    open -- "$target" >/dev/null 2>&1 || true
+fi
+
+exit 0

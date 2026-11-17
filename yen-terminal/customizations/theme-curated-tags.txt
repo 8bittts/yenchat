@@ -1,0 +1,24 @@
+# Curated theme category tags for Settings search.
+# Format: Theme Name|comma-separated tags
+# Allowed tags: dark, light, retro, neon, low-contrast, high-contrast
+
+Atom One Dark|dark
+Catppuccin Latte|light
+Catppuccin Mocha|dark
+CutePretzel|light
+Dracula|dark
+Everforest Dark Med|dark,low-contrast
+GitHub Dark|dark
+GitHub Light Default|light,high-contrast
+Gruvbox Dark|dark,retro
+Gruvbox Light|light,retro
+iTerm2 Solarized Dark|dark,low-contrast
+iTerm2 Solarized Light|light,low-contrast
+Kanagawa Wave|dark
+Monokai Pro|dark
+Nord|dark,low-contrast
+Retro Terminal|dark,retro
+Rose Pine|dark
+Rose Pine Dawn|light
+TokyoNight|dark,neon
+YEN|dark,high-contrast

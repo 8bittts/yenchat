@@ -1,0 +1,73 @@
+{
+	"ignore": {
+		"rules": ["react-doctor/nextjs-no-a-element"],
+		"overrides": [
+			{
+				"files": ["app/docs/docs-client.tsx"],
+				"rules": ["react-doctor/duplicate-jsx-subtree"],
+				"reason": "Browser URL behavior and AppleScript surface rows describe independent contracts. Their shared table-cell structure is incidental; extracting a shared domain component would couple unrelated documentation."
+			},
+			{
+				"files": ["package.json", "bunfig.toml"],
+				"rules": ["deslop/unused-dev-dependency"]
+			},
+			{
+				"files": ["**/.venv/**", "**/site-packages/**"]
+			},
+			{
+				"files": [".worktrees/**"]
+			},
+			{
+				"files": ["app/docs/**", "app/privacy/**", "app/not-found-client.tsx"],
+				"rules": ["react-doctor/design-no-em-dash-in-jsx-text"]
+			},
+			{
+				"files": ["tests/**", "scripts/**"],
+				"rules": [
+					"react-doctor/js-set-map-lookups",
+					"react-doctor/async-await-in-loop",
+					"react-doctor/js-combine-iterations",
+					"deslop/unused-export"
+				]
+			},
+			{
+				"files": ["tests/**", "yen-cli/fixtures/**", "yen-terminal/ghostty/**"],
+				"rules": ["deslop/unused-file"]
+			},
+			{
+				"files": [
+					"yen-terminal/.github/workflows/**",
+					"yen-terminal/ghostty/.github/workflows/**",
+					"yen-terminal/ghostty/.yen-zig-global-cache/**"
+				],
+				"rules": [
+					"react-doctor/plugin-update-trust-risk",
+					"react-doctor/build-pipeline-secret-boundary"
+				]
+			},
+			{
+				"files": ["app/docs/docs-client.tsx", "app/tunes/tunes-client.tsx"],
+				"rules": ["react-doctor/iframe-missing-sandbox"]
+			},
+			{
+				"files": ["app/yeni/yeni-client.tsx"],
+				"rules": [
+					"react-doctor/nextjs-no-img-element",
+					"react-doctor/no-giant-component"
+				]
+			},
+			{
+				"files": [
+					"app/home-client.tsx",
+					"app/tunes/tunes-client.tsx",
+					"components/shared/theme-toggle.tsx"
+				],
+				"rules": [
+					"react-doctor/no-initialize-state",
+					"react-doctor/rerender-state-only-in-handlers",
+					"react-doctor/rendering-hydration-no-flicker"
+				]
+			}
+		]
+	}
+}

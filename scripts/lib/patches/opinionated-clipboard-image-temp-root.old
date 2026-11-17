@@ -1,0 +1,5 @@
+    private static let directImageFileTypes: [(type: NSPasteboard.PasteboardType, ext: String)] = [
+        (.png, "png"),
+        (.init(UTType.gif.identifier), "gif"),
+        (.init(UTType.jpeg.identifier), "jpg"),
+    ]

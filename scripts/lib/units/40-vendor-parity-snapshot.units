@@ -1,0 +1,10 @@
+# Units declared by scripts/40-vendor-parity-snapshot.sh (verify + baseline modes).
+#
+# `text` and `hash` are DATA producers -- their stdout is piped into `shasum` and
+# into diffs -- so they deliberately emit no receipt. Only the two gate modes do.
+#
+# The `snapshot` unit exists because an empty snapshot compared against an empty
+# baseline diffs clean and reports parity over nothing at all.
+
+snapshot
+baseline-compare

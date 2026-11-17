@@ -1,0 +1,6 @@
+#!/bin/bash
+# YEN gitlazy alias
+
+source "${YEN_LIB}/init.sh"
+
+exec "${YEN_CMD_DIR}/core/yengit" "$@"

@@ -1,0 +1,26 @@
+# Retro Terminal
+# Recreated from the legacy retro-terminal skin.
+
+background = #050907
+foreground = #7cff91
+cursor-color = #33ff66
+cursor-text = #050907
+selection-background = #2fa34f
+selection-foreground = #050907
+
+palette = 0=#021b0d
+palette = 1=#2fa34f
+palette = 2=#33ff66
+palette = 3=#9ce287
+palette = 4=#4ca66b
+palette = 5=#66cc88
+palette = 6=#57d69a
+palette = 7=#b8f7c9
+palette = 8=#1c5b3b
+palette = 9=#2fa34f
+palette = 10=#33ff66
+palette = 11=#9ce287
+palette = 12=#4ca66b
+palette = 13=#66cc88
+palette = 14=#57d69a
+palette = 15=#e7ffee

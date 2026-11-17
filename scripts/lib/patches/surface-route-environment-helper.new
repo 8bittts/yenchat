@@ -1,0 +1,14 @@
+        /// Context for surface creation
+        var context: yen_surface_context_e = YEN_SURFACE_CONTEXT_WINDOW
+
+        static let surfaceRouteEnvironmentKey = "YEN_SURFACE_ID"
+
+        mutating func setRouteEnvironmentID(_ routeID: UUID) {
+            let key = Self.surfaceRouteEnvironmentKey
+            if let existingRouteID = environmentVariables[key], !existingRouteID.isEmpty {
+                return
+            }
+            environmentVariables[key] = routeID.uuidString
+        }
+
+        init() {}

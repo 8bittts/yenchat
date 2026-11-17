@@ -1,0 +1,9 @@
+# Units declared by scripts/41-lint-swift-view-modifiers.sh.
+#
+# This gate already carried both empty-scan-set floors before the receipt
+# contract existed; its sibling 42 did not, because the rule lived only as prose.
+# Declaring the scan as its own unit makes the floor's measurement part of the
+# result rather than a line that dies at the caller.
+
+swift-scan
+bare-modifier-lint

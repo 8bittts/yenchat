@@ -1,0 +1,10 @@
+# YEN lazygit overrides
+# Applied on top of user config by yen-cli/commands/core/yengit.
+#
+# Goals:
+# - Remove startup welcome popups.
+# - Keep hotkey hints visible on bottom line.
+
+disableStartupPopups: true
+gui:
+  showBottomLine: true

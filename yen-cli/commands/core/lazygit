@@ -1,0 +1,7 @@
+#!/bin/bash
+# YEN lazygit command wrapper
+# Routes through yengit so config overlays always apply.
+
+source "${YEN_LIB}/init.sh"
+
+exec "${YEN_CMD_DIR}/core/yengit" "$@"

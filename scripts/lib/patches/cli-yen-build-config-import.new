@@ -1,0 +1,2 @@
+const SpecialCase = actionpkg.SpecialCase;
+const build_config = @import("../build_config.zig");

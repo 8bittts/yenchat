@@ -1,0 +1,47 @@
+        var lastPerformKeyEvent: TimeInterval?
+
+        static func performableClipboardSelector(
+            menuAction: Selector?,
+            standardClipboardHasContents: Bool,
+            selectionClipboardHasContents: Bool
+        ) -> Selector? {
+            if menuAction == #selector(YEN.SurfaceView.paste(_:)),
+               standardClipboardHasContents {
+                return menuAction
+            }
+
+            if menuAction == #selector(YEN.SurfaceView.pasteSelection(_:)),
+               selectionClipboardHasContents {
+                return menuAction
+            }
+
+            return nil
+        }
+
+        static func fixedYENMenuShortcutSelector(_ menuAction: Selector?) -> Bool {
+            menuAction == #selector(AppDelegate.toggleGitDrawer(_:))
+        }
+
+        static func shouldPerformYENMenuShortcutBeforeTerminalEncoding(
+            menuAction: Selector?,
+            bindingFlags: YEN.Input.BindingFlags?,
+            keySequenceIsEmpty: Bool,
+            keyTablesAreEmpty: Bool
+        ) -> Bool {
+            guard menuAction != nil,
+                  keySequenceIsEmpty,
+                  keyTablesAreEmpty else {
+                return false
+            }
+
+            if fixedYENMenuShortcutSelector(menuAction) {
+                return true
+            }
+
+            guard let bindingFlags else { return false }
+            return bindingFlags.isDisjoint(with: [.all, .performable]) &&
+                bindingFlags.contains(.consumed)
+        }
+
+        /// Special case handling for some control keys
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {

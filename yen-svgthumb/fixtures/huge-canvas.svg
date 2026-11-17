@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8000" height="4200" viewBox="0 0 8000 4200">
+  <rect width="8000" height="4200" fill="#111827" />
+  <g stroke="#22d3ee" stroke-width="28" fill="none">
+    <path d="M400 3600 C1800 800, 3000 800, 4400 3600" />
+    <path d="M1800 3600 C3000 1200, 4600 1200, 7000 3600" />
+  </g>
+  <text x="500" y="720" font-family="Helvetica" font-size="420" fill="#f8fafc">Large Canvas Stress</text>
+</svg>

@@ -1,0 +1,15 @@
+        private static func showDesktopNotification(
+            _ surfaceView: SurfaceView,
+            title: String,
+            body: String,
+            requireFocus: Bool = true) {
+            AppDelegate.deliverManagedSurfaceNotification(
+                surfaceView: surfaceView,
+                service: .general,
+                title: title,
+                subtitle: surfaceView.title,
+                body: body,
+                requireFocus: requireFocus,
+                logLabel: "general"
+            )
+        }

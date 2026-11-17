@@ -1,0 +1,17 @@
+# fzf Baseline Tracking
+upstream_repo=https://github.com/junegunn/fzf
+upstream_version=v0.75.0
+last_sync=2026-11-07
+architecture=universal (arm64 + x86_64)
+source_asset_arm64=fzf-0.75.0-darwin_arm64.tar.gz
+source_asset_x86_64=fzf-0.75.0-darwin_amd64.tar.gz
+source_sha256_arm64=1e76698eb481436e42119bea6aa6e2bd9552ff090789d769c286e3c3a4e0ded6
+source_sha256_x86_64=8fa67fa874468b8e73ecad2df82cc110026f45d10605128aaac6b191262d2844
+source_api_sha256_arm64=1e76698eb481436e42119bea6aa6e2bd9552ff090789d769c286e3c3a4e0ded6
+source_api_sha256_x86_64=8fa67fa874468b8e73ecad2df82cc110026f45d10605128aaac6b191262d2844
+source_checksums_file=fzf_0.75.0_checksums.txt
+source_checksums_sha256=7ac865fdb2d656f32641b4cc3f5c3b75a5afaa20e4a1c3b704df7d71dd2e0470
+provenance_verification=github-release-asset-digests
+output_verification=verified
+output_sha256=008155929424dfcb4676d52d9c6eba69dc0350437bbe9f8490f8b68deed42526
+companion_output_sha256=none

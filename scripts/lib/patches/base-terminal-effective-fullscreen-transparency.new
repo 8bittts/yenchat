@@ -1,0 +1,2 @@
+        // Do nothing if in fullscreen (transparency doesn't apply in fullscreen)
+        guard let window, !window.yenIsEffectivelyFullscreen else { return }

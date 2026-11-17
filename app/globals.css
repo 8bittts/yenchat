@@ -1,0 +1,669 @@
+@import "tailwindcss";
+
+@utility docs-sidebar-fixed {
+	position: fixed;
+	overflow-y: auto;
+	padding-left: 1.5rem;
+	padding-right: 1.5rem;
+	padding-bottom: 2rem;
+	top: var(--header-height);
+	width: calc(50% - 0.75rem);
+	height: calc(100dvh - var(--header-height));
+}
+
+/*
+ * YEN Design System
+ * =================
+ * Single source of truth for all styling.
+ *
+ * Architecture:
+ * 1. :root / .dark  - CSS custom properties (switchable light/dark values)
+ * 2. @theme         - Tailwind v4 tokens referencing CSS vars (enables dark mode for utilities)
+ * 3. Base           - Element defaults
+ * 4. Components     - Reusable utility classes
+ *
+ * Dark mode works because @theme tokens reference CSS variables via hsl(var(--name)).
+ * When .dark class is applied, the variables change, and all Tailwind utilities update.
+ */
+
+/* =============================================================================
+   1. CSS CUSTOM PROPERTIES
+   Light mode defaults + dark mode overrides.
+   Component utilities also use these directly: hsl(var(--brand) / 0.5)
+   ============================================================================= */
+
+@layer base {
+	:root {
+		/* Core — warm off-white #f5f5f0 (HSL 60 20% 95.1%) */
+		--background: 60 20% 95.1%;
+		--foreground: 0 0% 6%;
+
+		/* Brand: #ff5100 — hsl(19 100% 50%) renders rgb(255,81,0); matches the
+		   locked ANSI banner, native Color.yenBrand, and app/constants.ts. */
+		--brand: 19 100% 50%;
+		--brand-dark: 19 100% 37%;
+
+		/* Borders */
+		--border: 0 0% 89%;
+		--border-light: 0 0% 93%;
+		--ring: 19 100% 50%;
+
+		/* Text hierarchy */
+		--text-primary: 0 0% 6%;
+		--text-body: 0 0% 25%;
+		--text-muted: 0 0% 41%;
+		--text-tertiary: 0 0% 55%;
+		--text-inverse: 0 0% 100%;
+		--text-on-brand: 0 0% 6%;
+
+		/* Components */
+		--card: 0 0% 100%;
+		--card-header: 0 0% 92%;
+		--card-content: 0 0% 89%;
+
+		/* Status */
+		--status-error: 0 67% 52%;
+		--status-warning: 38 92% 47%;
+
+		/* Terminal */
+		--terminal-text: 213 13% 36%;
+		--terminal-text-muted: 213 13% 40%;
+		--terminal-dot-red: 0 91% 71%;
+		--terminal-dot-yellow: 48 96% 53%;
+		--terminal-dot-green: 142 69% 58%;
+
+		/* Layout */
+		--header-height: 65px;
+
+		/* YENI scoped accent — the character's brand violet (#7C3AED). Used only
+		   as a small scoped accent on the unlisted /yeni page, never as part of
+		   the site's orange brand system. */
+		--yeni-accent: #7c3aed;
+	}
+
+	/* =========================================================================
+	   DARK MODE
+	   WCAG AA compliant (4.5:1 contrast minimum for text)
+	   ========================================================================= */
+
+	.dark {
+		--background: 0 0% 8%;
+		--foreground: 0 0% 93%;
+
+		--brand-dark: 19 100% 60%;
+
+		--border: 0 0% 22%;
+		--border-light: 0 0% 18%;
+
+		--text-primary: 0 0% 95%;
+		--text-body: 0 0% 85%;
+		--text-muted: 0 0% 75%;
+		--text-tertiary: 0 0% 65%;
+		--text-inverse: 0 0% 6%;
+		--text-on-brand: 0 0% 6%;
+
+		--card: 0 0% 12%;
+		--card-header: 0 0% 16%;
+		--card-content: 0 0% 10%;
+
+		--terminal-text: 213 13% 80%;
+		--terminal-text-muted: 213 13% 70%;
+	}
+
+	/* =========================================================================
+	   BASE ELEMENT STYLES
+	   ========================================================================= */
+
+	/*
+	 * Viewport-height convention: page shells use Tailwind `min-h-dvh` (NOT
+	 * `min-h-screen`/`100vh`). On mobile browsers `100vh` resolves to the LARGE
+	 * viewport (toolbars retracted), so a `100vh` sticky-footer container is
+	 * taller than the visible area and leaves dead space around the footer. The
+	 * dynamic-viewport unit `dvh` tracks the actual visible viewport. Keep all
+	 * full-height shells (home/docs/tunes/404/global-error) and the fixed docs
+	 * sidebar on `dvh`, not `vh`. See home-client.tsx / doc-page-shell.tsx.
+	 */
+	html {
+		@apply scroll-smooth;
+		min-height: 100%;
+		overflow-x: hidden;
+		scroll-padding-top: var(--header-height);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html {
+			scroll-behavior: auto;
+		}
+	}
+
+	body {
+		background-color: hsl(var(--background));
+		color: hsl(var(--foreground));
+		font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+		@apply antialiased;
+		min-height: 100dvh;
+		overflow-x: hidden;
+		max-width: 100%;
+	}
+
+	@supports not (height: 100dvh) {
+		body {
+			min-height: 100vh;
+		}
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	pre,
+	code {
+		overflow-x: auto;
+		word-break: break-word;
+	}
+
+	pre {
+		white-space: pre;
+		overflow-y: hidden;
+	}
+
+	a {
+		word-break: break-word;
+		overflow-wrap: break-word;
+	}
+
+	img {
+		max-width: 100%;
+		height: auto;
+	}
+}
+
+@layer utilities {
+	@supports (height: 100dvh) {
+		.min-h-screen {
+			min-height: 100dvh;
+		}
+
+		.h-screen {
+			height: 100dvh;
+		}
+	}
+}
+
+/* =============================================================================
+   2. TAILWIND THEME TOKENS
+   Reference CSS vars so utilities like bg-background, text-text-primary
+   automatically switch between light and dark mode.
+
+   Static values are used only for tokens that never change (dots, code blocks).
+   ============================================================================= */
+
+/* Resolve next/font variables where they exist on body, not at the root. */
+@theme inline {
+	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+	--font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@theme {
+	/* Core */
+	--color-background: hsl(var(--background));
+
+	/* Brand (same hue in both modes, only brand-dark shifts) */
+	--color-brand: hsl(var(--brand));
+	--color-brand-dark: hsl(var(--brand-dark));
+
+	/* Borders */
+	--color-border: hsl(var(--border));
+	--color-border-light: hsl(var(--border-light));
+
+	/* Text hierarchy */
+	--color-text-primary: hsl(var(--text-primary));
+	--color-text-body: hsl(var(--text-body));
+	--color-text-muted: hsl(var(--text-muted));
+	--color-text-tertiary: hsl(var(--text-tertiary));
+	--color-text-inverse: hsl(var(--text-inverse));
+	--color-text-on-brand: hsl(var(--text-on-brand));
+
+	/* Components */
+	--color-card: hsl(var(--card));
+	--color-card-header: hsl(var(--card-header));
+	--color-card-content: hsl(var(--card-content));
+
+	/* Terminal text (switches for contrast on card-content background) */
+	--color-terminal-text: hsl(var(--terminal-text));
+	--color-terminal-text-muted: hsl(var(--terminal-text-muted));
+
+	/* Terminal dots (static — same in both modes) */
+	--color-terminal-dot-red: hsl(0 91% 71%);
+	--color-terminal-dot-yellow: hsl(48 96% 53%);
+	--color-terminal-dot-green: hsl(142 69% 58%);
+
+	/* Status */
+	--color-status-error: hsl(var(--status-error));
+	--color-status-warning: hsl(var(--status-warning));
+
+	/* Code blocks (static — always dark terminal style) */
+	--color-code-bg: hsl(0 0% 6%);
+	--color-code-header-bg: hsl(0 0% 15%);
+	--color-code-text: hsl(0 0% 93%);
+	--color-code-text-muted: hsl(0 0% 63%);
+	--color-code-border: hsl(0 0% 25%);
+
+	/* YENI scoped accent (literal violet, not part of the orange brand system) */
+	--color-yeni-accent: var(--yeni-accent);
+}
+
+/* =============================================================================
+   3. COMPONENT UTILITIES
+   ============================================================================= */
+
+@layer components {
+	/* ---------------------------------------------------------------------------
+	   Layout
+	   --------------------------------------------------------------------------- */
+
+	.container-page {
+		@apply max-w-7xl mx-auto px-4 sm:px-6;
+	}
+
+	.container-centered {
+		@apply max-w-2xl mx-auto text-center;
+	}
+
+	.section-padding {
+		@apply py-20 md:py-28;
+	}
+
+	.content-spacing-lg {
+		@apply space-y-12 md:space-y-16 min-w-0;
+	}
+
+	.grid-two-cols-divider {
+		@apply grid lg:grid-cols-[1fr_1px_1fr] lg:gap-6;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Typography
+	   --------------------------------------------------------------------------- */
+
+	.text-heading-lg {
+		color: hsl(var(--text-primary));
+		@apply text-3xl md:text-4xl lg:text-5xl font-bold leading-tight;
+	}
+
+	.text-heading-md {
+		color: hsl(var(--text-primary));
+		@apply text-xl md:text-2xl font-bold;
+	}
+
+	.text-heading-sm {
+		color: hsl(var(--text-primary));
+		@apply text-base md:text-lg font-bold;
+	}
+
+	.text-body {
+		color: hsl(var(--text-body));
+		@apply leading-relaxed;
+	}
+
+	.text-body-sm {
+		color: hsl(var(--text-body));
+		@apply leading-relaxed text-sm;
+	}
+
+	.text-body-xs {
+		color: hsl(var(--text-body));
+		@apply leading-relaxed text-xs;
+	}
+
+	.eyebrow-text {
+		@apply text-xs leading-relaxed font-semibold uppercase;
+		color: hsl(var(--text-muted));
+		letter-spacing: 0.18em;
+	}
+
+	.heading-spacing {
+		@apply mb-4 md:mb-6;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Links & Navigation
+	   --------------------------------------------------------------------------- */
+
+	.link-brand {
+		@apply transition rounded focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+		color: hsl(var(--brand-dark));
+		padding-bottom: 0.125rem;
+	}
+
+	.link-brand:hover {
+		/* Animation exception: keep subtle squiggle underline motion for branded link affordance. */
+		color: hsl(var(--brand-dark));
+		background-image: url("/squiggle.svg");
+		background-repeat: repeat-x;
+		background-position: bottom left;
+		background-origin: content-box;
+		background-size: 5px 0.5rem;
+		padding-bottom: 0.125rem;
+	}
+
+	.nav-link {
+		color: hsl(var(--text-muted));
+		@apply text-sm transition rounded px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+		padding-bottom: 0.125rem;
+	}
+
+	.nav-link:hover {
+		/* Animation exception: keep subtle squiggle underline motion for interactive navigation feedback. */
+		color: hsl(var(--text-primary));
+		background-image: url("/squiggle.svg");
+		background-repeat: repeat-x;
+		background-position: bottom left;
+		background-origin: content-box;
+		background-size: 5px 0.5rem;
+		padding-bottom: 0.125rem;
+	}
+
+	.nav-link-active {
+		@apply font-medium;
+		color: hsl(var(--brand-dark));
+	}
+
+	.nav-link-inactive {
+		color: hsl(var(--text-muted));
+	}
+
+	.nav-link-inactive:hover {
+		color: hsl(var(--text-primary));
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Buttons (with sheen animation)
+	   --------------------------------------------------------------------------- */
+
+	.btn-primary {
+		@apply inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-medium transition-colors duration-200 focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+		background-color: hsl(var(--card-header));
+		border: 1px solid hsl(var(--border));
+		color: hsl(var(--text-primary));
+		position: relative;
+		overflow: hidden;
+	}
+
+	.btn-primary:hover {
+		background-color: hsl(var(--brand));
+		border-color: hsl(var(--brand));
+		color: hsl(var(--text-on-brand));
+	}
+
+	.btn-secondary {
+		@apply inline-block px-4 py-2 text-sm rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+		border: 1px solid hsl(var(--border));
+		color: hsl(var(--text-primary));
+		position: relative;
+		overflow: hidden;
+	}
+
+	.btn-secondary:hover {
+		background-color: hsl(var(--card-header));
+	}
+
+	/* Sheen animation for buttons */
+	.btn-primary::before,
+	.btn-secondary::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: -100%;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.4) 50%,
+			transparent 100%
+		);
+		transition: left 0.5s ease-in-out;
+	}
+
+	.btn-primary:hover::before,
+	.btn-secondary:hover::before {
+		left: 100%;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.btn-primary::before,
+		.btn-secondary::before {
+			display: none;
+		}
+
+		.btn-primary,
+		.btn-secondary {
+			transition: none;
+		}
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Terminal Window
+	   --------------------------------------------------------------------------- */
+
+	.terminal-window {
+		@apply rounded-lg shadow-2xl overflow-hidden;
+		background-color: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+	}
+
+	.preview-focus-shell {
+		position: relative;
+	}
+
+	.preview-focus-shell:focus-within {
+		outline: 2px solid hsl(var(--ring));
+		outline-offset: 2px;
+	}
+
+	.preview-focus-target {
+		position: absolute;
+		right: 0.5rem;
+		top: 0.5rem;
+		z-index: 20;
+		transform: translateY(-150%);
+		border-radius: 0.375rem;
+		border: 1px solid hsl(var(--border));
+		background: hsl(var(--card));
+		color: hsl(var(--text-primary));
+		padding: 0.25rem 0.5rem;
+		font-size: 11px;
+	}
+
+	.preview-focus-target:focus-visible {
+		transform: translateY(0);
+	}
+
+	.terminal-header {
+		@apply px-4 py-3 flex items-center gap-2 border-b;
+		border-color: hsl(var(--border));
+	}
+
+	.terminal-dots {
+		@apply flex gap-2;
+	}
+
+	.terminal-dot {
+		@apply w-3 h-3 rounded-full;
+	}
+
+	.terminal-content {
+		@apply p-4 md:p-8 font-mono text-sm min-h-64 md:min-h-96;
+		background-color: hsl(var(--card-content));
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Code Blocks
+	   --------------------------------------------------------------------------- */
+
+	.inline-code-brand {
+		@apply px-1.5 py-0.5 rounded-md font-mono;
+		font-size: inherit;
+		background-color: hsl(var(--brand) / 0.1);
+		color: hsl(var(--text-primary));
+		word-break: break-word;
+		overflow-wrap: break-word;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Cards & Callouts
+	   --------------------------------------------------------------------------- */
+
+	.callout-card {
+		@apply rounded-lg p-4;
+		background-color: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+	}
+
+	/* ---------------------------------------------------------------------------
+		   Status Indicator (Recording dot)
+		   --------------------------------------------------------------------------- */
+
+	.status-indicator {
+		@apply relative flex items-center justify-center;
+	}
+
+	.status-indicator-ping {
+		/* Animation exception: recording indicator pulse is intentional product feedback. */
+		@apply absolute size-4 rounded-full animate-ping;
+		background-color: hsl(var(--terminal-dot-red) / 0.3);
+	}
+
+	.status-indicator-dot {
+		@apply relative size-3 rounded-full;
+		background-color: hsl(var(--terminal-dot-red));
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Animation
+	   --------------------------------------------------------------------------- */
+
+	@media (prefers-reduced-motion: reduce) {
+		.status-indicator-ping {
+			animation: none;
+			opacity: 0.3;
+		}
+
+		.cursor-blink {
+			animation: none;
+		}
+
+		/* Tailwind utility animations used outside design-system classes */
+		.animate-pulse,
+		.animate-ping {
+			animation: none;
+		}
+	}
+
+	.cursor-blink {
+		/* Animation exception: terminal cursor pulse preserves expected shell-like behavior. */
+		@apply inline-block w-1 animate-pulse align-middle ml-1;
+		height: 1em;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Media
+	   --------------------------------------------------------------------------- */
+
+	.media-border {
+		@apply rounded-lg border;
+		border-color: hsl(var(--border));
+	}
+
+	.media-caption {
+		color: hsl(var(--text-muted));
+		@apply text-sm mt-3;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Mobile Menu
+	   --------------------------------------------------------------------------- */
+
+	.mobile-menu-dropdown {
+		@apply md:hidden;
+		background-color: hsl(var(--background));
+		border-bottom: 1px solid hsl(var(--border));
+	}
+
+	.mobile-menu-container {
+		@apply max-w-7xl mx-auto px-4 sm:px-6 py-3;
+	}
+
+	.mobile-menu-link {
+		color: hsl(var(--text-primary));
+		transition: color 0.2s ease;
+		padding-bottom: 0.125rem;
+	}
+
+	.mobile-menu-link:hover {
+		/* Animation exception: keep subtle squiggle underline motion for mobile nav hover parity. */
+		color: hsl(var(--brand-dark));
+		background-image: url("/squiggle.svg");
+		background-repeat: repeat-x;
+		background-position: bottom left;
+		background-origin: content-box;
+		background-size: 5px 0.5rem;
+	}
+
+	.mobile-menu-link:focus-visible {
+		outline: 2px solid hsl(var(--ring));
+		outline-offset: 2px;
+		border-radius: 0.25rem;
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Accessibility
+	   --------------------------------------------------------------------------- */
+
+	.skip-link {
+		@apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 px-4 py-2 z-50 rounded focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+		background-color: hsl(var(--brand-dark));
+		color: hsl(var(--text-inverse));
+	}
+
+	.focus-ring {
+		@apply focus:outline-hidden focus:ring-2 focus:ring-offset-2;
+		--tw-ring-color: hsl(var(--ring));
+		--tw-ring-offset-color: hsl(var(--background));
+	}
+
+	/* ---------------------------------------------------------------------------
+	   Tables (in terminal windows)
+	   --------------------------------------------------------------------------- */
+
+	table {
+		width: 100%;
+		table-layout: auto;
+	}
+
+	.overflow-x-auto table {
+		min-width: max-content;
+	}
+
+	pre code {
+		display: block;
+		overflow-x: auto;
+		white-space: pre;
+	}
+
+	/* Ensure brand color in pre blocks */
+	pre .text-brand {
+		color: hsl(var(--brand));
+	}
+}

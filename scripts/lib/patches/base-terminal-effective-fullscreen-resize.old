@@ -1,0 +1,3 @@
+        // We ignore fullscreen windows because macOS automatically resizes
+        // those back to the fullscreen bounds.
+        guard !window.styleMask.contains(.fullScreen) else { return }

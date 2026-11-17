@@ -1,0 +1,3 @@
+    @objc private func onToggleFullscreen(notification: SwiftUI.Notification) {
+        handleToggleFullscreenNotification(notification)
+    }

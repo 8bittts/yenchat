@@ -1,0 +1,19 @@
+# Units declared by scripts/manual/16-verify-applescript-if-needed.sh.
+#
+# trigger-scan closes the blind spot this gate shipped with: the trigger read
+# only the working tree (`git diff HEAD`, `--cached`, untracked), so COMMITTING a
+# change to a tripwire path disarmed the tripwire meant to catch it. The gate
+# then printed a checkmark and exited 0, which its callers' evals recorded as a
+# pass. `zip-verify.md` mandates committing a vendor bump BEFORE /yen-zip, so in the
+# documented order the gate could never fire for a vendor-introduced change.
+#
+# The scan now also reads the committed range since the last verified commit
+# recorded in yen-terminal/.applescript-verified, and fails closed when that
+# stamp is missing or unreadable.
+#
+# verifier records whether 15-verify-applescript.sh actually ran. A skip is
+# legitimate but must leave a trace, so a caller can no longer read "declined to
+# run" as "ran and passed".
+
+trigger-scan
+verifier

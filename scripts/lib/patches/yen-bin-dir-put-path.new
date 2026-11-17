@@ -1,0 +1,1 @@
+            try env.put("PATH", bin_dir.?);

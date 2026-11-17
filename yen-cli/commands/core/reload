@@ -1,0 +1,50 @@
+#!/bin/bash
+# YEN Config Reload Command
+# Reloads YEN Terminal configuration without restarting the app
+
+source "${YEN_LIB}/init.sh"
+
+# Simple approach: find YEN process and send SIGUSR2
+# The terminal's signal handler will reload the config
+
+# First: check TERM_PROGRAM environment variable (set by YEN in Exec.zig)
+# This is the definitive way to know if we're inside YEN Terminal
+if [[ "$TERM_PROGRAM" != "yen" ]]; then
+    yen_warn "YEN Terminal is not running"
+    yen_info "Start YEN Terminal and run this command again to reload configuration"
+    exit 1
+fi
+
+# We're inside YEN — now find the terminal process PID for signaling
+YEN_PID=""
+
+# Walk up our process tree to find the YEN terminal process
+pid=$$
+while [[ $pid -gt 1 ]]; do
+    cmd=$(ps -p "$pid" -o args= 2>/dev/null)
+    if [[ "$cmd" == *"YEN.app/Contents/MacOS/yen"* ]]; then
+        YEN_PID=$pid
+        break
+    fi
+    pid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ')
+    [[ -z "$pid" ]] && break
+done
+
+# Fallback: match full path to avoid signaling unrelated "yen" processes
+if [[ -z "$YEN_PID" ]]; then
+    YEN_PID=$(pgrep -f "YEN.app/Contents/MacOS/yen" 2>/dev/null | head -1)
+fi
+
+if [[ -z "$YEN_PID" ]]; then
+    yen_error "Could not find YEN process to signal"
+    yen_info "Try restarting YEN Terminal"
+    exit 1
+fi
+
+# Send the reload signal
+if kill -USR2 "$YEN_PID" 2>/dev/null; then
+    yen_info "Configuration reloaded"
+else
+    yen_error "Failed to reload configuration"
+    exit 1
+fi

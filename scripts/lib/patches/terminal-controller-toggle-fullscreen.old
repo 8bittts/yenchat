@@ -1,0 +1,16 @@
+    @objc private func onToggleFullscreen(notification: SwiftUI.Notification) {
+        guard let target = notification.object as? YEN.SurfaceView else { return }
+        guard target == self.focusedSurface else { return }
+
+        // Get the fullscreen mode we want to toggle
+        let fullscreenMode: FullscreenMode
+        if let any = notification.userInfo?[YEN.Notification.FullscreenModeKey],
+           let mode = any as? FullscreenMode {
+            fullscreenMode = mode
+        } else {
+            YEN.logger.warning("no fullscreen mode specified or invalid mode, doing nothing")
+            return
+        }
+
+        toggleFullscreen(mode: fullscreenMode)
+    }

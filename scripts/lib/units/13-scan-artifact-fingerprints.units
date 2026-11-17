@@ -1,0 +1,10 @@
+# Units declared by scripts/13-scan-artifact-fingerprints.sh.
+#
+# This gate already reported `RESULT ... scanned=<n>` before the receipt contract
+# existed -- it was the only one of 64 that emitted a runtime measurement, added
+# after a bundle holding one text file returned `total=0 ... mode=enforce` and
+# exit 0. Declaring the scan and the allowlist filter separately keeps "nothing
+# was examined" distinguishable from "nothing was wrong".
+
+payload-scan
+allowlist-filter

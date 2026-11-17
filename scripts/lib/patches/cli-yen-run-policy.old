@@ -1,0 +1,2 @@
+    pub fn run(self: Action, alloc: Allocator) !u8 {
+        return self.runMain(alloc) catch |err| switch (err) {

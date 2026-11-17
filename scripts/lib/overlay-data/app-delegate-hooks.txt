@@ -1,0 +1,8 @@
+DictationController.shared.setup()
+showOnboardingIfNeeded()
+TabSidebarController.shared.setup()
+LayoutShortcutController.shared.setup()
+setupBuildNotificationObserver()
+DictationController.backgroundModeActive
+NotificationCenter.default.post(name: .yenConfigDidReload, object: nil)
+func performYENBindingMenuKeyEquivalent

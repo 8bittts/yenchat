@@ -1,0 +1,12 @@
+    func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        guard !sender.yenIsEffectivelyFullscreen else { return frameSize }
+        guard let screen = sender.screen ?? NSScreen.main else { return frameSize }
+        return YENGeometryClamp.sanitize(
+            size: frameSize,
+            visibleSize: screen.visibleFrame.size
+        )
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        windowFrameDidChange()
+    }

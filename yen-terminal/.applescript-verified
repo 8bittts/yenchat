@@ -1,0 +1,5 @@
+# AppleScript/workspace contract verification stamp.
+# Written by scripts/manual/16-verify-applescript-if-needed.sh after a
+# passing scripts/manual/15-verify-applescript.sh run on a clean tree.
+verified_commit=f2df90e8943961aed51e8b7b3498dd4cfc097d20
+verified_at=2026-11-16T23:41:18Z

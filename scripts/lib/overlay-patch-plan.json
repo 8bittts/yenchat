@@ -1,0 +1,760 @@
+{
+	"quick-terminal-shared-panel-motion": {
+		"target": "ghostty/macos/Sources/Features/QuickTerminal/QuickTerminalController.swift",
+		"arguments": [
+			"--label",
+			"Quick Terminal shared panel motion",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"            .entering,",
+			"--marker-all",
+			"            .exiting,",
+			"--old-block",
+			"@$PATCHES_DIR/quick-terminal-shared-motion-in.old",
+			"--new-block",
+			"@$PATCHES_DIR/quick-terminal-shared-motion-in.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/quick-terminal-shared-motion-out.old:::@$PATCHES_DIR/quick-terminal-shared-motion-out.new"
+		]
+	},
+	"undo-timeout-default-preservation": {
+		"target": "ghostty/macos/Sources/YEN/Ghostty.Config.swift",
+		"arguments": [
+			"--label",
+			"undo-timeout default preservation",
+			"--mode",
+			"exact",
+			"--marker",
+			"guard yen_config_get(config, &v, key, UInt(key.lengthOfBytes(using: .utf8))) else {",
+			"--old-block",
+			"@$PATCHES_DIR/undo-timeout-default.old",
+			"--new-block",
+			"@$PATCHES_DIR/undo-timeout-default.new"
+		]
+	},
+	"yen-bin-dir-fix": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"YEN_BIN_DIR fix",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"try env.put(\"YEN_BIN_DIR\", bin_dir.?);",
+			"--marker-all",
+			"if (std.mem.eql(u8, entry, bin_dir.?)) break :yen_path;",
+			"--marker-all",
+			"try appendEnv(alloc, path, bin_dir.?)",
+			"--marker-all",
+			"            try env.put(\"PATH\", bin_dir.?);",
+			"--old-block",
+			"@$PATCHES_DIR/yen-bin-dir.old",
+			"--new-block",
+			"@$PATCHES_DIR/yen-bin-dir.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/yen-bin-dir-path-entry.old:::@$PATCHES_DIR/yen-bin-dir-path-entry.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/yen-bin-dir-append-env.old:::@$PATCHES_DIR/yen-bin-dir-append-env.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/yen-bin-dir-put-path.old:::@$PATCHES_DIR/yen-bin-dir-put-path.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/yen-bin-dir-comment.old:::@$PATCHES_DIR/yen-bin-dir-comment.new",
+			"--post-verify",
+			"try env.put(\"YEN_BIN_DIR\", bin_dir.?);",
+			"--post-verify",
+			"if (std.mem.eql(u8, entry, bin_dir.?)) break :yen_path;",
+			"--post-verify",
+			"try appendEnv(alloc, path, bin_dir.?)",
+			"--post-verify",
+			"            try env.put(\"PATH\", bin_dir.?);"
+		]
+	},
+	"baseterminalcontroller-titleoverride-restorable-state-invalidation": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"BaseTerminalController titleOverride restorable-state invalidation",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"NSApp.invalidateRestorableState()",
+			"--marker-all",
+			"window?.invalidateRestorableState()",
+			"--old-block",
+			"@$PATCHES_DIR/terminal-title-override-restorable.old",
+			"--new-block",
+			"@$PATCHES_DIR/terminal-title-override-restorable.new",
+			"--post-verify",
+			"    /// The last computed title"
+		]
+	},
+	"baseterminalcontroller-windowdidresignkey-focus-deferral": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"BaseTerminalController windowDidResignKey focus deferral",
+			"--mode",
+			"exact",
+			"--marker",
+			"self?.syncFocusToSurfaceTree()",
+			"--old-block",
+			"@$PATCHES_DIR/terminal-resign-key-focus.old",
+			"--new-block",
+			"@$PATCHES_DIR/terminal-resign-key-focus.new"
+		]
+	},
+	"baseterminalcontroller-visible-frame-resize-bound": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"BaseTerminalController visible-frame resize bound",
+			"--mode",
+			"exact",
+			"--marker",
+			"func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize",
+			"--old-block",
+			"@$PATCHES_DIR/base-terminal-visible-resize.old",
+			"--new-block",
+			"@$PATCHES_DIR/base-terminal-visible-resize.new"
+		]
+	},
+	"baseterminalcontroller-native-fullscreen-guard": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"BaseTerminalController native fullscreen guard",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"guard !window.yenIsEffectivelyFullscreen else { return }",
+			"--marker-all",
+			"guard let window, !window.yenIsEffectivelyFullscreen else { return }",
+			"--marker-all",
+			"logFullscreenToggleRequest(mode: mode, window: window)",
+			"--old-block",
+			"@$PATCHES_DIR/base-terminal-effective-fullscreen-resize.old",
+			"--new-block",
+			"@$PATCHES_DIR/base-terminal-effective-fullscreen-resize.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/base-terminal-effective-fullscreen-transparency.old:::@$PATCHES_DIR/base-terminal-effective-fullscreen-transparency.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/base-terminal-fullscreen-toggle-guard.old:::@$PATCHES_DIR/base-terminal-fullscreen-toggle-guard.new"
+		]
+	},
+	"hiddentitlebarterminalwindow-effective-fullscreen-state": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/HiddenTitlebarTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"HiddenTitlebarTerminalWindow effective fullscreen state",
+			"--mode",
+			"exact",
+			"--marker",
+			"if yenIsEffectivelyFullscreen || (terminalController?.fullscreenStyle?.isFullscreen ?? false) {",
+			"--already-valid-pattern",
+			"if yenIsEffectivelyFullscreen {",
+			"--old-block",
+			"@$PATCHES_DIR/hidden-titlebar-effective-fullscreen.old",
+			"--new-block",
+			"@$PATCHES_DIR/hidden-titlebar-effective-fullscreen.new"
+		]
+	},
+	"terminalcontroller-effective-fullscreen-state": {
+		"target": "ghostty/macos/Sources/Features/Terminal/TerminalController.swift",
+		"arguments": [
+			"--label",
+			"TerminalController effective fullscreen state",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"handleToggleFullscreenNotification(notification)",
+			"--marker-all",
+			"parent.yenIsEffectivelyFullscreen",
+			"--marker-all",
+			"window.yenIsEffectivelyFullscreen",
+			"--old-block",
+			"@$PATCHES_DIR/terminal-controller-toggle-fullscreen.old",
+			"--new-block",
+			"@$PATCHES_DIR/terminal-controller-toggle-fullscreen.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/terminal-controller-parent-effective-fullscreen.old:::@$PATCHES_DIR/terminal-controller-parent-effective-fullscreen.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen.old:::@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen-continuation.old:::@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen-continuation.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen-basic.old:::@$PATCHES_DIR/terminal-controller-window-not-effective-fullscreen-basic.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/terminal-controller-window-effective-fullscreen.old:::@$PATCHES_DIR/terminal-controller-window-effective-fullscreen.new"
+		]
+	},
+	"terminalcontroller-resizewindow-fullscreen-guard": {
+		"target": "ghostty/macos/Sources/Features/Terminal/TerminalController.swift",
+		"arguments": [
+			"--label",
+			"TerminalController resizeWindow fullscreen guard",
+			"--mode",
+			"exact",
+			"--marker",
+			"!window.yenIsEffectivelyFullscreen,",
+			"--old-block",
+			"@$PATCHES_DIR/terminal-controller-resize-window-fullscreen.old",
+			"--new-block",
+			"@$PATCHES_DIR/terminal-controller-resize-window-fullscreen.new"
+		]
+	},
+	"terminalwindow-effective-fullscreen-state": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"TerminalWindow effective fullscreen state",
+			"--mode",
+			"exact",
+			"--marker",
+			"if !yenIsEffectivelyFullscreen &&",
+			"--old-block",
+			"@$PATCHES_DIR/terminal-window-effective-fullscreen.old",
+			"--new-block",
+			"@$PATCHES_DIR/terminal-window-effective-fullscreen.new"
+		]
+	},
+	"copy-on-select-default-patch": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"copy-on-select default patch",
+			"--mode",
+			"proximity",
+			"--marker-proximity-anchor",
+			"@\"copy-on-select\"",
+			"--marker-proximity-window",
+			"5",
+			"--marker-proximity-substring",
+			".macos => .both",
+			"--proximity-anchor",
+			"@\"copy-on-select\"",
+			"--proximity-window",
+			"5",
+			"--proximity-old",
+			".linux, .macos => .primary,",
+			"--proximity-new",
+			".linux => .primary,\n    .macos => .both,",
+			"--extra-replace",
+			"@$PATCHES_DIR/copy-on-select-doc.old:::@$PATCHES_DIR/copy-on-select-doc.new",
+			"--post-verify-proximity-anchor",
+			"@\"copy-on-select\"",
+			"--post-verify-proximity-window",
+			"5",
+			"--post-verify-proximity-substring",
+			".macos => .both"
+		]
+	},
+	"write-screen-file-copy-remap": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"write_screen_file copy remap",
+			"--mode",
+			"exact",
+			"--already-valid-pattern",
+			".{ .key = .{ .unicode = 'u' }, .mods = .{ .shift = true, .ctrl = true, .super = true } },",
+			"--old-block",
+			".{ .key = .{ .unicode = 'j' }, .mods = .{ .shift = true, .ctrl = true, .super = true } },",
+			"--new-block",
+			".{ .key = .{ .unicode = 'u' }, .mods = .{ .shift = true, .ctrl = true, .super = true } },",
+			"--post-verify",
+			".{ .key = .{ .unicode = 'u' }, .mods = .{ .shift = true, .ctrl = true, .super = true } },"
+		]
+	},
+	"write-screen-file-paste-remap": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"write_screen_file paste remap",
+			"--mode",
+			"exact",
+			"--already-valid-pattern",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true }) },",
+			"--old-block",
+			".{ .key = .{ .unicode = 'j' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true }) },",
+			"--new-block",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true }) },",
+			"--post-verify",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true }) },"
+		]
+	},
+	"write-screen-file-open-remap": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"write_screen_file open remap",
+			"--mode",
+			"exact",
+			"--already-valid-pattern",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true, .alt = true }) },",
+			"--old-block",
+			".{ .key = .{ .unicode = 'j' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true, .alt = true }) },",
+			"--new-block",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true, .alt = true }) },",
+			"--post-verify",
+			".{ .key = .{ .unicode = 'u' }, .mods = inputpkg.ctrlOrSuper(.{ .shift = true, .alt = true }) },"
+		]
+	},
+	"quick-terminal-keybind-patch": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"Quick Terminal keybind patch",
+			"--mode",
+			"exact",
+			"--marker",
+			"// Toggle quick terminal (YEN default",
+			"--old-block",
+			"@$PATCHES_DIR/quick-terminal.old",
+			"--new-block",
+			"@$PATCHES_DIR/quick-terminal.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/quick-terminal-doc.old:::@$PATCHES_DIR/quick-terminal-doc.new"
+		]
+	},
+	"shift-enter-keybind-patch": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"Shift+Enter keybind patch",
+			"--mode",
+			"exact",
+			"--marker",
+			"Shift+Enter fix",
+			"--old-block",
+			"@$PATCHES_DIR/shift-enter.old",
+			"--new-block",
+			"@$PATCHES_DIR/shift-enter.new"
+		]
+	},
+	"cursor-style-reload-fix": {
+		"target": "ghostty/src/termio/stream_handler.zig",
+		"arguments": [
+			"--label",
+			"cursor style reload fix",
+			"--mode",
+			"exact",
+			"--marker",
+			"// YEN: force configured cursor on config reload",
+			"--old-block",
+			"        self.terminal.setDefaultCursorBlink(config.cursor_blink);",
+			"--new-block",
+			"        self.terminal.setDefaultCursorBlink(config.cursor_blink);\n        // YEN: force configured cursor on config reload\n        self.terminal.setCursorStyle(.default);",
+			"--post-verify",
+			"// YEN: force configured cursor on config reload"
+		]
+	},
+	"runtime-padding-reload-fix": {
+		"target": "ghostty/src/Surface.zig",
+		"arguments": [
+			"--label",
+			"Runtime padding reload fix",
+			"--mode",
+			"exact",
+			"--marker",
+			"Apply updated padding immediately on config reload",
+			"--old-block",
+			"@$PATCHES_DIR/runtime-padding.old",
+			"--new-block",
+			"@$PATCHES_DIR/runtime-padding.new"
+		]
+	},
+	"selection-repaint-fix": {
+		"target": "ghostty/src/Surface.zig",
+		"arguments": [
+			"--label",
+			"Selection repaint fix",
+			"--mode",
+			"exact",
+			"--marker",
+			"var selection_reapplied = false;",
+			"--already-valid-range-start",
+			"if (button == .left and action == .release) {",
+			"--already-valid-range-end",
+			"// Handle link clicking.",
+			"--already-valid-range-require",
+			"if (self.config.copy_on_select != .none)",
+			"--already-valid-range-require",
+			"queueRender(",
+			"--old-block",
+			"@$PATCHES_DIR/selection-repaint.old",
+			"--new-block",
+			"@$PATCHES_DIR/selection-repaint.new"
+		]
+	},
+	"right-click-context-menu-selection-patch": {
+		"target": "ghostty/src/Surface.zig",
+		"arguments": [
+			"--label",
+			"Right-click context-menu selection patch",
+			"--mode",
+			"exact",
+			"--marker",
+			"Preserve the current selection state on right-click and",
+			"--old-block",
+			"@$PATCHES_DIR/right-click-context-select.old",
+			"--new-block",
+			"@$PATCHES_DIR/right-click-context-select.new"
+		]
+	},
+	"right-click-context-menu-stale-block-self-heal": {
+		"target": "ghostty/src/Surface.zig",
+		"arguments": [
+			"--label",
+			"Right-click context-menu stale block self-heal",
+			"--mode",
+			"exact",
+			"--already-valid-pattern",
+			"_ = pin;\n                return false;",
+			"--old-block",
+			"@$PATCHES_DIR/right-click-context-select-stale.old",
+			"--new-block",
+			"@$PATCHES_DIR/right-click-context-select.new"
+		]
+	},
+	"cli-action-policy": {
+		"target": "ghostty/src/cli/yen.zig",
+		"arguments": [
+			"--label",
+			"CLI action policy",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"const build_config = @import(\"../build_config.zig\");",
+			"--marker-all",
+			"pub const ActionTier = enum",
+			"--marker-all",
+			"pub fn tier(self: Action) ActionTier",
+			"--marker-all",
+			"pub fn isAllowed(self: Action) bool",
+			"--old-block",
+			"@$PATCHES_DIR/cli-yen-build-config-import.old",
+			"--new-block",
+			"@$PATCHES_DIR/cli-yen-build-config-import.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/cli-yen-action-tier-enum.old:::@$PATCHES_DIR/cli-yen-action-tier-enum.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/cli-yen-action-policy-methods.old:::@$PATCHES_DIR/cli-yen-action-policy-methods.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/cli-yen-run-policy.old:::@$PATCHES_DIR/cli-yen-run-policy.new"
+		]
+	},
+	"cli-help-tiered-action-filtering": {
+		"target": "ghostty/src/cli/help.zig",
+		"arguments": [
+			"--label",
+			"CLI help tiered action filtering",
+			"--mode",
+			"exact",
+			"--marker",
+			"action.shouldShowInHelp()",
+			"--old-block",
+			"@$PATCHES_DIR/cli-help-action-loop.old",
+			"--new-block",
+			"@$PATCHES_DIR/cli-help-action-loop.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/cli-help-policy-note.old:::@$PATCHES_DIR/cli-help-policy-note.new"
+		]
+	},
+	"ghostty-app-managed-notification-delivery": {
+		"target": "ghostty/macos/Sources/YEN/Ghostty.App.swift",
+		"arguments": [
+			"--label",
+			"Ghostty.App managed notification delivery",
+			"--mode",
+			"exact",
+			"--marker",
+			"AppDelegate.deliverManagedSurfaceNotification(",
+			"--old-block",
+			"@$PATCHES_DIR/ghostty-app-managed-notification.old",
+			"--new-block",
+			"@$PATCHES_DIR/ghostty-app-managed-notification.new"
+		]
+	},
+	"ghostty-app-terminal-browser-link-routing": {
+		"target": "ghostty/macos/Sources/YEN/Ghostty.App.swift",
+		"arguments": [
+			"--label",
+			"Ghostty.App terminal browser link routing",
+			"--mode",
+			"exact",
+			"--marker",
+			"TerminalBrowserLinkRouter.open(url)",
+			"--old-block",
+			"@$PATCHES_DIR/ghostty-app-terminal-browser-link.old",
+			"--new-block",
+			"@$PATCHES_DIR/ghostty-app-terminal-browser-link.new"
+		]
+	},
+	"surfaceview-async-notification-callback": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"SurfaceView async notification callback",
+			"--mode",
+			"exact",
+			"--marker",
+			"try await UNUserNotificationCenter.current().add(request)",
+			"--old-block",
+			"@$PATCHES_DIR/surface-view-appkit-notification-callback.old",
+			"--new-block",
+			"@$PATCHES_DIR/surface-view-appkit-notification-callback.new"
+		]
+	},
+	"split-focus-hit-test-coordinate-fix": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Split-focus hit-test coordinate fix",
+			"--mode",
+			"exact",
+			"--marker",
+			"The clicked location should still resolve back to this surface (or one",
+			"--old-block",
+			"@$PATCHES_DIR/split-focus-hit-test.old",
+			"--new-block",
+			"@$PATCHES_DIR/split-focus-hit-test.new"
+		]
+	},
+	"opinionated-clipboard-image-path-bridge": {
+		"target": "ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift",
+		"arguments": [
+			"--label",
+			"Opinionated clipboard image path bridge",
+			"--mode",
+			"exact",
+			"--marker",
+			"(try? url.checkResourceIsReachable()) == true",
+			"--old-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-path.old",
+			"--new-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-path.new"
+		]
+	},
+	"opinionated-clipboard-image-temp-root-hardening": {
+		"target": "ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift",
+		"arguments": [
+			"--label",
+			"Opinionated clipboard image temp-root hardening",
+			"--mode",
+			"exact",
+			"--marker",
+			"private static let opinionatedClipboardImageDirectoryName = \"com.yenchat.yen.clipboard-images\"",
+			"--old-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-temp-root.old",
+			"--new-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-temp-root.new"
+		]
+	},
+	"opinionated-clipboard-image-retention-hardening": {
+		"target": "ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift",
+		"arguments": [
+			"--label",
+			"Opinionated clipboard image retention hardening",
+			"--mode",
+			"exact",
+			"--marker",
+			"private static func pruneStaleOpinionatedClipboardImageFiles",
+			"--old-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-retention.old",
+			"--new-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-retention.new"
+		]
+	},
+	"opinionated-clipboard-image-readability-check": {
+		"target": "ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift",
+		"arguments": [
+			"--label",
+			"Opinionated clipboard image readability check",
+			"--mode",
+			"proximity",
+			"--marker",
+			"return NSImage(pasteboard: self) != nil",
+			"--proximity-anchor",
+			"func hasOpinionatedStringContents() -> Bool {",
+			"--proximity-window",
+			"20",
+			"--proximity-old",
+			"return canReadObject(forClasses: [NSImage.self], options: nil)",
+			"--proximity-new",
+			"return NSImage(pasteboard: self) != nil"
+		]
+	},
+	"opinionated-clipboard-image-temp-file-permissions": {
+		"target": "ghostty/macos/Sources/Helpers/Extensions/NSPasteboard+Extension.swift",
+		"arguments": [
+			"--label",
+			"Opinionated clipboard image temp-file permissions",
+			"--mode",
+			"exact",
+			"--marker",
+			"try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)",
+			"--old-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-permissions.old",
+			"--new-block",
+			"@$PATCHES_DIR/opinionated-clipboard-image-permissions.new"
+		]
+	},
+	"performable-clipboard-selector-helper": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Performable clipboard selector helper",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"static func fixedYENMenuShortcutSelector(",
+			"--marker-all",
+			"#selector(AppDelegate.toggleGitDrawer(_:))",
+			"--marker-all",
+			"static func shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--old-block",
+			"@$PATCHES_DIR/performable-clipboard-selector.old",
+			"--new-block",
+			"@$PATCHES_DIR/performable-clipboard-selector.new",
+			"--old-absent-ok"
+		]
+	},
+	"performable-clipboard-selector-fixed-shortcut-upgrade": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Performable clipboard selector fixed-shortcut upgrade",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"static func fixedYENMenuShortcutSelector(",
+			"--marker-all",
+			"#selector(AppDelegate.toggleGitDrawer(_:))",
+			"--marker-all",
+			"static func shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--old-block",
+			"@$PATCHES_DIR/performable-clipboard-selector-pre-fixed-git-drawer.old",
+			"--new-block",
+			"@$PATCHES_DIR/performable-clipboard-selector.new"
+		]
+	},
+	"performable-clipboard-shortcut-routing": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Performable clipboard shortcut routing",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"let menuAction = appDelegate?.yenMenuActionSelector(for: event)",
+			"--marker-all",
+			"if Self.shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--marker-all",
+			"appDelegate?.performYENBindingMenuKeyEquivalent(with: event) == true",
+			"--old-block",
+			"@$PATCHES_DIR/performable-clipboard-shortcut.old",
+			"--new-block",
+			"@$PATCHES_DIR/performable-clipboard-shortcut.new",
+			"--old-absent-ok"
+		]
+	},
+	"performable-clipboard-shortcut-fixed-shortcut-upgrade": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Performable clipboard shortcut fixed-shortcut upgrade",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"let menuAction = appDelegate?.yenMenuActionSelector(for: event)",
+			"--marker-all",
+			"if Self.shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--marker-all",
+			"appDelegate?.performYENBindingMenuKeyEquivalent(with: event) == true",
+			"--old-block",
+			"@$PATCHES_DIR/performable-clipboard-shortcut-pre-fixed-git-drawer.old",
+			"--new-block",
+			"@$PATCHES_DIR/performable-clipboard-shortcut.new"
+		]
+	},
+	"directional-split-chord-routing": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Directional split chord routing",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"appDelegate?.directionalSplitSelector(for: event)",
+			"--marker-all",
+			"NSApp.sendAction(directionalSplitAction, to: self, from: nil)",
+			"--old-block",
+			"@$PATCHES_DIR/directional-split-chord.old",
+			"--new-block",
+			"@$PATCHES_DIR/directional-split-chord.new",
+			"--old-absent-ok"
+		]
+	},
+	"paste-selection-validation-purity": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Paste selection validation purity",
+			"--mode",
+			"exact",
+			"--marker",
+			"return pb.hasOpinionatedStringContents()",
+			"--old-block",
+			"@$PATCHES_DIR/paste-selection-validation.old",
+			"--new-block",
+			"@$PATCHES_DIR/paste-selection-validation.new"
+		]
+	},
+	"surface-route-environment-helper": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView.swift",
+		"arguments": [
+			"--label",
+			"Surface route environment helper",
+			"--mode",
+			"exact",
+			"--marker",
+			"static let surfaceRouteEnvironmentKey = \"YEN_SURFACE_ID\"",
+			"--old-block",
+			"@$PATCHES_DIR/surface-route-environment-helper.old",
+			"--new-block",
+			"@$PATCHES_DIR/surface-route-environment-helper.new"
+		]
+	},
+	"appkit-surface-route-environment-stamp": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"AppKit surface route environment stamp",
+			"--mode",
+			"exact",
+			"--marker",
+			"surface_cfg.setRouteEnvironmentID(self.id)",
+			"--old-block",
+			"@$PATCHES_DIR/surface-route-stamp.old",
+			"--new-block",
+			"@$PATCHES_DIR/surface-route-stamp.new"
+		]
+	},
+	"ghosttypackage-sendable-retrofit-removal": {
+		"target": "ghostty/macos/Sources/YEN/GhosttyPackage.swift",
+		"arguments": [
+			"--label",
+			"GhosttyPackage Sendable retrofit removal",
+			"--mode",
+			"exact",
+			"--old-block",
+			"@$PATCHES_DIR/ghostty-package-sendable-retrofit.old",
+			"--new-block",
+			"@$PATCHES_DIR/ghostty-package-sendable-retrofit.new",
+			"--old-absent-ok",
+			"--old-absent-drift-pattern",
+			"extension yen_surface_t: @unchecked @retroactive Sendable {}"
+		]
+	}
+}

@@ -1,0 +1,24 @@
+# Curated bundled theme catalog for YEN runtime picker.
+# One theme display name per line (case-sensitive).
+# Three YEN themes plus the widely used community palettes.
+
+Atom One Dark
+Catppuccin Latte
+Catppuccin Mocha
+CutePretzel
+Dracula
+Everforest Dark Med
+GitHub Dark
+GitHub Light Default
+Gruvbox Dark
+Gruvbox Light
+iTerm2 Solarized Dark
+iTerm2 Solarized Light
+Kanagawa Wave
+Monokai Pro
+Nord
+Retro Terminal
+Rose Pine
+Rose Pine Dawn
+TokyoNight
+YEN

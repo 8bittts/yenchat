@@ -1,0 +1,3 @@
+        // Add our binary tools to PATH if we can find them.
+        // Prefer the Resources/bin directory (where YEN bundles yen/yazi and helpers),
+        // but fall back to the main executable directory if needed.

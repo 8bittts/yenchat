@@ -1,0 +1,43 @@
+# Regex allowlist for scripts/13-scan-artifact-fingerprints.sh
+#
+# One regex per line. Matching is evaluated against full finding lines:
+#   <category>|<location>|<sample>
+#
+# Example:
+# ^path:ghostty\|app:Contents/Resources/yen/shell-integration/bash/ghostty\.bash\|
+#
+# Keep this file as small as possible and document each allowlist entry in
+# _docs/04-security.md or _docs/05-infrastructure.md when accepted long-term.
+
+# Vendored CLI binaries can include upstream terminal capability detection
+# strings (for example xterm_ghostty) that are not user-facing YEN branding.
+# Keep these path-scoped and category-scoped to avoid masking broader residue.
+^binary:ghostty\|[^|]*Contents/Resources/bin/lazygit:[0-9]+\|
+^binary:ghostty\|[^|]*Contents/Resources/bin/yazi:[0-9]+\|
+^binary:ghostty\|[^|]*Contents/Resources/bin/fastfetch:[0-9]+\|
+
+# Yazi's companion CLI (ya) shares yazi's terminal capability detection
+# table (Kitty, Iterm2, Foot, Ghostty, Rio, VSCode, ...) and its remote
+# command-emit protocol. Same upstream vendor, same reasoning as bin/yazi
+# above — not user-facing YEN branding. Yazi v26.8.15 grew this table
+# enough that it now trips the fingerprint scan on bin/ya specifically.
+^binary:ghostty\|[^|]*Contents/Resources/bin/ya:[0-9]+\|
+
+# fastfetch 2.67.0 added macOS terminal-font detection that reads Ghostty's
+# config at ~/Library/Application Support/com.mitchellh.ghostty/config, which
+# introduces the com_mitchellh_ghostty token alongside the bare "ghostty" one
+# already accepted above. Same binary, same reason: a third-party detection
+# table, not YEN branding. The path is dormant under YEN because the terminal
+# process is not named ghostty, so it never resolves. Scoped to this one
+# binary and this one token deliberately — do NOT broaden the path here.
+^binary:com_mitchellh_ghostty\|[^|]*Contents/Resources/bin/fastfetch:[0-9]+\|
+
+# Main yen binary contains "ghostty" as a compiled-in terminal type
+# identifier (Zig terminfo detection, not user-facing branding).
+# Also matches Swift debug source-path metadata embedded by the compiler
+# (paths contain "ghostty" because the build tree is at yen-terminal/ghostty/).
+^binary:ghostty\|[^|]*Contents/MacOS/yen:[0-9]+\|
+
+# Zig compiler embeds build cache path strings (.zig-global-cache)
+# in the binary. These are compile-time artifacts, not user-facing.
+^binary:zig_global_cache\|[^|]*Contents/MacOS/yen:[0-9]+\|

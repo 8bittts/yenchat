@@ -1,0 +1,37 @@
+#!/bin/bash
+# YEN fastfetch Command
+# Launch bundled fastfetch system info display.
+
+source "${YEN_LIB}/init.sh"
+
+FASTFETCH_BIN="${YEN_RESOURCES}/bin/fastfetch"
+DEV_FASTFETCH_BIN="${YEN_RESOURCES}/../yen-terminal/customizations/vendor/fastfetch/fastfetch"
+
+resolve_fastfetch_binary() {
+    if [[ -x "$FASTFETCH_BIN" ]]; then
+        echo "$FASTFETCH_BIN"
+        return 0
+    fi
+
+    if [[ -x "$DEV_FASTFETCH_BIN" ]]; then
+        echo "$DEV_FASTFETCH_BIN"
+        return 0
+    fi
+
+    # Local-debug escape hatch only (not default runtime behavior).
+    if [[ "${YEN_ALLOW_SYSTEM_BIN_FALLBACK:-}" == "1" ]] && command -v fastfetch >/dev/null 2>&1; then
+        command -v fastfetch
+        return 0
+    fi
+
+    return 1
+}
+
+if FASTFETCH_EXEC=$(resolve_fastfetch_binary); then
+    exec "$FASTFETCH_EXEC" "$@"
+fi
+
+yen_error "fastfetch is not available."
+echo "Expected: bundled Resources/bin/fastfetch (app) or vendored customizations/vendor/fastfetch/fastfetch (dev)."
+echo "Run: ./scripts/14-vendor.sh fastfetch and rebuild YEN."
+exit 1

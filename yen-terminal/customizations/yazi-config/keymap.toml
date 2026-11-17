@@ -1,0 +1,40 @@
+# YEN File Browser Keybindings
+# macOS-specific customizations for enhanced integration
+#
+# Yazi v26.5.6 disallows non-kebab-case top-level keys, so the
+# legacy `$schema = "..."` editor hint that earlier configs carried
+# would now fail to parse. Editors needing a JSON schema reference
+# can point at https://yazi-rs.github.io/schemas/keymap.json directly.
+
+[mgr]
+prepend_keymap = [
+    # Keep this list focused on YEN-specific overrides and shortcuts
+    # that differ from Yazi's shipped defaults.
+
+    # Quick Look preview (macOS native)
+    # Space opens the macOS Quick Look overlay for the hovered file
+    # Works with images, PDFs, videos, documents, 3D models, and more
+    { on = "<Space>", run = "shell --orphan -- yen-quicklook %h >/dev/null 2>&1", desc = "Quick Look" },
+
+    # Open hovered file in terminal editor.
+    # Wrapper normalizes editor quirks (e.g. micro ruler gutter in copy paths).
+    { on = "e", run = "shell --block -- yen-yazi-edit %h", desc = "Open in $EDITOR" },
+
+    # Selection for bulk operations (Space is repurposed for Quick Look)
+    { on = "<Tab>", run = [ "toggle", "arrow 1" ], desc = "Toggle selection and move to next file" },
+
+    # Jump home directly
+    { on = "~", run = "cd ~", desc = "Go home" },
+
+    # Help on ? (Yazi default help is ~ / F1 on newer versions)
+    { on = "?", run = "help", desc = "Open help" },
+
+    # Reveal in Finder
+    # Opens Finder with the hovered file selected
+    { on = ["g", "r"], run = "shell --orphan -- open -R -- %h", desc = "Reveal in Finder" },
+
+    # Open in default app
+    # Uses macOS open command for proper app association
+    { on = ["g", "o"], run = "shell --orphan -- open -- %h", desc = "Open in default app" },
+
+]

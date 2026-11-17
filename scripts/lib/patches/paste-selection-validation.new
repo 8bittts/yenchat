@@ -1,0 +1,3 @@
+        case #selector(pasteSelection):
+            let pb = NSPasteboard.yenSelection
+            return pb.hasOpinionatedStringContents()
