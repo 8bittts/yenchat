@@ -24,6 +24,8 @@ const nextConfig: NextConfig = {
 			"public/stable/*.zip",
 			"public/doc-images/*.mp4",
 			"public/mascot/*.mp4",
+			// blog.yen.chat post media is served statically, never read by a function.
+			"public/blog-media/**",
 		],
 	},
 	experimental: {

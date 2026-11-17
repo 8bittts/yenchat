@@ -53,6 +53,7 @@ Then read the affected surface owner from `_docs/00-docs-map.md`, with `_docs/02
 - Reuse `PageShell`, `DocPageShell`, `DocSection`, shared header, and shared footer.
 - Every indexable page needs a canonical URL, contextual Open Graph metadata, contextual Twitter metadata, and `index,follow` robots directives.
 - Keep `/library` noindex and outside public discovery.
+- Route blog.yen.chat only in `proxy.ts` (`lib/http/blog-host.ts`); a `next.config.ts` host rewrite would serve the static blog pages a nonce CSP and break hydration ([_docs/10-gtm.md](_docs/10-gtm.md#blog-blogyenchat)).
 - Regenerate release notes with `bun scripts/gen-release-notes.ts` after editing release copy or version history.
 - Run `bun run seo:source-check` after changing public comparison claims.
 - Verify public pages at desktop and mobile widths in a real browser.

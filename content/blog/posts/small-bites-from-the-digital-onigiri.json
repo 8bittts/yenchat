@@ -1,0 +1,14 @@
+{
+	"slug": "small-bites-from-the-digital-onigiri",
+	"postId": "184784699",
+	"title": "Small Bites from the Digital Onigiri",
+	"subtitle": "Get updates on YEN's progress directly from the source",
+	"publishedAt": "2026-01-16T17:45:36.105Z",
+	"coverImage": {
+		"src": "/blog-media/images/117adfe5-817d-404f-95f9-d2f3eadbf88b_1024x1024.w1456.webp",
+		"width": 1024,
+		"height": 1024
+	},
+	"wordCount": 104,
+	"html": "<p>Hello!</p><p>I’m <a href=\"https://twitter.com/8bit\" target=\"_blank\" rel=\"noopener noreferrer\">8</a>, the only full-time engineer working on <a href=\"https://yen.chat\" target=\"_blank\" rel=\"noopener noreferrer\">YEN</a>, a modern Terminal App for macOS! </p><p>It’s quite a lot and in an effort to keep things simple I started this Substack to keep our small community updated with progress, feature releases, and more.</p><p>You can also get <a href=\"https://github.com/8bittts/yen-chat\" target=\"_blank\" rel=\"noopener noreferrer\">community support here</a> as well!</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/117adfe5-817d-404f-95f9-d2f3eadbf88b_1024x1024.w1456.webp\"><img src=\"/blog-media/images/117adfe5-817d-404f-95f9-d2f3eadbf88b_1024x1024.w1456.webp\" srcset=\"/blog-media/images/117adfe5-817d-404f-95f9-d2f3eadbf88b_1024x1024.w848.webp 848w, /blog-media/images/117adfe5-817d-404f-95f9-d2f3eadbf88b_1024x1024.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1024\" height=\"1024\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a><figcaption>One of the original logos for this publication. So cute!</figcaption></figure><h2 id=\"what-i-really-want-and-need\">What I Really Want and Need</h2><p>What I want more than anything else is <strong>feedback on the product</strong> so please feel free to leave thoughts and suggestions here (via comments) or in <a href=\"https://github.com/8bittts/yen-chat\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>!</p><p>Or you can check out the <a href=\"/\">chat feature</a> as well. Appreciate the support!</p><p>— 8</p>"
+}

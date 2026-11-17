@@ -1,0 +1,14 @@
+{
+	"slug": "a-community-chat-inside-a-terminal",
+	"postId": "187706832",
+	"title": "A Community Chat Inside a Terminal?",
+	"subtitle": "The first of it's kind? A Terminal Social Network? It's in the Emulator.",
+	"publishedAt": "2026-02-16T12:24:52.997Z",
+	"coverImage": {
+		"src": "/blog-media/images/3926e241-4290-48bc-82ec-2abf02f4852e_1640x1304.w1456.webp",
+		"width": 1200,
+		"height": 954
+	},
+	"wordCount": 279,
+	"html": "<p>Hey folks!</p><p>I shipped something a bit unusual this month: A <strong>global chat room</strong> built directly into YEN. Type <strong>chat</strong> in your terminal, and you’re in a shared room with other YEN users.</p><p>No browser tab. No Electron sidebar. No account. Just a TUI that connects you to other people who use the same terminal.</p><p>Here’s why I built it, and the engineering decisions behind it.</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/3926e241-4290-48bc-82ec-2abf02f4852e_1640x1304.w1456.webp\"><img src=\"/blog-media/images/3926e241-4290-48bc-82ec-2abf02f4852e_1640x1304.w1456.webp\" srcset=\"/blog-media/images/3926e241-4290-48bc-82ec-2abf02f4852e_1640x1304.w848.webp 848w, /blog-media/images/3926e241-4290-48bc-82ec-2abf02f4852e_1640x1304.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1200\" height=\"954\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><h3 id=\"why-put-chat-in-a-terminal\">Why Put Chat in a Terminal?</h3><p>Every terminal user already has Slack, Discord, and a dozen other chat apps open. Why add another one?</p><p>Because none of those are <em>in the terminal</em>. In fact, this might be a real “world first\" type of thing! I’m a bit chuffed about it actually.</p><p>But what I really wanted was a direct line of communication to our early users. In other words, <strong>product feedback</strong>. If I’m debugging something and want to ask a quick question, I have to context-switch to a browser or a separate app. </p><p>The friction is small, but it adds up. I wanted something that felt as native as <strong>git log</strong> or <strong>man</strong> — a command, not an application.</p><p>The goal was simple: type “<strong>chat</strong>”, say something, type <strong>/q</strong>, get back to work. Under 2 seconds of overhead.</p><h3 id=\"four-rooms-no-configuration\">Four Rooms, No Configuration</h3><p>There are four hardcoded rooms: Lounge, Feedback, Show &amp; Tell, and Support. Press <strong>Tab</strong> to switch between them, or <strong>use arrow keys</strong> when your input is empty.</p><p>I will definitely think about extending this and perhaps even letting users create their own rooms but I’m not entirely sure how I want to do that so feedback is definitely welcome! Put it in the chat!</p><p>Oh, and don’t forget to set your <strong>handle</strong>; just type <strong>/h</strong> and pick one. I’ll see you online.</p><p>— 8</p>"
+}

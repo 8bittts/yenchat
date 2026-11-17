@@ -7,6 +7,11 @@ import {
 	STATIC_INLINE_SCRIPT_HASHES,
 } from "@/lib/csp/generated-inline-script-hashes";
 import { buildCSP } from "@/lib/csp/policy";
+import {
+	BLOG_HOST,
+	blogUrlForMainHostPath,
+	routeBlogHostPath,
+} from "@/lib/http/blog-host";
 import { resolveRequestHostSignals } from "@/lib/http/request-host";
 
 export { buildCSP } from "@/lib/csp/policy";
@@ -18,6 +23,7 @@ const HEADER_BYPASS_PREFIXES = [
 	"/favicons",
 	"/doc-images",
 	"/mascot",
+	"/blog-media",
 	"/stable",
 ];
 
@@ -62,6 +68,7 @@ function continueWithCSP(
 	request: NextRequest,
 	csp: string,
 	nonce?: string,
+	rewritePathname?: string,
 ): NextResponse {
 	const requestHeaders = new Headers(request.headers);
 	requestHeaders.set("Content-Security-Policy", csp);
@@ -71,11 +78,15 @@ function continueWithCSP(
 		requestHeaders.delete("x-nonce");
 	}
 
-	const response = NextResponse.next({
-		request: {
-			headers: requestHeaders,
-		},
-	});
+	const init = { request: { headers: requestHeaders } };
+	let response: NextResponse;
+	if (rewritePathname) {
+		const rewriteUrl = request.nextUrl.clone();
+		rewriteUrl.pathname = rewritePathname;
+		response = NextResponse.rewrite(rewriteUrl, init);
+	} else {
+		response = NextResponse.next(init);
+	}
 	response.headers.set("Content-Security-Policy", csp);
 	if (nonce) {
 		response.headers.set("x-nonce", nonce);
@@ -102,6 +113,55 @@ function shouldBypassSecurityHeaders(pathname: string): boolean {
 	return HEADER_BYPASS_PREFIXES.some((prefix) =>
 		matchesExactOrChildPath(pathname, prefix),
 	);
+}
+
+/**
+ * Serves `pathname` with its route's CSP: exact static hashes for a prerendered
+ * route, otherwise a fresh nonce. `rewritePathname` renders another route at
+ * this address (blog.yen.chat/<slug> renders /blog/<slug>).
+ */
+function serveWithCSP(
+	request: NextRequest,
+	pathname: string,
+	rewritePathname?: string,
+): NextResponse {
+	const isDevelopment = process.env.NODE_ENV === "development";
+	const staticHashes = isDevelopment
+		? undefined
+		: STATIC_INLINE_SCRIPT_HASHES[pathname];
+	if (staticHashes) {
+		const csp = buildCSP(
+			undefined,
+			uniqueHashes(staticHashes, ERROR_INLINE_SCRIPT_HASHES),
+		);
+		return continueWithCSP(request, csp, undefined, rewritePathname);
+	}
+	const nonce = isDevelopment
+		? DEVELOPMENT_CSP_NONCE
+		: btoa(crypto.randomUUID());
+	const csp = buildCSP(
+		nonce,
+		uniqueHashes(DYNAMIC_ROOT_INLINE_SCRIPT_HASHES, ERROR_INLINE_SCRIPT_HASHES),
+		isDevelopment,
+	);
+	return continueWithCSP(request, csp, nonce, rewritePathname);
+}
+
+/** blog.yen.chat requests; `null` means a shared asset the normal path serves. */
+function routeBlogHost(request: NextRequest): NextResponse | null {
+	const route = routeBlogHostPath(request.nextUrl.pathname);
+	if (route.kind === "redirect") {
+		return NextResponse.redirect(`${route.url}${request.nextUrl.search}`, 308);
+	}
+	if (route.kind === "file") {
+		const rewriteUrl = request.nextUrl.clone();
+		rewriteUrl.pathname = route.pathname;
+		return NextResponse.rewrite(rewriteUrl);
+	}
+	if (route.kind === "page") {
+		return serveWithCSP(request, route.pathname, route.pathname);
+	}
+	return null;
 }
 
 export function proxy(request: NextRequest) {
@@ -136,6 +196,18 @@ export function proxy(request: NextRequest) {
 		return NextResponse.redirect(canonicalUrl, 308);
 	}
 
+	if (host === BLOG_HOST) {
+		const blogResponse = routeBlogHost(request);
+		if (blogResponse) {
+			return blogResponse;
+		}
+	} else if (host === "yen.chat") {
+		const blogUrl = blogUrlForMainHostPath(pathname);
+		if (blogUrl) {
+			return NextResponse.redirect(`${blogUrl}${request.nextUrl.search}`, 308);
+		}
+	}
+
 	const canonicalStaticPath = findCanonicalStaticPath(pathname);
 	if (canonicalStaticPath && canonicalStaticPath !== pathname) {
 		const canonicalUrl = new URL(request.url);
@@ -146,26 +218,7 @@ export function proxy(request: NextRequest) {
 		return NextResponse.next();
 	}
 
-	const isDevelopment = process.env.NODE_ENV === "development";
-	const staticHashes = isDevelopment
-		? undefined
-		: STATIC_INLINE_SCRIPT_HASHES[pathname];
-	if (staticHashes) {
-		const csp = buildCSP(
-			undefined,
-			uniqueHashes(staticHashes, ERROR_INLINE_SCRIPT_HASHES),
-		);
-		return continueWithCSP(request, csp);
-	}
-	const nonce = isDevelopment
-		? DEVELOPMENT_CSP_NONCE
-		: btoa(crypto.randomUUID());
-	const csp = buildCSP(
-		nonce,
-		uniqueHashes(DYNAMIC_ROOT_INLINE_SCRIPT_HASHES, ERROR_INLINE_SCRIPT_HASHES),
-		isDevelopment,
-	);
-	return continueWithCSP(request, csp, nonce);
+	return serveWithCSP(request, pathname);
 }
 
 export const config = {

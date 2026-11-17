@@ -11,13 +11,14 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - `lib/seo.ts` (`PUBLIC_PAGE_SEO`), `app/sitemap.ts`, `app/robots.ts`, `app/manifest.ts` — metadata and discovery.
 - `lib/library/public-pages.ts` — PSEO registry and eligibility; `lib/library/seo-inventory.ts` — the `/library` view model.
 - `proxy.ts` and `scripts/44-build-web-csp.ts` — host validation and CSP.
+- `lib/blog.ts`, `lib/http/blog-host.ts`, `app/blog/`, `content/blog/` and `public/blog-media/` — blog.yen.chat ([Blog](#blog-blogyenchat)).
 - `app/release/release-notes-copy.ts` — curated release prose; `app/release/release-notes-data.ts` is generated.
 
 ## Public Accuracy and Legal Copy
 
 [CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
 
-- Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, Cloudflare DNS. Never claim "no third parties".
+- Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS. Never claim "no third parties".
 - Shared chrome: header links are Docs and @yenFTW only; footer brand links are Onigiri (blog), Music (`/tunes`), Bitcoin Email (`https://btc.email`, new tab), and JP the Cat (`https://jpthecat.com`, new tab). Footer legal is Terms only (`/terms`, combined privacy and cookie policy; `/privacy` redirects). `/release` stays out of header and footer.
 - Downloads are GitHub Release assets; `/download` redirects to the current DMG and records nothing.
 - Public counts come from manifests or scripts (the curated theme manifest for themes), never from old copy; never advertise retired custom sounds or sound packs.
@@ -42,6 +43,19 @@ It reuses `DocPageShell`, `DocNav` and `DocSection` exactly like `/terms`, stays
 - Keep the hero download CTA, the closing "Ready to try it?" section and every `Download for macOS` → `/download` link.
 - After editing either copy layer, run the generator and `bun run build`, confirm no unused keys, and ship the data and CSP hashes in a `[deploy]` commit.
 
+## Blog (blog.yen.chat)
+
+blog.yen.chat is the self-hosted Digital Onigiri blog; Substack no longer serves it.
+The 53 posts imported from the Substack export live in `content/blog/posts/<slug>.json`, and their media in `public/blog-media/`, served same-origin.
+`scripts/47-import-substack-blog.ts` wrote both: it sanitizes each body to a small HTML subset, maps Substack post links to `/<slug>`, drops subscribe widgets, keeps the 848px and 1456px webp copies Substack served (GIFs and videos as originals), and fails closed on an unknown component, link or media type.
+
+- Routing lives in `proxy.ts` through `lib/http/blog-host.ts`, never in a `next.config.ts` host rewrite. The proxy picks a page's static CSP by path before rewrites run, so only the proxy can give `blog.yen.chat/<slug>` the hashes of the prerendered `/blog/<slug>`.
+- On blog.yen.chat, `/` and `/<slug>` render `app/blog/`; `/feed`, `/sitemap.xml` and `/robots.txt` are the blog's own route handlers; `/p/<slug>` and a trailing slash 308 to `/<slug>`; Substack-only pages 308 to `/`; and every other page path 308s to yen.chat.
+- On yen.chat, `/blog` and `/blog/<path>` 308 to blog.yen.chat; previews and local development still render `/blog` directly.
+- Local `next dev` and `next start` rewrite the request host to `localhost`, so host routing is proven by `tests/159-blog-host-routing.test.ts` and on the deployed domain, never by a local Host header.
+- `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, pins the archive at 53 posts, and fails if a post references media missing from `public/blog-media/`.
+- A new post is a new `content/blog/posts/<slug>.json` in the same shape plus its slug in `slugs.json`, with its media under `public/blog-media/`.
+
 ## Content Voice
 
 Applies to marketing, blog posts, social posts and public docs.
@@ -55,7 +69,7 @@ YEN is a solo-developer product written in the first person ("I built", never "w
 
 | Channel | Style |
 |---------|-------|
-| Blog (Substack) | Long-form, personal, technical; "Hey folks!" and a "— 8" sign-off |
+| Blog (blog.yen.chat) | Long-form, personal, technical; "Hey folks!" and a "— 8" sign-off |
 | Social | One insight per post, code welcome |
 | Public docs | Clear, scannable, accurate over promotional |
 | `/release` | The weekly story rules above |

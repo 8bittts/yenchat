@@ -43,6 +43,7 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 | `yen-terminal/customizations/dmg-resources/README.md`                 | DMG background art; the layout rules are in `05-infrastructure.md`                               |
 | `yen-terminal/archive/gui-settings-2025-12/README.md`                 | Archived GUI Settings code; not documentation                                                    |
 | `_docs/_design/`                                                      | Design assets, indexed by `00-foundation.md`; not documentation                                  |
+| `content/blog/`                                                       | The published blog.yen.chat posts and proxy slug index ([10-gtm.md](10-gtm.md#blog-blogyenchat)) |
 | `8leeai/_global/` (separate repo)                                     | Operator configuration backups; its `README.md` owns the mappings                                |
 
 ## Authority order

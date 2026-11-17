@@ -1,0 +1,14 @@
+{
+	"slug": "a-terminal-that-remembers-your-layout",
+	"postId": "187582568",
+	"title": "A Terminal That Remembers Your Layout",
+	"subtitle": "Save your split layout and get it back on every launch. So much wow.",
+	"publishedAt": "2026-02-11T02:41:41.395Z",
+	"coverImage": {
+		"src": "/blog-media/images/12160af2-05a7-4642-8474-0a8b78eac9ac_1258x546.w1456.webp",
+		"width": 1258,
+		"height": 546
+	},
+	"wordCount": 202,
+	"html": "<p>Hey folks!</p><p>I split my terminal the same way every morning. Old habits die hard:</p><ul><li><p>Left pane: File viewer and directory. </p></li><li><p>Right pane: Dev server and git log. </p></li><li><p>Top-right: Community chat. </p></li><li><p>Bottom-left: Vim editor, active coding session.</p></li></ul><p>You know the drill. Every single day. Open YEN Terminal. Cmd + Shift + D. Then Cmd + D. Then Cmd + Shift + D again. Navigate to the right directories, start working.</p><p>Rinse. Repeat. Again and again and again and again.</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/12160af2-05a7-4642-8474-0a8b78eac9ac_1258x546.w1456.webp\"><img src=\"/blog-media/images/12160af2-05a7-4642-8474-0a8b78eac9ac_1258x546.w1456.webp\" srcset=\"/blog-media/images/12160af2-05a7-4642-8474-0a8b78eac9ac_1258x546.w848.webp 848w, /blog-media/images/12160af2-05a7-4642-8474-0a8b78eac9ac_1258x546.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1258\" height=\"546\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><p>That’s maybe 15 seconds. 10 if I don’t mess it up. Multiply by 260 working days and you get an hour a year of arranging rectangles. Not tragic, but dumb. The computer should remember this. </p><p>Seriously.</p><p>And… now it does. Or, I finally built it into my favorite Terminal with a “<strong>Save Layout as Default</strong>” which snapshots your current split tree so that the next time I launch — or click the dock icon — my layout returns.</p><p>Same splits, same ratios, same working directories. </p><video class=\"blog-video\" src=\"/blog-media/videos/4a348815-cab4-4817-999e-ad377448cf10.mp4\" controls=\"\" preload=\"metadata\" playsinline=\"\"></video><p>Magic.</p><p>Oh! And yes, you can also edit the JSON file directly in <strong>default-layout.json</strong> and no, I won’t judge you for hand-tuning your split ratios to exactly <strong>0.618</strong> as the golden ratio is a valid terminal layout strategy as far as I’m concerned.</p><p>You do you.</p><p>— 8</p>"
+}

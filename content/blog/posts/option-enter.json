@@ -1,0 +1,14 @@
+{
+	"slug": "option-enter",
+	"postId": "188101877",
+	"title": "Option + Enter Should Just Work",
+	"subtitle": "The tiniest fix that drove me the most insane",
+	"publishedAt": "2026-02-17T19:32:03.297Z",
+	"coverImage": {
+		"src": "/blog-media/images/7ead07d8-7e89-4ed1-b46d-565d662093f0_932x528.w1456.webp",
+		"width": 932,
+		"height": 528
+	},
+	"wordCount": 178,
+	"html": "<p>Hey folks!</p><p>This is a short one. But I need to get it off my chest.</p><p>Press <strong>Option + Enter</strong> in your terminal. Go ahead, try it. If you are using most terminals, you get a normal newline. Your shell runs the command or drops to the next line. Life is good.</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/7ead07d8-7e89-4ed1-b46d-565d662093f0_932x528.w1456.webp\"><img src=\"/blog-media/images/7ead07d8-7e89-4ed1-b46d-565d662093f0_932x528.w1456.webp\" srcset=\"/blog-media/images/7ead07d8-7e89-4ed1-b46d-565d662093f0_932x528.w848.webp 848w, /blog-media/images/7ead07d8-7e89-4ed1-b46d-565d662093f0_932x528.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"932\" height=\"528\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><h3 id=\"what-is-happening\"><strong>What Is Happening</strong></h3><p>The xterm <strong>modifyOtherKeys</strong> protocol is a way for terminals to tell applications “Hey, the user pressed Option along with this key.” It encodes the modifier and the keycode into an escape sequence:</p><pre><code>\\x1b[27;2;13~</code></pre><p>That is: Escape, CSI, key event 27, modifier 2 (Shift), keycode 13 (Enter), terminator. A perfectly valid terminal protocol sequence.</p><p>The problem is that your shell does not care.</p><p>Zsh does not parse <strong>modifyOtherKeys</strong> sequences for Enter. Bash does not either. Fish does not. Nushell does not. They see <strong>\\x1b[27;2;13~</strong> and go “that is not a keybinding I recognize” and print the tail end as literal text.</p><p>Sadness. Every. Single. Time.</p><p>Now, we don’t have a sadness and that’s a great thing. That is it. That is the entire blog post. <strong>Option + Enter</strong> sends Enter. As God intended.</p><p>— 8</p>"
+}

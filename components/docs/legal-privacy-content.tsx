@@ -53,7 +53,7 @@ export function LegalPrivacyContent() {
 				</div>
 			</DocSection>
 
-			<DocSection id="website" title="Website (yen.chat)">
+			<DocSection id="website" title="Website (yen.chat and blog.yen.chat)">
 				<p className="text-body-sm text-text-muted mb-3">
 					The YEN website uses:
 				</p>
@@ -75,6 +75,12 @@ export function LegalPrivacyContent() {
 						to the current release on GitHub. YEN does not record the request.
 						GitHub serves the file and processes the request under its own
 						privacy terms.
+					</li>
+					<li>
+						<strong className="text-text-primary">Embedded videos</strong> —
+						pages with a video load YouTube&apos;s privacy-enhanced player from
+						youtube-nocookie.com. YouTube receives your IP address and browser
+						details when the player loads.
 					</li>
 				</ul>
 				<p className="text-body-sm text-text-muted">
@@ -147,7 +153,7 @@ export function LegalPrivacyContent() {
 					<li>
 						<code className="inline-code-brand">Vercel</code> — Next.js app
 						hosting, edge delivery, Web Analytics, and Speed Insights for
-						yen.chat.
+						yen.chat and blog.yen.chat.
 					</li>
 					<li>
 						<code className="inline-code-brand">GitHub</code> — hosts the YEN

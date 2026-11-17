@@ -1,0 +1,14 @@
+{
+	"slug": "save-screenshots-in-your-terminal",
+	"postId": "187603244",
+	"title": "Save Screenshots in Your Terminal",
+	"subtitle": "YEN respects your macOS screenshot file location and name preferences.",
+	"publishedAt": "2026-02-11T17:25:18.742Z",
+	"coverImage": {
+		"src": "/blog-media/images/71c0c910-fc5a-42ee-ac27-17d64d792ee3_930x362.w1456.webp",
+		"width": 1200,
+		"height": 467
+	},
+	"wordCount": 261,
+	"html": "<p>Hey folks!</p><p>New shortcut: <strong>Cmd + Shift + S</strong> saves a screenshot of your terminal window to a file and copies it to your clipboard. One keystroke, two outputs.</p><p>Yup, that’s it. Magic. A much needed upgrade for folks who love to do just that.</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/71c0c910-fc5a-42ee-ac27-17d64d792ee3_930x362.w1456.webp\"><img src=\"/blog-media/images/71c0c910-fc5a-42ee-ac27-17d64d792ee3_930x362.w1456.webp\" srcset=\"/blog-media/images/71c0c910-fc5a-42ee-ac27-17d64d792ee3_930x362.w848.webp 848w, /blog-media/images/71c0c910-fc5a-42ee-ac27-17d64d792ee3_930x362.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1200\" height=\"467\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><h3 id=\"the-problem-was-always-the-same\">The Problem Was Always the Same</h3><p>You want to share what’s in your terminal. A build error. A clean test run. A particularly satisfying <strong>git log</strong> or AI chat log. I know I do.</p><p>Your current options <strong>before</strong> YEN:</p><ol><li><p>Cmd + Shift + 4 — macOS screenshot tool. Draw a rectangle. Accidentally clip the edge. Redo it. Get it right. File lands on your Desktop. You still need to copy it to paste somewhere.</p></li><li><p>Cmd + Shift + 5 — The recording toolbar appears. You dismiss it. You wanted a screenshot, not a production.</p></li><li><p>Copy as Text — Loses all formatting, colors, and context. A green test suite and a red failure look identical in plain text.</p></li></ol><p>None of these are wrong. They’re just not built for a terminal. You’re using general-purpose tools for a specific job. Now, with YEN you get one shortcut, two outputs:</p><ol><li><p>Press <strong>CMD + Shift + S</strong> in YEN. That’s it.</p></li><li><p>Screenshot saves to your configured location (Desktop by default).</p></li><li><p>PNG copy goes to clipboard immediately.</p></li><li><p>A satisfying “<strong>Screenshot Saved</strong>” notification appears in YEN (seen above).</p></li></ol><p>Paste into Slack, Discord, a GitHub issue, an email. The image is already on your clipboard. The file is already on disk if you need it later. So quick. So fast. Speed!</p><p>If you haven’t tried it, give it a go! Let me know how it works for you.</p><p>— 8</p>"
+}

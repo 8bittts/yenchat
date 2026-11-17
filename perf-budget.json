@@ -20,6 +20,14 @@
 			"maxJsBytes": 525312,
 			"rendering": "static"
 		},
+		"/blog": {
+			"maxJsBytes": 531456,
+			"rendering": "static"
+		},
+		"/blog/[slug]": {
+			"maxJsBytes": 531456,
+			"rendering": "static"
+		},
 		"/docs": {
 			"maxJsBytes": 532480,
 			"rendering": "static"

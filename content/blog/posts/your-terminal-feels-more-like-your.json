@@ -1,0 +1,14 @@
+{
+	"slug": "your-terminal-feels-more-like-your",
+	"postId": "192262123",
+	"title": "Your Terminal Feels More Like Your World",
+	"subtitle": "Background images are here and that's it, that's the announce.",
+	"publishedAt": "2026-03-26T23:28:31.676Z",
+	"coverImage": {
+		"src": "/blog-media/images/205ee187-441c-46bd-8c41-69db01fa888d_2120x1584.w1456.webp",
+		"width": 1456,
+		"height": 1088
+	},
+	"wordCount": 91,
+	"html": "<p>Hey folks! </p><p>I built a background image upload that just makes it feel more like your own personal space. It’s available directly via the Settings Panel and there you go, magic.</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/205ee187-441c-46bd-8c41-69db01fa888d_2120x1584.w1456.webp\"><img src=\"/blog-media/images/205ee187-441c-46bd-8c41-69db01fa888d_2120x1584.w1456.webp\" srcset=\"/blog-media/images/205ee187-441c-46bd-8c41-69db01fa888d_2120x1584.w848.webp 848w, /blog-media/images/205ee187-441c-46bd-8c41-69db01fa888d_2120x1584.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1456\" height=\"1088\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><p>It’s stored locally in Application Support and is repeated through splits:</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/7a2c081d-046d-4910-a94d-5260ca806e54_3640x2298.w1456.webp\"><img src=\"/blog-media/images/7a2c081d-046d-4910-a94d-5260ca806e54_3640x2298.w1456.webp\" srcset=\"/blog-media/images/7a2c081d-046d-4910-a94d-5260ca806e54_3640x2298.w848.webp 848w, /blog-media/images/7a2c081d-046d-4910-a94d-5260ca806e54_3640x2298.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1456\" height=\"919\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><p>The Buster Sword is the GOAT:</p><figure class=\"blog-figure\"><a href=\"/blog-media/images/7de6d703-0fd2-49bc-9c41-b4549343881b_3640x2298.w1456.webp\"><img src=\"/blog-media/images/7de6d703-0fd2-49bc-9c41-b4549343881b_3640x2298.w1456.webp\" srcset=\"/blog-media/images/7de6d703-0fd2-49bc-9c41-b4549343881b_3640x2298.w848.webp 848w, /blog-media/images/7de6d703-0fd2-49bc-9c41-b4549343881b_3640x2298.w1456.webp 1456w\" sizes=\"(min-width: 768px) 768px, 100vw\" width=\"1456\" height=\"919\" alt=\"\" loading=\"lazy\" decoding=\"async\"></a></figure><p>Have fun with it! There’s also a setting I’m building which will make it either work in each and every splits — repeating, of course&nbsp;— or to just be a single background across all splits. I’ll have that posted in the next release soon.</p><p>— 8</p>"
+}

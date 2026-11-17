@@ -662,6 +662,89 @@
 		white-space: pre;
 	}
 
+	/* ---------------------------------------------------------------------------
+	   Blog prose (blog.yen.chat): imported post HTML styled with the tokens above
+	   --------------------------------------------------------------------------- */
+
+	.blog-prose {
+		color: hsl(var(--text-body));
+		@apply leading-relaxed space-y-5 min-w-0;
+	}
+
+	.blog-prose h2 {
+		color: hsl(var(--text-primary));
+		@apply text-xl md:text-2xl font-bold pt-4 scroll-mt-[var(--header-height)];
+	}
+
+	.blog-prose h3,
+	.blog-prose h4,
+	.blog-prose h5,
+	.blog-prose h6 {
+		color: hsl(var(--text-primary));
+		@apply text-base md:text-lg font-bold pt-2 scroll-mt-[var(--header-height)];
+	}
+
+	.blog-prose strong {
+		color: hsl(var(--text-primary));
+	}
+
+	.blog-prose a {
+		color: hsl(var(--brand-dark));
+		@apply underline underline-offset-4;
+	}
+
+	.blog-prose ul {
+		@apply list-disc pl-6 space-y-2;
+	}
+
+	.blog-prose ol {
+		@apply list-decimal pl-6 space-y-2;
+	}
+
+	.blog-prose blockquote {
+		border-color: hsl(var(--border));
+		@apply border-l-4 pl-4 space-y-3;
+	}
+
+	.blog-prose hr {
+		border-color: hsl(var(--border));
+	}
+
+	.blog-prose code {
+		@apply px-1.5 py-0.5 rounded-md font-mono text-sm;
+		background-color: hsl(var(--brand) / 0.1);
+		color: hsl(var(--text-primary));
+		overflow-wrap: break-word;
+	}
+
+	.blog-prose pre {
+		@apply rounded-lg border p-4 overflow-x-auto text-sm;
+		border-color: hsl(var(--border));
+		background-color: hsl(var(--card-content));
+	}
+
+	.blog-prose pre code {
+		@apply p-0;
+		background-color: transparent;
+		overflow-wrap: normal;
+	}
+
+	.blog-prose figure img,
+	.blog-prose blockquote img,
+	.blog-prose video {
+		@apply block w-full h-auto rounded-lg border;
+		border-color: hsl(var(--border));
+	}
+
+	.blog-prose figcaption {
+		color: hsl(var(--text-muted));
+		@apply text-sm mt-3;
+	}
+
+	.blog-prose .blog-embed iframe {
+		@apply block w-full aspect-video rounded-lg border-0;
+	}
+
 	/* Ensure brand color in pre blocks */
 	pre .text-brand {
 		color: hsl(var(--brand));

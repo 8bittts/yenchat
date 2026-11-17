@@ -296,6 +296,7 @@ The rules for changing a value are in [AGENTS.md](../AGENTS.md#infisical).
 - Bun and Node are pinned the way the fleet stack table says (`8leeai/_docs/13-starter-kit.md` → Web stack).
 - `vercel env pull` returns `[Sensitive]` for every `Secret`-type variable; Infisical `prod` holds the readable copy.
 - Functions read the env snapshot of their deployment: a new or rotated variable takes effect only after the next `[deploy]` build.
+- blog.yen.chat is a domain on the same Vercel project; its Cloudflare record is a DNS-only CNAME to the target Vercel assigns, so Vercel terminates TLS. `proxy.ts` routes it ([10-gtm.md](10-gtm.md#blog-blogyenchat)).
 
 ### Retired Names
 
@@ -320,4 +321,5 @@ Web, SEO, PSEO and legal changes ship separately from `/yen-zip`:
 [HARD REQUIREMENT] Never delete a `public/` asset because nothing references it.
 `public/mascot/` and `public/doc-images/` are kept as backup material; a sweep may report unreferenced media, but removal is the operator's call.
 Keep the `public/mascot/*.mp4` entry in `outputFileTracingExcludes` and `/mascot` in `HEADER_BYPASS_PREFIXES`; they keep that media out of the serverless bundle.
+`public/blog-media/` holds every blog.yen.chat image and video, has the same tracing exclude and bypass entry, and is rewritten only by `scripts/47-import-substack-blog.ts` ([10-gtm.md](10-gtm.md#blog-blogyenchat)).
 `public/yeni/yeni-canonical-front.png` is referenced as the `/yeni` social card.
