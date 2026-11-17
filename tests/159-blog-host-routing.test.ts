@@ -130,6 +130,20 @@ describe("proxy on blog.yen.chat", () => {
 		expect(docs.headers.get("location")).toBe("https://yen.chat/docs");
 	});
 
+	test("answers router fetches of site links without a cross-origin redirect", () => {
+		const prefetch = proxy(
+			new NextRequest("https://blog.yen.chat/docs", {
+				headers: {
+					host: "blog.yen.chat",
+					rsc: "1",
+					"next-router-prefetch": "1",
+				},
+			}),
+		);
+		expect(prefetch.status).toBe(204);
+		expect(prefetch.headers.get("location")).toBeNull();
+	});
+
 	test("moves yen.chat/blog/<slug> to blog.yen.chat", () => {
 		const response = proxy(request("https://yen.chat/blog/skills"));
 		expect(response.status).toBe(308);

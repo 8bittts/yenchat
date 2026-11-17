@@ -151,6 +151,13 @@ function serveWithCSP(
 function routeBlogHost(request: NextRequest): NextResponse | null {
 	const route = routeBlogHostPath(request.nextUrl.pathname);
 	if (route.kind === "redirect") {
+		// A router fetch (prefetch or client navigation) of a shared header or
+		// footer link such as /docs cannot follow a cross-origin redirect: CSP
+		// connect-src blocks it. An empty non-RSC answer makes the router skip
+		// the prefetch and fall back to a full navigation, which gets the 308.
+		if (request.headers.get("rsc") === "1") {
+			return new NextResponse(null, { status: 204 });
+		}
 		return NextResponse.redirect(`${route.url}${request.nextUrl.search}`, 308);
 	}
 	if (route.kind === "file") {
