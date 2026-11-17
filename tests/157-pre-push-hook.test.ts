@@ -4,12 +4,15 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	realpathSync,
 	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+const setupHooksPath = resolve(import.meta.dir, "../scripts/setup-hooks.ts");
 
 const hookPath = resolve(import.meta.dir, "../.githooks/pre-push");
 const hookSource = readFileSync(hookPath, "utf8");
@@ -99,5 +102,22 @@ describe("pre-push hook", () => {
 			0,
 		);
 		expect(runHook(publicRepo, privateRoot, ZERO).status).toBe(0);
+	});
+
+	test("setup points every worktree at the main checkout's hooks", () => {
+		const { repo } = repoWithCommits("hooks-main", 1);
+		const worktree = join(dir, "hooks-worktree");
+		git(repo, ["worktree", "add", "-q", "--detach", worktree]);
+		const result = spawnSync(process.execPath, [setupHooksPath], {
+			cwd: worktree,
+			encoding: "utf8",
+			env: gitEnv(),
+		});
+		expect(result.status, result.stderr).toBe(0);
+		const mainHooks = join(realpathSync(repo), ".githooks");
+		expect(git(worktree, ["config", "--get", "core.hooksPath"])).toBe(
+			mainHooks,
+		);
+		expect(git(worktree, ["rev-parse", "--git-path", "hooks"])).toBe(mainHooks);
 	});
 });
