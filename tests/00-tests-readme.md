@@ -46,5 +46,5 @@ The harness deletes those directories after each test and tears down any process
 `tests/146-ide-temp-harness.test.ts` fails the suite if an ide test file goes back to raw `mkdtemp`.
 
 A test process never holds a live provider credential.
-`bun test` skips `.env.local` but inherits the shell, and the operator shell exports `RESEND_API_KEY`; `tests/01-preload.ts` strips every credential-shaped variable before any file loads, and `tests/158-credential-strip.test.ts` asserts that strip.
+`bun test` skips `.env.local` but inherits the shell, and the operator shell exports `RESEND_API_KEY`; `tests/01-preload.ts` strips every credential-shaped variable before any file loads, and `tests/160-credential-strip.test.ts` asserts that strip.
 A test that needs a provider injects a fake client, and a test whose behavior depends on `new Date()` pins the clock with `setSystemTime` — guarding only the assertion still runs the side effect, which is how a Monday run once sent a real production email.

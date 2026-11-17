@@ -37,22 +37,11 @@ The theme path is fixed (`ThemePreviewCoordinator.restorePendingSelection`); the
 
 - [ ] Flush the pending real-time config sync before the re-read, with a visible-window regression test.
 
-### Retired environment names
-
-Owner doc: `_docs/05-infrastructure.md` → Environment Variables.
-
-- [ ] Delete each retired name listed in the owner doc from Infisical `prod` and Vercel production, because the sync never deletes; the web app reads none of them.
-- [ ] In the same change, make `scripts/46-scan-bundle-leaks.ts` pass when the deployment holds no credential at all, with a test, because it fails closed when no credential value resolves and would then fail every build.
-
 ### Third-party notices in the app bundle
 
 Owner doc: `_docs/04-security.md`.
 
 - [ ] Ship the MIT notices for Ghostty and the bundled tools inside `YEN.app`, because MIT requires the notice in every copy; reconcile it with the fingerprint gates, which reject the upstream name in the bundle.
-
-### Supabase retirement
-
-- [ ] After every installed YEN has had time to read the GitHub-hosted appcast, delete the `yenchat` Supabase project; it still holds the old `releases` bucket and the retired `public.downloads` table.
 
 ---
 ## WAIT-GATED

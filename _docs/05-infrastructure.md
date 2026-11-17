@@ -287,22 +287,21 @@ The x86_64 compile gate is stricter than arm64 Debug:
 ## Environment Variables
 
 The web app reads no environment variable beyond `NODE_ENV`; contributors need no secrets to run `bun run dev`.
-Maintainer values live in Infisical (this project's `dev` and `prod`), a gitignored `.env.local`, and Vercel Production, which the Infisical auto-sync fills as Sensitive variables.
-This file holds names and reasons only, never a value.
+The Vercel project holds no environment variable, and the project's Infisical `dev` and `prod` hold no web key; a stale gitignored `.env.local` is harmless because nothing reads it.
+Add a variable only with the code that reads it, through Infisical, which auto-syncs to Vercel Production as a Sensitive variable; this file then lists its name and reason, never a value.
 The rules for changing a value are in [AGENTS.md](../AGENTS.md#infisical).
 
 ### Vercel Behavior
 
 - Bun and Node are pinned the way the fleet stack table says (`8leeai/_docs/13-starter-kit.md` → Web stack).
-- `vercel env pull` returns `[Sensitive]` for every `Secret`-type variable; Infisical `prod` holds the readable copy.
 - Functions read the env snapshot of their deployment: a new or rotated variable takes effect only after the next `[deploy]` build.
 - blog.yen.chat is a domain on the same Vercel project; its Cloudflare record is a DNS-only CNAME to the target Vercel assigns, so Vercel terminates TLS. `proxy.ts` routes it ([10-gtm.md](10-gtm.md#blog-blogyenchat)).
 
-### Retired Names
+### Bundle Secret Scan
 
-No code reads these names, which belonged to the removed download database, owner report, Search Console reader, and the retired web chat and admin surfaces:
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_API_SECRET_KEY`, `SUPABASE_DB_PASSWORD`, `RESEND_API_KEY`, `CRON_SECRET`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`, `GSC_SITE_URL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `INTERNAL_API_KEY`, `ENCRYPTION_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `OPENROUTER_API_KEY`, `CURSOR_API_KEY`, `SOCKET_API_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `CHAT_IMAGES_PUBLIC_BASE_URL`, and the `CLOUDFLARE_*` names.
-`scripts/46-scan-bundle-leaks.ts` keeps the credential names on its client-bundle scan list while any of them remains in an environment, and it fails closed when none resolves, so remove the scan's dependency on them in the same change that deletes the last one ([todos.md](todos.md) → Retired environment names).
+`scripts/46-scan-bundle-leaks.ts` fails closed when no credential value resolves.
+On Vercel it always has one: the project's OIDC federation is on, so every build carries `VERCEL_OIDC_TOKEN`, which the scan list includes.
+A contributor build with no credentials fails that last step by design, so `bun run build` is a maintainer gate (`CONTRIBUTING.md`).
 
 ## Public Web Release Practice
 

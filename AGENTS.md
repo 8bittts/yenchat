@@ -84,7 +84,7 @@ A `/yen-zip` vendor-phase Zig toolchain preflight failure means Ghostty raised `
 This project's Infisical id is `af507451-0829-4a0f-9362-91209db7f241` (slug `yenchat`); log in with `infisical login` (US cloud).
 Infisical is for maintainers only: the website reads no secrets, so contributors need none.
 Run `bun run dev:secrets` for local development; it injects Infisical `dev`, and plain `bun run dev` still reads a gitignored `.env.local`.
-Production secrets live in Infisical `prod` at `/`, and the `vercel-prod-yenchat` sync copies every change to Vercel production as a Sensitive variable; redeploy production to load it.
+Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` at `/`, and the `vercel-prod-yenchat` sync copies it to Vercel production as a Sensitive variable; redeploy production to load it.
 [`8leeai/_global/infisical.md`](https://github.com/8bittts/8leeai/blob/main/_global/infisical.md) owns the fleet rules: editing a synced key, retiring one, preview and development variables, and shared keys.
 
 ## Release

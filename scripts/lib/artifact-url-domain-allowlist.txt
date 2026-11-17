@@ -8,7 +8,6 @@
 
 # Primary YEN domains
 ^yen\.chat$
-^auth\.yen\.chat$
 
 # GitHub Releases origin used in release metadata
 ^github\.com$

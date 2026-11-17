@@ -17,6 +17,7 @@ Dates are the evidence in this doc; the owner docs carry none.
   Superlogical, the company Ghostty's creator started in July 2026, began public testing of its Rex terminal on 2026-10-05; it is free, funded, and built on the same engine.
 - 2026-11-17: the source goes public under the MIT license as a fresh repository with a new root commit, because the old history held company records and operator-private files.
   The same change moves release downloads from Supabase Storage to GitHub Releases and removes the download database, the owner daily report, and the `yen-tunes/` music pipeline.
+  The Supabase project, its `auth.yen.chat` DNS record, and every web environment variable in Infisical and Vercel were deleted the same day.
 
 ## Decisions
 
