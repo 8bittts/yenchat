@@ -153,9 +153,12 @@ function routeBlogHost(request: NextRequest): NextResponse | null {
 	if (route.kind === "redirect") {
 		// A router fetch (prefetch or client navigation) of a shared header or
 		// footer link such as /docs cannot follow a cross-origin redirect: CSP
-		// connect-src blocks it. An empty non-RSC answer makes the router skip
-		// the prefetch and fall back to a full navigation, which gets the 308.
-		if (request.headers.get("rsc") === "1") {
+		// connect-src blocks it. Next strips the rsc header before this proxy,
+		// so detect a script fetch by Sec-Fetch-Dest instead; an empty answer
+		// makes the router skip the prefetch and fall back to a full navigation,
+		// which is a document request and gets the 308.
+		const fetchDest = request.headers.get("sec-fetch-dest");
+		if (fetchDest && fetchDest !== "document") {
 			return new NextResponse(null, { status: 204 });
 		}
 		return NextResponse.redirect(`${route.url}${request.nextUrl.search}`, 308);
