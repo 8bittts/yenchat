@@ -235,6 +235,7 @@ Every desktop release is a GitHub Release on the public `8bittts/yenchat` reposi
 The release holds `yen-<v>.dmg`, `yen-<v>.dmg.sha256`, and that release's Sparkle deltas; nothing is pruned, because older DMGs are the delta sources.
 `finalize-build.sh` creates the release when it is missing, with its tag on the default branch tip, and uploads with `gh release upload --clobber`, retrying only network and server errors.
 It then verifies the public URL and the byte size of each asset, following GitHub's redirect to its asset host.
+The status probe retries up to `YEN_RELEASE_URL_VERIFY_ATTEMPTS` times (default 6, `YEN_RELEASE_URL_VERIFY_DELAY_SECONDS` apart, default 10), because the asset host can answer 404 for a short time after an upload, then fails closed.
 A private repository would make every download and update fail, so the release-target preflight rejects one.
 
 ## Sparkle Updates

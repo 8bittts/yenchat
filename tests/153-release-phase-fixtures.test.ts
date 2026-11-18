@@ -595,6 +595,8 @@ ensure_github_release v1.000 "YEN 1.000" notes
 				`
 source "$1"
 HTTP_STATUS="$2"
+YEN_RELEASE_URL_VERIFY_ATTEMPTS=3
+YEN_RELEASE_URL_VERIFY_DELAY_SECONDS=0
 curl() { printf '%s' "$HTTP_STATUS"; }
 verify_public_url fixture https://example.invalid/fixture HEAD
 echo VERIFIED
@@ -605,6 +607,65 @@ echo VERIFIED
 			if (status === 0) expect(result.stdout).toContain("VERIFIED");
 			else expect(result.stdout).toContain("upload verification failed");
 		}),
+	);
+	test("public upload verification waits out a brief 404 after upload", () =>
+		fixture((root) => {
+			const result = shell(
+				root,
+				`
+source "$1"
+YEN_RELEASE_URL_VERIFY_ATTEMPTS=3
+YEN_RELEASE_URL_VERIFY_DELAY_SECONDS=0
+# curl runs inside $(...), so the call count lives in a file, not a variable.
+curl() { echo probe >> "$PWD/probes"; if [ "$(wc -l < "$PWD/probes")" -lt 2 ]; then printf 404; else printf 200; fi; }
+verify_public_url fixture https://example.invalid/fixture.sha256
+echo "VERIFIED after $(wc -l < "$PWD/probes" | tr -d ' ')"
+`,
+				[join(finalizeRoot, "02-services.sh")],
+			);
+			expect(result.status, result.stderr).toBe(0);
+			expect(result.stdout).toContain("HTTP 404 on attempt 1/3");
+			expect(result.stdout).toContain("VERIFIED after 2");
+		}));
+	test("public upload verification stops after its last attempt", () =>
+		fixture((root) => {
+			const result = shell(
+				root,
+				`
+source "$1"
+YEN_RELEASE_URL_VERIFY_ATTEMPTS=3
+YEN_RELEASE_URL_VERIFY_DELAY_SECONDS=0
+curl() { echo probe >> "$PWD/probes"; printf 404; }
+verify_public_url fixture https://example.invalid/fixture.sha256
+echo UNEXPECTED
+`,
+				[join(finalizeRoot, "02-services.sh")],
+			);
+			expect(result.status).not.toBe(0);
+			expect(result.stdout).toContain("HTTP 404 after 3 attempts");
+			expect(result.stdout).not.toContain("UNEXPECTED");
+			expect(
+				readFileSync(join(root, "probes"), "utf8").trim().split("\n"),
+			).toHaveLength(3);
+		}));
+	test.each(["0", "x", "-1"])(
+		"public upload verification refuses a bad attempt count: %p",
+		(attempts) =>
+			fixture((root) => {
+				const result = shell(
+					root,
+					`
+source "$1"
+YEN_RELEASE_URL_VERIFY_ATTEMPTS="$2"
+curl() { printf 200; }
+verify_public_url fixture https://example.invalid/fixture
+echo UNEXPECTED
+`,
+					[join(finalizeRoot, "02-services.sh"), attempts],
+				);
+				expect(result.status).not.toBe(0);
+				expect(result.stdout).not.toContain("UNEXPECTED");
+			}),
 	);
 });
 

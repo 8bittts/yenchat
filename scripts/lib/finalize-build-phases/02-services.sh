@@ -47,25 +47,49 @@ sign_with_retry() {
     return 1
 }
 
-verify_public_url() {
-    local label="$1"
-    local url="$2"
-    local method="${3:-GET}"
-    local verify_status
+public_url_status() {
+    local url="$1"
+    local method="$2"
     if [ "$method" = "HEAD" ]; then
         # HEAD avoids streaming the full body (the DMG is ~102MB) just to read a
         # status code. Only the status line is consumed here; the authoritative
         # byte-exact size check lives in verify_remote_content_length (which keeps
         # its Cloudflare content-range fallback). Keep the small .sha256 probe on
         # GET so it never leans on the documented HEAD Content-Length quirk.
-        verify_status=$(curl -o /dev/null -sIL -w '%{http_code}' "$url" 2>/dev/null || true)
+        curl -o /dev/null -sIL -w '%{http_code}' "$url" 2>/dev/null || true
     else
-        verify_status=$(curl -o /dev/null -sL -w '%{http_code}' "$url" 2>/dev/null || true)
+        curl -o /dev/null -sL -w '%{http_code}' "$url" 2>/dev/null || true
     fi
-    if [ "$verify_status" != "200" ]; then
-        echo "  ERROR: ${label} upload verification failed (HTTP ${verify_status:-unknown})"
-        exit 1
-    fi
+}
+
+# GitHub's asset host can answer 404 for a short time after `gh release upload`
+# returns: on v1.272 the .sha256 probe got 404 right after upload and 200 within a
+# minute, which failed a release whose assets were already correct. Retry the
+# status probe a bounded number of times, then fail closed.
+verify_public_url() {
+    local label="$1"
+    local url="$2"
+    local method="${3:-GET}"
+    local attempts="${YEN_RELEASE_URL_VERIFY_ATTEMPTS:-6}"
+    local delay="${YEN_RELEASE_URL_VERIFY_DELAY_SECONDS:-10}"
+    local attempt=1
+    local verify_status
+    case "$attempts" in
+        ''|*[!0-9]*|0)
+            echo "  ERROR: ${label} upload verification misconfigured (YEN_RELEASE_URL_VERIFY_ATTEMPTS=${attempts})"
+            exit 1
+            ;;
+    esac
+    while :; do
+        verify_status=$(public_url_status "$url" "$method")
+        [ "$verify_status" = "200" ] && return 0
+        [ "$attempt" -ge "$attempts" ] && break
+        echo "  ${label}: HTTP ${verify_status:-unknown} on attempt ${attempt}/${attempts}; retrying in ${delay}s"
+        attempt=$((attempt + 1))
+        sleep "$delay"
+    done
+    echo "  ERROR: ${label} upload verification failed (HTTP ${verify_status:-unknown} after ${attempts} attempts)"
+    exit 1
 }
 
 verify_signed_metadata_round_trip() {
