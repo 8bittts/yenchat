@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { trackProductEvent } from "@/lib/analytics/product-analytics";
 
-export function Footer() {
+interface FooterProps {
+	/**
+	 * Origin prefixed to internal links. blog.yen.chat passes yen.chat, because
+	 * there "/" is the blog index and other paths only reach yen.chat by redirect.
+	 */
+	siteOrigin?: string | undefined;
+}
+
+export function Footer({ siteOrigin = "" }: FooterProps) {
 	return (
 		<footer className="relative z-10 bg-background border-t border-border pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:py-4">
 			<div className="container-page flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -24,7 +32,7 @@ export function Footer() {
 						Onigiri
 					</a>
 					<Link
-						href="/tunes"
+						href={`${siteOrigin}/tunes`}
 						className="nav-link nav-link-inactive"
 						onClick={() => trackProductEvent("footer_click", { item: "Music" })}
 					>
@@ -72,7 +80,7 @@ export function Footer() {
 						aria-label="Legal"
 					>
 						<Link
-							href="/terms"
+							href={`${siteOrigin}/terms`}
 							className="nav-link nav-link-inactive"
 							onClick={() =>
 								trackProductEvent("footer_click", { item: "Terms" })

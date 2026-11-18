@@ -10,7 +10,7 @@ import {
 	formatBlogDate,
 	getBlogPostsByMonth,
 } from "@/lib/blog";
-import { buildPublicPageMetadata } from "@/lib/seo";
+import { buildPublicPageMetadata, SITE_URL } from "@/lib/seo";
 
 // Served at https://blog.yen.chat/ by proxy.ts; /blog on yen.chat redirects there.
 export const metadata: Metadata = buildPublicPageMetadata({
@@ -29,6 +29,7 @@ const NAV_ITEMS: DocNavItem[] = MONTHS.map((month) => ({
 export default function BlogIndexPage() {
 	return (
 		<DocPageShell
+			siteOrigin={SITE_URL}
 			navItems={NAV_ITEMS}
 			hero={
 				<header className="space-y-3 max-w-5xl">

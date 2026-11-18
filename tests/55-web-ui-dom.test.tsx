@@ -47,6 +47,7 @@ mock.module("next-themes", () => ({
 }));
 
 const { Header } = await import("@/components/shared/header");
+const { DocPageShell } = await import("@/components/docs/doc-page-shell");
 const { HomeClient } = await import("@/app/home-client");
 const { TunesClient } = await import("@/app/tunes/tunes-client");
 const { DocsPageClient } = await import("@/app/docs/docs-client");
@@ -208,6 +209,34 @@ describe("web client UI smoke", () => {
 			event: "theme_toggle",
 			payload: { theme: "light" },
 		});
+	});
+
+	test("DocPageShell with a site origin points every internal header and footer link at it", async () => {
+		await render(
+			<DocPageShell siteOrigin="https://yen.chat" navItems={[]}>
+				<p>Post</p>
+			</DocPageShell>,
+		);
+
+		const internalHrefs = [
+			...document.querySelectorAll("header a, footer a, #mobile-site-nav a"),
+		]
+			.map((link) => link.getAttribute("href") ?? "")
+			.filter((href) => href.startsWith("/") || href.includes("yen.chat"));
+		expect(internalHrefs).toEqual([
+			"https://yen.chat/",
+			"https://yen.chat/docs",
+			"https://yen.chat/docs",
+			"https://blog.yen.chat/",
+			"https://yen.chat/tunes",
+			"https://yen.chat/terms",
+		]);
+	});
+
+	test("blog pages render the shared shell with the yen.chat origin", () => {
+		for (const file of ["app/blog/page.tsx", "app/blog/[slug]/page.tsx"]) {
+			expect(readFileSync(file, "utf8")).toContain("siteOrigin={SITE_URL}");
+		}
 	});
 
 	test("HomeClient honors reduced motion and renders stable release links", async () => {

@@ -13,7 +13,7 @@ import {
 	getBlogPost,
 	getBlogPosts,
 } from "@/lib/blog";
-import { buildPublicPageMetadata } from "@/lib/seo";
+import { buildPublicPageMetadata, SITE_URL } from "@/lib/seo";
 
 // Served at https://blog.yen.chat/<slug> by proxy.ts; /p/<slug> redirects here.
 interface BlogPostRouteProps {
@@ -67,6 +67,7 @@ export default async function BlogPostPage({ params }: BlogPostRouteProps) {
 
 	return (
 		<DocPageShell
+			siteOrigin={SITE_URL}
 			variant="guide"
 			navItems={navItems}
 			hero={

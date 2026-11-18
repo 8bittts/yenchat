@@ -151,8 +151,8 @@ function serveWithCSP(
 function routeBlogHost(request: NextRequest): NextResponse | null {
 	const route = routeBlogHostPath(request.nextUrl.pathname);
 	if (route.kind === "redirect") {
-		// A router fetch (prefetch or client navigation) of a shared header or
-		// footer link such as /docs cannot follow a cross-origin redirect: CSP
+		// A router fetch (prefetch or client navigation) of a relative yen.chat
+		// link such as /docs cannot follow a cross-origin redirect: CSP
 		// connect-src blocks it. Next strips the rsc header before this proxy,
 		// so detect a script fetch by Sec-Fetch-Dest instead; an empty answer
 		// makes the router skip the prefetch and fall back to a full navigation,

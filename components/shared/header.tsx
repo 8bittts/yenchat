@@ -9,12 +9,18 @@ interface HeaderProps {
 	currentPage?: "home" | "docs" | "tunes" | undefined;
 	onMobileNavToggle?: (open: boolean) => void;
 	mobileNavOpen?: boolean;
+	/**
+	 * Origin prefixed to internal links. blog.yen.chat passes yen.chat, because
+	 * there "/" is the blog index and other paths only reach yen.chat by redirect.
+	 */
+	siteOrigin?: string | undefined;
 }
 
 export function Header({
 	currentPage = "home",
 	onMobileNavToggle,
 	mobileNavOpen = false,
+	siteOrigin = "",
 }: HeaderProps) {
 	const handleToggle = () => {
 		onMobileNavToggle?.(!mobileNavOpen);
@@ -25,7 +31,7 @@ export function Header({
 			<header className="bg-background border-b border-border py-3 md:py-4">
 				<div className="container-page flex items-center justify-between">
 					<Link
-						href="/"
+						href={`${siteOrigin}/`}
 						className="flex items-center gap-3 text-heading-sm text-text-primary hover:text-brand-dark transition focus-ring rounded"
 						aria-label="YEN - home"
 						onClick={() => trackProductEvent("header_click", { item: "Logo" })}
@@ -46,7 +52,7 @@ export function Header({
 						aria-label="Primary navigation"
 					>
 						<Link
-							href="/docs"
+							href={`${siteOrigin}/docs`}
 							aria-current={currentPage === "docs" ? "page" : undefined}
 							className={`nav-link ${
 								currentPage === "docs" ? "nav-link-active" : "nav-link-inactive"
@@ -122,7 +128,7 @@ export function Header({
 				<div className="mobile-menu-container">
 					<div className="text-sm text-text-muted flex items-center gap-6 flex-wrap">
 						<Link
-							href="/docs"
+							href={`${siteOrigin}/docs`}
 							className="mobile-menu-link"
 							onClick={() =>
 								trackProductEvent("header_click", {

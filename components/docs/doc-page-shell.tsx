@@ -20,6 +20,8 @@ interface DocPageShellProps {
 	/** Centered guide, equal halves, or viewport-wide narrow navigation. */
 	variant?: "half" | "narrow" | "guide";
 	children: ReactNode;
+	/** Origin for shared header and footer links; see Header. */
+	siteOrigin?: string;
 }
 
 const layouts = {
@@ -62,6 +64,7 @@ export function DocPageShell({
 	hero,
 	variant = "half",
 	children,
+	siteOrigin,
 }: DocPageShellProps) {
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
 	const layout = layouts[variant];
@@ -76,6 +79,7 @@ export function DocPageShell({
 				currentPage={currentPage}
 				onMobileNavToggle={setMobileNavOpen}
 				mobileNavOpen={mobileNavOpen}
+				siteOrigin={siteOrigin}
 			/>
 
 			<DocNavMobile
@@ -105,7 +109,7 @@ export function DocPageShell({
 				</main>
 			</div>
 
-			<Footer />
+			<Footer siteOrigin={siteOrigin} />
 		</div>
 	);
 }

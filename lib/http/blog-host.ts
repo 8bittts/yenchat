@@ -65,7 +65,7 @@ export function routeBlogHostPath(pathname: string): BlogHostRoute {
 		return { kind: "redirect", url: `${BLOG_ORIGIN}/` };
 	}
 	if (ASSET_PATH_PATTERN.test(pathname)) return { kind: "asset" };
-	// Shared header and footer links such as /docs are yen.chat pages.
+	// Any other page path, such as a typed /docs, is a yen.chat page.
 	return { kind: "redirect", url: `${MAIN_ORIGIN}${pathname}` };
 }
 
