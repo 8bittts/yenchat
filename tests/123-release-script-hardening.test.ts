@@ -43,7 +43,7 @@ const versionUtilsPath = join(repoRoot, "scripts/lib/version-utils.sh");
 const vendorAuditPath = join(repoRoot, "_docs/04-security.md");
 
 describe("release script hardening", () => {
-	test("public docs branding rejects the retired attribution exception", () => {
+	test("in-app docs branding rejects lineage while public plaintext may credit Ghostty", () => {
 		const script = readFileSync(brandingVerifyPath, "utf8");
 		const start = script.indexOf("LINEAGE_PATTERN=");
 		const end = script.indexOf("# Check 9:", start);
@@ -53,8 +53,9 @@ describe("release script hardening", () => {
 		try {
 			mkdirSync(join(root, "app/docs"), { recursive: true });
 			mkdirSync(join(root, "public"));
-			writeFileSync(join(root, "public/llms.txt"), "YEN");
-			writeFileSync(join(root, "public/README.md"), "YEN");
+			// YEN is open source, so the public plaintext credits Ghostty and must not fail the gate.
+			writeFileSync(join(root, "public/llms.txt"), "YEN is built on Ghostty");
+			writeFileSync(join(root, "public/README.md"), "Built using libghostty");
 			for (const [copy, expected] of [
 				["YEN terminal guide", 0],
 				["Built using libghostty", 1],

@@ -136,33 +136,19 @@ if subject_present f "customizations/shell-integration/yen-welcome.sh"; then
         add_issue "welcome script comment still references Ghostty-standard wording"
 fi
 
-# Check 8d: User-facing docs/plaintext stay lineage-neutral
-# Internal engineering/vendor docs (_docs/, AGENTS.md, scripts/) are intentionally out of scope.
+# Check 8d: The in-app docs stay lineage-neutral
+# YEN is open source under MIT, so public/llms.txt, public/README.md and README.md credit Ghostty
+# by name and are out of scope, as are internal engineering/vendor docs (_docs/, AGENTS.md, scripts/).
 LINEAGE_PATTERN='ghostty|libghostty|com\.mitchellh\.ghostty'
 USER_DOCS_MATCHES=""
 if subject_present d "$REPO_ROOT/app/docs"; then
     USER_DOCS_MATCHES=$(grep -RniE "$LINEAGE_PATTERN" --include="*.tsx" --include="*.md" "$REPO_ROOT/app/docs" 2>/dev/null || true)
 fi
 
-PUBLIC_TEXT_MATCHES=""
-for PUBLIC_TEXT_FILE in "$REPO_ROOT/public/llms.txt" "$REPO_ROOT/public/README.md"; do
-    if subject_present f "$PUBLIC_TEXT_FILE"; then
-        FILE_MATCHES=$(grep -niE "$LINEAGE_PATTERN" "$PUBLIC_TEXT_FILE" 2>/dev/null || true)
-        if [ -n "$FILE_MATCHES" ]; then
-            PUBLIC_TEXT_MATCHES="${PUBLIC_TEXT_MATCHES}${FILE_MATCHES}"$'\n'
-        fi
-    fi
-done
-
-ALL_USER_FACING_LINEAGE_MATCHES="$USER_DOCS_MATCHES"
-if [ -n "$PUBLIC_TEXT_MATCHES" ]; then
-    ALL_USER_FACING_LINEAGE_MATCHES="${ALL_USER_FACING_LINEAGE_MATCHES}"$'\n'"$PUBLIC_TEXT_MATCHES"
-fi
-
-if [ -n "$ALL_USER_FACING_LINEAGE_MATCHES" ]; then
-    FIRST_LINEAGE_MATCH=$(printf "%s\n" "$ALL_USER_FACING_LINEAGE_MATCHES" | sed '/^$/d' | head -1 | sed "s|$REPO_ROOT/||")
-    LINEAGE_MATCH_COUNT=$(printf "%s\n" "$ALL_USER_FACING_LINEAGE_MATCHES" | sed '/^$/d' | wc -l | tr -d ' ')
-    add_issue "User-facing docs/plaintext contain Ghostty lineage tokens ($LINEAGE_MATCH_COUNT matches; first: $FIRST_LINEAGE_MATCH)"
+if [ -n "$USER_DOCS_MATCHES" ]; then
+    FIRST_LINEAGE_MATCH=$(printf "%s\n" "$USER_DOCS_MATCHES" | sed '/^$/d' | head -1 | sed "s|$REPO_ROOT/||")
+    LINEAGE_MATCH_COUNT=$(printf "%s\n" "$USER_DOCS_MATCHES" | sed '/^$/d' | wc -l | tr -d ' ')
+    add_issue "In-app docs contain Ghostty lineage tokens ($LINEAGE_MATCH_COUNT matches; first: $FIRST_LINEAGE_MATCH)"
 fi
 
 # Check 9: YENCustomResources.zig
