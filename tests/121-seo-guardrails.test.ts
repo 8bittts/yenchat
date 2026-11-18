@@ -193,29 +193,61 @@ describe("public SEO guardrails", () => {
 		).toContain('"Release notes: https://blog.yen.chat/releases"');
 	});
 
-	test("shared footer lists brand and legal links in chrome order", () => {
+	test("shared header and footer list their links in chrome order", () => {
+		// Visible text of every <a> or <Link> in a component, in source order; the
+		// logo link holds only an image and a span, so it yields no label.
+		const linkLabels = (file: string) =>
+			[
+				...readFileSync(
+					join(process.cwd(), "components", "shared", file),
+					"utf8",
+				).matchAll(/>\s*([^<>{}]+?)\s*<\/(?:a|Link)>/g),
+			]
+				.map((match) => match[1]?.trim())
+				.filter(Boolean);
 		const footerSource = readFileSync(
 			join(process.cwd(), "components", "shared", "footer.tsx"),
 			"utf8",
 		);
-
-		const onigiriIndex = footerSource.indexOf("Onigiri");
-		const musicIndex = footerSource.indexOf("Music");
-		const bitcoinIndex = footerSource.indexOf("Bitcoin Email");
-		const jpIndex = footerSource.indexOf("JP the Cat");
-		const termsIndex = footerSource.indexOf("Terms");
-
-		expect(onigiriIndex).toBeGreaterThan(-1);
-		expect(musicIndex).toBeGreaterThan(onigiriIndex);
-		expect(bitcoinIndex).toBeGreaterThan(musicIndex);
-		expect(jpIndex).toBeGreaterThan(bitcoinIndex);
-		expect(termsIndex).toBeGreaterThan(jpIndex);
-
-		expect(footerSource).toContain('href="https://jpthecat.com"');
-		expect(footerSource).toContain('item: "JP the Cat"');
-		expect(footerSource).toMatch(
-			/href="https:\/\/jpthecat\.com"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
+		const headerSource = readFileSync(
+			join(process.cwd(), "components", "shared", "header.tsx"),
+			"utf8",
 		);
+
+		// Desktop nav, then the mobile menu: Docs and GitHub only.
+		expect(linkLabels("header.tsx")).toEqual([
+			"Docs",
+			"GitHub",
+			"Docs",
+			"GitHub",
+		]);
+		expect(linkLabels("footer.tsx")).toEqual([
+			"Blog",
+			"@yenFTW",
+			"Music",
+			"Email",
+			"Tokens",
+			"Terms",
+		]);
+
+		expect(headerSource).toMatch(
+			/href="https:\/\/github\.com\/8bittts\/yenchat"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
+		);
+		expect(headerSource).not.toContain("twitter.com");
+		expect(footerSource).not.toContain("github.com");
+		for (const href of [
+			"https://blog.yen.chat/",
+			"https://twitter.com/yenFTW",
+			"https://btc.email",
+			"https://jpthecat.com",
+		]) {
+			expect(footerSource).toMatch(
+				new RegExp(
+					`href="${href.replace(/[.?/]/g, "\\$&")}"\\s*className="[^"]*"\\s*target="_blank"\\s*rel="noopener noreferrer"`,
+				),
+			);
+		}
+		expect(footerSource).toContain('item: "Tokens"');
 	});
 
 	test("yeni character bible has page-local social metadata and stays unlisted", () => {

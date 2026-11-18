@@ -25,11 +25,20 @@ export function Footer({ siteOrigin = "" }: FooterProps) {
 						className="nav-link nav-link-inactive"
 						target="_blank"
 						rel="noopener noreferrer"
+						onClick={() => trackProductEvent("footer_click", { item: "Blog" })}
+					>
+						Blog
+					</a>
+					<a
+						href="https://twitter.com/yenFTW"
+						className="nav-link nav-link-inactive"
+						target="_blank"
+						rel="noopener noreferrer"
 						onClick={() =>
-							trackProductEvent("footer_click", { item: "Substack" })
+							trackProductEvent("footer_click", { item: "Twitter" })
 						}
 					>
-						Onigiri
+						@yenFTW
 					</a>
 					<Link
 						href={`${siteOrigin}/tunes`}
@@ -43,11 +52,9 @@ export function Footer({ siteOrigin = "" }: FooterProps) {
 						className="nav-link nav-link-inactive"
 						target="_blank"
 						rel="noopener noreferrer"
-						onClick={() =>
-							trackProductEvent("footer_click", { item: "Bitcoin Email" })
-						}
+						onClick={() => trackProductEvent("footer_click", { item: "Email" })}
 					>
-						Bitcoin Email
+						Email
 					</a>
 					<a
 						href="https://jpthecat.com"
@@ -55,21 +62,10 @@ export function Footer({ siteOrigin = "" }: FooterProps) {
 						target="_blank"
 						rel="noopener noreferrer"
 						onClick={() =>
-							trackProductEvent("footer_click", { item: "JP the Cat" })
+							trackProductEvent("footer_click", { item: "Tokens" })
 						}
 					>
-						JP the Cat
-					</a>
-					<a
-						href="https://github.com/8bittts/yenchat"
-						className="nav-link nav-link-inactive"
-						target="_blank"
-						rel="noopener noreferrer"
-						onClick={() =>
-							trackProductEvent("footer_click", { item: "GitHub" })
-						}
-					>
-						GitHub
+						Tokens
 					</a>
 				</nav>
 

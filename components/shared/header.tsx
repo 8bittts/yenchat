@@ -64,15 +64,15 @@ export function Header({
 							Docs
 						</Link>
 						<a
-							href="https://twitter.com/yenFTW"
+							href="https://github.com/8bittts/yenchat"
 							className="nav-link nav-link-inactive"
 							target="_blank"
 							rel="noopener noreferrer"
 							onClick={() =>
-								trackProductEvent("header_click", { item: "Twitter" })
+								trackProductEvent("header_click", { item: "GitHub" })
 							}
 						>
-							@yenFTW
+							GitHub
 						</a>
 						<ThemeToggle />
 					</nav>
@@ -140,18 +140,18 @@ export function Header({
 							Docs
 						</Link>
 						<a
-							href="https://twitter.com/yenFTW"
+							href="https://github.com/8bittts/yenchat"
 							className="mobile-menu-link"
 							target="_blank"
 							rel="noopener noreferrer"
 							onClick={() =>
 								trackProductEvent("header_click", {
-									item: "Twitter",
+									item: "GitHub",
 									mobile: true,
 								})
 							}
 						>
-							@yenFTW
+							GitHub
 						</a>
 					</div>
 				</div>

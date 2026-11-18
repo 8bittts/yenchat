@@ -46,6 +46,13 @@
 				]
 			},
 			{
+				"files": [
+					"yen-terminal/ghostty/src/terminal/snapshot/verify-kaitai.py"
+				],
+				"rules": ["react-doctor/command-execution-input-risk"],
+				"reason": "Vendored upstream Ghostty developer script, never edited (vendor, don't fork) and never bundled into YEN.app. It runs the local Kaitai compiler found on PATH with an argument list and no shell, over repo-owned schema paths."
+			},
+			{
 				"files": ["app/docs/docs-client.tsx", "app/tunes/tunes-client.tsx"],
 				"rules": ["react-doctor/iframe-missing-sandbox"]
 			},

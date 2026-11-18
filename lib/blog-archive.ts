@@ -78,7 +78,7 @@ export function getPostsForReleaseWeek(week: ReleaseWeek): BlogPost[] {
 	return getBlogPosts().filter((post) => weekContains(week, postDay(post)));
 }
 
-/** A week's month is the month holding its Thursday, as on the release notes. */
+/** `YYYY-MM` of an ISO day. */
 function monthKeyForDay(day: string): string {
 	return day.slice(0, 7);
 }
@@ -98,6 +98,7 @@ export function getArchiveByMonth(): ArchiveMonth[] {
 			};
 		}),
 		...RELEASE_WEEKS.map((week) => ({
+			// A week's month holds its Thursday, as on the release notes.
 			month: monthKeyForDay(addDays(week.iso, 3)),
 			entry: {
 				kind: "release",
