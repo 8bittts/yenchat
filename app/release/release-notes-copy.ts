@@ -828,6 +828,8 @@ export const RELEASE_WEEK_COPY: Record<string, string> = {
 // login / pure test builds). Kept explicit so the exclusion is never silent and a
 // future editor can see why a build is intentionally absent.
 export const RELEASE_EXCLUDE: Record<string, string> = {
+	"1.272":
+		"maintenance build: terminal engine refresh whose changes are a Linux-only input fix, a new benchmark and contributor-list metadata, no user-facing change on macOS",
 	"1.271":
 		"maintenance build: terminal engine refresh whose only change is contributor-list metadata, no user-facing change",
 	"1.270":
