@@ -22,9 +22,9 @@ Hand-edit only the tables and watch items.
 ## Snapshot Metadata (Script-Validated)
 
 ```
-snapshot_date=2026-11-16
-ghostty_commit=5ebe501a63425b13d9952e8c54682c046386e5af
-ghostty_version=5ebe501a63425b13d9952e8c54682c046386e5af
+snapshot_date=2026-11-17
+ghostty_commit=f3e1f65bb602ac3d441ffdd5f9645bef66a39648
+ghostty_version=f3e1f65bb602ac3d441ffdd5f9645bef66a39648
 ghostty_upstream_repo=https://github.com/ghostty-org/ghostty.git
 yazi_version=v26.9.1
 fd_version=v10.5.2
@@ -61,7 +61,7 @@ Delete a row once the range has re-landed cleanly.
 
 ## Upstream Ghostty Overlap Assessment
 
-Audit of YEN customizations against upstream Ghostty (commit `5ebe501a`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
+Audit of YEN customizations against upstream Ghostty (commit `f3e1f65b`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
 
 Per-bump assessments live in the vendor commit messages, not here.
 
@@ -162,7 +162,8 @@ Re-check each of these when the owning file is re-synced:
 
 ### Public Documentation Branding
 
-`scripts/04-verify-branding.sh` check 8d requires the public manual and plaintext product descriptions to remain lineage-neutral.
+`scripts/04-verify-branding.sh` check 8d requires the in-app manual (`app/docs`) to remain lineage-neutral.
+YEN is open source under MIT, so `README.md`, `public/README.md` and `public/llms.txt` credit Ghostty by name and are outside that check.
 Internal engineering documentation and required artifact provenance are outside that copy boundary.
 
 ### Artifact Fingerprint Allowlist (Release Gate)
