@@ -1,8 +1,8 @@
 {
-  "version": "1.271",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.271/yen-1271.dmg",
-  "sha256": "d1991940616c2d80df5c2893120a306608e77c585bc5ea3d56b447dbc12db007",
-  "notes": "Fresh signed rebuild with current components",
+  "version": "1.272",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.272/yen-1272.dmg",
+  "sha256": "f4afe8ca3d018cf1c87ee1ffee5f59bdb7f66554e543d6998fba466b27477b88",
+  "notes": "Maintenance rebuild with refreshed terminal components",
   "minOS": "13.0",
   "releaseDate": ""
 }
