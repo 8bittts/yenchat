@@ -250,7 +250,7 @@ Each release's deltas are assets of that release, so a new appcast never points 
 `scripts/manual/17-verify-sparkle-delta-dryrun.sh` re-proves the mechanics with no writes.
 `appcast.xml` generation fails closed on an invalid `minOS`, and `05-detect-failures.sh` verifies `sparkle:edSignature` against the DMG.
 
-Release notes are a required release step owned by `_docs/10-gtm.md` → Release Notes Page.
+Release notes are a required release step owned by `_docs/10-gtm.md` → Release Notes.
 
 ## Version Management
 

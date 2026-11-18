@@ -13,6 +13,11 @@ import {
 	getBlogPost,
 	getBlogPosts,
 } from "@/lib/blog";
+import {
+	getReleaseWeekForPost,
+	RELEASES_PATH,
+	releaseWeekHref,
+} from "@/lib/blog-archive";
 import { buildPublicPageMetadata, SITE_URL } from "@/lib/seo";
 
 // Served at https://blog.yen.chat/<slug> by proxy.ts; /p/<slug> redirects here.
@@ -60,6 +65,7 @@ export default async function BlogPostPage({ params }: BlogPostRouteProps) {
 	const post = getBlogPost((await params).slug);
 	if (!post) notFound();
 	const { newer, older } = getAdjacentBlogPosts(post.slug);
+	const releaseWeek = getReleaseWeekForPost(post);
 	const navItems: DocNavItem[] = [
 		...getBlogHeadings(post),
 		{ id: "more-posts", title: "More posts" },
@@ -119,6 +125,19 @@ export default async function BlogPostPage({ params }: BlogPostRouteProps) {
 						<Link href="/" className="link-brand">
 							All posts
 						</Link>
+					</li>
+					<li className="text-body-sm">
+						<span className="text-text-muted">What shipped: </span>
+						{releaseWeek ? (
+							<Link href={releaseWeekHref(releaseWeek)} className="link-brand">
+								Release notes for the{" "}
+								{releaseWeek.label.replace(/^Week/, "week")}
+							</Link>
+						) : (
+							<Link href={RELEASES_PATH} className="link-brand">
+								All release notes
+							</Link>
+						)}
 					</li>
 				</ul>
 			</DocSection>

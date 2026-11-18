@@ -13,6 +13,10 @@ describe("blog.yen.chat host routing", () => {
 			kind: "page",
 			pathname: "/blog/skills",
 		});
+		expect(routeBlogHostPath("/releases")).toEqual({
+			kind: "page",
+			pathname: "/blog/releases",
+		});
 		expect(routeBlogHostPath("/feed")).toEqual({
 			kind: "file",
 			pathname: "/blog/feed",
@@ -91,6 +95,7 @@ describe("blog.yen.chat host routing", () => {
 			"https://blog.yen.chat/skills",
 		);
 		expect(blogUrlForMainHostPath("/blogger")).toBeNull();
+		expect(blogUrlForMainHostPath("/releases")).toBeNull();
 		expect(blogUrlForMainHostPath("/docs")).toBeNull();
 	});
 });
@@ -153,5 +158,25 @@ describe("proxy on blog.yen.chat", () => {
 		expect(response.headers.get("location")).toBe(
 			"https://blog.yen.chat/skills",
 		);
+	});
+
+	test("renders the release notes from /blog/releases with a page CSP", () => {
+		const response = proxy(request("https://blog.yen.chat/releases"));
+		expect(response.headers.get("x-middleware-rewrite")).toBe(
+			"https://blog.yen.chat/blog/releases",
+		);
+		expect(response.headers.get("content-security-policy")).toContain(
+			"script-src 'self'",
+		);
+	});
+
+	test("moves the retired yen.chat/release to the blog's release notes", () => {
+		for (const path of ["/release", "/release/"]) {
+			const response = proxy(request(`https://yen.chat${path}?ref=x`));
+			expect(response.status).toBe(308);
+			expect(response.headers.get("location")).toBe(
+				"https://blog.yen.chat/releases?ref=x",
+			);
+		}
 	});
 });

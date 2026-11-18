@@ -1,6 +1,6 @@
 # Go-To-Market
 
-Public accuracy and legal copy, the release notes page and the content voice of the YEN website.
+Public accuracy and legal copy, blog.yen.chat with its release notes, and the content voice of the YEN website.
 
 Design, quality, growth, and release procedures belong to their owners in `00-docs-map.md`.
 
@@ -12,14 +12,14 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - `lib/library/public-pages.ts` — PSEO registry and eligibility; `lib/library/seo-inventory.ts` — the `/library` view model.
 - `proxy.ts` and `scripts/44-build-web-csp.ts` — host validation and CSP.
 - `lib/blog.ts`, `lib/http/blog-host.ts`, `app/blog/`, `content/blog/` and `public/blog-media/` — blog.yen.chat ([Blog](#blog-blogyenchat)).
-- `app/release/release-notes-copy.ts` — curated release prose; `app/release/release-notes-data.ts` is generated.
+- `lib/release-notes/release-notes-copy.ts` — curated release prose; `lib/release-notes/release-notes-data.ts` is generated.
 
 ## Public Accuracy and Legal Copy
 
 [CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
 
 - Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS. Never claim "no third parties".
-- Shared chrome: header links are Docs and @yenFTW only; footer brand links are Onigiri (blog), Music (`/tunes`), Bitcoin Email (`https://btc.email`, new tab), and JP the Cat (`https://jpthecat.com`, new tab). Footer legal is Terms only (`/terms`, combined privacy and cookie policy; `/privacy` redirects). `/release` stays out of header and footer.
+- Shared chrome: header links are Docs and @yenFTW only; footer brand links are Onigiri (blog), Music (`/tunes`), Bitcoin Email (`https://btc.email`, new tab), and JP the Cat (`https://jpthecat.com`, new tab). Footer legal is Terms only (`/terms`, combined privacy and cookie policy; `/privacy` redirects). Release notes stay out of header and footer; the blog index links them.
 - Downloads are GitHub Release assets; `/download` redirects to the current DMG and records nothing.
 - Public counts come from manifests or scripts (the curated theme manifest for themes), never from old copy; never advertise retired custom sounds or sound packs.
 - Historical public assets such as `public/skills.md` may stay reachable but are labeled historical.
@@ -28,19 +28,20 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - A copy correction must also check `public/llms.txt`, `app/manifest.ts`, and `lib/library/public-pages.ts`; these independent surfaces can retain the same stale claim.
 - Settings screenshots and recordings are not current feature evidence; compare their labels and controls with the shipped Settings source before placing them in instructions.
 
-## Release Notes Page (`/release`)
+## Release Notes
 
-`/release` is the public build history, grouped into Monday-Sunday weeks, newest first, each with one curated story, its build count and latest version.
-It reuses `DocPageShell`, `DocNav` and `DocSection` exactly like `/terms`, stays out of the header, footer, and sitemap.
+`https://blog.yen.chat/releases` (`app/blog/releases/page.tsx`) is the public build history, grouped into Monday-Sunday weeks, newest first, each with one curated story, its build count and latest version.
+It reuses `DocPageShell`, `DocNav` and `DocSection` exactly like `/terms`, stays out of the header and footer, and is listed in the blog sitemap.
+The retired yen.chat `/release` 308s there, and each week keeps its `w-<iso>` anchor, so an old week link still lands on its week; the build script's GitHub Release body links the blog page.
 
-- [HARD REQUIREMENT] Structure is generated, voice is curated. `bun scripts/gen-release-notes.ts` writes `release-notes-data.ts` from the frozen `app/release/release-ledger.ts` (the 514 builds shipped before the open-source history, which the public git log no longer holds) and then from `public/stable/version.json` bump commits; never edit the data file by hand (Biome ignores it), and never add to the ledger. `tests/161` fails if a regeneration drops a ledger build. `RELEASE_COPY` holds each version's factual line and `RELEASE_WEEK_COPY` each week's story; missing copy in either fails generation.
+- [HARD REQUIREMENT] Structure is generated, voice is curated. `bun scripts/gen-release-notes.ts` writes `release-notes-data.ts` from the frozen `lib/release-notes/release-ledger.ts` (the 514 builds shipped before the open-source history, which the public git log no longer holds) and then from `public/stable/version.json` bump commits; never edit the data file by hand (Biome ignores it), and never add to the ledger. `tests/161` fails if a regeneration drops a ledger build. `RELEASE_COPY` holds each version's factual line and `RELEASE_WEEK_COPY` each week's story; missing copy in either fails generation.
 - [HARD REQUIREMENT] Grouping: Monday-Sunday weeks; provenance sorted by ship day then version, descending; a week spanning two months belongs to the month containing its Thursday.
 - [HARD REQUIREMENT] Each weekly story is for the person deciding whether to update: lead with the change a reader would feel, in the second person, name the meaningful improvements, end on why it matters. Prefer one concrete detail over a category. Never a feature inventory or implementation log.
 - [HARD REQUIREMENT] Paragraphs are separated by a literal `\n\n`, which `release-client.tsx` renders as one `<p>` each: 2-3 for a big week, 1-2 for a thin one.
 - [HARD REQUIREMENT] No hype, emojis, exclamation marks or invented benefits; a thin week stays short. `tests/121` fails on an exclamation mark or summaries regressing toward commit shorthand.
 - [HARD REQUIREMENT] Never name the upstream engine; write "terminal engine". The generator strips it per paragraph as a backstop, and `tests/121` fails if `\bGhostty\b` reaches the data file.
 - Retired features stay out: versions whose final text matches the `RETIRED` pattern, plus the explicit `RELEASE_EXCLUDE` set, are excluded; mixed builds are curated to the surviving part.
-- Keep the hero download CTA, the closing "Ready to try it?" section and every `Download for macOS` → `/download` link.
+- Keep the hero download CTA, the closing "Ready to try it?" section and every `Download for macOS` link, which passes `siteOrigin` so it reaches `https://yen.chat/download` from the blog host.
 - After editing either copy layer, run the generator and `bun run build`, confirm no unused keys, and ship the data and CSP hashes in a `[deploy]` commit.
 
 ## Blog (blog.yen.chat)
@@ -56,6 +57,20 @@ The 53 posts imported from the Substack export live in `content/blog/posts/<slug
 - Local `next dev` and `next start` rewrite the request host to `localhost`, so host routing is proven by `tests/159-blog-host-routing.test.ts` and on the deployed domain, never by a local Host header.
 - `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, pins the archive at 53 posts, and fails if a post references media missing from `public/blog-media/`.
 - A new post is a new `content/blog/posts/<slug>.json` in the same shape plus its slug in `slugs.json`, with its media under `public/blog-media/`.
+- `tests/158` refuses a post slug that collides with a blog route such as `releases`.
+
+### Posts and release notes
+
+The blog holds two kinds of writing, and each says which it is.
+Posts are labeled "From the creator": long-form, first-person notes on why and how YEN is built.
+Release notes are labeled "Release notes": the weekly record of what changed, written for the person deciding whether to update.
+
+- The index (`app/blog/page.tsx`) is one month-by-month timeline of both, built by `lib/blog-archive.ts`. A week's entry shows its label, build count and latest version and links to its anchor on `/releases`; its story is never repeated on the index.
+- A week's month is the month of its Thursday, the same rule as the release notes nav; a post's month and day are read in Pacific time, like its date label.
+- The two cross-link by week: a release week lists that week's posts under "From the creator this week", and a post's "More posts" section links the release notes for the week it was published in.
+- A post can introduce a feature that the same week's release notes also mention. The post explains why; the week story stays the short factual record. Neither copies the other's text.
+- The feed (`/feed`) carries posts only, because a week's story is refreshed by every build that week.
+- `tests/55` and `tests/158` fail if the index drops or repeats an entry, or prints a week's story.
 
 ## Content Voice
 
@@ -73,7 +88,7 @@ YEN is a solo-developer product written in the first person ("I built", never "w
 | Blog (blog.yen.chat) | Long-form, personal, technical; "Hey folks!" and a "— 8" sign-off |
 | Social | One insight per post, code welcome |
 | Public docs | Clear, scannable, accurate over promotional |
-| `/release` | The weekly story rules above |
+| Release notes (blog.yen.chat/releases) | The weekly story rules above |
 
 Use: "just works", "local-first", "vendor, don't fork", "quiet, methodical work".
 Avoid: "AI-powered" (YEN uses native APIs), "revolutionary", "best-in-class", "seamless experience", "leverage".

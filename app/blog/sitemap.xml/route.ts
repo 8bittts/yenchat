@@ -1,5 +1,7 @@
 // Sitemap served at https://blog.yen.chat/sitemap.xml; yen.chat keeps its own app/sitemap.ts.
 import { BLOG_URL, blogPostUrl, getBlogPosts } from "@/lib/blog";
+import { RELEASES_PATH } from "@/lib/blog-archive";
+import { RELEASE_WEEKS } from "@/lib/release-notes/release-notes-data";
 
 export const dynamic = "force-static";
 
@@ -13,6 +15,10 @@ export function GET(): Response {
 		'<?xml version="1.0" encoding="UTF-8"?>',
 		'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
 		urlEntry(`${BLOG_URL}/`, posts[0]?.publishedAt ?? ""),
+		urlEntry(
+			`${BLOG_URL}${RELEASES_PATH}`,
+			RELEASE_WEEKS[0]?.versions[0]?.shippedOn ?? "",
+		),
 		...posts.map((post) => urlEntry(blogPostUrl(post.slug), post.publishedAt)),
 		"</urlset>",
 	].join("\n");

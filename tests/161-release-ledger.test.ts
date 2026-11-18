@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
 	LEDGER_LAST_VERSION,
 	PRE_OPEN_SOURCE_RELEASES,
-} from "@/app/release/release-ledger";
-import { RELEASE_EXCLUDE } from "@/app/release/release-notes-copy";
-import { RELEASE_WEEKS } from "@/app/release/release-notes-data";
+} from "@/lib/release-notes/release-ledger";
+import { RELEASE_EXCLUDE } from "@/lib/release-notes/release-notes-copy";
+import { RELEASE_WEEKS } from "@/lib/release-notes/release-notes-data";
 
 // The public git log starts at the open-source squash, so the ledger is the only
 // record of the 514 builds published before it. A regeneration that stops reading
-// it empties /release while every other gate stays green.
+// it empties the release notes while every other gate stays green.
 const LEDGER_RELEASE_COUNT = 514;
 
 function isAtOrBeforeLedger(version: string): boolean {

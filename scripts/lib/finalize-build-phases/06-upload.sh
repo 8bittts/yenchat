@@ -12,7 +12,7 @@ REMOTE_SHA256=$(curl -sL "$RELEASE_DMG_URL.sha256" 2>/dev/null | tr -d '[:space:
 if [ "$REMOTE_SHA256" = "$DMG_SHA256" ]; then
     echo "    Published SHA256 matches local — skipping upload"
 else
-    if ! ensure_github_release "$RELEASE_TAG" "YEN $VERSION" "Release notes: https://yen.chat/release"; then
+    if ! ensure_github_release "$RELEASE_TAG" "YEN $VERSION" "Release notes: https://blog.yen.chat/releases"; then
         exit 1
     fi
 

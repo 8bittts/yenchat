@@ -24,6 +24,10 @@
 			"maxJsBytes": 531456,
 			"rendering": "static"
 		},
+		"/blog/releases": {
+			"maxJsBytes": 531456,
+			"rendering": "static"
+		},
 		"/blog/[slug]": {
 			"maxJsBytes": 531456,
 			"rendering": "static"
@@ -38,10 +42,6 @@
 		},
 		"/privacy": {
 			"maxJsBytes": 530432,
-			"rendering": "static"
-		},
-		"/release": {
-			"maxJsBytes": 531456,
 			"rendering": "static"
 		},
 		"/terms": {

@@ -9,6 +9,12 @@ import {
 	getBlogPost,
 	getBlogPosts,
 } from "@/lib/blog";
+import {
+	getArchiveByMonth,
+	getPostsForReleaseWeek,
+	getReleaseWeekForPost,
+} from "@/lib/blog-archive";
+import { RELEASE_WEEKS } from "@/lib/release-notes/release-notes-data";
 
 // The Substack export of blog.yen.chat held 53 published posts; every one must stay on the blog.
 const ARCHIVED_POST_COUNT = 53;
@@ -115,5 +121,49 @@ describe("blog.yen.chat archive", () => {
 		expect(getAdjacentBlogPosts(first.slug).newer).toBeNull();
 		const skills = getBlogPost("skills");
 		expect(skills && getBlogHeadings(skills).length).toBeGreaterThan(0);
+	});
+
+	test("no post slug collides with a blog page route", () => {
+		for (const reserved of ["releases", "feed", "sitemap.xml", "robots.txt"]) {
+			expect(BLOG_SLUGS).not.toContain(reserved);
+		}
+	});
+
+	test("joins posts and release weeks into one timeline without repeating either", () => {
+		const months = getArchiveByMonth();
+		const entries = months.flatMap((month) => month.entries);
+		const postSlugs = entries.flatMap((entry) =>
+			entry.kind === "post" ? [entry.post.slug] : [],
+		);
+		const weekIsos = entries.flatMap((entry) =>
+			entry.kind === "release" ? [entry.week.iso] : [],
+		);
+		expect(postSlugs.sort()).toEqual(posts.map((post) => post.slug).sort());
+		expect(weekIsos.sort()).toEqual(
+			RELEASE_WEEKS.map((week) => week.iso).sort(),
+		);
+		expect(new Set(months.map((month) => month.id)).size).toBe(months.length);
+		// Months run newest first, and each month's entries newest first.
+		const monthDays = months.map((month) => month.entries[0]?.day ?? "");
+		expect([...monthDays].sort().reverse()).toEqual(monthDays);
+		for (const month of months) {
+			const days = month.entries.map((entry) => entry.day);
+			expect([...days].sort().reverse()).toEqual(days);
+		}
+	});
+
+	test("cross-links a post and the release week it was published in", () => {
+		const settings = getBlogPost("a-new-updated-and-lovely-settings");
+		expect(settings && getReleaseWeekForPost(settings)?.iso).toBe("2026-11-09");
+		let linked = 0;
+		for (const post of posts) {
+			const week = getReleaseWeekForPost(post);
+			if (!week) continue;
+			linked += 1;
+			expect(getPostsForReleaseWeek(week)).toContain(post);
+		}
+		expect(linked).toBeGreaterThan(40);
+		const linkedFromWeeks = RELEASE_WEEKS.flatMap(getPostsForReleaseWeek);
+		expect(linkedFromWeeks).toHaveLength(linked);
 	});
 });

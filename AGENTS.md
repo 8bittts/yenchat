@@ -32,7 +32,7 @@ YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the deci
 - `_docs/00-docs-map.md` indexes the owner docs under the fleet documentation standard and their audit rules; read the owner doc before non-trivial work in its domain.
 - `_docs/todos.md` is the only backlog; no TODOs live anywhere else.
 - State each constraint once, in its owner doc, and cite it elsewhere.
-- Reference docs carry no history: no changelogs, dated receipts or review notes. Git history and commit messages hold them, and `/release` is the customer-facing history.
+- Reference docs carry no history: no changelogs, dated receipts or review notes. Git history and commit messages hold them, and blog.yen.chat/releases is the customer-facing history.
 - Update public `/docs`, `public/llms.txt`, and the owning internal document when a public feature contract changes.
 - Update privacy and terms when a service, data flow, license, or provider changes.
 
@@ -90,8 +90,8 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 ## Release
 
 - `public/stable/version.json` is the public release source.
-- `app/release/release-notes-copy.ts` owns customer-facing release prose.
-- `app/release/release-notes-data.ts` is generated and must not be edited directly.
+- `lib/release-notes/release-notes-copy.ts` owns customer-facing release prose.
+- `lib/release-notes/release-notes-data.ts` is generated and must not be edited directly.
 - Vercel builds only a commit whose subject carries `[deploy]` (`8leeai/_docs/13-starter-kit.md` → Web stack); `vercel.json`'s `ignoreCommand` matches the subject line only (`head -1`).
 - Every desktop release is a GitHub Release tagged `v<version>` on `8bittts/yenchat`; `scripts/01-verify-release-target.sh` fails before a build when the repository is not public or the `gh` session cannot push ([_docs/05-infrastructure.md](_docs/05-infrastructure.md) § Release Hosting).
 - `.vercelignore` excludes `scripts/*` behind an allowlist, and `tests/135-static-csp-prerender.test.ts` fails when a script the install or build runs is missing from it (`8leeai/_docs/13-starter-kit.md` → Files to copy).

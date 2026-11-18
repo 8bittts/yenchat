@@ -149,7 +149,7 @@ Do not shrink ordinary instructions or use muted text as a second body style.
 | Landing hero | `pt-20 pb-6 md:py-28` | `/`, `/tunes` |
 | Full section | `section-padding` | 404, multi-section pages |
 | PSEO and library | `py-10 md:py-14` or `py-10 md:py-16` | `/alternatives`, `/use-cases`, `/library` |
-| Doc shell | `py-8 lg:pt-10` via `DocPageShell` | `/docs`, `/privacy`, `/terms`, `/release`, `/yeni` |
+| Doc shell | `py-8 lg:pt-10` via `DocPageShell` | `/docs`, `/privacy`, `/terms`, blog.yen.chat, `/yeni` |
 
 **Rules.**
 

@@ -59,7 +59,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 - Website: [yen.chat](https://yen.chat)
 - Documentation: [yen.chat/docs](https://yen.chat/docs)
-- Release notes: [yen.chat/release](https://yen.chat/release)
+- Release notes: [blog.yen.chat/releases](https://blog.yen.chat/releases)
 - Blog: [blog.yen.chat](https://blog.yen.chat/)
 
 ## License

@@ -15,7 +15,7 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 | `07-email.md`                | The support mailbox and mail authentication                                                                             |
 | `08-growth.md`               | Measurement limits, public comparison and PSEO                                                                          |
 | `09-quality.md`              | Gates, the native test suite, web quality baselines, the dictation live manual matrix                                   |
-| `10-gtm.md`                  | Public accuracy and legal copy, the `/release` page, content voice                                                      |
+| `10-gtm.md`                  | Public accuracy and legal copy, blog.yen.chat and its release notes, content voice                                      |
 | `11-speech-to-text.md`       | Dictation                                                                                                               |
 | `12-commands.md`             | `yen` CLI, shell integration, shortcuts, palette actions, automation, `yen ide` contract                                |
 | `13-desktop-features.md`     | Native desktop features: window rules, Settings, sounds and notifications, workspace panels, terminal behavior          |

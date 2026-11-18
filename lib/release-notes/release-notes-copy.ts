@@ -4,13 +4,13 @@
 // (from public/stable/version.json bump commits). This file owns the public
 // *voice*: RELEASE_COPY preserves a factual, customer-facing line per version;
 // RELEASE_WEEK_COPY turns those facts into the short narrative product stories
-// published on /release. The generator retains every version/date as weekly
+// published at blog.yen.chat/releases. The generator retains every version/date as weekly
 // provenance while showing one curated story per Monday-Sunday release week.
 //
 // Editorial rules (voice, lineage neutrality, retired-runtime handling) live in
-// _docs/10-gtm.md → "Release Notes Page". Two rules bind THIS file directly:
+// _docs/10-gtm.md → "Release Notes". Two rules bind THIS file directly:
 //   - [SHAPE] Break every story into paragraphs with a literal blank line
-//     ("\n\n"). The /release page splits on it and renders one <p> per
+//     ("\n\n"). The release notes page splits on it and renders one <p> per
 //     paragraph, so a missing break is a wall of text on the live page.
 //   - Builds that shipped nothing user-facing (pure test/CI, or purely a
 //     retired runtime) go in RELEASE_EXCLUDE with a reason, never reframed.

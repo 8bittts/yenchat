@@ -5,7 +5,7 @@
 // scripts/gen-release-notes.ts reads this ledger first and git only for later
 // builds. Seeded once from the published release-notes-data.ts on 2026-11-17 and
 // frozen: never add to it, because every later build is dated by its own commit.
-// See _docs/10-gtm.md -> "Release Notes Page".
+// See _docs/10-gtm.md -> "Release Notes".
 
 export type LedgerRelease = {
 	readonly version: string;

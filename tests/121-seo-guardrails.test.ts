@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { RELEASE_EXCLUDE } from "../app/release/release-notes-copy";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
+import { blogUrlForMainHostPath } from "../lib/http/blog-host";
 import {
 	getPublicLibrarySitemapEntries,
 	isPublicLibraryPageEligible,
@@ -12,6 +12,7 @@ import {
 	PUBLIC_LIBRARY_MIN_EVIDENCE_SCORE,
 	PUBLIC_LIBRARY_PAGES,
 } from "../lib/library/public-pages";
+import { RELEASE_EXCLUDE } from "../lib/release-notes/release-notes-copy";
 import {
 	buildPublicPageMetadata,
 	PUBLIC_PAGE_SEO,
@@ -136,31 +137,38 @@ describe("public SEO guardrails", () => {
 		}
 	});
 
-	test("release history is indexable but not sitemap- or chrome-linked", () => {
+	test("release notes live on the blog and the retired /release redirects there", () => {
 		const pageSource = readFileSync(
-			join(process.cwd(), "app", "release", "page.tsx"),
-			"utf8",
-		);
-		const clientSource = readFileSync(
-			join(process.cwd(), "app", "release", "release-client.tsx"),
+			join(process.cwd(), "app", "blog", "releases", "page.tsx"),
 			"utf8",
 		);
 		const sitemapUrls = sitemap().map((entry) => entry.url);
 
-		expect(PUBLIC_PAGE_SEO.release.url).toBe("https://yen.chat/release");
+		// The release notes are a blog page with their own metadata and the shared shell.
+		expect(existsSync(join(process.cwd(), "app", "release"))).toBe(false);
+		expect(Object.hasOwn(PUBLIC_PAGE_SEO, "release")).toBe(false);
 		expect(pageSource).toContain("buildPublicPageMetadata");
-		expect(pageSource).toContain("PUBLIC_PAGE_SEO.release");
-		expect(clientSource).toContain("DocPageShell");
-		expect(clientSource).toContain("DocSection");
-		expect(clientSource).not.toContain('from "@/components/shared/page-shell"');
-		// Kept out of the sitemap, llms.txt, and header nav...
+		expect(pageSource).toContain("url: `${BLOG_URL}${RELEASES_PATH}`");
+		expect(pageSource).toContain("DocPageShell");
+		expect(pageSource).toContain("DocSection");
+		expect(pageSource).not.toContain('from "@/components/shared/page-shell"');
+		expect(blogUrlForMainHostPath("/release")).toBe(
+			"https://blog.yen.chat/releases",
+		);
+		expect(blogUrlForMainHostPath("/release/")).toBe(
+			"https://blog.yen.chat/releases",
+		);
+
+		// yen.chat's own sitemap, llms.txt and chrome never point at the retired page.
 		expect(sitemapUrls).not.toContain("https://yen.chat/release");
-		expect(
-			readFileSync(
-				join(process.cwd(), "components", "shared", "header.tsx"),
-				"utf8",
-			),
-		).not.toContain('href="/release"');
+		for (const file of [
+			join("components", "shared", "header.tsx"),
+			join("components", "shared", "footer.tsx"),
+		]) {
+			const source = readFileSync(join(process.cwd(), file), "utf8");
+			expect(source).not.toContain('href="/release"');
+			expect(source).not.toContain('href="/releases"');
+		}
 		expect(
 			readFileSync(
 				join(process.cwd(), "components", "shared", "header.tsx"),
@@ -170,12 +178,19 @@ describe("public SEO guardrails", () => {
 		expect(
 			readFileSync(join(process.cwd(), "public", "llms.txt"), "utf8"),
 		).not.toContain("https://yen.chat/release");
+		// The GitHub Release body each build publishes links the blog page.
 		expect(
 			readFileSync(
-				join(process.cwd(), "components", "shared", "footer.tsx"),
+				join(
+					process.cwd(),
+					"scripts",
+					"lib",
+					"finalize-build-phases",
+					"06-upload.sh",
+				),
 				"utf8",
 			),
-		).not.toContain('href="/release"');
+		).toContain('"Release notes: https://blog.yen.chat/releases"');
 	});
 
 	test("shared footer lists brand and legal links in chrome order", () => {
@@ -237,16 +252,16 @@ describe("public SEO guardrails", () => {
 	});
 
 	test("week-grouped release history covers the current build and holds public-copy guardrails", () => {
-		// The /release page renders the generated, week-grouped dataset — that
-		// file (not release-client.tsx) is where the real changelog copy lives,
-		// so the guardrails must scan it. See scripts/gen-release-notes.ts and
-		// _docs/10-gtm.md → "Release Notes Page".
+		// blog.yen.chat/releases renders the generated, week-grouped dataset — that
+		// file (not the page) is where the real changelog copy lives, so the
+		// guardrails must scan it. See scripts/gen-release-notes.ts and
+		// _docs/10-gtm.md → "Release Notes".
 		const clientSource = readFileSync(
-			join(process.cwd(), "app", "release", "release-client.tsx"),
+			join(process.cwd(), "app", "blog", "releases", "page.tsx"),
 			"utf8",
 		);
 		const dataSource = readFileSync(
-			join(process.cwd(), "app", "release", "release-notes-data.ts"),
+			join(process.cwd(), "lib", "release-notes", "release-notes-data.ts"),
 			"utf8",
 		);
 		const currentVersion = JSON.parse(
@@ -257,7 +272,9 @@ describe("public SEO guardrails", () => {
 		).version as string;
 
 		// Renderer imports the generated data and is grouped by release week.
-		expect(clientSource).toContain('from "./release-notes-data"');
+		expect(clientSource).toContain(
+			'from "@/lib/release-notes/release-notes-data"',
+		);
 		expect(clientSource).toContain("RELEASE_WEEKS");
 		expect(dataSource).toContain('"label": "Week of ');
 		expect(dataSource).toContain(
@@ -267,7 +284,7 @@ describe("public SEO guardrails", () => {
 		// The public voice comes from the hand-curated copy layer, merged by the
 		// generator over the terse commit summary (see _docs/10-gtm.md).
 		const copySource = readFileSync(
-			join(process.cwd(), "app", "release", "release-notes-copy.ts"),
+			join(process.cwd(), "lib", "release-notes", "release-notes-copy.ts"),
 			"utf8",
 		);
 		expect(copySource).toContain("RELEASE_COPY");

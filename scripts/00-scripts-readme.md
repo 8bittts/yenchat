@@ -6,16 +6,16 @@ Run repo scripts by absolute path; never rely on `cd`.
 
 ## Release
 
-| Script                        | Purpose                                                                                                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `01-verify-release-target.sh` | Fails before a build when `gh` cannot reach the public release repository or cannot push to it                                                                                                            |
-| `02-sync-versions.sh`         | Copies `public/stable/version.json` into `package.json`, the Xcode project and `YEN-Info.plist`; `build-release.sh` runs it when mirrors drift                                                            |
-| `03-verify-components.sh`     | Pre-build component gate (details below)                                                                                                                                                                  |
-| `04-verify-branding.sh`       | Branding gate; 2 declared units, reports `guarded subjects` present/total                                                                                                                                 |
-| `05-detect-failures.sh`       | Post-build failure detection (details below)                                                                                                                                                              |
-| `06-verify-download-links.sh` | Download-link parity, called by `05`                                                                                                                                                                      |
-| `07-stage-release.sh`         | Stages `version.json`, `version.sig`, `appcast.xml`, the DMG checksum and `package.json` only                                                                                                             |
-| `gen-release-notes.ts`        | Rebuilds `app/release/release-notes-data.ts` from `release-notes-copy.ts`, the frozen `app/release/release-ledger.ts` and `version.json` bump commits; run `bun run build` after it to refresh CSP hashes |
+| Script                        | Purpose                                                                                                                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01-verify-release-target.sh` | Fails before a build when `gh` cannot reach the public release repository or cannot push to it                                                                                                                        |
+| `02-sync-versions.sh`         | Copies `public/stable/version.json` into `package.json`, the Xcode project and `YEN-Info.plist`; `build-release.sh` runs it when mirrors drift                                                                        |
+| `03-verify-components.sh`     | Pre-build component gate (details below)                                                                                                                                                                              |
+| `04-verify-branding.sh`       | Branding gate; 2 declared units, reports `guarded subjects` present/total                                                                                                                                             |
+| `05-detect-failures.sh`       | Post-build failure detection (details below)                                                                                                                                                                          |
+| `06-verify-download-links.sh` | Download-link parity, called by `05`                                                                                                                                                                                  |
+| `07-stage-release.sh`         | Stages `version.json`, `version.sig`, `appcast.xml`, the DMG checksum and `package.json` only                                                                                                                         |
+| `gen-release-notes.ts`        | Rebuilds `lib/release-notes/release-notes-data.ts` from `release-notes-copy.ts`, the frozen `lib/release-notes/release-ledger.ts` and `version.json` bump commits; run `bun run build` after it to refresh CSP hashes |
 
 ## Vendor
 

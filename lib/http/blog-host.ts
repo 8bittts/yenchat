@@ -2,7 +2,8 @@
  * Host routing for blog.yen.chat, applied by proxy.ts.
  *
  * The blog lives under app/blog/ and is served at the root of its own host:
- * `https://blog.yen.chat/skills` renders `/blog/skills`. Substack's
+ * `https://blog.yen.chat/skills` renders `/blog/skills`, and `/releases` renders
+ * the weekly release notes at `/blog/releases`. Substack's
  * `/p/<slug>` addresses redirect to `/<slug>`, Substack-only pages redirect to
  * the blog index, and any other page path belongs to yen.chat.
  */
@@ -16,7 +17,10 @@ const MAIN_ORIGIN = "https://yen.chat";
 const SLUGS: ReadonlySet<string> = new Set(BLOG_SLUGS);
 
 /** Pages rendered as HTML, which need the route's CSP. */
-const BLOG_PAGE_ROUTES: Readonly<Record<string, string>> = { "/": "/blog" };
+const BLOG_PAGE_ROUTES: Readonly<Record<string, string>> = {
+	"/": "/blog",
+	"/releases": "/blog/releases",
+};
 
 /** Route handlers (feed, sitemap, robots) served without page CSP. */
 const BLOG_FILE_ROUTES: Readonly<Record<string, string>> = {
@@ -69,9 +73,16 @@ export function routeBlogHostPath(pathname: string): BlogHostRoute {
 	return { kind: "redirect", url: `${MAIN_ORIGIN}${pathname}` };
 }
 
-/** On yen.chat, /blog and /blog/<path> move to blog.yen.chat. */
+/**
+ * On yen.chat, /blog and /blog/<path> move to blog.yen.chat, and the retired
+ * /release page moves to the blog's release notes. A browser keeps the `#w-<iso>`
+ * week anchor across the redirect, so old week links still land on their week.
+ */
 export function blogUrlForMainHostPath(pathname: string): string | null {
 	if (pathname === "/blog" || pathname === "/blog/") return `${BLOG_ORIGIN}/`;
+	if (pathname === "/release" || pathname === "/release/") {
+		return `${BLOG_ORIGIN}/releases`;
+	}
 	const rest = pathname.match(/^\/blog\/(.+)$/)?.[1];
 	return rest ? `${BLOG_ORIGIN}/${rest}` : null;
 }

@@ -54,8 +54,12 @@ const { DocsPageClient } = await import("@/app/docs/docs-client");
 const { TermsPageClient } = await import("@/app/terms/terms-client");
 const { LibraryClient } = await import("@/app/library/library-client");
 const { NotFoundClient } = await import("@/app/not-found-client");
-const { ReleasePageClient } = await import("@/app/release/release-client");
-const { RELEASE_WEEKS } = await import("@/app/release/release-notes-data");
+const { default: ReleaseNotesPage } = await import("@/app/blog/releases/page");
+const { default: BlogIndexPage } = await import("@/app/blog/page");
+const { getBlogPosts } = await import("@/lib/blog");
+const { RELEASE_WEEKS } = await import(
+	"@/lib/release-notes/release-notes-data"
+);
 const { default: GlobalError } = await import("@/app/global-error");
 const { PublicLibraryPage } = await import(
 	"@/components/library/public-library-page"
@@ -234,7 +238,11 @@ describe("web client UI smoke", () => {
 	});
 
 	test("blog pages render the shared shell with the yen.chat origin", () => {
-		for (const file of ["app/blog/page.tsx", "app/blog/[slug]/page.tsx"]) {
+		for (const file of [
+			"app/blog/page.tsx",
+			"app/blog/[slug]/page.tsx",
+			"app/blog/releases/page.tsx",
+		]) {
 			expect(readFileSync(file, "utf8")).toContain("siteOrigin={SITE_URL}");
 		}
 	});
@@ -276,9 +284,9 @@ describe("web client UI smoke", () => {
 	});
 
 	test("static page trees stay Server Components", () => {
-		// These three pages carry no hooks, handlers, or browser APIs. Marking any of
+		// These pages carry no hooks, handlers, or browser APIs. Marking any of
 		// them "use client" ships its whole static tree to the browser a second time
-		// as a hydratable chunk — /release alone re-shipped every release week for two
+		// as a hydratable chunk — the release notes once re-shipped every week for two
 		// analytics onClicks. The interactive leaves (DocPageShell, TerminalCodeBlock,
 		// TrackedDownloadLink) carry their own directives, so nothing here needs one.
 		// Nothing else guards this: re-adding the directive, or inlining `track` or a
@@ -286,7 +294,8 @@ describe("web client UI smoke", () => {
 		for (const relativePath of [
 			"app/docs/docs-client.tsx",
 			"app/yeni/yeni-client.tsx",
-			"app/release/release-client.tsx",
+			"app/blog/releases/page.tsx",
+			"app/blog/page.tsx",
 		]) {
 			const source = readFileSync(relativePath, "utf8");
 			expect(source).not.toMatch(/^\s*["']use client["']/);
@@ -433,19 +442,35 @@ describe("public web surface render smoke", () => {
 		expect(document.querySelector("main")?.id).toBe("main-content");
 	});
 
-	test("release history renders shared landmarks and both download CTAs", async () => {
-		await render(<ReleasePageClient />);
+	test("release notes render shared landmarks and both download CTAs", async () => {
+		await render(<ReleaseNotesPage />);
 
 		// The page leads with the newest public build. tests/121 owns the rule
 		// that it is the shipped build unless RELEASE_EXCLUDE drops that build.
 		const newestPublicVersion = RELEASE_WEEKS[0]?.latestVersion ?? "";
 		const downloadLinks = Array.from(
-			document.querySelectorAll<HTMLAnchorElement>('a[href="/download"]'),
+			document.querySelectorAll<HTMLAnchorElement>(
+				'a[href="https://yen.chat/download"]',
+			),
 		);
 
 		expect(document.querySelector("h1")?.textContent).toBe(
 			"What changed in YEN",
 		);
+		// Old yen.chat/release#w-<iso> links survive the redirect on these anchors.
+		for (const week of RELEASE_WEEKS) {
+			expect(document.getElementById(`w-${week.iso}`)).toBeTruthy();
+		}
+		// A week links the creator's posts from that week; the index links back.
+		const postLinks = Array.from(
+			document.querySelectorAll<HTMLAnchorElement>("main a"),
+		).filter((link) =>
+			getBlogPosts().some(
+				(post) => link.getAttribute("href") === `/${post.slug}`,
+			),
+		);
+		expect(postLinks.length).toBeGreaterThan(20);
+		expect(document.body.textContent).toContain("From the creator this week:");
 		expect(document.querySelector('a[href="#main-content"]')).toBeTruthy();
 		expect(document.querySelector("main")?.id).toBe("main-content");
 		// Nav is grouped by month (the page itself is grouped by week); labels
@@ -491,6 +516,37 @@ describe("public web surface render smoke", () => {
 			event: "download_click",
 			payload: { location: "release-footer" },
 		});
+	});
+
+	test("blog index lists every post and every release week once, each labeled by kind", async () => {
+		await render(<BlogIndexPage />);
+
+		const articles = Array.from(document.querySelectorAll("main article"));
+		const eyebrows = articles.map(
+			(article) => article.querySelector(".eyebrow-text")?.textContent ?? "",
+		);
+		const posts = getBlogPosts();
+		expect(articles).toHaveLength(posts.length + RELEASE_WEEKS.length);
+		expect(
+			eyebrows.filter((text) => text.startsWith("From the creator · ")),
+		).toHaveLength(posts.length);
+		expect(eyebrows.filter((text) => text === "Release notes")).toHaveLength(
+			RELEASE_WEEKS.length,
+		);
+
+		// The index never repeats a week's story: it links to it on /releases.
+		const weekHrefs = Array.from(
+			document.querySelectorAll<HTMLAnchorElement>(
+				'main a[href^="/releases#w-"]',
+			),
+		).map((link) => link.getAttribute("href"));
+		expect(new Set(weekHrefs).size).toBe(RELEASE_WEEKS.length);
+		for (const week of RELEASE_WEEKS) {
+			expect(document.body.textContent).not.toContain(
+				week.summary.slice(0, 80),
+			);
+		}
+		expect(document.querySelector('a[href="/releases"]')).toBeTruthy();
 	});
 
 	test("not-found page renders without throwing", async () => {

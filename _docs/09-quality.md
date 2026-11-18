@@ -71,7 +71,7 @@ Build warnings outside `appintentsmetadataprocessor` extraction, the `YENKit` um
 
 ## Web Quality Baselines
 
-These apply to `/`, `/docs`, `/tunes`, `/release`, `/alternatives`, `/use-cases` and their slug pages, `/yeni`, `/privacy`, `/terms`, and the shared 404 and error screens.
+These apply to `/`, `/docs`, `/tunes`, the blog.yen.chat index, posts and release notes, `/alternatives`, `/use-cases` and their slug pages, `/yeni`, `/privacy`, `/terms`, and the shared 404 and error screens.
 
 **Accessibility (WCAG AA).**
 
@@ -91,7 +91,7 @@ Check every changed public page at about 390x844 for the last-section-to-footer 
 **SEO and indexing.**
 
 - `https://yen.chat` is canonical; `www` redirects permanently, and every canonical, sitemap, OpenGraph and Twitter URL uses the apex host.
-- Indexable: `/`, `/docs`, `/tunes`, `/release` (unlinked in chrome, not in the sitemap), `/yeni` (unlinked, not in the sitemap), `/alternatives` and `/use-cases` with their slugs, `/terms` (combined terms and privacy; `/privacy` redirects here), `/whitepaper.pdf`. Each needs a canonical URL, OpenGraph and Twitter metadata, and `index,follow`.
+- Indexable: `/`, `/docs`, `/tunes`, `/yeni` (unlinked, not in the sitemap), `/alternatives` and `/use-cases` with their slugs, `/terms` (combined terms and privacy; `/privacy` redirects here), `/whitepaper.pdf`. Each needs a canonical URL, OpenGraph and Twitter metadata, and `index,follow`.
 - Noindex: `/api/*`, `/download`, `/stable/*`, `/cookies`, 404, and `/library`, with route-level `X-Robots-Tag` where it applies.
 - `robots.txt` comes only from `app/robots.ts`: it disallows `/api` and `/stable`, leaves `/download` and `/cookies` crawlable so crawlers see the header or redirect, and allows the major search and AI crawlers.
 - `app/manifest.ts` is the only manifest; a static `public/manifest.webmanifest` collides with the route and returns 500 in development.

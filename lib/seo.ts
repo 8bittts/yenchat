@@ -59,13 +59,6 @@ export const PUBLIC_PAGE_SEO = {
 		url: `${SITE_URL}/terms`,
 		imageAlt: "YEN Terms and Privacy Policy",
 	},
-	release: {
-		title: "YEN Release Notes",
-		description:
-			"The official development history of YEN, the free GPU-accelerated macOS terminal — from the first signed build to today's speech-to-text, browser, and IDE.",
-		url: `${SITE_URL}/release`,
-		imageAlt: "YEN release notes and development history",
-	},
 	// Unlisted character bible (direct URL only — not sitemap / llms / nav).
 	yeni: {
 		title: "YENI — Canonical Character Bible",
