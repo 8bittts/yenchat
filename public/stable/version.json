@@ -2,7 +2,7 @@
   "version": "1.273",
   "url": "https://github.com/8bittts/yenchat/releases/download/v1.273/yen-1273.dmg",
   "sha256": "e3d4047cbe258b4c8e0a6606773366c9a60c31663e6ebdc6ff8b17e9b705cfb2",
-  "notes": "Fixes wrong glyphs after font changes",
+  "notes": "Fixes garbled text after waking with two displays",
   "minOS": "13.0",
   "releaseDate": ""
 }

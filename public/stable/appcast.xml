@@ -18,7 +18,7 @@
                     .tech strong { color: #333; }
                 </style>
                 <h2>YEN 1.273</h2>
-                <p class="quip">Fixes wrong glyphs after font changes</p>
+                <p class="quip">Fixes garbled text after waking with two displays</p>
                 <p class="tech"><strong>Full release notes:</strong> <a href="https://yen.chat/docs">yen.chat/docs</a></p>
             ]]></description>
             <pubDate>Thu, 19 Nov 2026 08:02:18 -0800</pubDate>
