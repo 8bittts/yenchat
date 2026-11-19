@@ -648,6 +648,30 @@ echo UNEXPECTED
 				readFileSync(join(root, "probes"), "utf8").trim().split("\n"),
 			).toHaveLength(3);
 		}));
+	test("public upload verification waits about three minutes by default", () =>
+		fixture((root) => {
+			// v1.272 and v1.273 both saw the asset host answer 404 for over a
+			// minute after a correct upload; the default window must outlast that.
+			const result = shell(
+				root,
+				`
+source "$1"
+unset YEN_RELEASE_URL_VERIFY_ATTEMPTS YEN_RELEASE_URL_VERIFY_DELAY_SECONDS
+curl() { printf 404; }
+sleep() { echo "$1" >> "$PWD/slept"; }
+verify_public_url fixture https://example.invalid/fixture.sha256
+echo UNEXPECTED
+`,
+				[join(finalizeRoot, "02-services.sh")],
+			);
+			expect(result.status).not.toBe(0);
+			expect(result.stdout).not.toContain("UNEXPECTED");
+			const waited = readFileSync(join(root, "slept"), "utf8")
+				.trim()
+				.split("\n")
+				.reduce((sum, seconds) => sum + Number(seconds), 0);
+			expect(waited).toBeGreaterThanOrEqual(170);
+		}));
 	test.each(["0", "x", "-1"])(
 		"public upload verification refuses a bad attempt count: %p",
 		(attempts) =>
