@@ -63,14 +63,14 @@ public_url_status() {
 }
 
 # GitHub's asset host can answer 404 for a short time after `gh release upload`
-# returns: on v1.272 the .sha256 probe got 404 right after upload and 200 within a
-# minute, which failed a release whose assets were already correct. Retry the
-# status probe a bounded number of times, then fail closed.
+# returns: on v1.272 and v1.273 the .sha256 probe got 404 for about a minute after
+# a correct upload, which failed the release. Retry the status probe for about
+# three minutes by default, then fail closed.
 verify_public_url() {
     local label="$1"
     local url="$2"
     local method="${3:-GET}"
-    local attempts="${YEN_RELEASE_URL_VERIFY_ATTEMPTS:-6}"
+    local attempts="${YEN_RELEASE_URL_VERIFY_ATTEMPTS:-18}"
     local delay="${YEN_RELEASE_URL_VERIFY_DELAY_SECONDS:-10}"
     local attempt=1
     local verify_status
