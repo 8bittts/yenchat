@@ -1,11 +1,11 @@
 # delta Baseline Tracking
 upstream_repo=https://github.com/dandavison/delta
-upstream_version=0.20.1
-last_sync=2026-10-04
+upstream_version=0.21.1
+last_sync=2026-11-19
 architecture=universal (arm64 + x86_64)
 build_method=source (cargo cross-compile)
-source_archive_url=https://github.com/dandavison/delta/archive/b88d2290468449d75950bfa150ea7c1291fe2977.tar.gz
-source_commit=b88d2290468449d75950bfa150ea7c1291fe2977
-source_tarball_sha256=a3b6d5b4ee79fc693480d1f9d7f4d2ded65a08ddf7536dedcca11ef38f8fcefa
-output_sha256=65417db052dc3b4ac5f2e47e3a63e67c70771ffea86c48f9104f21dec3fc3a8c
+source_archive_url=https://github.com/dandavison/delta/archive/12b3ee11f607f2e38fb2d54e5cf071cbeba672aa.tar.gz
+source_commit=12b3ee11f607f2e38fb2d54e5cf071cbeba672aa
+source_tarball_sha256=30a221c9be8e63aa902abcf68036a21d66f312df33a6060e7e14d41afcdf2a48
+output_sha256=8ee940c3d7808b974a6a0bd097fe51e0370e888e649c68981aef1fe0071d55a9
 provenance_verification=github-commit-bound-archive
