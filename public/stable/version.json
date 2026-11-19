@@ -1,8 +1,8 @@
 {
-  "version": "1.272",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.272/yen-1272.dmg",
-  "sha256": "f4afe8ca3d018cf1c87ee1ffee5f59bdb7f66554e543d6998fba466b27477b88",
-  "notes": "Maintenance rebuild with refreshed terminal components",
+  "version": "1.273",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.273/yen-1273.dmg",
+  "sha256": "e3d4047cbe258b4c8e0a6606773366c9a60c31663e6ebdc6ff8b17e9b705cfb2",
+  "notes": "Fixes wrong glyphs after font changes",
   "minOS": "13.0",
   "releaseDate": ""
 }
