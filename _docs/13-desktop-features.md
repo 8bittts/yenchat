@@ -255,6 +255,7 @@ Shortcuts need exact Cmd + Option and a foreground terminal window; new panes in
 
 **Split pane labels.**
 Each split header shows an activity icon, title and working directory above the terminal.
+It uses the pane background and balances the space above and below the icon and title.
 Click the header to focus the pane, drag it to a highlighted edge to move it, or click the pencil to rename it.
 The existing Pane Labels preference controls headers and defaults to on.
 Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.

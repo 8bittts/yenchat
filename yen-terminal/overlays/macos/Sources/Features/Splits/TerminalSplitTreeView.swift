@@ -99,27 +99,8 @@ enum SplitPaneLabelRules {
         }
     }
 
-    static func headerBackgroundColor(backgroundColor: NSColor) -> NSColor {
-        if backgroundColor.isLightColor {
-            let shaded = backgroundColor.blended(withFraction: 0.18, of: .black)
-                ?? backgroundColor.shadow(withLevel: 0.18)
-                ?? backgroundColor
-            return shaded.withAlphaComponent(0.92)
-        }
-
-        let lifted = backgroundColor.blended(withFraction: 0.16, of: .white)
-            ?? backgroundColor.highlight(withLevel: 0.16)
-            ?? backgroundColor
-        return lifted.withAlphaComponent(0.94)
-    }
-
-    static func borderColor(backgroundColor: NSColor) -> NSColor {
-        switch foregroundRole(backgroundColor: backgroundColor) {
-        case .light:
-            return .white.withAlphaComponent(0.16)
-        case .dark:
-            return .black.withAlphaComponent(0.12)
-        }
+    static func headerBackgroundColor(backgroundColor: NSColor, opacity: Double = 1) -> NSColor {
+        backgroundColor.withAlphaComponent(opacity)
     }
 }
 
@@ -335,6 +316,9 @@ private struct SplitPaneLabelView: View {
     let dragEnabled: Bool
     @State private var isDragging = false
     @State private var isHovering = false
+    @EnvironmentObject private var yen: YEN.App
+    @FocusedValue(\.yenSurfaceView) private var focusedSurface
+    @Environment(\.yenLastFocusedSurface) private var lastFocusedSurface
 
     init(surfaceView: YEN.SurfaceView, dragEnabled: Bool) {
         self.surfaceView = surfaceView
@@ -390,8 +374,9 @@ private struct SplitPaneLabelView: View {
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.leading, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 .overlay {
                     if dragEnabled {
@@ -408,7 +393,7 @@ private struct SplitPaneLabelView: View {
 
                 Button(action: renameSurface) {
                     Image(systemName: "pencil")
-                        .frame(width: 24, height: 24)
+                        .frame(width: 32, height: 32)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -416,12 +401,14 @@ private struct SplitPaneLabelView: View {
                 .help("Rename split label")
                 .accessibilityLabel("Rename split label: \(title)")
             }
-            .frame(height: 26)
             .foregroundStyle(Color(nsColor: SplitPaneLabelRules.textColor(backgroundColor: baseBackgroundColor)))
-            .background(Color(nsColor: SplitPaneLabelRules.headerBackgroundColor(backgroundColor: baseBackgroundColor)))
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(Color(nsColor: SplitPaneLabelRules.borderColor(backgroundColor: baseBackgroundColor)))
-                    .frame(height: 1).allowsHitTesting(false)
+            .background {
+                Color(nsColor: SplitPaneLabelRules.headerBackgroundColor(
+                    backgroundColor: baseBackgroundColor, opacity: surfaceView.derivedConfig.backgroundOpacity
+                ))
+                if (focusedSurface ?? lastFocusedSurface?.value) !== surfaceView {
+                    yen.config.unfocusedSplitFill.opacity(yen.config.unfocusedSplitOpacity)
+                }
             }
         }
         .task(id: worktreeWatchDirectory) { [worktreeWatchDirectory] in

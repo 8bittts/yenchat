@@ -101,6 +101,14 @@ struct SplitPaneLabelRulesTests {
         }
     }
 
+    @Test func transparentHeadersLetTheWindowBackgroundShowThrough() {
+        let pane = NSColor(srgbRed: 0.15, green: 0.17, blue: 0.21, alpha: 1)
+        for opacity in [0.0, 0.5, 1.0] {
+            let header = SplitPaneLabelRules.headerBackgroundColor(backgroundColor: pane, opacity: opacity)
+            #expect(header == pane.withAlphaComponent(opacity))
+        }
+    }
+
     @Test func foregroundRoleTracksBackgroundLuminance() {
         #expect(SplitPaneLabelRules.foregroundRole(backgroundColor: .white) == .dark)
         #expect(SplitPaneLabelRules.foregroundRole(backgroundColor: .black) == .light)

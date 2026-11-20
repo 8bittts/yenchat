@@ -716,25 +716,39 @@ function SplitPaneLabelsSection() {
 	return (
 		<DocSection id="split-pane-labels" title="Split Pane Labels">
 			<p className="text-body">
-				Click a split header to focus its terminal. Drag the icon, name, or
-				empty header space to an edge of another pane. The highlighted half
-				shows where the pane will land. Click the pencil or run
-				<code className="inline-code-brand"> Rename Split Label</code> to change
-				its name. Leave the name blank to return to automatic naming.
+				In YEN 1.277 and 1.278, enable Settings &gt; General &gt; Pane Labels to
+				show a name above each split. Run{" "}
+				<code className="inline-code-brand">Rename Split Label</code> to set a
+				custom name. Clear it to return to automatic naming.
 			</p>
 			<p className="text-body">
 				Turn on Name Panes After Worktree to use the worktree folder or branch.
 				An agent can report its directory with{" "}
-				<code className="inline-code-brand">yen pane cwd</code>; this does not
-				change your shell&apos;s directory or where new splits open. A custom
-				label overrides automatic naming and survives session restore.
+				<code className="inline-code-brand">yen pane cwd</code>. Your shell and
+				new splits keep their working directory. A custom label overrides
+				automatic naming and survives session restore.
 			</p>
 			<p className="text-body">
-				Each tab shows up to three pane icons and a count for additional panes.
-				Icons follow recognized foreground tools and terminal titles. Headers
-				hide in small or zoomed panes. You can turn them off in Settings &gt;
-				General &gt; Pane Labels.
+				In builds from the latest source, split headers are on by default. Click
+				the icon, name, or empty header space to focus a pane. Drag it to a
+				highlighted edge to move it, or click the pencil to rename it. Each tab
+				shows icons for up to three panes and a count for additional panes.
+				Icons follow the foreground tool or terminal title. Headers hide in
+				small or zoomed panes.
 			</p>
+			<figure>
+				<Image
+					src="/doc-images/split-headers.png"
+					alt="Claude Code and Codex in adjacent panes. Each pane has its own icon and title, and both icons appear together in the selected tab."
+					width={1600}
+					height={330}
+					sizes="(min-width: 768px) 720px, 100vw"
+					className="w-full h-auto"
+				/>
+				<figcaption className="media-caption">
+					Split headers and tab icons in a source build.
+				</figcaption>
+			</figure>
 		</DocSection>
 	);
 }
