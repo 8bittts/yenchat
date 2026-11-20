@@ -51,6 +51,13 @@ struct SettingsPaneTests {
         #expect(SettingsAppearancePane.borderHint(scope: .focusedSplit) == "Outlines the focused pane.")
     }
 
+    @Test func borderSectionOffersScopeWhenTheBorderIsOn() {
+        #expect(SettingsAppearancePane.borderRows(enabled: true) == [.color, .scope, .weight])
+        #expect(SettingsAppearancePane.borderRows(enabled: false).isEmpty)
+        #expect(SettingsBorderScopeChoice.allCases.map(\.scope) == [.window, .focusedSplit])
+        #expect(SettingsBorderScopeChoice.allCases.map(\.title) == ["Window", "Focused Pane"])
+    }
+
     @Test func alertSoundShowsNoneWheneverTheStreamIsSilent() {
         let silent = NotificationSoundManager.silentSelectionID
         #expect(SettingsNotificationsPane.displayedSoundSelection(

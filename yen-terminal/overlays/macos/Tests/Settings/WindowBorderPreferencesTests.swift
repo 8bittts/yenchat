@@ -700,6 +700,29 @@ struct WindowBorderPreferencesTests {
         }
     }
 
+    @Test func windowBorderScopeToggleSwitchesBetweenWindowAndFocusedSplitAndPersists() {
+        withIsolatedWindowBorderPreferences {
+            let defaults = UserDefaults.standard
+            let controller = SettingsController.shared
+            controller.loadWindowBorderPreferences()
+            controller.windowBorderScope = .window
+
+            controller.toggleWindowBorderScope()
+            #expect(controller.windowBorderScope == .focusedSplit)
+            #expect(
+                defaults.string(forKey: WindowBorderPreferences.scopePreferenceKey)
+                    == WindowBorderScope.focusedSplit.rawValue
+            )
+
+            controller.toggleWindowBorderScope()
+            #expect(controller.windowBorderScope == .window)
+            #expect(
+                defaults.string(forKey: WindowBorderPreferences.scopePreferenceKey)
+                    == WindowBorderScope.window.rawValue
+            )
+        }
+    }
+
     private func withIsolatedWindowBorderPreferences(_ operation: () throws -> Void) rethrows {
         let defaults = UserDefaults.standard
         let keys = [

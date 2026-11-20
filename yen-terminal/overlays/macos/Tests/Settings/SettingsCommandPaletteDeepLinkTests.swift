@@ -118,6 +118,7 @@ struct SettingsCommandPaletteDeepLinkTests {
         #expect(actions.map(\.id) == [
             "window-border:toggle",
             "window-border:match-theme",
+            "window-border:scope",
             "window-border:cycle-focused",
             "window-border:cycle-unfocused",
             "window-border:reduce-motion",
@@ -126,6 +127,7 @@ struct SettingsCommandPaletteDeepLinkTests {
         #expect(actions.map(\.title) == [
             "Window Border: Toggle",
             "Window Border: Toggle Match Theme",
+            "Window Border: Toggle Focused Split",
             "Window Border: Cycle Focused Palette",
             "Window Border: Cycle Unfocused Palette",
             "Window Border: Open Reduce Motion Settings",
