@@ -28,27 +28,22 @@ Goal: a YEN pane keeps running when the app quits, crashes or updates, and the u
 Today `window-save-state = always` restores windows, tabs, splits and working directories, but every shell is a child of the app process and dies with it.
 Facts the plan builds on:
 - Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
-- Upstream ships a tmux control-mode client in core (`src/terminal/tmux/viewer.zig`, built when `tmux_control_mode` is on) with no macOS UI yet.
 - Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
+- The session backend is zmx (`_docs/00-foundation.md` → Decisions); a zmx client works over any PTY, so remote attach can reuse it through SSH.
 Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the user's own machines over Tailscale.
 
-#### Phase 1: Choose the session backend (spike, no shipping code)
+#### Phase 1: Operator review of the backend decision
 
-Candidates:
-- A native Swift daemon (`yend`) that owns the PTYs and runs as a LaunchAgent through `SMAppService`.
-- A bundled existing tool (zmx, shpool or abduco) driven by YEN.
-- tmux control mode on top of the upstream viewer, with tmux as a dependency.
-
-- [ ] Score each candidate on these criteria: survives app quit, crash and update; replays scrollback and screen state on attach; resize and multiple clients; license; bundle size; fit with the release fingerprint scan; and the native-before-bundled rule.
-- [ ] Prototype the best candidate: one pane survives Cmd+Q and relaunch with its process, scrollback and cursor intact.
-- [ ] Write the decision and the rejected options into `_docs/01-architecture.md`, then stop for operator review before Phase 2.
+- [ ] The operator approves zmx as the backend (`_docs/00-foundation.md` → Decisions) before Phase 2 starts.
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Start every new pane as an attach to session `<pane UUID>`, and reattach on restore.
+- [ ] Vendor zmx as a pinned source build (`scripts/lib/vendor-manifest.sh`), bundled under `Contents/Resources/bin`, with its libghostty-vt built from YEN's vendored mirror so replay and rendering share one engine; reconcile the release fingerprint scan, because the spike binary carries the upstream name three times.
+- [ ] Start every new pane as an attach to session `<pane UUID>`, and reattach on restore; the macOS layer must pass the restore `UUID`, because `YEN_SURFACE_ID` is a random per-run number (`Surface.zig`).
+- [ ] Keep the session socket directory short: a Unix socket path caps at 104 bytes, and zmx refused a long `ZMX_DIR` with `NameTooLong`.
 - [ ] Define lifecycle: closing a pane or tab ends its session; quitting, crashing or updating the app only detaches.
 - [ ] Handle a session that the restore state no longer names (list it, then reap after a timeout) and a restore entry whose session died (start a fresh shell in the saved directory).
-- [ ] Pass through shell integration, OSC title and working-directory reports, the `yen` CLI, dictation paste, Secure Input and the Quick Terminal.
+- [ ] Restore the pane title and working directory after reattach (the spike's relaunched pane showed the title `YEN`, not `~`, because replay restores the screen, not OSC state), and pass through shell integration, the `yen` CLI, dictation paste, Secure Input and the Quick Terminal.
 - [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.
 - [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle.
 - [ ] Prove it in a running re-identified `zig-out` copy: quit, force-kill and update each leave the session alive; add regression tests for lifecycle and restore mapping.

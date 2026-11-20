@@ -27,6 +27,10 @@ Dates are the evidence in this doc; the owner docs carry none.
   New features, redesigns, refactors, performance work, and growth or SEO work wait for an explicit operator request, because a solo project cannot compete with a funded team on the same engine (Timeline, 2026-11-16).
   `AGENTS.md` → Maintenance Mode carries the rule; `_docs/todos.md` holds only work inside it.
 - **Always-on sessions are the one exception.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); the plan lives in `_docs/todos.md`.
+- **zmx is the session backend.** zmx (MIT, Zig 0.17, built on libghostty-vt) owns each pane's PTY in its own process group, so a pane survives the app quitting and replays its screen and scrollback on reattach.
+  A spike proved it in a re-identified copy of the shipping app: a pane whose `command` was `zmx attach` kept its counter running through an AppleScript quit and showed the whole history after relaunch.
+  No macOS framework keeps a PTY and its screen state alive after the app exits, so the native-first rule allows this bundled binary.
+  Rejected: a YEN-owned daemon, which would rebuild zmx on the same library; shpool, which is Linux-first with a single client per session; abduco and dtach, which replay no screen state; and tmux control mode, which needs a tmux install and whose upstream viewer has no macOS interface.
 - **YEN is open source under MIT.** The repository starts from a fresh root commit; the pre-open-source history is private and never pushed to the public repository (`AGENTS.md` → Public Repository).
   Ghostty's MIT notice stays in `LICENSE` because the overlays carry Ghostty-derived code.
 - **No account, no telemetry.** The desktop app requires no YEN account and sends no terminal content or usage telemetry; dictation runs on-device through Apple's `SpeechAnalyzer` on macOS 26 and later ([11-speech-to-text.md](11-speech-to-text.md)).
