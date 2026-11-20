@@ -12,6 +12,47 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct TerminalChromeAppearanceTests {
+    @Test func refocusingATabUsesTheCurrentGroupWidth() throws {
+        let windows = (0..<3).map { _ in
+            NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
+                     styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        }
+        windows.forEach { $0.isReleasedWhenClosed = false }
+        defer { windows.forEach { $0.close() } }
+
+        let firstContent = try #require(windows[0].contentView)
+        let secondContent = try #require(windows[2].contentView)
+        let firstHost = NSView()
+        let secondHost = NSView()
+        firstHost.translatesAutoresizingMaskIntoConstraints = false
+        secondHost.translatesAutoresizingMaskIntoConstraints = false
+        firstContent.addSubview(firstHost)
+        secondContent.addSubview(secondHost)
+        let firstStrip = WorkspaceTabStrip()
+        let secondStrip = WorkspaceTabStrip()
+
+        windows[0].addTabbedWindow(windows[1], ordered: .above)
+        let group = try #require(windows[1].tabGroup)
+        firstStrip.fit(firstHost, to: group)
+        firstContent.layoutSubtreeIfNeeded()
+        let twoTabWidth = firstHost.frame.width
+        #expect(twoTabWidth > 0)
+
+        windows[0].addTabbedWindow(windows[2], ordered: .above)
+        secondStrip.fit(secondHost, to: group)
+        secondContent.layoutSubtreeIfNeeded()
+        #expect(secondHost.frame.width > twoTabWidth)
+
+        group.removeWindow(windows[1])
+        group.selectedWindow = windows[2]
+        // The test host can stay in the background while another app owns focus.
+        NotificationCenter.default.post(name: NSWindow.didBecomeMainNotification, object: windows[2])
+        secondContent.layoutSubtreeIfNeeded()
+        #expect(group.selectedWindow === windows[2])
+        #expect(group.windows.count == 2)
+        #expect(secondHost.frame.width == twoTabWidth)
+    }
+
     @Test func tabStripDoesNotSetTheMinimumWindowWidth() {
         let titlebar = NSView()
         let host = NSView()
