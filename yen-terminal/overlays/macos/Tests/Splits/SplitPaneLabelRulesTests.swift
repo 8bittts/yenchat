@@ -93,6 +93,14 @@ struct SplitPaneLabelRulesTests {
         #expect(PaneActivity.resolve(process: "git", title: "project") == .git)
     }
 
+    @Test func opaqueHeadersMatchLightAndDarkPaneBackgrounds() {
+        for pane in [NSColor(srgbRed: 0.15, green: 0.17, blue: 0.21, alpha: 1),
+                     NSColor(srgbRed: 0.96, green: 0.94, blue: 0.90, alpha: 1)] {
+            let header = SplitPaneLabelRules.headerBackgroundColor(backgroundColor: pane)
+            #expect(header.usingColorSpace(.sRGB) == pane.usingColorSpace(.sRGB))
+        }
+    }
+
     @Test func foregroundRoleTracksBackgroundLuminance() {
         #expect(SplitPaneLabelRules.foregroundRole(backgroundColor: .white) == .dark)
         #expect(SplitPaneLabelRules.foregroundRole(backgroundColor: .black) == .light)
