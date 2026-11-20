@@ -83,14 +83,14 @@ struct PersistentSessionReaperTests {
     }
 
     @Test func sessionRecordsAreStaleOnlyWhenTheirSocketIsGone() {
-        let files = [orphan, "\(orphan).tty", "\(orphan).zmx", "\(held).tty", "\(held).zmx", "bin", "logs", "notes.txt"]
+        let files = [orphan, "\(orphan).tty", "\(orphan).zmx", "\(held).tty", "\(held).zmx", "bin", "logs", "notes.txt", "notes.tty", "notes.zmx"]
         #expect(PersistentSessionReaper.staleSessionRecords(in: files) == ["\(held).tty", "\(held).zmx"])
     }
 
     @Test func onlyUnrecordedNonCurrentZmxCopiesAreUnused() {
-        let copies = ["/s/bin/zmx-aaaa", "/s/bin/zmx-bbbb", "/s/bin/zmx-cccc", "/s/bin/.zmx-staging", "/s/bin/notes"]
-        let unused = PersistentSessionReaper.unusedBinaryCopies(copies, referenced: ["/s/bin/zmx-aaaa"], current: "/s/bin/zmx-cccc")
-        #expect(unused == ["/s/bin/zmx-bbbb"])
+        let copies = ["/s/bin/zmx-aaaaaaaaaaaaaaaa", "/s/bin/zmx-bbbbbbbbbbbbbbbb", "/s/bin/zmx-cccccccccccccccc", "/s/bin/.zmx-staging", "/s/bin/zmx-notes", "/s/bin/notes"]
+        let unused = PersistentSessionReaper.unusedBinaryCopies(copies, referenced: ["/s/bin/zmx-aaaaaaaaaaaaaaaa"], current: "/s/bin/zmx-cccccccccccccccc")
+        #expect(unused == ["/s/bin/zmx-bbbbbbbbbbbbbbbb"])
     }
 
     @Test func adoptionReopensOnlyUnheldDetachedPaneSessionsUpToTheLimit() {

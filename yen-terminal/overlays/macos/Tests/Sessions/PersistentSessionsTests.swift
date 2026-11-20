@@ -194,6 +194,22 @@ struct PersistentSessionsTests {
         #expect(killed.sorted() == live.map(\.uuidString).sorted())
     }
 
+    @Test func failedSessionEndPreservesRecoveryRecords() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let socket = directory.appendingPathComponent(paneID.uuidString)
+        try Data().write(to: socket)
+        let binary = socket.appendingPathExtension("zmx")
+        let tty = socket.appendingPathExtension("tty")
+        try "/usr/bin/false".write(to: binary, atomically: true, encoding: .utf8)
+        try "/dev/tty".write(to: tty, atomically: true, encoding: .utf8)
+
+        PersistentSessions.paneDidClose(paneID, socketDirectory: directory.path, zmxPath: "/usr/bin/false", terminating: false)
+        #expect(FileManager.default.fileExists(atPath: binary.path))
+        #expect(FileManager.default.fileExists(atPath: tty.path))
+    }
+
     @Test func quittingAsksOnlyAboutPanesWithoutALiveSession() {
         #expect(PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in false })
         #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in true })
