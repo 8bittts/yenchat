@@ -9,8 +9,11 @@ import Foundation
 /// preference is turned off before a relaunch, or the app crashes between a
 /// close and its delayed kill. A detached session may still be running work the
 /// user cares about, so an orphan is ended only after it has been seen orphaned
-/// continuously for `orphanGrace`; the first sighting is remembered across
-/// launches.
+/// continuously for `orphanGrace`. Sightings persist across launches but reset
+/// when the previous sweep is older than `observationGap` intervals, because a
+/// session detached while YEN was quit was never observed. Only an app with the
+/// preference on sweeps, so a Debug build or test host sharing the socket
+/// directory never ends the release app's sessions.
 enum PersistentSessionReaper {
     struct Session: Equatable {
         let name: String
@@ -18,6 +21,9 @@ enum PersistentSessionReaper {
     }
 
     static let firstSeenDefaultsKey = "com.yenchat.yen.persistentSessionOrphansFirstSeen"
+    static let lastSweepDefaultsKey = "com.yenchat.yen.persistentSessionReaperLastSweep"
+    /// Sweeps further apart than this many intervals break continuous observation.
+    static let observationGap: Double = 3
     static let graceDefaultsKey = "com.yenchat.yen.persistentSessionOrphanGraceSeconds"
     static let intervalDefaultsKey = "com.yenchat.yen.persistentSessionReaperIntervalSeconds"
     static let defaultOrphanGrace: TimeInterval = 24 * 60 * 60
@@ -47,9 +53,14 @@ enum PersistentSessionReaper {
         sessions: [Session],
         heldPaneIDs: Set<String>,
         firstSeen: [String: Date],
+        lastSweep: Date?,
         now: Date,
-        grace: TimeInterval
+        grace: TimeInterval,
+        interval: TimeInterval
     ) -> (kill: [String], firstSeen: [String: Date]) {
+        // Without an unbroken run of sweeps, no orphan was watched; start over.
+        let watched = lastSweep.map { now.timeIntervalSince($0) <= interval * observationGap } ?? false
+        let firstSeen = watched ? firstSeen : [:]
         var next: [String: Date] = [:]
         var kill: [String] = []
         for session in sessions {
@@ -73,7 +84,7 @@ enum PersistentSessionReaper {
     /// Start periodic sweeps; the first runs after restore has settled.
     @MainActor static func start() {
         let defaults = UserDefaults.standard
-        guard timer == nil, PersistentSessions.zmxPath() != nil else { return }
+        guard timer == nil, PersistentSessions.isEnabled, PersistentSessions.zmxPath() != nil else { return }
         let interval = positive(defaults.double(forKey: intervalDefaultsKey)) ?? defaultInterval
         DispatchQueue.main.asyncAfter(deadline: .now() + min(launchSettle, interval)) {
             runOnce()
@@ -86,10 +97,11 @@ enum PersistentSessionReaper {
     }
 
     @MainActor static func runOnce() {
-        guard !PersistentSessions.isTerminating, let zmx = PersistentSessions.zmxPath() else { return }
+        guard !PersistentSessions.isTerminating, PersistentSessions.isEnabled, let zmx = PersistentSessions.zmxPath() else { return }
         let directory = PersistentSessions.socketDirectory()
         guard FileManager.default.fileExists(atPath: directory) else { return }
         let grace = positive(UserDefaults.standard.double(forKey: graceDefaultsKey)) ?? defaultOrphanGrace
+        let interval = positive(UserDefaults.standard.double(forKey: intervalDefaultsKey)) ?? defaultInterval
 
         Task.detached(priority: .utility) {
             let sessions = parseList(run(zmx, ["ls"], directory))
@@ -98,8 +110,14 @@ enum PersistentSessionReaper {
                 let held = Set(heldPaneIDs().map(\.uuidString))
                 let defaults = UserDefaults.standard
                 let firstSeen = (defaults.dictionary(forKey: firstSeenDefaultsKey) as? [String: Date]) ?? [:]
-                let result = sweep(sessions: sessions, heldPaneIDs: held, firstSeen: firstSeen, now: Date(), grace: grace)
+                let lastSweep = defaults.object(forKey: lastSweepDefaultsKey) as? Date
+                let now = Date()
+                let result = sweep(
+                    sessions: sessions, heldPaneIDs: held, firstSeen: firstSeen,
+                    lastSweep: lastSweep, now: now, grace: grace, interval: interval
+                )
                 defaults.set(result.firstSeen, forKey: firstSeenDefaultsKey)
+                defaults.set(now, forKey: lastSweepDefaultsKey)
                 return result.kill
             }
             for name in kill where !PersistentSessions.isTerminating {

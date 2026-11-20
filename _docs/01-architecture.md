@@ -48,7 +48,7 @@ The preference `com.yenchat.yen.persistentSessions` turns it on; it is off by de
 - Closing a pane ends its session: `paneLeftTree` checks once undo can no longer bring the pane back and kills the session unless a terminal window holds it again. Ghostty can keep a closed pane alive long after that, so `SurfaceView.deinit` is only the fast path.
 - Quitting only detaches: `applicationWillTerminate` sets `PersistentSessions.markTerminating()`, and quit confirmation skips panes with a live session (`quitKillsProcess`).
 - A restored pane whose session died gets a fresh shell in its saved directory, because `zmx attach` creates a missing session.
-- `PersistentSessionReaper` ends orphans: UUID-named sessions with no client that no terminal window holds. It sweeps 30 seconds after launch and every 10 minutes, and ends an orphan only after seeing it orphaned for 24 hours, remembered across launches, because a detached session may still run work the user wants.
+- `PersistentSessionReaper` ends orphans: UUID-named sessions with no client that no terminal window holds. It runs only in an app whose preference is on, so a Debug build or test host sharing the socket directory never ends the release app's sessions. It sweeps 30 seconds after launch and every 10 minutes, and ends an orphan only after watching it orphaned for 24 hours without a gap: a sweep more than three intervals after the last one restarts observation, because a session detached while YEN was quit was never watched.
 
 ## Native Patterns
 

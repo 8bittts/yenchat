@@ -27,15 +27,15 @@ struct PersistentSessionReaperTests {
     @Test func orphanIsRememberedOnFirstSightingAndEndedOnlyAfterTheGrace() {
         let sessions: [PersistentSessionReaper.Session] = [.init(name: orphan, clients: 0)]
 
-        let first = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: [:], now: start, grace: 60)
+        let first = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: [:], lastSweep: nil, now: start, grace: 60, interval: 10)
         #expect(first.kill.isEmpty)
         #expect(first.firstSeen == [orphan: start])
 
-        let early = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: first.firstSeen, now: start + 59, grace: 60)
+        let early = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: first.firstSeen, lastSweep: start + 50, now: start + 59, grace: 60, interval: 10)
         #expect(early.kill.isEmpty)
         #expect(early.firstSeen == [orphan: start])
 
-        let due = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: first.firstSeen, now: start + 60, grace: 60)
+        let due = PersistentSessionReaper.sweep(sessions: sessions, heldPaneIDs: [], firstSeen: first.firstSeen, lastSweep: start + 59, now: start + 60, grace: 60, interval: 10)
         #expect(due.kill == [orphan])
         #expect(due.firstSeen.isEmpty)
     }
@@ -52,11 +52,33 @@ struct PersistentSessionReaperTests {
             sessions: sessions,
             heldPaneIDs: [held],
             firstSeen: [held: stale, attached: stale, "dev": stale],
+            lastSweep: start - 5,
             now: start,
-            grace: 60
+            grace: 60,
+            interval: 10
         )
 
         #expect(result.kill.isEmpty)
         #expect(result.firstSeen.isEmpty)
+    }
+
+    @Test func aGapInSweepsRestartsObservationSoADetachedSessionIsNotEnded() {
+        let sessions: [PersistentSessionReaper.Session] = [.init(name: orphan, clients: 0)]
+        let longAgo = start - 3 * 24 * 60 * 60
+
+        // YEN was quit for days: the sighting is stale and nothing watched in between.
+        let afterGap = PersistentSessionReaper.sweep(
+            sessions: sessions, heldPaneIDs: [], firstSeen: [orphan: longAgo],
+            lastSweep: longAgo, now: start, grace: 60, interval: 10
+        )
+        #expect(afterGap.kill.isEmpty)
+        #expect(afterGap.firstSeen == [orphan: start])
+
+        // A first sweep ever has nothing to continue either.
+        let firstEver = PersistentSessionReaper.sweep(
+            sessions: sessions, heldPaneIDs: [], firstSeen: [orphan: longAgo],
+            lastSweep: nil, now: start, grace: 60, interval: 10
+        )
+        #expect(firstEver.kill.isEmpty)
     }
 }
