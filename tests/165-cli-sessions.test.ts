@@ -115,12 +115,40 @@ describe("yen sessions", () => {
 						result.stdout.match(new RegExp(`^${id}\\s+detached\\s`, "gm")),
 					).toHaveLength(1);
 				}
+				chmodSync(binary, 0o600);
+				const partial = sessions([]);
+				expect(partial.status).not.toBe(0);
+				expect(partial.stdout).toMatch(
+					new RegExp(`^${oldID}\\s+unreachable\\s`, "m"),
+				);
+				expect(partial.stdout).toMatch(
+					new RegExp(`^${paneID}\\s+detached\\s`, "m"),
+				);
 			} finally {
 				listener.stop(true);
 				zmxRun(["kill", paneID]);
 			}
 		},
 		30_000,
+	);
+
+	test.skipIf(!vendored)(
+		"removes a refused socket after its owning client confirms it is stale",
+		() => {
+			const socket = join(socketDir, "11111111-2222-3333-4444-555555555555");
+			const bound = spawnSync("python3", [
+				"-I",
+				"-c",
+				"import socket, sys; s = socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); s.close()",
+				socket,
+			]);
+			expect(bound.status).toBe(0);
+			expect(existsSync(socket)).toBe(true);
+			const result = sessions([]);
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("unreachable");
+			expect(existsSync(socket)).toBe(false);
+		},
 	);
 
 	test.skipIf(!vendored)(

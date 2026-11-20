@@ -85,7 +85,7 @@ display_directory() {
 }
 
 list_sessions() {
-    local zmx listing line field key value name clients created cwd state started count=0
+    local status=0 zmx listing line field key value name clients created cwd state started count=0
     if [[ ! -d "$SESSIONS_DIR" ]]; then
         echo "No persistent sessions."
         return 0
@@ -94,10 +94,11 @@ list_sessions() {
         yen_error "zmx is not available; reinstall YEN."
         exit 1
     }
-    listing="$(ZMX_DIR="$SESSIONS_DIR" "$zmx" ls)" || {
+    listing="$(/bin/bash "$YEN_LIB/list-pane-sessions.sh" "$SESSIONS_DIR" "$zmx")" || status=$?
+    if [[ $status -ne 0 ]]; then
         yen_error "Could not list persistent sessions."
-        return 1
-    }
+        [[ $status -eq 2 && -n "$listing" ]] || return 1
+    fi
     while IFS= read -r line; do
         [[ "$line" == *name=* ]] || continue
         name="" clients="" created="" cwd="" state=""
@@ -127,6 +128,7 @@ list_sessions() {
         count=$((count + 1))
     done <<< "$listing"
     [[ $count -gt 0 ]] || echo "No persistent sessions."
+    return "$status"
 }
 
 case "${1:-list}" in

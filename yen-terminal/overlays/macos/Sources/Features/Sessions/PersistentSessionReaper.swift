@@ -165,7 +165,10 @@ enum PersistentSessionReaper {
             for copy in unusedBinaryCopies(copies, referenced: referenced, current: current) {
                 try? manager.removeItem(atPath: copy)
             }
-            let sessions = parseList(run(zmx, ["ls"], directory))
+            guard let resources = Bundle.main.resourceURL else { return }
+            let helper = resources.appendingPathComponent("lib/list-pane-sessions.sh").path
+            guard let listing = run("/bin/bash", [helper, directory, zmx], directory, accepting: [0, 2]) else { return }
+            let sessions = parseList(listing)
             let kill: [String] = await MainActor.run {
                 guard !PersistentSessions.isTerminating else { return [] }
                 if !adoptedThisLaunch {
@@ -192,7 +195,7 @@ enum PersistentSessionReaper {
                 let binary = UUID(uuidString: name).flatMap {
                     PersistentSessions.recordedBinary(for: $0, socketDirectory: directory)
                 } ?? zmx
-                run(binary, ["kill", name], directory)
+                guard run(binary, ["kill", name], directory) != nil else { continue }
                 for suffix in recordSuffixes {
                     try? FileManager.default.removeItem(atPath: (directory as NSString).appendingPathComponent(name + suffix))
                 }
@@ -219,7 +222,7 @@ enum PersistentSessionReaper {
     }
 
     @discardableResult
-    nonisolated private static func run(_ path: String, _ arguments: [String], _ directory: String) -> String {
+    nonisolated private static func run(_ path: String, _ arguments: [String], _ directory: String, accepting statuses: Set<Int32> = [0]) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
@@ -232,10 +235,11 @@ enum PersistentSessionReaper {
         do {
             try process.run()
         } catch {
-            return ""
+            return nil
         }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        guard process.terminationReason == .exit, statuses.contains(process.terminationStatus) else { return nil }
         return String(decoding: data, as: UTF8.self)
     }
 }
