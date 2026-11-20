@@ -45,6 +45,8 @@ Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSes
 - The engine wraps the final command in `src/termio/yen_session.zig` after shell integration, as `zmx attach <UUID> /bin/bash --noprofile --norc -c 'exec -l <shell>'`, so integration and login semantics apply to the shell zmx starts; the marker never reaches the child.
 - A restored pane keeps its UUID, so restore reattaches to the same session and zmx replays the screen and scrollback.
 - A pane with an explicit command (AppleScript, palette actions, file openers) stays ephemeral, and so does a pane whose socket path would pass 103 bytes.
+- zmx stores local diagnostic logs under `<ZMX_DIR>/logs`.
+  These can retain working directories and connection environment details after the session ends.
 - Closing a pane ends its session: `paneLeftTree` checks once undo can no longer bring the pane back and kills the session unless a terminal window holds it again. Ghostty can keep a closed pane alive long after that, so `SurfaceView.deinit` is only the fast path.
 - Quitting only detaches: `applicationWillTerminate` sets `PersistentSessions.markTerminating()`, and quit confirmation skips panes with a live session (`quitKillsProcess`).
 - A restored pane whose session died gets a fresh shell in its saved directory, because `zmx attach` creates a missing session.

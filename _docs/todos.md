@@ -25,7 +25,7 @@ Vendor updates and desktop releases run through `/yen-zip` and need no entry her
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
 
 Goal: a YEN pane keeps running when the app quits, crashes or updates, and the user can attach to it from another Mac on their tailnet.
-Today `window-save-state = always` restores windows, tabs, splits and working directories, but every shell is a child of the app process and dies with it.
+Local shell persistence ships in v1.275; see `_docs/01-architecture.md` → Persistent sessions.
 Facts the plan builds on:
 - Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
 - Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
@@ -51,7 +51,7 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 #### Phase 5: Docs and release
 
-- [ ] Write release copy in `lib/release-notes/release-notes-copy.ts`, regenerate release notes, and ship through `/yen-zip`. The copy must say that quitting YEN now leaves pane processes running (a dev server keeps its port), how to end them (`yen sessions kill`, closing the pane), and where to turn the behavior off.
+- [ ] Document and release remote attach and window changes when their phases are complete.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 

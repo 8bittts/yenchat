@@ -14,8 +14,8 @@ It is built on [Ghostty](https://github.com/ghostty-org/ghostty) and released un
 
 ### Sessions that never die
 
-Quit YEN, let it update, or watch it crash: every pane keeps running.
-Open it again and each pane reattaches with its screen and scrollback, right where you left it.
+Quit YEN, let it update, or watch it crash: your shell sessions keep running.
+Open it again and each restored session reattaches with its screen and scrollback, right where you left it.
 A build finishes, a dev server keeps its port, and an SSH connection stays up while YEN is closed.
 
 There is nothing to set up: no tmux config, no session names, no extra commands.

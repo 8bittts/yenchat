@@ -105,8 +105,8 @@ export function HomeClient({ version }: HomeClientProps) {
 								{/* LOCKED COPY — Do not modify this text without explicit user request.
 									    This is hand-crafted marketing copy approved by the founder. */}
 								<p className="text-body text-text-muted max-w-4xl">
-									Every pane keeps running when YEN quits, crashes, or updates,
-									then reattaches right where you left it. Plus native
+									A shell session keeps running when YEN quits, crashes, or
+									updates, then reattaches right where you left it. Plus native
 									speech-to-text, clipboard-aware Cmd + V image/file paste, 20
 									curated stylish themes, custom notifications, power dev tools,
 									and more! Built on Metal for 60FPS+ rendering. LFG.

@@ -730,10 +730,12 @@ function PersistentSessionsSection() {
 		<DocSection id="persistent-sessions" title="Persistent Sessions">
 			<p className="text-body">
 				With Settings &gt; General &gt; Keep Sessions Running on, the default,
-				each pane&apos;s shell keeps running when you quit YEN, when it updates,
-				or if it crashes. Reopen YEN and every pane reattaches with its screen
-				and scrollback, so a build, a server, or an SSH connection carries on
-				where you left it.
+				ordinary shell panes keep running when you quit YEN, when it updates, or
+				if it crashes. Reopen YEN and a restored session reattaches with its
+				screen and scrollback, so a build, a server, or an SSH connection
+				carries on where you left it. Panes opened for an explicit command and
+				panes whose session socket path exceeds 103 bytes run without
+				persistence.
 			</p>
 			<p className="text-body">
 				Quitting no longer stops what runs in your panes: a dev server keeps its
@@ -746,9 +748,12 @@ function PersistentSessionsSection() {
 				ends one. Turning the setting off affects new panes only.
 			</p>
 			<p className="text-body">
-				Sessions stay on your Mac and end when it restarts. A session no window
-				shows reopens in a window the next time YEN starts; one that still has
-				no window ends after YEN has watched it for a day.
+				Sessions stay on your Mac and end when it restarts. With Keep Sessions
+				Running on, YEN can reopen up to eight detached sessions that window
+				restore missed. Use{" "}
+				<code className="inline-code-brand">yen sessions</code> to find the
+				others. A detached session that no window holds ends after YEN has
+				watched it continuously for a day.
 			</p>
 		</DocSection>
 	);

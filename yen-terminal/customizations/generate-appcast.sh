@@ -293,7 +293,7 @@ cat > "$APPCAST_FILE" << EOF
                 </style>
                 <h2>YEN $VERSION</h2>
                 <p class="quip">$NOTES_ESCAPED</p>
-                <p class="tech"><strong>Full release notes:</strong> <a href="https://yen.chat/docs">yen.chat/docs</a></p>
+                <p class="tech"><strong>Full release notes:</strong> <a href="https://blog.yen.chat/releases">blog.yen.chat/releases</a></p>
             ]]></description>
             <pubDate>$PUB_DATE</pubDate>
 $ENCLOSURE_BLOCK
