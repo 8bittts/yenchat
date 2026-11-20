@@ -252,6 +252,7 @@ struct TerminalCommandPaletteView: View {
             hasMultiplePanes: activeTerminalController?.surfaceTree.isSplit ?? false,
             scratchpadEnabled: settingsController.scratchpadEnabled,
             windowBorderEnabled: settingsController.windowBorderEnabled,
+            windowBorderScope: settingsController.windowBorderScope,
             windowBorderColorMode: settingsController.windowBorderColorMode,
             windowBorderFocusedPalette: settingsController.windowBorderFocusedPalette,
             windowBorderUnfocusedPalette: settingsController.windowBorderUnfocusedPalette,

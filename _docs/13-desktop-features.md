@@ -62,7 +62,9 @@ The default pane is Appearance; every pane has a command palette deep link.
 **Controls that map onto stored settings.** The panes expose fewer controls than the stored model, and these mappings are the contract:
 
 - Padding is one stepper (step 2) that writes both `window-padding-x` and `window-padding-y`.
-- Border shows On, Color (Theme writes Match Theme, Accent writes manual) and Weight (Thin 1, Regular 2, Thick 4); a stored width snaps to the nearest weight. Scope, radius and palettes keep their stored values and stay reachable from the command palette's Window Border actions.
+- Border shows On, Color (Theme writes Match Theme, Accent writes manual), Outline (Window or Focused Pane, writes the scope) and Weight (Thin 1, Regular 2, Thick 4); a stored width snaps to the nearest weight.
+- `SettingsAppearancePane.borderRows` lists the child rows, and `SettingsPaneTests` fails when one goes missing.
+- Scope and palettes are also reachable from the command palette's Window Border actions; radius has no control and keeps its stored value.
 - Tab Sidebar is one pop-up: Off clears the enabled flag, Floating is transient mode, Docked is persistent mode.
 - Each alert stream is one sound pop-up. It shows None whenever the stream is silent (no sound, a delivery mode without sound, or zero volume). Choosing a sound raises Banner Only or Off to Banner + Sound, raises a zero volume to 100%, and previews it; choosing None changes only the sound.
 - Background image scope appears only while an image is set.
@@ -312,7 +314,7 @@ Failed loads remain retryable, and each window still applies the parsed config t
 - Leaving `Whole Window`, replacing the image or clearing it rewrites the runtime config to a visible state before removing it.
 - New, restored and re-laid-out splits inherit the scope, and screenshots render the wallpaper once.
 
-**Chromatic window border** (Settings > Appearance > Border; scope and palettes through the palette's Window Border actions).
+**Chromatic window border** (Settings > Appearance > Border; scope also through the palette's `Window Border: Toggle Focused Split`, palettes through its other Window Border actions).
 Scope `Window` or `Focused Split` (falls back to the window when no split frame exists); manual or Match Theme colors.
 - Split frames convert from AppKit to SwiftUI coordinates (Y flip) and snap to the newly focused pane without implicit animation.
 - Frame observers run only for an enabled focused-split border and target its surface and window; missing targets never create global subscriptions.

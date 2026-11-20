@@ -2787,6 +2787,10 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         windowBorderEnabled.toggle()
     }
 
+    func toggleWindowBorderScope() {
+        windowBorderScope = windowBorderScope == .window ? .focusedSplit : .window
+    }
+
     @discardableResult
     func cycleWindowBorderFocusedPalette() -> Bool {
         guard windowBorderColorMode == .manual else { return false }

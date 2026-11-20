@@ -192,6 +192,41 @@ enum SettingsBorderWeight: Double, CaseIterable, Identifiable {
     }
 }
 
+/// Border scopes the Appearance pane offers.
+enum SettingsBorderScopeChoice: String, CaseIterable, Identifiable {
+    case window
+    case focusedPane
+
+    var id: String { rawValue }
+
+    var scope: WindowBorderScope {
+        switch self {
+        case .window: return .window
+        case .focusedPane: return .focusedSplit
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .window: return "Window"
+        case .focusedPane: return "Focused Pane"
+        }
+    }
+
+    init(scope: WindowBorderScope) {
+        self = scope == .window ? .window : .focusedPane
+    }
+}
+
+/// The child rows under the Border toggle, in display order.
+enum SettingsBorderRow: CaseIterable, Identifiable {
+    case color
+    case scope
+    case weight
+
+    var id: Self { self }
+}
+
 struct SettingsAppearancePane: View {
     @ObservedObject var store: GeneralSettingsStore
 
@@ -203,6 +238,10 @@ struct SettingsAppearancePane: View {
 
     static func borderHint(scope: WindowBorderScope) -> String {
         scope == .window ? "Outlines the window." : "Outlines the focused pane."
+    }
+
+    static func borderRows(enabled: Bool) -> [SettingsBorderRow] {
+        enabled ? SettingsBorderRow.allCases : []
     }
 
     var body: some View {
@@ -344,48 +383,74 @@ struct SettingsAppearancePane: View {
                     )
                 }
 
-                if appearance.windowBorderEnabled {
-                    Picker(
-                        selection: Binding(
-                            get: { appearance.windowBorderColorMode },
-                            set: { store.setWindowBorderColorMode($0) }
-                        )
-                    ) {
-                        Text("Theme").tag(WindowBorderColorMode.matchTheme)
-                        Text("Accent").tag(WindowBorderColorMode.manual)
-                    } label: {
-                        SettingsStudioLabel(title: "Color", isChild: true)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityLabel("Border Color")
-
-                    // The theme has no usable accent colors, so the border draws
-                    // the accent palette instead.
-                    if appearance.windowBorderColorMode == .matchTheme,
-                       appearance.windowBorderMatchThemeUsesManualFallback {
-                        SettingsStudioCaution(text: appearance.windowBorderMatchThemeStatusMessage)
-                    }
-
-                    Picker(
-                        selection: Binding(
-                            get: { SettingsBorderWeight.nearest(to: appearance.windowBorderWidth) },
-                            set: { store.setWindowBorderWidth($0.rawValue) }
-                        )
-                    ) {
-                        ForEach(SettingsBorderWeight.allCases) { weight in
-                            Text(weight.title).tag(weight)
-                        }
-                    } label: {
-                        SettingsStudioLabel(title: "Weight", isChild: true)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityLabel("Border Weight")
+                ForEach(Self.borderRows(enabled: appearance.windowBorderEnabled)) { row in
+                    borderRow(row, appearance: appearance)
                 }
             } header: {
                 Text("Window")
             } footer: {
                 Text(Self.opacityFooter)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func borderRow(
+        _ row: SettingsBorderRow,
+        appearance: GeneralSettingsStore.Snapshot.Appearance
+    ) -> some View {
+        switch row {
+        case .color:
+            Picker(
+                selection: Binding(
+                    get: { appearance.windowBorderColorMode },
+                    set: { store.setWindowBorderColorMode($0) }
+                )
+            ) {
+                Text("Theme").tag(WindowBorderColorMode.matchTheme)
+                Text("Accent").tag(WindowBorderColorMode.manual)
+            } label: {
+                SettingsStudioLabel(title: "Color", isChild: true)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Border Color")
+
+            // The theme has no usable accent colors, so the border draws
+            // the accent palette instead.
+            if appearance.windowBorderColorMode == .matchTheme,
+               appearance.windowBorderMatchThemeUsesManualFallback {
+                SettingsStudioCaution(text: appearance.windowBorderMatchThemeStatusMessage)
+            }
+        case .scope:
+            Picker(
+                selection: Binding(
+                    get: { SettingsBorderScopeChoice(scope: appearance.windowBorderScope) },
+                    set: { store.setWindowBorderScope($0.scope) }
+                )
+            ) {
+                ForEach(SettingsBorderScopeChoice.allCases) { choice in
+                    Text(choice.title).tag(choice)
+                }
+            } label: {
+                SettingsStudioLabel(title: "Outline", isChild: true)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Border Outline")
+        case .weight:
+            Picker(
+                selection: Binding(
+                    get: { SettingsBorderWeight.nearest(to: appearance.windowBorderWidth) },
+                    set: { store.setWindowBorderWidth($0.rawValue) }
+                )
+            ) {
+                ForEach(SettingsBorderWeight.allCases) { weight in
+                    Text(weight.title).tag(weight)
+                }
+            } label: {
+                SettingsStudioLabel(title: "Weight", isChild: true)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Border Weight")
         }
     }
 }

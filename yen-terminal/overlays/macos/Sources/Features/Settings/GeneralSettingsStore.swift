@@ -183,6 +183,10 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
         controller.windowBorderEnabled = value
     }
 
+    func setWindowBorderScope(_ value: WindowBorderScope) {
+        controller.windowBorderScope = value
+    }
+
     func setWindowBorderWidth(_ value: Double) {
         controller.windowBorderWidth = value
     }

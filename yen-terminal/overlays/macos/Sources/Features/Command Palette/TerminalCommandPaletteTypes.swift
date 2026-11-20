@@ -74,6 +74,7 @@ extension TerminalCommandPaletteView {
 
     struct ActionCatalogWindowBorderKey: Equatable {
         let enabled: Bool
+        let scope: WindowBorderScope
         let colorMode: WindowBorderColorMode
         let focusedPalette: WindowBorderPalette
         let unfocusedPalette: WindowBorderPalette

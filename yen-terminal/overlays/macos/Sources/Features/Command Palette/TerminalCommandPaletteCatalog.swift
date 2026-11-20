@@ -336,6 +336,7 @@ extension TerminalCommandPaletteView {
     private var windowBorderActionDescriptors: [PaletteActionDescriptor] {
         Self.buildWindowBorderActionSnapshots(
             borderEnabled: settingsController.windowBorderEnabled,
+            scope: settingsController.windowBorderScope,
             colorMode: settingsController.windowBorderColorMode,
             focusedPalette: settingsController.windowBorderFocusedPalette,
             unfocusedPalette: settingsController.windowBorderUnfocusedPalette,
@@ -434,6 +435,7 @@ extension TerminalCommandPaletteView {
 
     static func buildWindowBorderActionSnapshots(
         borderEnabled: Bool,
+        scope: WindowBorderScope,
         colorMode: WindowBorderColorMode,
         focusedPalette: WindowBorderPalette,
         unfocusedPalette: WindowBorderPalette,
@@ -462,6 +464,15 @@ extension TerminalCommandPaletteView {
                 ),
                 leadingIcon: colorMode == .matchTheme ? "paintbrush.pointed" : "swatchpalette",
                 searchTags: ["window", "border", "theme", "colors", "manual", "match theme"]
+            ),
+            .init(
+                id: "window-border:scope",
+                title: "Window Border: Toggle Focused Split",
+                description: scope == .window
+                    ? "Outline the focused split instead of the whole window"
+                    : "Outline the whole window instead of the focused split",
+                leadingIcon: scope == .window ? "rectangle.split.2x1" : "macwindow",
+                searchTags: ["window", "border", "scope", "split", "pane", "focused split"]
             ),
             .init(
                 id: "window-border:cycle-focused",
@@ -510,6 +521,8 @@ extension TerminalCommandPaletteView {
             settingsController.windowBorderColorMode = settingsController.windowBorderColorMode == .matchTheme
                 ? .manual
                 : .matchTheme
+        case "window-border:scope":
+            settingsController.toggleWindowBorderScope()
         case "window-border:cycle-focused":
             settingsController.cycleWindowBorderFocusedPalette()
         case "window-border:cycle-unfocused":

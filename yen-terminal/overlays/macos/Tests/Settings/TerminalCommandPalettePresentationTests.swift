@@ -354,6 +354,14 @@ struct TerminalCommandPalettePresentationTests {
         )
         #expect(
             base != actionCatalogInvalidationKey(
+                windowBorderScope: .focusedSplit,
+                jumpTargets: [
+                    jumpTargetKey(for: firstSurface),
+                ]
+            )
+        )
+        #expect(
+            base != actionCatalogInvalidationKey(
                 windowBorderColorMode: .matchTheme,
                 windowBorderResolvedThemeName: "Solarized",
                 jumpTargets: [
@@ -968,6 +976,7 @@ struct TerminalCommandPalettePresentationTests {
         hasMultiplePanes: Bool = false,
         scratchpadEnabled: Bool = true,
         windowBorderEnabled: Bool = true,
+        windowBorderScope: WindowBorderScope = .window,
         windowBorderColorMode: WindowBorderColorMode = .manual,
         windowBorderFocusedPalette: WindowBorderPalette = .aurora,
         windowBorderUnfocusedPalette: WindowBorderPalette = .graphite,
@@ -990,6 +999,7 @@ struct TerminalCommandPalettePresentationTests {
             hasMultiplePanes: hasMultiplePanes,
             scratchpadEnabled: scratchpadEnabled,
             windowBorderEnabled: windowBorderEnabled,
+            windowBorderScope: windowBorderScope,
             windowBorderColorMode: windowBorderColorMode,
             windowBorderFocusedPalette: windowBorderFocusedPalette,
             windowBorderUnfocusedPalette: windowBorderUnfocusedPalette,

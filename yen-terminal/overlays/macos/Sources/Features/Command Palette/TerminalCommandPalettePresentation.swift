@@ -33,6 +33,7 @@ extension TerminalCommandPaletteView {
         hasMultiplePanes: Bool,
         scratchpadEnabled: Bool,
         windowBorderEnabled: Bool,
+        windowBorderScope: WindowBorderScope,
         windowBorderColorMode: WindowBorderColorMode,
         windowBorderFocusedPalette: WindowBorderPalette,
         windowBorderUnfocusedPalette: WindowBorderPalette,
@@ -54,6 +55,7 @@ extension TerminalCommandPaletteView {
             hasMultiplePanes: hasMultiplePanes,
             scratchpadEnabled: scratchpadEnabled,
             windowBorderEnabled: windowBorderEnabled,
+            windowBorderScope: windowBorderScope,
             windowBorderColorMode: windowBorderColorMode,
             windowBorderFocusedPalette: windowBorderFocusedPalette,
             windowBorderUnfocusedPalette: windowBorderUnfocusedPalette,
@@ -67,6 +69,7 @@ extension TerminalCommandPaletteView {
 
     static func windowBorderActionSnapshotsForTesting(
         borderEnabled: Bool,
+        scope: WindowBorderScope,
         colorMode: WindowBorderColorMode,
         focusedPalette: WindowBorderPalette,
         unfocusedPalette: WindowBorderPalette,
@@ -77,6 +80,7 @@ extension TerminalCommandPaletteView {
     ) -> [WindowBorderActionSnapshot] {
         buildWindowBorderActionSnapshots(
             borderEnabled: borderEnabled,
+            scope: scope,
             colorMode: colorMode,
             focusedPalette: focusedPalette,
             unfocusedPalette: unfocusedPalette,
@@ -99,6 +103,7 @@ extension TerminalCommandPaletteView {
         hasMultiplePanes: Bool,
         scratchpadEnabled: Bool,
         windowBorderEnabled: Bool,
+        windowBorderScope: WindowBorderScope,
         windowBorderColorMode: WindowBorderColorMode,
         windowBorderFocusedPalette: WindowBorderPalette,
         windowBorderUnfocusedPalette: WindowBorderPalette,
@@ -122,6 +127,7 @@ extension TerminalCommandPaletteView {
                 scratchpadEnabled: scratchpadEnabled,
                 windowBorder: ActionCatalogWindowBorderKey(
                     enabled: windowBorderEnabled,
+                    scope: windowBorderScope,
                     colorMode: windowBorderColorMode,
                     focusedPalette: windowBorderFocusedPalette,
                     unfocusedPalette: windowBorderUnfocusedPalette,

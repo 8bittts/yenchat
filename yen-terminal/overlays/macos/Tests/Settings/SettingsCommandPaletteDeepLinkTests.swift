@@ -106,6 +106,7 @@ struct SettingsCommandPaletteDeepLinkTests {
     @Test func windowBorderCommandPaletteActionsRemainStable() {
         let actions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
             borderEnabled: false,
+            scope: .window,
             colorMode: .manual,
             focusedPalette: .aurora,
             unfocusedPalette: .graphite,
@@ -138,6 +139,7 @@ struct SettingsCommandPaletteDeepLinkTests {
     @Test func windowBorderCommandPaletteDescriptionsTrackThemeAndAccessibilityState() {
         let manualActions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
             borderEnabled: true,
+            scope: .window,
             colorMode: .manual,
             focusedPalette: .ocean,
             unfocusedPalette: .graphite,
@@ -148,6 +150,25 @@ struct SettingsCommandPaletteDeepLinkTests {
         )
         let manualLookup = Dictionary(uniqueKeysWithValues: manualActions.map { ($0.id, $0) })
 
+        #expect(
+            manualLookup["window-border:scope"]?.description
+                == "Outline the focused split instead of the whole window"
+        )
+        let splitActions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
+            borderEnabled: true,
+            scope: .focusedSplit,
+            colorMode: .manual,
+            focusedPalette: .ocean,
+            unfocusedPalette: .graphite,
+            matchThemeUsesManualFallback: false,
+            resolvedThemeName: nil,
+            reduceMotion: false,
+            differentiateWithoutColor: false
+        )
+        #expect(
+            splitActions.first { $0.id == "window-border:scope" }?.description
+                == "Outline the whole window instead of the focused split"
+        )
         #expect(
             manualLookup["window-border:cycle-focused"]?.description
                 == "Focused palette: Ocean"
@@ -163,6 +184,7 @@ struct SettingsCommandPaletteDeepLinkTests {
 
         let themedActions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
             borderEnabled: true,
+            scope: .window,
             colorMode: .matchTheme,
             focusedPalette: .ocean,
             unfocusedPalette: .graphite,
@@ -190,6 +212,7 @@ struct SettingsCommandPaletteDeepLinkTests {
     @Test func windowBorderMatchThemeCommandUsesResolvedThemeNameWhenAvailable() {
         let actions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
             borderEnabled: true,
+            scope: .window,
             colorMode: .matchTheme,
             focusedPalette: .aurora,
             unfocusedPalette: .graphite,
@@ -213,6 +236,7 @@ struct SettingsCommandPaletteDeepLinkTests {
     @Test func windowBorderCommandPaletteSearchTagsIncludeModeAndPaletteLabels() {
         let actions = TerminalCommandPaletteView.windowBorderActionSnapshotsForTesting(
             borderEnabled: true,
+            scope: .window,
             colorMode: .manual,
             focusedPalette: .aurora,
             unfocusedPalette: .graphite,
