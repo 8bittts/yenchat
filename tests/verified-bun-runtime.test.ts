@@ -40,7 +40,7 @@ test("a downloaded runtime named bun.exe owns nested bun calls", () => {
 				cwd: root,
 				env: {
 					...process.env,
-					PATH: `${join(root, "bin")}:${process.env["PATH"] ?? ""}`,
+					PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
 				},
 				encoding: "utf8",
 			},

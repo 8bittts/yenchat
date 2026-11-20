@@ -3,11 +3,8 @@
 	"ignoreDependencies": ["tailwindcss"],
 	"ignoreBinaries": [
 		"infisical",
-		"lsof",
-		"python3",
 		"lua",
 		"clang",
-		"zsh",
 		"openssl",
 		"zig",
 		"msgfmt",

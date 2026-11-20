@@ -30,12 +30,6 @@ const DATE_LABEL = new Intl.DateTimeFormat("en-US", {
 	year: "numeric",
 });
 
-const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
-	month: "long",
-	timeZone: "America/Los_Angeles",
-	year: "numeric",
-});
-
 export interface BlogImage {
 	src: string;
 	width: number;
@@ -97,24 +91,6 @@ export function getAdjacentBlogPosts(slug: string): {
 	const index = posts.findIndex((post) => post.slug === slug);
 	if (index < 0) return { newer: null, older: null };
 	return { newer: posts[index - 1] ?? null, older: posts[index + 1] ?? null };
-}
-
-/** Posts grouped by month, newest first, for the index page. */
-export function getBlogPostsByMonth(): {
-	id: string;
-	label: string;
-	posts: BlogPost[];
-}[] {
-	const groups = new Map<string, BlogPost[]>();
-	for (const post of getBlogPosts()) {
-		const label = MONTH_LABEL.format(new Date(post.publishedAt));
-		groups.set(label, [...(groups.get(label) ?? []), post]);
-	}
-	return [...groups].map(([label, posts]) => ({
-		id: `m-${label.toLowerCase().replace(/\s+/g, "-")}`,
-		label,
-		posts,
-	}));
 }
 
 /** The h2/h3 section anchors the importer added to a post. */

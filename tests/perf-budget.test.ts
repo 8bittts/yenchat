@@ -125,7 +125,7 @@ describe("perf budget gate", () => {
 		const packageJson = JSON.parse(
 			await readFile(new URL("../package.json", import.meta.url), "utf8"),
 		) as { scripts: Record<string, string> };
-		expect(packageJson.scripts["build"]).toContain("bun run check:perf-budget");
+		expect(packageJson.scripts.build).toContain("bun run check:perf-budget");
 		expect(packageJson.scripts["check:perf-budget"]).toBe(
 			"bun scripts/perf-budget.ts",
 		);
