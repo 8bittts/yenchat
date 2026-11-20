@@ -35,7 +35,7 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 #### Phase 2: Local persistent sessions
 
 - [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle, then turn the preference on by default.
-- [ ] Prove force-kill and a Sparkle update in a running re-identified `zig-out` copy leave sessions alive (quit and restore are proven).
+- [ ] Prove force-kill and a Sparkle update in the stable verify copy (`scripts/manual/18-make-verify-copy.sh`) leave sessions alive (quit and restore are proven).
 
 #### Phase 3: Remote attach over Tailscale
 
