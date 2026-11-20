@@ -1,23 +1,52 @@
 # YEN
 
+**Quit, crash, update. Your terminal keeps running.**
+
 ![YEN Terminal](https://yen.chat/doc-images/_yen-0.png)
 
-YEN is a free, open-source, GPU-accelerated terminal for macOS, built on [Ghostty](https://github.com/ghostty-org/ghostty).
-It is released under the [MIT License](LICENSE).
+YEN is a free, open-source, GPU-accelerated terminal for macOS that just works.
+Your panes keep running through quits, crashes and updates, you can talk to any app on your Mac, and nothing needs configuring before it is useful.
+It is built on [Ghostty](https://github.com/ghostty-org/ghostty) and released under the [MIT License](LICENSE).
 
-## Product
+[Download for macOS](https://yen.chat) · [Docs](https://yen.chat/docs) · [Release notes](https://blog.yen.chat/releases)
 
-- Native Metal rendering.
-- Apple Speech dictation in YEN and other macOS apps.
-- A built-in file browser, Git drawer, command palette, browser preview, tab sidebar, and scratchpad.
-- Local terminal-first IDE workflows for project detection, trust, diagnostics, testing, review, and automation.
-- A curated theme catalog and native macOS settings.
-- No required YEN account and no desktop usage telemetry sent to YEN.
+## Why YEN
 
-Dictation uses Apple's on-device `SpeechAnalyzer` on macOS 26 or newer.
-On older systems or runtime fallback, YEN requests on-device recognition when Apple reports support.
-Apple's legacy recognizer can use Apple's service when on-device recognition is unavailable.
-YEN does not receive dictation audio or transcripts.
+### Sessions that never die
+
+Quit YEN, let it update, or watch it crash: every pane keeps running.
+Open it again and each pane reattaches with its screen and scrollback, right where you left it.
+A build finishes, a dev server keeps its port, and an SSH connection stays up while YEN is closed.
+
+There is nothing to set up: no tmux config, no session names, no extra commands.
+It is on by default.
+Settings > General shows how many sessions are running and stops them all with one button, and `yen sessions` lists, attaches and ends them from any shell.
+Closing a pane still ends what runs in it.
+
+### Speech-to-text in any app
+
+Press `Option + Space`, talk, and your words land in the terminal or in any other macOS app.
+Dictation runs on Apple's on-device `SpeechAnalyzer` on macOS 26 or newer, so there is no AI service, no account and no upload.
+YEN never receives your audio or transcripts.
+
+### Paste anything
+
+`Cmd + V` knows what is on your clipboard.
+Paste a screenshot or a copied picture and YEN saves it to a private, auto-pruned folder and pastes its path, ready for your editor or coding agent.
+
+### A terminal-first IDE
+
+- A native file browser, Git drawer, command palette, tab sidebar and scratchpad, all one shortcut away.
+- A built-in WebKit browser for docs and local dev servers, in a window or a split.
+- Project detection, trust, diagnostics, test runs, review and automation through the bundled `yen` command.
+- 20 curated themes, previewed live in Settings.
+- Metal rendering at 60 FPS and up.
+
+### Private by default
+
+No YEN account.
+No desktop usage telemetry sent to YEN.
+No terminal content is sent to YEN.
 
 ## Requirements
 
@@ -25,13 +54,17 @@ YEN does not receive dictation audio or transcripts.
 - Apple silicon or Intel Mac.
 - Accessibility, Microphone, and Speech Recognition permissions for dictation.
 
+On systems older than macOS 26, or when the on-device recognizer is unavailable, YEN requests on-device recognition when Apple reports support.
+Apple's legacy recognizer can use Apple's service when on-device recognition is unavailable.
+
 ## Install
 
 1. Download YEN from [yen.chat](https://yen.chat) or the [latest GitHub Release](https://github.com/8bittts/yenchat/releases/latest).
 2. Open the DMG and drag YEN to Applications.
 3. Open YEN from Applications.
 
-See the [public documentation](https://yen.chat/docs) for current features and commands.
+YEN updates itself.
+See the [public documentation](https://yen.chat/docs) for every feature and command.
 
 ## Development
 
@@ -55,16 +88,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 | `scripts/` | Build, vendor, verification, and release automation |
 | `_docs/` | Owner documentation for maintainers |
 
-## Links
-
-- Website: [yen.chat](https://yen.chat)
-- Documentation: [yen.chat/docs](https://yen.chat/docs)
-- Release notes: [blog.yen.chat/releases](https://blog.yen.chat/releases)
-- Blog: [blog.yen.chat](https://blog.yen.chat/)
-
 ## License
 
 YEN is released under the [MIT License](LICENSE).
 YEN is built on Ghostty, which is also MIT licensed; its notice is included in [LICENSE](LICENSE).
+Persistent sessions use [zmx](https://github.com/neurosnap/zmx), which is MIT licensed.
 Bundled third-party tools keep their own licenses.
 The YEN name and logo are not covered by the MIT License.
