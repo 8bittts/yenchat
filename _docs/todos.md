@@ -24,13 +24,13 @@ Vendor updates and desktop releases run through `/yen-zip` and need no entry her
 
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
 
-Goal: a YEN pane keeps running when the app quits, crashes or updates, and the operator can attach to it from another Mac on their tailnet.
+Goal: a YEN pane keeps running when the app quits, crashes or updates, and the user can attach to it from another Mac on their tailnet.
 Today `window-save-state = always` restores windows, tabs, splits and working directories, but every shell is a child of the app process and dies with it.
 Facts the plan builds on:
 - Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
 - Upstream ships a tmux control-mode client in core (`src/terminal/tmux/viewer.zig`, built when `tmux_control_mode` is on) with no macOS UI yet.
 - Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
-Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the operator's own machines over Tailscale.
+Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the user's own machines over Tailscale.
 
 #### Phase 1: Choose the session backend (spike, no shipping code)
 
