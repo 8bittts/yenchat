@@ -12,24 +12,24 @@ DMG_PATH="$RELEASE_DIR/$DMG_FILENAME"
 DMG_VOLUME_NAME="YEN"
 DMG_WINDOW_BOUNDS_LEFT=200
 DMG_WINDOW_BOUNDS_TOP=140
-DMG_WINDOW_BOUNDS_RIGHT=1015
-DMG_WINDOW_BOUNDS_BOTTOM=1000
+DMG_WINDOW_BOUNDS_RIGHT=800
+DMG_WINDOW_BOUNDS_BOTTOM=800
 DMG_WINDOW_BOUNDS_RIGHT_JIGGLE=$((DMG_WINDOW_BOUNDS_RIGHT - 10))
 DMG_WINDOW_BOUNDS_BOTTOM_JIGGLE=$((DMG_WINDOW_BOUNDS_BOTTOM - 10))
 # Full-bleed opaque icons render visually larger in Finder; tune icon size and
 # positions to keep the app icon aligned with the option key center.
-DMG_ICON_SIZE=144
-DMG_TEXT_SIZE=16
-# Align app icon center over the keyboard option key in full 800x800 art.
-DMG_APP_ICON_X=400
-DMG_APP_ICON_Y=321
-DMG_APPLICATIONS_ICON_X=400
-DMG_APPLICATIONS_ICON_Y=560
+DMG_ICON_SIZE=108
+DMG_TEXT_SIZE=12
+# Align app icon center over the keyboard option key in full 600x600 art.
+DMG_APP_ICON_X=300
+DMG_APP_ICON_Y=241
+DMG_APPLICATIONS_ICON_X=300
+DMG_APPLICATIONS_ICON_Y=420
 # Keep hidden metadata folders aligned below Applications in the lower white
 # strip so they stay out of the primary art/drag path.
-DMG_HIDDEN_METADATA_X=400
-DMG_BACKGROUND_FOLDER_Y=1008
-DMG_FSEVENTSD_FOLDER_Y=1048
+DMG_HIDDEN_METADATA_X=300
+DMG_BACKGROUND_FOLDER_Y=760
+DMG_FSEVENTSD_FOLDER_Y=800
 
 # Clean old release files
 find "$RELEASE_DIR" -name "yen-*.dmg" -type f ! -name "$DMG_FILENAME" -delete 2>/dev/null || true

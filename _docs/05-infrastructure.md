@@ -156,10 +156,11 @@ The Debug and ReleaseLocal files also carry `com.apple.security.cs.disable-libra
 
 Frozen installer layout, enforced by `scripts/manual/14-verify-dmg-layout.sh`:
 
-- Icon view with toolbar and status bar hidden, arrangement `not arranged`, window `815x860`.
-- Icon size `144` (full-bleed opaque icons read oversized at `124`), label size `16`.
-- `YEN.app {400,321}`, `Applications {400,560}`; `.background {400,1008}` and `.fseventsd {400,1048}` parked below the frame.
-- `background.png` (800x800) and `background@2x.png` (1600x1600) from `public/dmg-frame-2.png`, icon-only art with no baked labels. The chevron recipe lives in `yen-terminal/customizations/dmg-resources/README.md`.
+- Icon view with toolbar and status bar hidden, arrangement `not arranged`, window `600x660`.
+- Icon size `108`, label size `12`.
+- `YEN.app {300,241}`, `Applications {300,420}`; `.background {300,760}` and `.fseventsd {300,800}` parked below the frame.
+- `background.png` (600x600) and `background@2x.png` (1200x1200) from `public/dmg-frame.png`, with no baked labels. The recipe lives in `yen-terminal/customizations/dmg-resources/README.md`.
+- Finder draws icon labels in the system text color (black in Light Mode, white in Dark Mode), and a DMG cannot change it. The art puts a mid-gray pill under each label so both stay readable; without a backing, Light Mode labels vanish on the dark art.
 - An `/Applications` symlink for drag install.
 
 Packaging rules:
