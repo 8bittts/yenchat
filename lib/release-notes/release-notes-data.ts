@@ -13,10 +13,14 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"iso": "2026-11-16",
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
-		"summary": "Quit YEN, let it update, or watch it crash, and your panes keep running. Open it again and each restored shell session reattaches with its screen and scrollback, so a build finishes, a dev server keeps its port, and an SSH connection stays up while YEN is closed. It is on by default; Settings > General shows how many sessions are running, End All Sessions stops them at once, and Keep Sessions Running turns the behavior off for new panes. Closing a pane still ends what runs in it, and yen sessions lists and ends sessions from a shell.\n\nIf you work with a Retina display and a non-Retina display attached, wake your Mac and your text comes back the way you left it. Characters YEN draws from fallback fonts, such as Japanese text and symbols, could reuse font data from before sleep that now pointed at a different font, so they showed as the wrong glyphs. YEN now checks that its cached fonts belong to the current display setup before it uses them.\n\nThe bundled diff viewer also moves to its latest release, so deleted files keep their syntax highlighting and side-by-side view keeps your line-number styles. Later in the week it picks up another release, so a submodule with uncommitted changes now shows that in the diff instead of looking clean.",
-		"builds": 3,
-		"latestVersion": "1.275",
+		"summary": "Leave a dev server running in a shell pane and quit YEN. When you reopen it, the server still has its port and the pane brings back its screen and scrollback. If a crash interrupts window restore, YEN can reopen up to eight detached shell sessions, including ones started by an older version of the session tool. Closing a pane still ends its session.\n\nRun yen sessions to see which shells are still running, even across an update. If the session directory is unreadable, the command tells you it could not check. In Settings, End All Sessions stops them together, and Keep Sessions Running lets you choose how new shell panes behave.\n\nIf you use Retina and non-Retina displays together, Japanese text and other fallback characters keep the right glyphs after your Mac wakes. In the diff viewer, deleted files keep their syntax highlighting, and you can see when a submodule has uncommitted changes.",
+		"builds": 4,
+		"latestVersion": "1.277",
 		"versions": [
+			{
+				"version": "1.277",
+				"shippedOn": "2026-11-20"
+			},
 			{
 				"version": "1.275",
 				"shippedOn": "2026-11-20"
