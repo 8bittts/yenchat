@@ -476,7 +476,7 @@ enum TabSidebarPreferences {
 enum SplitPaneLabelsPreferences {
     static let enabledPreferenceKey = "com.yenchat.yen.splitPaneLabelsEnabled"
     static let worktreeNamingEnabledPreferenceKey = "com.yenchat.yen.splitPaneLabelsWorktreeNamingEnabled"
-    static let defaultEnabled = false
+    static let defaultEnabled = true
     static let defaultWorktreeNamingEnabled = false
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {

@@ -1,0 +1,2 @@
+            // Focus on a plain press while preserving the native drag source.
+            if let surfaceView { window?.makeFirstResponder(surfaceView) }

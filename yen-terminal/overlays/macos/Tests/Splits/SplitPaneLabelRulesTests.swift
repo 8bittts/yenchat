@@ -76,77 +76,21 @@ struct SplitPaneLabelRulesTests {
         )
     }
 
-    @Test func visibilityFailsClosedForSmallHoveringDraggedOrNonSplitPanes() {
-        #expect(
-            SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: true,
-                hoverURL: nil,
-                isAnySurfaceDragging: false,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: false,
-                isSplit: true,
-                hoverURL: nil,
-                isAnySurfaceDragging: false,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: false,
-                hoverURL: nil,
-                isAnySurfaceDragging: false,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: true,
-                hoverURL: "https://yen.chat",
-                isAnySurfaceDragging: false,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: true,
-                hoverURL: nil,
-                isAnySurfaceDragging: true,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: true,
-                hoverURL: nil,
-                isAnySurfaceDragging: false,
-                isDropTargetActive: true,
-                availableSize: CGSize(width: 220, height: 120)
-            )
-        )
-        #expect(
-            !SplitPaneLabelRules.isVisible(
-                enabled: true,
-                isSplit: true,
-                hoverURL: nil,
-                isAnySurfaceDragging: false,
-                isDropTargetActive: false,
-                availableSize: CGSize(width: 120, height: 120)
-            )
-        )
+    @Test func headersRequireEnabledLabelsAndEnoughRoomInASplit() {
+        let size = CGSize(width: 220, height: 120)
+        #expect(SplitPaneLabelRules.isVisible(enabled: true, isSplit: true, availableSize: size))
+        #expect(!SplitPaneLabelRules.isVisible(enabled: false, isSplit: true, availableSize: size))
+        #expect(!SplitPaneLabelRules.isVisible(enabled: true, isSplit: false, availableSize: size))
+        #expect(!SplitPaneLabelRules.isVisible(enabled: true, isSplit: true, availableSize: .init(width: 100, height: 120)))
+        #expect(!SplitPaneLabelRules.isVisible(enabled: true, isSplit: true, availableSize: .init(width: 220, height: 60)))
+    }
+
+    @Test func paneIconsRecognizeForegroundToolsAndWrappedTitles() {
+        #expect(PaneActivity.resolve(process: "nvim", title: "Codex") == .editor)
+        #expect(PaneActivity.resolve(process: "node", title: "OpenAI Codex") == .codex)
+        #expect(PaneActivity.resolve(process: "zmx", title: "✳ Claude Code") == .claude)
+        #expect(PaneActivity.resolve(process: "zsh", title: "~/work/codex") == .terminal)
+        #expect(PaneActivity.resolve(process: "git", title: "project") == .git)
     }
 
     @Test func foregroundRoleTracksBackgroundLuminance() {

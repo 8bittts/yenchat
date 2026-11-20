@@ -1,0 +1,2 @@
+        @Environment(\.yenLastFocusedSurface) private var lastFocusedSurface
+        @Environment(\.paneHeaderVisible) private var paneHeaderVisible

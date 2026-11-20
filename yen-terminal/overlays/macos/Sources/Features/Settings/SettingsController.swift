@@ -544,7 +544,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         }
     }
 
-    /// Whether split panes show a bottom label with optional user-defined pane labels.
+    /// Whether split panes show a header with an optional custom title.
     /// Stored in UserDefaults to avoid unknown-key diagnostics from config.yen.
     @Published var splitPaneLabelsEnabled: Bool = SplitPaneLabelsPreferences.enabled() {
         didSet {

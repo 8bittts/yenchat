@@ -716,10 +716,11 @@ function SplitPaneLabelsSection() {
 	return (
 		<DocSection id="split-pane-labels" title="Split Pane Labels">
 			<p className="text-body">
-				Enable Settings &gt; General &gt; Pane Labels, then run
-				<code className="inline-code-brand"> Rename Split Label</code> from the
-				command palette. Leave the name blank to return to automatic naming.
-				Labels are off by default and separate from tab titles.
+				Click a split header to focus its terminal. Drag the icon, name, or
+				empty header space to an edge of another pane. The highlighted half
+				shows where the pane will land. Click the pencil or run
+				<code className="inline-code-brand"> Rename Split Label</code> to change
+				its name. Leave the name blank to return to automatic naming.
 			</p>
 			<p className="text-body">
 				Turn on Name Panes After Worktree to use the worktree folder or branch.
@@ -729,8 +730,10 @@ function SplitPaneLabelsSection() {
 				label overrides automatic naming and survives session restore.
 			</p>
 			<p className="text-body">
-				Labels hide in very small panes, during drag and drop, and while
-				hovering over a URL.
+				Each tab shows up to three pane icons and a count for additional panes.
+				Icons follow recognized foreground tools and terminal titles. Headers
+				hide in small or zoomed panes. You can turn them off in Settings &gt;
+				General &gt; Pane Labels.
 			</p>
 		</DocSection>
 	);

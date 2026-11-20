@@ -745,7 +745,7 @@ struct TerminalCommandPaletteSearchTests {
                 TerminalCommandPaletteActionSearchDescriptor(
                     id: "workspace:rename-split-label",
                     title: "Rename Split Label",
-                    subtitle: "Change the bottom label for the focused split pane",
+                    subtitle: "Change the header title for the focused split pane",
                     description: nil,
                     searchTags: ["split", "label", "rename"]
                 ),

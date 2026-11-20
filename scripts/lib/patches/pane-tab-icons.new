@@ -1,0 +1,2 @@
+        window.contentView = container
+        PaneTabIconAccessory.install(for: self, in: window)

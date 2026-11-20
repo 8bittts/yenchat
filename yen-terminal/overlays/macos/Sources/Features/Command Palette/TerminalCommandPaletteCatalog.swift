@@ -133,7 +133,7 @@ extension TerminalCommandPaletteView {
                 actionDescriptor(
                     id: "workspace:rename-split-label",
                     title: "Rename Split Label",
-                    description: "Change the bottom label for the focused split pane",
+                    description: "Change the header title for the focused split pane",
                     leadingIcon: "pencil.line",
                     searchTags: ["split", "pane", "label", "rename", "title"]
                 ) {

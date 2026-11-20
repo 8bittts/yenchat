@@ -45,7 +45,6 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
-- [ ] Verify the upstream split drag-and-drop in the running app, then make the drag handle and drop zones easy to find.
 - [ ] Show session state (live, detached, remote host) in tabs and the tab sidebar.
 
 #### Phase 5: Docs and release

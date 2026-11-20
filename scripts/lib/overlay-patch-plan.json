@@ -994,5 +994,52 @@
 			"--marker-all",
 			"WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)"
 		]
+	},
+	"pane-header-focus": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceDragSource.swift",
+		"arguments": [
+			"--label",
+			"pane header focus",
+			"--mode",
+			"exact",
+			"--marker",
+			"window?.makeFirstResponder(surfaceView)",
+			"--old-block",
+			"@$PATCHES_DIR/pane-header-focus.old",
+			"--new-block",
+			"@$PATCHES_DIR/pane-header-focus.new"
+		]
+	},
+	"pane-header-grab-handle": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView.swift",
+		"arguments": [
+			"--label",
+			"pane header grab handle",
+			"--mode",
+			"exact",
+			"--marker",
+			"dragHandle: paneHeaderVisible ? .never",
+			"--old-block",
+			"@$PATCHES_DIR/pane-header-grab-handle.old",
+			"--new-block",
+			"@$PATCHES_DIR/pane-header-grab-handle.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/pane-header-grab-handle-value.old:::@$PATCHES_DIR/pane-header-grab-handle-value.new"
+		]
+	},
+	"pane-tab-icons": {
+		"target": "ghostty/macos/Sources/Features/Terminal/TerminalController.swift",
+		"arguments": [
+			"--label",
+			"pane tab icons",
+			"--mode",
+			"exact",
+			"--marker",
+			"PaneTabIconAccessory.install",
+			"--old-block",
+			"@$PATCHES_DIR/pane-tab-icons.old",
+			"--new-block",
+			"@$PATCHES_DIR/pane-tab-icons.new"
+		]
 	}
 }

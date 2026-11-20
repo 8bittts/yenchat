@@ -1,10 +1,5 @@
 // YEN Overlay: replaces upstream macos/Sources/Features/Splits/TerminalSplitTreeView.swift
 //
-// Divergence from upstream:
-//   - optional split-pane label pill rendered at the bottom of each pane
-//   - label visibility rules that fail closed for tiny panes, URL hover previews, and drag/drop
-//   - label styling derived from the active terminal background for theme-aware contrast
-
 import AppKit
 import SwiftUI
 
@@ -45,13 +40,9 @@ enum SplitPaneLabelRules {
     static func isVisible(
         enabled: Bool,
         isSplit: Bool,
-        hoverURL: String?,
-        isAnySurfaceDragging: Bool,
-        isDropTargetActive: Bool,
         availableSize: CGSize
     ) -> Bool {
         guard enabled, isSplit else { return false }
-        guard hoverURL == nil, !isAnySurfaceDragging, !isDropTargetActive else { return false }
         guard availableSize.width >= minimumWidth, availableSize.height >= minimumHeight else { return false }
         return true
     }
@@ -108,7 +99,7 @@ enum SplitPaneLabelRules {
         }
     }
 
-    static func pillBackgroundColor(backgroundColor: NSColor) -> NSColor {
+    static func headerBackgroundColor(backgroundColor: NSColor) -> NSColor {
         if backgroundColor.isLightColor {
             let shaded = backgroundColor.blended(withFraction: 0.18, of: .black)
                 ?? backgroundColor.shadow(withLevel: 0.18)
@@ -224,29 +215,23 @@ private struct TerminalSplitLeaf: View {
     @ObservedObject private var splitPaneLabelSettings = SplitPaneLabelSettings.shared
     @State private var dropState: DropState = .idle
     @State private var isSelfDragging: Bool = false
-    @State private var isAnySurfaceDragging: Bool = false
-
-    private var isDropTargetActive: Bool {
-        if case .dropping = dropState {
-            return true
-        }
-        return false
-    }
+    @EnvironmentObject private var yen: YEN.App
 
     var body: some View {
         GeometryReader { geometry in
             let showSplitLabel = SplitPaneLabelRules.isVisible(
                 enabled: splitPaneLabelSettings.isEnabled,
                 isSplit: isSplit,
-                hoverURL: surfaceView.hoverUrl,
-                isAnySurfaceDragging: isAnySurfaceDragging,
-                isDropTargetActive: isDropTargetActive,
                 availableSize: geometry.size
             )
 
-            YEN.InspectableSurface(
-                surfaceView: surfaceView,
-                isSplit: isSplit)
+            VStack(spacing: 0) {
+                if showSplitLabel {
+                    SplitPaneLabelView(surfaceView: surfaceView, dragEnabled: yen.config.dragHandle != .never)
+                }
+                YEN.InspectableSurface(surfaceView: surfaceView, isSplit: isSplit)
+                    .environment(\.paneHeaderVisible, showSplitLabel)
+            }
             .background {
                 // If we're dragging ourself, we hide the entire drop zone. This makes
                 // it so that a released drop animates back to its source properly
@@ -261,16 +246,6 @@ private struct TerminalSplitLeaf: View {
                         ))
                 }
             }
-            .overlay(alignment: .bottomLeading) {
-                if showSplitLabel {
-                    SplitPaneLabelView(
-                        surfaceView: surfaceView,
-                        availableWidth: geometry.size.width
-                    )
-                    .padding(.leading, 8)
-                    .padding(.bottom, 8)
-                }
-            }
             .overlay {
                 if !isSelfDragging, case .dropping(let zone) = dropState {
                     zone.overlay(in: geometry)
@@ -278,7 +253,6 @@ private struct TerminalSplitLeaf: View {
                 }
             }
             .onPreferenceChange(YEN.DraggingSurfaceKey.self) { value in
-                isAnySurfaceDragging = value != nil
                 isSelfDragging = value == surfaceView.id
                 if isSelfDragging {
                     dropState = .idle
@@ -358,12 +332,13 @@ private struct SplitPaneLabelView: View {
     @ObservedObject private var agentWorkingDirectory: AgentWorkingDirectoryState
     @ObservedObject private var splitPaneLabelSettings = SplitPaneLabelSettings.shared
     @ObservedObject private var worktreeLabels = SplitPaneWorktreeLabelStore.shared
-    let availableWidth: CGFloat
+    let dragEnabled: Bool
+    @State private var isDragging = false
     @State private var isHovering = false
 
-    init(surfaceView: YEN.SurfaceView, availableWidth: CGFloat) {
+    init(surfaceView: YEN.SurfaceView, dragEnabled: Bool) {
         self.surfaceView = surfaceView
-        self.availableWidth = availableWidth
+        self.dragEnabled = dragEnabled
         _labelState = ObservedObject(wrappedValue: surfaceView.splitPaneLabelState)
         _agentWorkingDirectory = ObservedObject(wrappedValue: surfaceView.agentWorkingDirectoryState)
     }
@@ -373,11 +348,11 @@ private struct SplitPaneLabelView: View {
         return NSColor(color)
     }
 
-    private var displayTitle: String {
+    private func displayTitle(for activity: PaneActivity) -> String {
         SplitPaneLabelRules.displayTitle(
             explicitLabel: labelState.label,
             worktreeLabel: worktreeLabel,
-            surfaceTitle: surfaceView.title,
+            surfaceTitle: activity.agentName ?? surfaceView.title,
             workingDirectory: surfaceView.effectiveWorkingDirectory
         )
     }
@@ -387,72 +362,95 @@ private struct SplitPaneLabelView: View {
         return worktreeLabels.label(forWorkingDirectory: directory)
     }
 
-    /// The directory this pill keeps polled, or nil when worktree naming is off. An agent's
+    /// The directory this header keeps polled, or nil when worktree naming is off. An agent's
     /// reported worktree wins over the shell's `pwd` while that agent runs.
     private var worktreeWatchDirectory: String? {
         guard splitPaneLabelSettings.isWorktreeNamingEnabled else { return nil }
         return surfaceView.effectiveWorkingDirectory
     }
 
-    private var maximumLabelWidth: CGFloat {
-        max(0, min(availableWidth - 16, 280))
-    }
-
     var body: some View {
-        let title = displayTitle
-        Button(action: renameSurface) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .settingsScaledSystemFont(size: 11, weight: .semibold)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+        PaneActivityReader(surface: surfaceView) { activity in
+            let directory = surfaceView.effectiveWorkingDirectory.map { NSString(string: $0).abbreviatingWithTildeInPath }
+            let title = displayTitle(for: activity)
+            HStack(spacing: 0) {
+                HStack(spacing: 7) {
+                    PaneActivityIcon(activity: activity)
+                    Text(title)
+                        .settingsScaledSystemFont(size: 11, weight: .semibold)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .layoutPriority(1)
+                    if let directory, directory != title {
+                        Text(directory)
+                            .settingsScaledSystemFont(size: 11)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .opacity(0.68)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .overlay {
+                    if dragEnabled {
+                        YEN.SurfaceDragSource(surfaceView: surfaceView, isDragging: $isDragging, isHovering: $isHovering)
+                    } else {
+                        Color.clear.contentShape(Rectangle()).onTapGesture { focusSurface() }
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Focus pane: \(title)")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { focusSurface() }
+                .help(dragEnabled ? "Click to focus. Drag to move this pane." : "Click to focus this pane.")
 
-                Image(systemName: "pencil")
-                    .settingsScaledSystemFont(size: 10, weight: .semibold)
-                    .opacity(isHovering ? 0.82 : 0)
+                Button(action: renameSurface) {
+                    Image(systemName: "pencil")
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(isHovering ? 0.85 : 0.55)
+                .help("Rename split label")
+                .accessibilityLabel("Rename split label: \(title)")
             }
-            .foregroundColor(Color(nsColor: SplitPaneLabelRules.textColor(backgroundColor: baseBackgroundColor)))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(maxWidth: maximumLabelWidth, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color(nsColor: SplitPaneLabelRules.pillBackgroundColor(backgroundColor: baseBackgroundColor)))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(
-                        Color(nsColor: SplitPaneLabelRules.borderColor(backgroundColor: baseBackgroundColor)),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(
-                color: Color.black.opacity(baseBackgroundColor.isLightColor ? 0.06 : 0.22),
-                radius: 6,
-                y: 2
-            )
+            .frame(height: 26)
+            .foregroundStyle(Color(nsColor: SplitPaneLabelRules.textColor(backgroundColor: baseBackgroundColor)))
+            .background(Color(nsColor: SplitPaneLabelRules.headerBackgroundColor(backgroundColor: baseBackgroundColor)))
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Color(nsColor: SplitPaneLabelRules.borderColor(backgroundColor: baseBackgroundColor)))
+                    .frame(height: 1).allowsHitTesting(false)
+            }
         }
-        .buttonStyle(.plain)
-        .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .onHover { hovering in
-            isHovering = hovering
-        }
-        .help("Rename split label")
-        .accessibilityLabel("Rename split label: \(title)")
-        // An idle pane never redraws, so the pill polls its directory while it is on screen.
-        // SwiftUI restarts this on a `cd` or a settings change and cancels it when the pill hides.
         .task(id: worktreeWatchDirectory) { [worktreeWatchDirectory] in
             await worktreeLabels.watch(workingDirectory: worktreeWatchDirectory)
         }
     }
 
-    private func renameSurface() {
+    private func focusSurface() {
         if let window = surfaceView.window {
             window.makeFirstResponder(surfaceView)
         } else {
             YEN.moveFocus(to: surfaceView)
         }
+    }
+
+    private func renameSurface() {
+        focusSurface()
         surfaceView.promptSplitPaneLabel()
+    }
+}
+
+private struct PaneHeaderVisibleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var paneHeaderVisible: Bool {
+        get { self[PaneHeaderVisibleKey.self] }
+        set { self[PaneHeaderVisibleKey.self] = newValue }
     }
 }
 

@@ -530,3 +530,7 @@ apply_overlay_patch ghosttypackage-sendable-retrofit-removal
 # The overlay patch previously lived here; it is now obsolete. Branding check
 # #38 still verifies the round-trip is absent and the contentView-nil handling
 # is present in the upstream NSDockTile.setIcon extension.
+
+apply_overlay_patch pane-header-focus
+apply_overlay_patch pane-header-grab-handle
+apply_overlay_patch pane-tab-icons

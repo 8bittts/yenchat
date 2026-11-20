@@ -254,14 +254,21 @@ The focused pane must belong to the target tree before new terminal surfaces are
 Shortcuts need exact Cmd + Option and a foreground terminal window; new panes inherit the focused split's baseline, zoom identity is preserved where possible, and one undo restores the whole layout.
 
 **Split pane labels.**
-Off by default; when on, "Rename Split Label" sets a label that survives layout rewrites, undo, restore and relaunch (a `UUID -> label` sidecar in terminal and Quick Terminal restore state).
-Without a label the pill shows the worktree name (if enabled), the surface title, the cwd leaf, or "Terminal".
+Each split header shows an activity icon, title and working directory above the terminal.
+Click the header to focus the pane, drag it to a highlighted edge to move it, or click the pencil to rename it.
+The existing Pane Labels preference controls headers and defaults to on.
+Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.
+Native tabs show the first three pane icons in layout order and count additional panes.
+The icon uses the local foreground executable and falls back to a recognized terminal title or a terminal symbol.
+"Rename Split Label" sets a label that survives layout rewrites, undo, restore and relaunch (a `UUID -> label` sidecar in terminal and Quick Terminal restore state).
+Without a custom label, the header prefers the worktree name (if enabled), recognized agent name, surface title, working directory name, then "Terminal".
 Worktree naming (default off) uses the worktree root's folder name, or the branch when the name is generic (`wt`, `tmp`, a dot-directory) or the repository is bare; a typed label always wins.
 Resolution runs git off the main actor and is cached per directory.
 Label reads and watcher setup share path normalization, capped at 128 entries with five-second expiry.
 Missing paths also expire, so newly created directories and changed symlinks are checked again.
 An informative folder name skips the branch query.
-Each visible pill registers with `SplitPaneWorktreeLabelStore.watch(workingDirectory:)`, and one loop re-resolves watched directories every 5s, because an idle pill is never redrawn; git stops when the last pill hides.
+Each visible header registers with `SplitPaneWorktreeLabelStore.watch(workingDirectory:)`.
+One loop checks the watched directories every five seconds and stops when the last header hides.
 
 **Agent worktrees.** A coding agent works in a worktree while its pane's shell stays in the checkout, and agents emit no OSC 7, so `pwd`, the agent's own cwd and its session file all keep the launch directory.
 The agent reports its directory with `yen pane cwd`, which posts `com.yenchat.yen.agentWorkingDirectory` with the pane's `YEN_SURFACE_ID`.
