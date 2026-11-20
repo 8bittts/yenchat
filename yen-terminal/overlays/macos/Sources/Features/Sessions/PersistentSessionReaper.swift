@@ -5,7 +5,9 @@ import Foundation
 /// -> Persistent sessions).
 ///
 /// An orphan is a session named by a pane UUID, with no attached client, that
-/// no terminal window holds. It appears when restore state is lost, the
+/// no terminal window holds. On the first sweep after launch, orphans are
+/// reopened in windows (`adoptionCandidates`), so a crash or lost restore state
+/// does not strand them; only the ones that stay orphaned are ended later. It appears when restore state is lost, the
 /// preference is turned off before a relaunch, or the app crashes between a
 /// close and its delayed kill. A detached session may still be running work the
 /// user cares about, so an orphan is ended only after it has been seen orphaned
@@ -97,7 +99,29 @@ enum PersistentSessionReaper {
         }.sorted()
     }
 
+    /// Most windows reopened for orphans at one launch; the rest wait for the reaper.
+    static let adoptionLimit = 8
+
+    /// Orphans to reopen in windows on the first sweep after launch. A crash or
+    /// lost restore state leaves live sessions with no pane; reopening each in
+    /// a window under its own UUID reattaches it instead of letting it age out.
+    nonisolated static func adoptionCandidates(
+        sessions: [Session],
+        heldPaneIDs: Set<String>,
+        limit: Int = adoptionLimit
+    ) -> [UUID] {
+        Array(
+            sessions
+                .filter { $0.clients == 0 && !heldPaneIDs.contains($0.name) }
+                .compactMap { UUID(uuidString: $0.name) }
+                .sorted { $0.uuidString < $1.uuidString }
+                .prefix(limit)
+        )
+    }
+
     // MARK: - Runner
+
+    @MainActor private static var adoptedThisLaunch = false
 
     @MainActor private static var timer: Timer?
 
@@ -144,6 +168,13 @@ enum PersistentSessionReaper {
             let sessions = parseList(run(zmx, ["ls"], directory))
             let kill: [String] = await MainActor.run {
                 guard !PersistentSessions.isTerminating else { return [] }
+                if !adoptedThisLaunch {
+                    adoptedThisLaunch = true
+                    let held = Set(heldPaneIDs().map(\.uuidString))
+                    for paneID in adoptionCandidates(sessions: sessions, heldPaneIDs: held) {
+                        reopen(paneID)
+                    }
+                }
                 let held = Set(heldPaneIDs().map(\.uuidString))
                 let defaults = UserDefaults.standard
                 let firstSeen = (defaults.dictionary(forKey: firstSeenDefaultsKey) as? [String: Date]) ?? [:]
@@ -167,6 +198,14 @@ enum PersistentSessionReaper {
                 }
             }
         }
+    }
+
+    /// Open a window whose pane has the session's UUID; `PersistentSessions.prepare`
+    /// then attaches it to that session.
+    @MainActor static func reopen(_ paneID: UUID) {
+        guard let yen = (NSApp.delegate as? AppDelegate)?.yen, let app = yen.app else { return }
+        let view = YEN.SurfaceView(app, baseConfig: nil, uuid: paneID)
+        _ = TerminalController.newWindow(yen, tree: SplitTree(view: view))
     }
 
     @MainActor static func heldPaneIDs() -> [UUID] {

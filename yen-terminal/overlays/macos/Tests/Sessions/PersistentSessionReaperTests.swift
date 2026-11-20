@@ -92,4 +92,18 @@ struct PersistentSessionReaperTests {
         let unused = PersistentSessionReaper.unusedBinaryCopies(copies, referenced: ["/s/bin/zmx-aaaa"], current: "/s/bin/zmx-cccc")
         #expect(unused == ["/s/bin/zmx-bbbb"])
     }
+
+    @Test func adoptionReopensOnlyUnheldDetachedPaneSessionsUpToTheLimit() {
+        let sessions: [PersistentSessionReaper.Session] = [
+            .init(name: orphan, clients: 0),
+            .init(name: held, clients: 0),
+            .init(name: attached, clients: 1),
+            .init(name: "dev", clients: 0),
+        ]
+        let picked = PersistentSessionReaper.adoptionCandidates(sessions: sessions, heldPaneIDs: [held])
+        #expect(picked == [UUID(uuidString: orphan)!])
+
+        let many = (0..<12).map { _ in PersistentSessionReaper.Session(name: UUID().uuidString, clients: 0) }
+        #expect(PersistentSessionReaper.adoptionCandidates(sessions: many, heldPaneIDs: [], limit: 8).count == 8)
+    }
 }

@@ -32,10 +32,6 @@ Facts the plan builds on:
 - The session backend is zmx (`_docs/00-foundation.md` → Decisions), vendored by `scripts/48-vendor-zmx.sh` against YEN's engine and bundled at `Contents/Resources/bin/zmx`; a zmx client works over any PTY, so remote attach can reuse it through SSH.
 Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the user's own machines over Tailscale.
 
-#### Phase 2: Local persistent sessions
-
-- [ ] Prove force-kill and a Sparkle update in the stable verify copy (`scripts/manual/18-make-verify-copy.sh`) leave sessions alive (quit and restore are proven).
-
 #### Phase 3: Remote attach over Tailscale
 
 - [ ] Discover peers from the installed Tailscale (`tailscale status --json`); do not embed Tailscale or `tsnet`.
