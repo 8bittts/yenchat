@@ -1,8 +1,8 @@
 {
-  "version": "1.277",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.277/yen-1277.dmg",
-  "sha256": "313ba451d3759657f1654bb100b613e69acaaa2671bb77fc684b6811405729a6",
-  "notes": "Recover shell sessions across app updates",
+  "version": "1.278",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.278/yen-1278.dmg",
+  "sha256": "4c341c818b897a8894d288a4b6b7f24f842f104c09f7245ba260fd59f0427429",
+  "notes": "Compact titlebar tabs and a quieter sidebar",
   "minOS": "13.0",
   "releaseDate": ""
 }

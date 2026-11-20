@@ -14,9 +14,13 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
 		"summary": "Leave a dev server running in a shell pane and quit YEN. When you reopen it, the server still has its port and the pane brings back its screen and scrollback. If a crash interrupts window restore, YEN can reopen up to eight detached shell sessions, including ones started by an older version of the session tool. Closing a pane still ends its session.\n\nRun yen sessions to see which shells are still running, even across an update. If the session directory is unreadable, the command tells you it could not check. In Settings, End All Sessions stops them together, and Keep Sessions Running lets you choose how new shell panes behave.\n\nIf you use Retina and non-Retina displays together, Japanese text and other fallback characters keep the right glyphs after your Mac wakes. In the diff viewer, deleted files keep their syntax highlighting, and you can see when a submodule has uncommitted changes.",
-		"builds": 4,
-		"latestVersion": "1.277",
+		"builds": 5,
+		"latestVersion": "1.278",
 		"versions": [
+			{
+				"version": "1.278",
+				"shippedOn": "2026-11-20"
+			},
 			{
 				"version": "1.277",
 				"shippedOn": "2026-11-20"

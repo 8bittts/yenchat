@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.278":
+		"On macOS 14 and later, native tabs share the titlebar by default. The tab strip grows as you open tabs, and the sidebar highlights the active shell. Two controls at the upper left in native fullscreen let you show the sidebar or return to a window.",
 	"1.277":
 		"YEN can find and reopen a detached shell session even after an update changes the tool that started it. The yen sessions command lists old and new sessions together and reports an error if it cannot read the session directory. In Settings, the Live Preview label now lines up with the window controls.",
 	"1.275":
