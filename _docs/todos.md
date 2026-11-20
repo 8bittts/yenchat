@@ -34,7 +34,6 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Verify the `yen` CLI, dictation paste and the Quick Terminal inside a persistent pane; shell integration, the title and working-directory reports already pass through.
 - [ ] Reflow replayed history to the attaching pane's width: a restored pane showed history hard-wrapped at about 48 columns in a wider window.
 - [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.
 - [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle, then turn the preference on by default.
