@@ -19,12 +19,14 @@ Dates are the evidence in this doc; the owner docs carry none.
 - 2026-11-18: the yen.chat `/release` page is retired; its weekly release notes move to blog.yen.chat/releases, and the blog index lists them beside the creator's posts.
   The same change moves release downloads from Supabase Storage to GitHub Releases and removes the download database, the owner daily report, and the `yen-tunes/` music pipeline.
   The Supabase project, its `auth.yen.chat` DNS record, and every web environment variable in Infisical and Vercel were deleted the same day.
+- 2026-11-19: the operator lifts maintenance mode for one feature, always-on sessions: panes that outlive the app and attach from another Mac over Tailscale, plus the window-chrome and split design work around them.
 
 ## Decisions
 
 - **Maintenance mode.** YEN gets vendor updates, dependency updates, desktop releases, and fixes for bugs, crashes, security issues and broken builds.
   New features, redesigns, refactors, performance work, and growth or SEO work wait for an explicit operator request, because a solo project cannot compete with a funded team on the same engine (Timeline, 2026-11-16).
   `AGENTS.md` → Maintenance Mode carries the rule; `_docs/todos.md` holds only work inside it.
+- **Always-on sessions are the one exception.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); the plan lives in `_docs/todos.md`.
 - **YEN is open source under MIT.** The repository starts from a fresh root commit; the pre-open-source history is private and never pushed to the public repository (`AGENTS.md` → Public Repository).
   Ghostty's MIT notice stays in `LICENSE` because the overlays carry Ghostty-derived code.
 - **No account, no telemetry.** The desktop app requires no YEN account and sends no terminal content or usage telemetry; dictation runs on-device through Apple's `SpeechAnalyzer` on macOS 26 and later ([11-speech-to-text.md](11-speech-to-text.md)).

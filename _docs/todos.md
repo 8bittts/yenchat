@@ -18,7 +18,7 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) until Phase 0 below lifts it for one feature.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) except for the always-on sessions feature below.
 Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/yen-zip` and need no entry here.
 
@@ -31,11 +31,6 @@ Facts the plan builds on:
 - Upstream ships a tmux control-mode client in core (`src/terminal/tmux/viewer.zig`, built when `tmux_control_mode` is on) with no macOS UI yet.
 - Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
 Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the operator's own machines over Tailscale.
-
-#### Phase 0: Leave maintenance mode for this feature
-
-- [ ] Record the decision in `_docs/00-foundation.md` → Decisions and narrow `AGENTS.md` → Maintenance Mode to name this feature as in scope.
-- [ ] Update Claude project memory (`yen-maintenance-mode.md`) to match.
 
 #### Phase 1: Choose the session backend (spike, no shipping code)
 

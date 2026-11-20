@@ -8,7 +8,8 @@ This file contains only YEN-specific constraints.
 YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the decision.
 
 - In scope: vendor updates and desktop releases through `/yen-zip`, dependency updates through `/update-projs`, and fixes for bugs, crashes, security issues and broken builds.
-- Out of scope unless the operator asks: new features, redesigns, refactors, performance work, and growth or SEO work.
+- Also in scope: the always-on sessions feature in `_docs/todos.md` (persistent panes, Tailscale remote attach, and its window-chrome and split design pass).
+- Out of scope unless the operator asks: other new features, redesigns, refactors, performance work, and growth or SEO work.
 - `_docs/todos.md` holds only in-scope work; record an out-of-scope finding in the final report, not the backlog.
 - Maintenance mode covers the desktop app and the yen.chat website.
 
