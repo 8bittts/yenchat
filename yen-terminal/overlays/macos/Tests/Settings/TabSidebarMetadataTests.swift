@@ -104,6 +104,22 @@ struct TabSidebarMetadataTests {
         #expect(TabSidebarController.testingMetadataCacheBuildCount > beforeExpiry)
     }
 
+    @Test func entryBuiltOnALaterClockDoesNotOutliveAnEarlierReferenceDate() {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        TabSidebarController.testingResetMetadataCache()
+        defer { window.orderOut(nil); TabSidebarController.testingResetMetadataCache() }
+
+        // An observer scan stamps the entry with the wall clock.
+        _ = TabSidebarController.cachedWorkingDirectory(for: window)
+        let afterObserverScan = TabSidebarController.testingMetadataCacheBuildCount
+
+        // A row read on an earlier clock must not reuse that entry, or it never
+        // expires on the reader's clock.
+        _ = TabSidebarController.items(for: window, referenceDate: Date(timeIntervalSince1970: 1_000_000))
+        #expect(TabSidebarController.testingMetadataCacheBuildCount == afterObserverScan + 1)
+    }
+
     @Test func sharedGitResolverPreservesSidebarStatusAndDetachedFallback() async {
         let runner = SidebarGitFixture(responses: [
             "status --porcelain=v2 -z --branch --untracked-files=no":
