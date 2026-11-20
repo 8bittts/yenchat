@@ -37,13 +37,22 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
             weak var window: NSWindow?
             let key: MetadataCacheKey
             let value: MetadataValue
+            let builtAt: Date
             let expiresAt: Date
 
             init(window: NSWindow, key: MetadataCacheKey, value: MetadataValue, referenceDate: Date) {
                 self.window = window
                 self.key = key
                 self.value = value
+                builtAt = referenceDate
                 expiresAt = referenceDate.addingTimeInterval(TabSidebarGitContextCache.refreshInterval)
+            }
+
+            /// Live only inside its own window: a reader on an earlier clock
+            /// (the wall clock stepping back, or an injected test clock) must
+            /// not keep an entry another clock stamped.
+            func isLive(at referenceDate: Date) -> Bool {
+                builtAt <= referenceDate && referenceDate < expiresAt
             }
         }
 
@@ -60,7 +69,7 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
         ) -> MetadataValue {
             let id = ObjectIdentifier(window)
             if let entry = entries[id] {
-                if entry.window === window, entry.key == key, referenceDate < entry.expiresAt {
+                if entry.window === window, entry.key == key, entry.isLive(at: referenceDate) {
                     return entry.value
                 }
                 entries.removeValue(forKey: id)
