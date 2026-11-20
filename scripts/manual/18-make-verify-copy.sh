@@ -51,8 +51,11 @@ DEST_APP="$DEST_DIR/YENVerify.app"
 	exit 1
 }
 
-if lsappinfo info -only pid -app "$VERIFY_ID" 2>/dev/null | /usr/bin/grep -Eq 'pid ?= ?[0-9]+'; then
-	echo "ERROR: $VERIFY_ID is running; quit it first: osascript -e 'tell application id \"$VERIFY_ID\" to quit'" >&2
+# LaunchServices keeps a ghost record with a stale pid after a copy is killed
+# with SIGKILL, so trust only a live process whose executable is yenverify.
+running_pid="$(lsappinfo info -only pid -app "$VERIFY_ID" 2>/dev/null | /usr/bin/sed -nE 's/.*pid ?= ?([0-9]+).*/\1/p' | /usr/bin/head -1)"
+if [ -n "$running_pid" ] && /bin/ps -p "$running_pid" -o comm= 2>/dev/null | /usr/bin/grep -q 'yenverify$'; then
+	echo "ERROR: $VERIFY_ID is running (pid $running_pid); quit it first: osascript -e 'tell application id \"$VERIFY_ID\" to quit'" >&2
 	exit 1
 fi
 
