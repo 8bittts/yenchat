@@ -899,6 +899,7 @@ process_binary_vendor() {
         update_reason="Update available: $current -> $latest"
     else
         local needs_rebuild=false
+        local rebuild_reason="Rebuild required for local universal binaries"
 
         if [ "$key" = "lazygit" ]; then
             local lazygit_config="$REPO_ROOT/yen-terminal/customizations/lazygit/config.yml"
@@ -912,6 +913,26 @@ process_binary_vendor() {
         if ! is_universal_binary "$binary_path"; then
             echo "  Current version exists but binary is non-universal. Rebuilding..."
             needs_rebuild=true
+        fi
+
+        # A vendor built from more than its source tarball (zmx compiles the
+        # vendored engine) records build_input_id; the tag alone cannot show
+        # that an engine bump made the bundled binary stale.
+        local recorded_input_id=""
+        recorded_input_id=$(baseline_value "build_input_id" "$baseline_file" 2>/dev/null) || true
+        if [ -n "$recorded_input_id" ]; then
+            local current_input_id=""
+            current_input_id=$("$script_path" --print-input-id 2>/dev/null) || current_input_id=""
+            if [ -z "$current_input_id" ]; then
+                echo "  ! Could not compute the current build inputs for $key"
+                ERROR_COUNT=$((ERROR_COUNT + 1))
+                return
+            fi
+            if [ "$current_input_id" != "$recorded_input_id" ]; then
+                echo "  Build inputs changed ($recorded_input_id -> $current_input_id). Rebuilding..."
+                needs_rebuild=true
+                rebuild_reason="Rebuild required: build inputs changed"
+            fi
         fi
 
         if [ -n "$companion_path" ]; then
@@ -932,7 +953,7 @@ process_binary_vendor() {
             return
         fi
 
-        update_reason="Rebuild required for local universal binaries"
+        update_reason="$rebuild_reason"
     fi
 
     echo "  $update_reason"

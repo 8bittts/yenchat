@@ -28,6 +28,7 @@
 #
 # Usage: ./scripts/48-vendor-zmx.sh
 #        ./scripts/48-vendor-zmx.sh --force
+#        ./scripts/48-vendor-zmx.sh --print-input-id   (what 14-vendor.sh compares)
 #        VENDOR_LATEST_TAG=vX.Y.Z ./scripts/48-vendor-zmx.sh
 
 set -euo pipefail
@@ -37,17 +38,14 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/lib/vendor-binary.sh"
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
-    echo "Usage: ./scripts/48-vendor-zmx.sh [--force]"
+    echo "Usage: ./scripts/48-vendor-zmx.sh [--force | --print-input-id]"
     exit 0
 fi
-FORCE=$(parse_force_flag "$@")
+PRINT_INPUT_ID=false
+[ "${1:-}" = "--print-input-id" ] && PRINT_INPUT_ID=true
+FORCE=false
+[ "$PRINT_INPUT_ID" = true ] || FORCE=$(parse_force_flag "$@")
 
-require_tool "zig"
-require_tool "curl"
-require_tool "tar"
-require_tool "lipo"
-require_tool "file"
-require_tool "python3"
 require_tool "shasum"
 
 ENGINE_DIR="$REPO_ROOT/yen-terminal/ghostty"
@@ -80,7 +78,18 @@ engine_input_id() {
 }
 
 ENGINE_ID="$(engine_input_id)"
+if [ "$PRINT_INPUT_ID" = true ]; then
+    echo "$ENGINE_ID"
+    exit 0
+fi
 echo "  Engine input: $ENGINE_ID"
+
+require_tool "zig"
+require_tool "curl"
+require_tool "tar"
+require_tool "lipo"
+require_tool "file"
+require_tool "python3"
 
 # Replace exactly the expected anchor in a file; any other count fails closed.
 patch_anchor() {

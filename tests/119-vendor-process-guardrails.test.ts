@@ -943,6 +943,53 @@ describe("vendor manifest is the single roster", () => {
 		}
 	}
 
+	test("a recorded build input matches the inputs its vendor script computes now", () => {
+		// zmx compiles the vendored engine. Its tag can stay current while an
+		// engine bump makes the bundled binary stale, so 14-vendor.sh compares
+		// build_input_id with `<script> --print-input-id`. This fails when a
+		// committed baseline names inputs the tree no longer has.
+		const withInputs = manifest().filter((r) => {
+			const baselinePath = join(repoRoot, `yen-terminal/.${r.key}-baseline`);
+			return (
+				existsSync(baselinePath) &&
+				/^build_input_id=/m.test(readFileSync(baselinePath, "utf8"))
+			);
+		});
+		expect(withInputs.map((r) => r.key)).toContain("zmx");
+
+		const engineConfig = join(
+			repoRoot,
+			"yen-terminal/ghostty/src/config/Config.zig",
+		);
+		if (!existsSync(engineConfig)) {
+			expect(
+				process.env.YEN_ALLOW_MISSING_VENDOR_TREE,
+				"vendored engine missing — run scripts/10-update-ghostty.sh, or set YEN_ALLOW_MISSING_VENDOR_TREE=1 to acknowledge this check did not run",
+			).toBe("1");
+			return;
+		}
+
+		for (const record of withInputs) {
+			const recorded = readFileSync(
+				join(repoRoot, `yen-terminal/.${record.key}-baseline`),
+				"utf8",
+			).match(/^build_input_id=(.+)$/m)?.[1];
+			const result = spawnSync(
+				join(repoRoot, "scripts", record.script),
+				["--print-input-id"],
+				{ encoding: "utf8" },
+			);
+			expect(result.status, result.stderr).toBe(0);
+			expect(result.stdout.trim(), `${record.key} build inputs drifted`).toBe(
+				recorded ?? "",
+			);
+		}
+
+		const vendorScript = readFileSync(vendorScriptPath, "utf8");
+		expect(vendorScript).toContain('baseline_value "build_input_id"');
+		expect(vendorScript).toContain('"$script_path" --print-input-id');
+	});
+
 	test("scripts readme registry has a row for every manifest vendor", () => {
 		const readme = readFileSync(scriptsReadmePath, "utf8");
 		expectRowPerVendor(readme, "### Vendor Registry");
