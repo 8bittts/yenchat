@@ -50,9 +50,10 @@ Run repo scripts by absolute path; never rely on `cd`.
 | resvg     | Binary (pre-built)    | `.resvg-baseline`     | `29-vendor-resvg.sh`     |
 | btop      | Binary (source-built) | `.btop-baseline`      | `34-vendor-btop.sh`      |
 | fastfetch | Binary (pre-built)    | `.fastfetch-baseline` | `33-vendor-fastfetch.sh` |
+| zmx       | Binary (source-built) | `.zmx-baseline`       | `48-vendor-zmx.sh`       |
 
 Baselines are git-tracked; vendor artifacts are gitignored.
-Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`; `fd`, `btop` and `delta` build both slices from source through `vendor_source_build()` (Cargo or CMake, then `lipo`) because upstream ships no Intel asset.
+Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`; `fd`, `btop` and `delta` build both slices from source through `vendor_source_build()` (Cargo or CMake, then `lipo`) because upstream ships no Intel asset; `zmx` builds the same way with Zig against the vendored engine (`_docs/04-security.md`).
 
 ### Verification Pipeline (vendor-binary.sh)
 

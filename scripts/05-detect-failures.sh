@@ -688,6 +688,7 @@ else
     [ ! -f "$RESOURCES/bin/jq" ] || [ ! -x "$RESOURCES/bin/jq" ] && fail "jq binary not bundled"
     [ ! -f "$RESOURCES/bin/lazygit" ] || [ ! -x "$RESOURCES/bin/lazygit" ] && fail "lazygit binary not bundled"
     [ ! -f "$RESOURCES/bin/delta" ] || [ ! -x "$RESOURCES/bin/delta" ] && fail "delta binary not bundled"
+    [ ! -f "$RESOURCES/bin/zmx" ] || [ ! -x "$RESOURCES/bin/zmx" ] && fail "zmx binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-vidthumb" ] || [ ! -x "$RESOURCES/bin/yen-vidthumb" ] && fail "yen-vidthumb binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-pdfthumb" ] || [ ! -x "$RESOURCES/bin/yen-pdfthumb" ] && fail "yen-pdfthumb binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-svgthumb" ] || [ ! -x "$RESOURCES/bin/yen-svgthumb" ] && fail "yen-svgthumb binary not bundled"
@@ -714,6 +715,9 @@ else
     fi
     if [ -f "$RESOURCES/bin/delta" ] && ! assert_universal_binary "$RESOURCES/bin/delta"; then
         fail "delta is not a universal binary"
+    fi
+    if [ -f "$RESOURCES/bin/zmx" ] && ! assert_universal_binary "$RESOURCES/bin/zmx"; then
+        fail "zmx is not a universal binary"
     fi
     # Shell integration — all files at Resources/yen/shell-integration/
     SHELL_ZSH="$RESOURCES/yen/shell-integration/zsh/.zshenv"

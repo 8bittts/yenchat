@@ -79,6 +79,10 @@ echo "    Verified lazygit is pure vendor (no patch marker)"
 DELTA_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/delta"
 bundle_vendor_bin "$DELTA_VENDOR_DIR" "delta" "delta" "ERROR: delta binary not found — required for bundled git diff rendering"
 
+# zmx (session persistence for terminal panes)
+ZMX_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/zmx"
+bundle_vendor_bin "$ZMX_VENDOR_DIR" "zmx" "zmx" "ERROR: zmx binary not found — required for persistent terminal sessions"
+
 # btop (system monitor TUI)
 BTOP_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/btop"
 bundle_vendor_bin "$BTOP_VENDOR_DIR" "btop" "btop" "ERROR: btop binary not found — required for bundled system monitor command"

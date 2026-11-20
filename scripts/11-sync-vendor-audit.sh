@@ -18,6 +18,7 @@
 #   resvg_version
 #   btop_version
 #   fastfetch_version
+#   zmx_version
 #
 # Usage:
 #   ./scripts/11-sync-vendor-audit.sh
@@ -76,6 +77,7 @@ DELTA_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.delt
 RESVG_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.resvg-baseline")
 BTOP_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.btop-baseline")
 FASTFETCH_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.fastfetch-baseline")
+ZMX_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.zmx-baseline")
 
 for required_value in \
 	"$LATEST_SYNC" \
@@ -93,11 +95,12 @@ for required_value in \
 	"$DELTA_VERSION" \
 	"$RESVG_VERSION" \
 	"$BTOP_VERSION" \
-	"$FASTFETCH_VERSION"; do
+	"$FASTFETCH_VERSION" \
+	"$ZMX_VERSION"; do
 	[ -n "$required_value" ] || fail "Baseline metadata contains empty required value"
 done
 
-python3 - <<'PY' "$DOC_PATH" "$LATEST_SYNC" "$GHOSTTY_COMMIT" "$GHOSTTY_VERSION" "$GHOSTTY_UPSTREAM_REPO" "$YAZI_VERSION" "$FD_VERSION" "$RIPGREP_VERSION" "$FZF_VERSION" "$ZOXIDE_VERSION" "$BAT_VERSION" "$JQ_VERSION" "$LAZYGIT_VERSION" "$DELTA_VERSION" "$RESVG_VERSION" "$BTOP_VERSION" "$FASTFETCH_VERSION"
+python3 - <<'PY' "$DOC_PATH" "$LATEST_SYNC" "$GHOSTTY_COMMIT" "$GHOSTTY_VERSION" "$GHOSTTY_UPSTREAM_REPO" "$YAZI_VERSION" "$FD_VERSION" "$RIPGREP_VERSION" "$FZF_VERSION" "$ZOXIDE_VERSION" "$BAT_VERSION" "$JQ_VERSION" "$LAZYGIT_VERSION" "$DELTA_VERSION" "$RESVG_VERSION" "$BTOP_VERSION" "$FASTFETCH_VERSION" "$ZMX_VERSION"
 import re
 import sys
 from pathlib import Path
@@ -120,6 +123,7 @@ updates = [
     ("resvg_version", sys.argv[15]),
     ("btop_version", sys.argv[16]),
     ("fastfetch_version", sys.argv[17]),
+    ("zmx_version", sys.argv[18]),
 ]
 
 text = doc_path.read_text()

@@ -61,6 +61,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 #   $7  FORCE               true/false (optional, default false)
 #   $8  BUILD_METHOD        baseline build_method value; empty => that line omitted
 #
+# Optional environment for vendor_source_build:
+#   VENDOR_BUILD_INPUT_ID  identity of build inputs beyond the source tarball
+#       (zmx compiles YEN's vendored engine, so it passes the engine commit).
+#       Recorded as build_input_id in the baseline. The output digest pin only
+#       applies while the recorded id matches; a changed id forces a rebuild and
+#       re-records the pin, because new inputs legitimately change the output.
+#
 # BUILD_FN contract: invoked as `"$BUILD_FN" "$SOURCE_DIR" "$TEMP_DIR"`. It must
 # build both architectures and print EXACTLY two lines to STDOUT — line 1 the
 # arm64 binary path, line 2 the x86_64 binary path — with ALL progress routed to
@@ -859,6 +866,23 @@ vendor_source_build() {
         BASELINE_PIN_OUTPUT_SHA256=$(baseline_value "output_sha256" "$BASELINE_FILE") || true
     fi
 
+    # Build inputs beyond the source tarball (see VENDOR_BUILD_INPUT_ID above).
+    # Without the variable both sides are empty and every pin check below runs
+    # exactly as before.
+    local BUILD_INPUT_ID="${VENDOR_BUILD_INPUT_ID:-}"
+    local BASELINE_PIN_INPUT_ID=""
+    if [ -n "$BUILD_INPUT_ID" ] && [ -f "$BASELINE_FILE" ]; then
+        BASELINE_PIN_INPUT_ID=$(baseline_value "build_input_id" "$BASELINE_FILE") || true
+    fi
+    local OUTPUT_PIN_APPLIES=false
+    if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && [ "$BASELINE_PIN_INPUT_ID" = "$BUILD_INPUT_ID" ]; then
+        OUTPUT_PIN_APPLIES=true
+    fi
+    if [ -n "$BUILD_INPUT_ID" ] && [ "$BASELINE_PIN_INPUT_ID" != "$BUILD_INPUT_ID" ]; then
+        echo "  Build inputs changed (${BASELINE_PIN_INPUT_ID:-none} -> $BUILD_INPUT_ID); rebuilding and re-recording the output pin"
+        FORCE=true
+    fi
+
     # No-op path: current + universal. Revalidate the pinned output digest of the
     # bundled binary BEFORE declaring it current, so a tampered/stale artifact
     # fails closed instead of silently passing (three fail-closed branches; keep
@@ -1069,7 +1093,7 @@ vendor_source_build() {
         OUTPUT_SHA256=$(get_sha256 "$OUTPUT_BINARY")
         echo "  Output SHA256: $OUTPUT_SHA256"
 
-        if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ]; then
+        if [ "$OUTPUT_PIN_APPLIES" = true ]; then
             if ! is_valid_sha256 "$BASELINE_PIN_OUTPUT_SHA256"; then
                 if ! vendor_fail_or_bypass_integrity \
                     "$REPO_ROOT" \
@@ -1128,6 +1152,9 @@ vendor_source_build() {
             echo "architecture=universal (arm64 + x86_64)"
             if [ -n "$BUILD_METHOD" ]; then
                 echo "build_method=$BUILD_METHOD"
+            fi
+            if [ -n "$BUILD_INPUT_ID" ]; then
+                echo "build_input_id=$BUILD_INPUT_ID"
             fi
             echo "source_archive_url=$SOURCE_URL"
             echo "source_commit=$SOURCE_COMMIT"

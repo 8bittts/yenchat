@@ -110,6 +110,7 @@ for arg in "$@"; do
             echo "  ./scripts/14-vendor.sh lazygit      # Update lazygit only"
             echo "  ./scripts/14-vendor.sh delta        # Update delta only"
             echo "  ./scripts/14-vendor.sh btop         # Update btop only"
+            echo "  ./scripts/14-vendor.sh zmx          # Rebuild zmx against the vendored engine"
             echo "  ./scripts/14-vendor.sh fastfetch    # Update fastfetch only"
             echo "  ./scripts/14-vendor.sh resvg        # Update resvg only"
             echo "  ./scripts/14-vendor.sh yazi --force  # Force update Yazi"

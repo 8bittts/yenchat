@@ -16,6 +16,7 @@ set_required_app_bins() {
         "delta"
         "btop"
         "fastfetch"
+        "zmx"
         "yen-vidthumb"
         "yen-pdfthumb"
         "yen-svgthumb"

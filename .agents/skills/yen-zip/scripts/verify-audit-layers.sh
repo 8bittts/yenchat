@@ -68,7 +68,7 @@ case "$vendor" in
         vendor_type="source"
         required_layer_ids="1 2 3 4 5 6"
         ;;
-    btop|fd|delta)
+    btop|fd|delta|zmx)
         vendor_type="source-built"
         required_layer_ids="3 4 5 6"
         ;;

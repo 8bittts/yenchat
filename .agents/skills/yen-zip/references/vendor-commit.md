@@ -30,7 +30,7 @@ On Claude Code the push to `main` needs `dangerouslyDisableSandbox: true` on tha
 
 ## Vendor Summary
 
-Keep a summary for the final `/yen-zip` report. All 13 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
+Keep a summary for the final `/yen-zip` report. All 14 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
 
 ```
 ## Vendor Summary
@@ -50,6 +50,7 @@ Keep a summary for the final `/yen-zip` report. All 13 vendors get a row every r
 | resvg | Current | v0.48.1 | — |
 | btop | Current | v1.4.7 | — |
 | fastfetch | Current | 2.67.1 | — |
+| zmx | Current | v1.0.1 | — |
 ```
 
 For Ghostty, also state: commits ahead; whether overlays applied cleanly and what was repaired or retired; the compile gate used and its result; every `RECEIPT gate=... result=PASS` line with its unit counts (a result is read from a positive field, never from a missing string); whether `manual/16-verify-applescript-if-needed.sh` ran; new Xcode targets or embedded bundles.

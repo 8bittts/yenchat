@@ -38,6 +38,7 @@ delta_version=0.21.1
 resvg_version=v0.50.0
 btop_version=v1.4.8
 fastfetch_version=2.71.0
+zmx_version=v1.0.1
 ```
 
 `ghostty_upstream_repo` is gated so a forge change cannot silently move the upstream source of truth.
@@ -195,6 +196,7 @@ A new Go binary built on `tcell` or Bubble Tea will need its own entry.
 - **Exposure gaps.** Settings exposes generic title editing, not upstream's separate window/tab title actions. Command palette border actions do not switch scope.
 - **Theme discovery.** Runtime themes come from `~/.config/yen/themes` and bundled `Resources/yen/themes`; never restore migration from `~/.yen/themes`.
 - **Stale verifier.** When a check fails after a bump, confirm the checked symbol did not just move in a YEN refactor before blaming upstream.
+- **zmx builds against the vendored engine.** `scripts/48-vendor-zmx.sh` points zmx's engine dependency at a clone of `yen-terminal/ghostty`, records the engine commit and source digest as `build_input_id`, and builds stripped from one fixed path so the output pin reproduces; an engine bump rebuilds zmx and re-records the pin.
 - **Source-built Rust vendors.** `fd` and `delta` dropped Intel macOS assets, so `scripts/16-vendor-fd.sh` and `scripts/35-vendor-delta.sh` cross-compile both slices and `lipo` them. If upstream restores `x86_64-apple-darwin` assets, return them to the `vendor-binary.sh` wrapper pattern and drop their `14-vendor.sh` prefetch entries.
 
 ### Fail-Closed Gate Contracts (Do Not Regress)
@@ -254,6 +256,7 @@ One row per binary, name unquoted: `12-verify-vendor-audit.sh` matches `| <name>
 | jq | JSON processor | Yazi calls it directly |
 | btop | System monitor | Interactive UX |
 | fastfetch | System info | Output parity |
+| zmx | Session persistence | No macOS framework keeps a PTY and its screen state alive after the app exits; built against the vendored engine |
 | resvg | SVG fallback | `.svgz` and CSS-variable edge cases |
 | yen-svgthumb | SVG thumbnails | Native (AppKit) |
 | yen-vidthumb | Video thumbnails | Native (AVFoundation) |

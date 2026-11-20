@@ -29,16 +29,11 @@ Today `window-save-state = always` restores windows, tabs, splits and working di
 Facts the plan builds on:
 - Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
 - Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
-- The session backend is zmx (`_docs/00-foundation.md` → Decisions); a zmx client works over any PTY, so remote attach can reuse it through SSH.
+- The session backend is zmx (`_docs/00-foundation.md` → Decisions), vendored by `scripts/48-vendor-zmx.sh` against YEN's engine and bundled at `Contents/Resources/bin/zmx`; a zmx client works over any PTY, so remote attach can reuse it through SSH.
 Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the user's own machines over Tailscale.
-
-#### Phase 1: Operator review of the backend decision
-
-- [ ] The operator approves zmx as the backend (`_docs/00-foundation.md` → Decisions) before Phase 2 starts.
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Vendor zmx as a pinned source build (`scripts/lib/vendor-manifest.sh`), bundled under `Contents/Resources/bin`, with its libghostty-vt built from YEN's vendored mirror so replay and rendering share one engine; reconcile the release fingerprint scan, because the spike binary carries the upstream name three times.
 - [ ] Start every new pane as an attach to session `<pane UUID>`, and reattach on restore; the macOS layer must pass the restore `UUID`, because `YEN_SURFACE_ID` is a random per-run number (`Surface.zig`).
 - [ ] Keep the session socket directory short: a Unix socket path caps at 104 bytes, and zmx refused a long `ZMX_DIR` with `NameTooLong`.
 - [ ] Define lifecycle: closing a pane or tab ends its session; quitting, crashing or updating the app only detaches.

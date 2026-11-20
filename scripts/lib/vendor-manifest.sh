@@ -54,6 +54,7 @@ YEN_VENDOR_MANIFEST=(
     "resvg|binary|resvg|SVG Preview Renderer|linebender/resvg|resvg|29-vendor-resvg.sh||false"
     "btop|source-built|btop|System Monitor|aristocratos/btop|btop|34-vendor-btop.sh||false"
     "fastfetch|binary|fastfetch|System Info Display|fastfetch-cli/fastfetch|fastfetch|33-vendor-fastfetch.sh||false"
+    "zmx|source-built|zmx|Session Persistence|neurosnap/zmx|zmx|48-vendor-zmx.sh||false"
 )
 
 # Field index by name, 1-based to match `cut -d'|' -f<n>`.
