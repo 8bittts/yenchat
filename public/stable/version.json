@@ -1,8 +1,8 @@
 {
-  "version": "1.273",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.273/yen-1273.dmg",
-  "sha256": "e3d4047cbe258b4c8e0a6606773366c9a60c31663e6ebdc6ff8b17e9b705cfb2",
-  "notes": "Fixes garbled text after waking with two displays",
+  "version": "1.274",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.274/yen-1274.dmg",
+  "sha256": "4298c42aad0ca02d48a5fe037ff2b95b0440ea96b91f33211542404b99c3acb8",
+  "notes": "Diff viewer marks submodules with uncommitted changes",
   "minOS": "13.0",
   "releaseDate": ""
 }
