@@ -1,8 +1,8 @@
 {
-  "version": "1.274",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.274/yen-1274.dmg",
-  "sha256": "4298c42aad0ca02d48a5fe037ff2b95b0440ea96b91f33211542404b99c3acb8",
-  "notes": "Diff viewer marks submodules with uncommitted changes",
+  "version": "1.275",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.275/yen-1275.dmg",
+  "sha256": "81b1cb367dce42a3169bc0d5411d0fe53d53a5a45b42109d2a807081b8fd8c2d",
+  "notes": "Panes keep running through quit, crash, update",
   "minOS": "13.0",
   "releaseDate": ""
 }
