@@ -21,6 +21,8 @@ Themes and the generated catalog, the public web design system, and the hero typ
 | `Helpers/Color+HexParsing.swift` | Shared six-digit hexadecimal color parsing |
 
 Theme files hold literal colors because they are portable content; app chrome uses semantic tokens.
+Tab sidebar rows use a neutral selection fill and the terminal-facing corner radius.
+An unset tab color shows a terminal glyph; a chosen color replaces the glyph with its swatch.
 Never turn palette values into design tokens, and never edit generated upstream theme sources.
 
 ## File Format

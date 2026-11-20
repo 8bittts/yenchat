@@ -32,10 +32,10 @@ function attributeValues(
 
 describe("blog.yen.chat archive", () => {
 	test("keeps every published Substack post, and the proxy slug index matches the post files", () => {
-		expect(posts).toHaveLength(ARCHIVED_POST_COUNT);
-		expect(new Set(posts.map((post) => post.postId)).size).toBe(
+		expect(posts.filter((post) => /^\d+$/.test(post.postId))).toHaveLength(
 			ARCHIVED_POST_COUNT,
 		);
+		expect(new Set(posts.map((post) => post.postId)).size).toBe(posts.length);
 		const files = readdirSync("content/blog/posts").map((name) =>
 			name.replace(/\.json$/, ""),
 		);

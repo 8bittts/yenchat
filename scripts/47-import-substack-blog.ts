@@ -751,6 +751,17 @@ async function main(): Promise<void> {
 	const posts = readPublishedPosts(exportDir);
 	console.log(`1. ${posts.length} published posts in posts.csv`);
 
+	// The importer replaces both the post archive and its media directory.
+	const postsDir = path.join(CONTENT_DIR, "posts");
+	if (existsSync(postsDir)) {
+		const incoming = new Set(posts.map((post) => `${post.slug}.json`));
+		failIf(
+			readdirSync(postsDir).filter(
+				(name) => name.endsWith(".json") && !incoming.has(name),
+			),
+			"Import would remove local posts",
+		);
+	}
 	const { converted, ctx } = convertAll(exportDir, posts);
 	const assets = [...ctx.assets.values()];
 	failIf(unexpectedMediaTypes(assets), "Unexpected media types");

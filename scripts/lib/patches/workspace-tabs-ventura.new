@@ -1,0 +1,3 @@
+    override var supportsUpdateAccessory: Bool { false }
+
+    let workspaceTabs = WorkspaceTabStrip()

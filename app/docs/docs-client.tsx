@@ -680,15 +680,26 @@ function TabSidebarSection() {
 	return (
 		<DocSection id="tab-sidebar" title="Tab Sidebar">
 			<p className="text-body">
-				Press <code className="inline-code-brand">Cmd + Shift + B</code>. Select
-				a tab to switch, double-click its title to rename it, or use its color
-				chip. Custom titles restore on relaunch. Press Esc to dismiss the
-				transient sidebar when not editing.
+				On macOS 14 and later, tabs share the titlebar by default. Set{" "}
+				<code className="inline-code-brand">
+					macos-titlebar-style = transparent
+				</code>{" "}
+				to place them below it.
+			</p>
+			<p className="text-body">
+				Press <code className="inline-code-brand">Cmd + Shift + B</code> to open
+				the sidebar. Click a row to switch tabs. Click its terminal icon or
+				color swatch to choose a color. To rename a tab, right-click its row and
+				choose Change Title. Custom titles restore on relaunch. Press Esc to
+				dismiss the transient sidebar when not editing.
 			</p>
 			<p className="text-body">
 				The pin button switches between a transient overlay and a docked rail.
-				Docked mode is unavailable in fullscreen and Quick Terminal. The gear
-				opens General settings; the footer creates a tab.
+				In native fullscreen, the upper-left sidebar button opens a rail for
+				that tab group. The adjacent arrows exit fullscreen. Your windowed
+				sidebar preference resumes when you leave fullscreen. Quick Terminal
+				does not support docking. The gear opens General settings, and New Tab
+				opens another tab.
 			</p>
 			<p className="text-body">
 				Rows show the focused split&apos;s directory, Git state, and recent task

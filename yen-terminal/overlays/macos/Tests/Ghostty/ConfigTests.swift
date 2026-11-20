@@ -84,9 +84,13 @@ struct ConfigTests {
         #expect(config.windowTitleFontFamily == "Menlo")
     }
 
-    @Test func macosTitlebarStyleDefaultsToTransparent() throws {
+    @Test func macosTitlebarStyleDefaultPreservesTabRestoration() throws {
         let config = try TemporaryConfig("")
-        #expect(config.macosTitlebarStyle == .transparent)
+        if #available(macOS 14, *) {
+            #expect(config.macosTitlebarStyle == .tabs)
+        } else {
+            #expect(config.macosTitlebarStyle == .transparent)
+        }
     }
 
     @Test(arguments: [

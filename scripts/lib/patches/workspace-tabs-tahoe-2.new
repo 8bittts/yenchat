@@ -1,0 +1,3 @@
+        workspaceTabs.fit(clipView, to: tabGroup)
+
+        // Setup all our constraints

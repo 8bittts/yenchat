@@ -1,0 +1,6 @@
+    // Ventura cannot reliably restore a window group with titlebar tabs.
+    if (builtin.os.tag == .macos and internal_os.macos.isAtLeastVersion(14, 0, 0)) {
+        result.@"macos-titlebar-style" = .tabs;
+    }
+
+    // Add our default keybindings

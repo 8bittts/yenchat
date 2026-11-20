@@ -16,3 +16,5 @@ ghostty/src/termio/Exec.zig
 ghostty/src/termio/stream_handler.zig
 ghostty/src/cli/yen.zig
 ghostty/src/cli/help.zig
+ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift
+ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsVenturaTerminalWindow.swift

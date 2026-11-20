@@ -1,0 +1,2 @@
+            accessoryClipView.translatesAutoresizingMaskIntoConstraints = false
+            self?.workspaceTabs.fit(accessoryClipView, to: self?.tabGroup)

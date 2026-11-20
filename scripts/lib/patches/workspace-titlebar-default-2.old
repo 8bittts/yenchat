@@ -1,0 +1,3 @@
+/// The default value is "transparent". This is an opinionated choice
+/// but its one I think is the most aesthetically pleasing and works in
+/// most cases.

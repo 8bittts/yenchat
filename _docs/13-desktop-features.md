@@ -16,7 +16,10 @@ Overlay-owned utility windows (Settings, About, Onboarding, PR Review, Merge Con
 
 Intentional deltas, not templates for new windows:
 
-- Terminal titlebar styles and non-native fullscreen are upstream behavior.
+- Standard terminal windows default to native titlebar tabs on macOS 14 and later.
+  The tab strip grows with the group until it reaches the window edge.
+  macOS 13 keeps the transparent titlebar default for native tab restoration.
+  An explicit `macos-titlebar-style` overrides either default.
 - Quick Terminal is a non-activating `NSPanel` with its own space and fullscreen policy.
 - Tab Sidebar and the dictation overlay are borderless non-activating panels so the terminal keeps focus; Onboarding floats during first run; Configuration Errors uses an elevated level.
 - Native fullscreen is tracked as an in-flight transition, and overlay consumers read effective fullscreen (`styleMask.contains(.fullScreen)` or a transition in flight); the patch is in `_docs/04-security.md`.
@@ -207,7 +210,9 @@ Surface publishers coalesce on the main run loop, and observer callbacks render 
 Sidebar Git reads use `GitDrawerShellClient` with optional locks disabled, a two-second timeout, and forced termination after a 200 ms grace period.
 Sidebar status reads branch metadata through `GitStatusPorcelainV2`; detached names use the shared `GitBranchResolver` helper.
 Split-pane labels resolve a branch only when the worktree folder cannot supply an informative name.
-By default a transient panel slides in over the terminal from the window's left edge, as the Scratchpad does from the right; an opt-in persistent mode docks a fixed-width rail inside standard terminal windows and fails closed in fullscreen, minimized windows and Quick Terminal.
+By default a transient panel slides in over the terminal from the window's left edge, as the Scratchpad does from the right; an opt-in persistent mode docks a fixed-width rail inside standard terminal windows and stays hidden in minimized windows and Quick Terminal.
+Native fullscreen has leading controls to toggle the rail for the current tab group and leave fullscreen.
+The fullscreen rail uses the available window width and does not write the windowed visibility preference.
 - Both hosts come from `TabSidebarHostingViewFactory`, which sets `sizingOptions = []`; default content sizing shrinks or centers a short rail.
 - Startup and restore show the docked rail only when the feature is enabled and the stored `persistentVisible` is true.
 - Switching to persistent dismisses any live transient panel before persisting the mode.

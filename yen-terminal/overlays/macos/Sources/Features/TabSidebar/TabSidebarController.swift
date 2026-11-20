@@ -147,6 +147,9 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
 
     static func shouldShowDockedSidebar(in window: NSWindow?) -> Bool {
         guard tabSidebarEnabled else { return false }
+        if let window, window.styleMask.contains(.fullScreen), window.windowController is TerminalController {
+            return shared.isFullscreenSidebarOpen(in: window)
+        }
         guard presentationMode == .persistent else { return false }
         guard persistentVisible else { return false }
         guard let window else { return false }
@@ -158,6 +161,20 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
     }
 
     private(set) var visible: Bool = false
+    private weak var fullscreenSidebarWindow: NSWindow?
+    private weak var fullscreenSidebarGroup: NSWindowTabGroup?
+
+    private func isFullscreenSidebarOpen(in window: NSWindow) -> Bool {
+        fullscreenSidebarWindow === window || (fullscreenSidebarGroup != nil && fullscreenSidebarGroup === window.tabGroup)
+    }
+
+    func clearFullscreenSidebar(for window: NSWindow) {
+        guard isFullscreenSidebarOpen(in: window) else { return }
+        fullscreenSidebarWindow = nil
+        fullscreenSidebarGroup = nil
+        postStateDidChange()
+    }
+
     private var panel: TabSidebarPanel?
     private weak var anchorWindow: NSWindow?
     private var hasSetup = false
@@ -376,10 +393,22 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
         )
     }
 
-    func toggle() {
+    func toggle(in target: NSWindow? = nil) {
         guard Self.tabSidebarEnabled else {
             NSSound.beep()
             DisabledFeatureToast.post(featureName: "Tab Sidebar")
+            return
+        }
+
+        if let window = target ?? NSApp.keyWindow,
+           window.windowController is TerminalController, window.styleMask.contains(.fullScreen) {
+            if isFullscreenSidebarOpen(in: window) {
+                clearFullscreenSidebar(for: window)
+            } else {
+                fullscreenSidebarWindow = window
+                fullscreenSidebarGroup = window.tabGroup
+                postStateDidChange()
+            }
             return
         }
 

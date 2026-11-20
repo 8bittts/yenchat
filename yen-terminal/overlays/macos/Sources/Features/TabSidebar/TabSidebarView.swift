@@ -78,30 +78,14 @@ struct TabSidebarView<Model: TabSidebarDataSource>: View {
 	// Git Drawer, and Quick Terminal (10pt continuous).
 	private var cornerRadius: CGFloat { YENDesignTokens.terminalFacingCornerRadius }
 
-	private var rowSpacing: CGFloat {
-		switch style {
-		case .floating:
-			return 6
-		case .docked:
-			return 8
-		}
-	}
-
-	private var bodyPadding: CGFloat {
-		switch style {
-		case .floating:
-			return 14
-		case .docked:
-			return 16
-		}
-	}
+	private var bodyPadding: CGFloat { 10 }
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 0) {
 			header
 
 			ScrollView {
-				LazyVStack(alignment: .leading, spacing: rowSpacing) {
+				LazyVStack(alignment: .leading, spacing: 3) {
 					ForEach(model.tabs) { tab in
 						TabSidebarRow(tab: tab, style: style, accentColor: Color.overlayAccent) {
 							model.switchToTab(tab.window)
@@ -109,7 +93,7 @@ struct TabSidebarView<Model: TabSidebarDataSource>: View {
 					}
 				}
 				.padding(.horizontal, bodyPadding)
-				.padding(.vertical, 12)
+				.padding(.vertical, 6)
 				.accessibilityElement(children: .contain)
 				.accessibilityLabel("Open tabs")
 			}
@@ -149,13 +133,12 @@ private struct SidebarHeaderView: View {
 
 	var body: some View {
 		HStack(alignment: .center, spacing: 10) {
-			VStack(alignment: .leading, spacing: 2) {
-				Text("Tabs")
-					.settingsScaledSystemFont(size: 13, weight: .semibold)
-				Text("\(tabCount) open")
-					.settingsScaledSystemFont(size: 11)
-					.foregroundColor(.secondary)
-			}
+			Text("Tabs")
+				.settingsScaledSystemFont(size: 13, weight: .semibold)
+			Text("\(tabCount)")
+				.settingsScaledSystemFont(size: 11, weight: .medium)
+				.foregroundColor(.secondary)
+				.accessibilityLabel("\(tabCount) open tabs")
 
 			Spacer(minLength: 0)
 
@@ -164,8 +147,7 @@ private struct SidebarHeaderView: View {
 					.settingsScaledSystemFont(size: 12, weight: .semibold)
 					.foregroundColor(settings.tabSidebarPresentationMode == .persistent ? Color.overlayAccent : .secondary)
 					.frame(width: 28, height: 28)
-					.background(Color.primary.opacity(0.06))
-					.clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+					.contentShape(Rectangle())
 			}
 			.buttonStyle(.plain)
 			.accessibilityLabel(settings.tabSidebarPresentationMode == .persistent ? "Switch to transient tab sidebar" : "Pin tab sidebar inside terminal windows")
@@ -176,12 +158,11 @@ private struct SidebarHeaderView: View {
 					.settingsScaledSystemFont(size: 12, weight: .semibold)
 					.foregroundColor(.secondary)
 					.frame(width: 28, height: 28)
-					.background(Color.primary.opacity(0.06))
-					.clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+					.contentShape(Rectangle())
 			}
 			.buttonStyle(.plain)
 			.accessibilityLabel("Open tab sidebar settings")
-			.help("Open Workspace settings")
+			.help("Open General settings")
 		}
 		.padding(.horizontal, bodyPadding)
 		.padding(.top, style == .floating ? 12 : 10)
@@ -203,9 +184,7 @@ private struct SidebarHeaderView: View {
 	}
 }
 
-/// Scoped view that observes SettingsController only for footer mode state.
 private struct SidebarFooterView: View {
-	@ObservedObject private var settings = SettingsController.shared
 	let style: TabSidebarStyle
 	let bodyPadding: CGFloat
 	let newTab: () -> Void
@@ -228,16 +207,6 @@ private struct SidebarFooterView: View {
 			.buttonStyle(.plain)
 
 			Spacer(minLength: 0)
-
-			if settings.tabSidebarPresentationMode == .persistent {
-				Text("Pinned")
-					.settingsScaledSystemFont(size: 11, weight: .semibold)
-					.foregroundColor(Color.overlayAccent)
-			} else {
-				Text("Transient")
-					.settingsScaledSystemFont(size: 11, weight: .medium)
-					.foregroundColor(.secondary)
-			}
 		}
 		.padding(.horizontal, bodyPadding)
 		.padding(.top, 10)
@@ -348,23 +317,8 @@ private struct TabSidebarRow: View {
 	}
 
 	private var rowBackground: Color {
-		if tab.isSelected {
-			return accentColor.opacity(style == .floating ? 0.14 : 0.12)
-		}
-		if isHovered {
-			return Color.primary.opacity(style == .floating ? 0.07 : 0.06)
-		}
-		return Color.primary.opacity(style == .floating ? 0.03 : 0.02)
-	}
-
-	private var rowBorderColor: Color {
-		if tab.isSelected {
-			return accentColor.opacity(style == .floating ? 0.34 : 0.24)
-		}
-		if isHovered {
-			return Color.primary.opacity(style == .floating ? 0.16 : 0.12)
-		}
-		return .clear
+		if tab.isSelected { return Color.primary.opacity(0.12) }
+		return isHovered ? Color.primary.opacity(0.06) : .clear
 	}
 
 	private var rowAnimation: Animation? {
@@ -372,15 +326,15 @@ private struct TabSidebarRow: View {
 	}
 
 	private var rowCornerRadius: CGFloat {
-		style == .floating ? 10 : 8
+		YENDesignTokens.terminalFacingCornerRadius
 	}
 
 	private var rowHorizontalPadding: CGFloat {
-		style == .floating ? 12 : 10
+		8
 	}
 
 	private var rowVerticalPadding: CGFloat {
-		style == .floating ? 10 : 8
+		5
 	}
 
 	private var accessibilityDescriptor: TabSidebarRowAccessibilityDescriptor {
@@ -404,6 +358,7 @@ private struct TabSidebarRow: View {
 			}
 
 			rowMetadataView
+				.padding(.leading, 32)
 		}
 		.padding(.horizontal, rowHorizontalPadding)
 		.padding(.vertical, rowVerticalPadding)
@@ -411,10 +366,6 @@ private struct TabSidebarRow: View {
 		.background(
 			RoundedRectangle(cornerRadius: rowCornerRadius, style: .continuous)
 				.fill(rowBackground)
-		)
-		.overlay(
-			RoundedRectangle(cornerRadius: rowCornerRadius, style: .continuous)
-				.stroke(rowBorderColor, lineWidth: tab.isSelected ? 1.25 : 1)
 		)
 		.contentShape(RoundedRectangle(cornerRadius: rowCornerRadius, style: .continuous))
 		.onHover { hovering in
@@ -529,7 +480,7 @@ private struct TabSidebarRow: View {
 				.settingsScaledSystemFont(size: 12.5, weight: tab.isSelected ? .semibold : .medium)
 				.lineLimit(1)
 				.truncationMode(.tail)
-				.foregroundColor(tab.isSelected ? accentColor : .primary)
+				.foregroundColor(.primary)
 				.frame(maxWidth: .infinity, alignment: .leading)
 		}
 	}
@@ -662,44 +613,22 @@ private struct TabSidebarColorControl: View {
 	let isSelected: Bool
 	let isHovered: Bool
 
-	private var backgroundColor: Color {
-		if isSelected {
-			return Color.overlayAccent.opacity(0.14)
-		}
-		if isHovered {
-			return Color.primary.opacity(0.08)
-		}
-		return Color.primary.opacity(0.05)
-	}
-
-	private var borderColor: Color {
-		if isSelected {
-			return Color.overlayAccent.opacity(0.3)
-		}
-		return Color.primary.opacity(0.12)
-	}
-
 	private var accessibilityDescriptor: TabSidebarColorControlAccessibilityDescriptor {
 		TabSidebarColorControlAccessibilityDescriptor(color: color)
 	}
 
 	var body: some View {
-		HStack(spacing: 4) {
-			TabSidebarColorSwatch(color: color, diameter: 12)
-			Image(systemName: "chevron.down")
-				.settingsScaledSystemFont(size: 8, weight: .bold)
-				.foregroundColor(.secondary)
+		Group {
+			if color == .none {
+				Image(systemName: "terminal")
+					.settingsScaledSystemFont(size: 13, weight: .medium)
+					.foregroundColor(isSelected || isHovered ? .primary : .secondary)
+			} else {
+				TabSidebarColorSwatch(color: color)
+			}
 		}
-		.padding(.horizontal, 8)
-		.padding(.vertical, 7)
-		.background(
-			RoundedRectangle(cornerRadius: 8, style: .continuous)
-				.fill(backgroundColor)
-		)
-		.overlay(
-			RoundedRectangle(cornerRadius: 8, style: .continuous)
-				.stroke(borderColor, lineWidth: 1)
-		)
+		.frame(width: 24, height: 24)
+		.contentShape(Rectangle())
 		.accessibilityElement(children: .ignore)
 		.accessibilityLabel(accessibilityDescriptor.label)
 		.accessibilityHint(accessibilityDescriptor.hint)

@@ -20,6 +20,9 @@ CONFIG_SWIFT="ghostty/macos/Sources/YEN/Ghostty.Config.swift"
 # otherwise missing config values read back as `0ms` and silently disable undo.
 
 apply_overlay_patch undo-timeout-default-preservation
+apply_overlay_patch workspace-titlebar-default
+apply_overlay_patch workspace-tabs-tahoe
+apply_overlay_patch workspace-tabs-ventura
 
 # ============================================================================
 # RETIRED 2026-04-30: SurfaceView Split Rendering rollback

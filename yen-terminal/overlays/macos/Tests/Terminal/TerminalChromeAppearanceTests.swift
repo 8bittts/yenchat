@@ -12,6 +12,47 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct TerminalChromeAppearanceTests {
+    @Test func tabStripDoesNotSetTheMinimumWindowWidth() {
+        let titlebar = NSView()
+        let host = NSView()
+        titlebar.addSubview(host)
+        host.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            host.leadingAnchor.constraint(equalTo: titlebar.leadingAnchor, constant: 70),
+            host.trailingAnchor.constraint(lessThanOrEqualTo: titlebar.trailingAnchor),
+        ])
+
+        let tabs = WorkspaceTabStrip()
+        tabs.fit(host, to: nil)
+        #expect(titlebar.fittingSize.width == 70)
+    }
+
+    @Test func tabStripClearsTheFullscreenButtonsWhenTheSystemControlsAppear() {
+        let titlebar = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
+        let tabs = NSView()
+        let buttons = NSView()
+        for view in [tabs, buttons] {
+            titlebar.addSubview(view)
+            view.translatesAutoresizingMaskIntoConstraints = false
+        }
+        let buttonsStart = buttons.leftAnchor.constraint(equalTo: titlebar.leftAnchor)
+        NSLayoutConstraint.activate([
+            WorkspaceTabStrip.start(tabs, at: titlebar.leftAnchor, inset: 70),
+            tabs.rightAnchor.constraint(lessThanOrEqualTo: titlebar.rightAnchor),
+            buttons.widthAnchor.constraint(equalToConstant: 62),
+            buttonsStart,
+        ])
+        let strip = WorkspaceTabStrip()
+        strip.fit(tabs, to: nil)
+        strip.place(after: buttons)
+        for inset: CGFloat in [0, 81, 0] {
+            buttonsStart.constant = inset
+            titlebar.layoutSubtreeIfNeeded()
+            #expect(tabs.frame.minX >= buttons.frame.maxX)
+            if inset == 0 { #expect(tabs.frame.minX == 70) }
+        }
+    }
+
     @Test func startsFromTheEngineResolvedBackground() throws {
         let config = try TemporaryConfig("background = #112233\n")
         let appearance = TerminalChromeAppearance(

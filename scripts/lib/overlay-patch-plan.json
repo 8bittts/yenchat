@@ -921,5 +921,78 @@
 			"--new-block",
 			"@$PATCHES_DIR/persistent-session-termios-poll.new"
 		]
+	},
+	"workspace-titlebar-default": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"workspace titlebar default",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"result.@\"macos-titlebar-style\" = .tabs;",
+			"--marker-all",
+			"/// The default is \"tabs\" on macOS 14 and later and \"transparent\" on macOS 13.",
+			"--old-block",
+			"@$PATCHES_DIR/workspace-titlebar-default.old",
+			"--new-block",
+			"@$PATCHES_DIR/workspace-titlebar-default.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/workspace-titlebar-default-2.old:::@$PATCHES_DIR/workspace-titlebar-default-2.new"
+		]
+	},
+	"workspace-tabs-tahoe": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"workspace tabs tahoe",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"let workspaceTabs = WorkspaceTabStrip()",
+			"--marker-all",
+			"workspaceTabs.fit(",
+			"--marker-all",
+			"clipView.rightAnchor.constraint(lessThanOrEqualTo: container.rightAnchor)",
+			"--old-block",
+			"@$PATCHES_DIR/workspace-tabs-tahoe.old",
+			"--new-block",
+			"@$PATCHES_DIR/workspace-tabs-tahoe.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/workspace-tabs-tahoe-2.old:::@$PATCHES_DIR/workspace-tabs-tahoe-2.new",
+			"--extra-replace",
+			"clipView.rightAnchor.constraint(equalTo: container.rightAnchor):::clipView.rightAnchor.constraint(lessThanOrEqualTo: container.rightAnchor)",
+			"--extra-replace",
+			"clipView.leftAnchor.constraint(equalTo: container.leftAnchor, constant: leftPadding):::WorkspaceTabStrip.start(clipView, at: container.leftAnchor, inset: leftPadding)",
+			"--marker-all",
+			"WorkspaceTabStrip.start(clipView, at: container.leftAnchor, inset: leftPadding)"
+		]
+	},
+	"workspace-tabs-ventura": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsVenturaTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"workspace tabs ventura",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"let workspaceTabs = WorkspaceTabStrip()",
+			"--marker-all",
+			"workspaceTabs.fit(",
+			"--marker-all",
+			"accessoryClipView.rightAnchor.constraint(lessThanOrEqualTo: toolbarView.rightAnchor)",
+			"--old-block",
+			"@$PATCHES_DIR/workspace-tabs-ventura.old",
+			"--new-block",
+			"@$PATCHES_DIR/workspace-tabs-ventura.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/workspace-tabs-ventura-2.old:::@$PATCHES_DIR/workspace-tabs-ventura-2.new",
+			"--extra-replace",
+			"accessoryClipView.rightAnchor.constraint(equalTo: toolbarView.rightAnchor):::accessoryClipView.rightAnchor.constraint(lessThanOrEqualTo: toolbarView.rightAnchor)",
+			"--extra-replace",
+			"accessoryClipView.leftAnchor.constraint(equalTo: windowButtonsBackdrop.rightAnchor):::WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)",
+			"--marker-all",
+			"WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)"
+		]
 	}
 }

@@ -55,7 +55,7 @@ The 53 posts imported from the Substack export live in `content/blog/posts/<slug
 - The blog pages pass `siteOrigin={SITE_URL}` to `DocPageShell`, so the shared header and footer link to yen.chat directly; a relative `/` there is the blog index, and `tests/55-web-ui-dom.test.tsx` pins every shared link to yen.chat.
 - On yen.chat, `/blog` and `/blog/<path>` 308 to blog.yen.chat; previews and local development still render `/blog` directly.
 - Local `next dev` and `next start` rewrite the request host to `localhost`, so host routing is proven by `tests/159-blog-host-routing.test.ts` and on the deployed domain, never by a local Host header.
-- `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, pins the archive at 53 posts, and fails if a post references media missing from `public/blog-media/`.
+- `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, checks that all 53 imported posts remain alongside locally authored posts, and fails if a post references media missing from `public/blog-media/`.
 - A new post is a new `content/blog/posts/<slug>.json` in the same shape plus its slug in `slugs.json`, with its media under `public/blog-media/`.
 - `tests/158` refuses a post slug that collides with a blog route such as `releases`.
 

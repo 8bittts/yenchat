@@ -83,6 +83,7 @@ class TerminalViewContainer: NSView {
 	private var terminalBottomConstraint: NSLayoutConstraint?
 	private var dockedSidebarWidthConstraint: NSLayoutConstraint?
 	private var dockedSidebarHostingView: NSView?
+	private var fullscreenControls: FullscreenWorkspaceControls?
 	private var dockedSidebarModel: DockedTabSidebarModel?
 	private var dockedSidebarWindowExpansion: DockedSidebarWindowExpansion?
 	private var dockedSidebarWindowCompensationSuppressed = false
@@ -363,6 +364,8 @@ class TerminalViewContainer: NSView {
 			NSWindow.didBecomeKeyNotification,
 			NSWindow.didResignKeyNotification,
 			.yenNativeFullscreenTransitionDidChange,
+			NSWindow.didEnterFullScreenNotification,
+			NSWindow.didExitFullScreenNotification,
 			NSWindow.didMiniaturizeNotification,
 			NSWindow.didDeminiaturizeNotification,
 		]
@@ -441,6 +444,7 @@ class TerminalViewContainer: NSView {
 	}
 
 	private func updateDockedSidebarIfNeeded() {
+		updateFullscreenControls()
 		guard shouldShowDockedSidebarInWindow(window) else {
 			removeDockedSidebarIfNeeded()
 			return
@@ -578,6 +582,7 @@ class TerminalViewContainer: NSView {
 	}
 
 	private func recomputeDockedSidebarWindowCompensationIfNeeded() {
+		guard window?.yenIsEffectivelyFullscreen != true else { return }
 		guard dockedSidebarHostingView != nil else { return }
 		guard !dockedSidebarWindowCompensationSuppressed else { return }
 		guard let window, window.isVisible else { return }
@@ -636,6 +641,21 @@ class TerminalViewContainer: NSView {
 		window.setFrame(contractedFrame, display: true)
 		window.constrainToScreen()
 		dockedSidebarWindowExpansion = nil
+	}
+
+	private func updateFullscreenControls() {
+		guard let window, window.windowController is TerminalController else { return }
+		if window.styleMask.contains(.fullScreen) {
+			guard fullscreenControls == nil else { return }
+			let controls = FullscreenWorkspaceControls()
+			controls.terminalWindow = window
+			fullscreenControls = controls
+			window.addTitlebarAccessoryViewController(controls)
+		} else if let controls = fullscreenControls {
+			controls.removeFromParent()
+			fullscreenControls = nil
+			TabSidebarController.shared.clearFullscreenSidebar(for: window)
+		}
 	}
 
 	private static func defaultDockedSidebarHostingView(_ model: DockedTabSidebarModel) -> NSView {
