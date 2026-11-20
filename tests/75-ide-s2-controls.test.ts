@@ -336,7 +336,9 @@ function runShellDetectRace(shell: "bash" | "zsh") {
 						"sleep 0.03",
 						`cd ${JSON.stringify(harness.projB)}`,
 						"__yen_ide_start_detect",
-						"sleep 0.25",
+						// Wait for the newest detect job to exit (bounded at 5s) instead of a
+						// fixed sleep: an interactive bash under load can need >250ms.
+						'for _ in {1..200}; do kill -0 "$_yen_ide_detect_pid" 2>/dev/null || break; sleep 0.025; done',
 						"__yen_ide_apply_detect",
 						'printf "root=%s\\n" "$YEN_PROJECT_ROOT"',
 						'printf "loaded=%s\\n" "$LOADED_FOR"',
