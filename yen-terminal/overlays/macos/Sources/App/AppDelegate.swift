@@ -292,6 +292,9 @@ class AppDelegate: NSObject,
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // End persistent sessions no pane holds any more, after restore settles.
+        PersistentSessionReaper.start()
+
         // System settings overrides
         UserDefaults.standard.register(defaults: [
             // Disable this so that repeated key events make it through to our terminal views.

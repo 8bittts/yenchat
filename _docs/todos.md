@@ -34,7 +34,6 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Handle a session that the restore state no longer names (list it, then reap after a timeout) and a restore entry whose session died (start a fresh shell in the saved directory).
 - [ ] Verify the `yen` CLI, dictation paste, Secure Input and the Quick Terminal inside a persistent pane; shell integration, the title and working-directory reports already pass through.
 - [ ] Reflow replayed history to the attaching pane's width: a restored pane showed history hard-wrapped at about 48 columns in a wider window.
 - [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.

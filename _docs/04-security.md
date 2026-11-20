@@ -198,6 +198,7 @@ A new Go binary built on `tcell` or Bubble Tea will need its own entry.
 - **Stale verifier.** When a check fails after a bump, confirm the checked symbol did not just move in a YEN refactor before blaming upstream.
 - **zmx builds against the vendored engine.** `scripts/48-vendor-zmx.sh` points zmx's engine dependency at a clone of `yen-terminal/ghostty`, records the engine commit plus a digest of the tracked YEN inputs that shape engine Zig sources (Zig overlays, engine-source patch blocks, the branding phases) as `build_input_id`, and builds stripped from one fixed path so the output pin reproduces; an engine bump rebuilds zmx and re-records the pin.
   `14-vendor.sh` compares the recorded id with `48-vendor-zmx.sh --print-input-id`, because the zmx tag alone stays current across an engine bump; `tests/119-vendor-process-guardrails.test.ts` fails when the committed id drifts from the tree.
+  After a pull that changes the zmx pin, the integrity gate refuses the old local binary until `./scripts/48-vendor-zmx.sh --force` rebuilds it; the build reproduces the pinned digest.
 - **Source-built Rust vendors.** `fd` and `delta` dropped Intel macOS assets, so `scripts/16-vendor-fd.sh` and `scripts/35-vendor-delta.sh` cross-compile both slices and `lipo` them. If upstream restores `x86_64-apple-darwin` assets, return them to the `vendor-binary.sh` wrapper pattern and drop their `14-vendor.sh` prefetch entries.
 
 ### Fail-Closed Gate Contracts (Do Not Regress)

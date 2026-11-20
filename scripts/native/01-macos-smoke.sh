@@ -240,6 +240,7 @@ case "$MODE" in
                 -only-testing:YENTests/SettingsPaneTests
                 -only-testing:YENTests/SettingsTypographyControlsTests
                 -only-testing:YENTests/SettingsWindowLifecycleTests
+                -only-testing:YENTests/PersistentSessionReaperTests
                 -only-testing:YENTests/PersistentSessionsTests
                 -only-testing:YENTests/ShellTests
                 -only-testing:YENTests/SplitTreeTests
