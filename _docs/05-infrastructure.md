@@ -192,18 +192,15 @@ The verifier refuses to run while another YEN process holds an older config.
 When the operator's session must stay up, give the build its own identity:
 
 ```bash
-SCRATCH=$(mktemp -d)
-cp -R $HOME/Documents/yenchat/yen-terminal/ghostty/zig-out/YEN.app "$SCRATCH/YENVerify.app"
-cd "$SCRATCH/YENVerify.app/Contents"
-mv MacOS/yen MacOS/yenverify
-/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable yenverify' Info.plist
-/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.yenchat.yenverify' Info.plist
-/usr/libexec/PlistBuddy -c 'Set :CFBundleName YENVerify' Info.plist
-codesign --force --deep --sign - "$SCRATCH/YENVerify.app"
-bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh --app "$SCRATCH/YENVerify.app" --keep-open
+bash $HOME/Documents/yenchat/scripts/manual/18-make-verify-copy.sh
+APP=$HOME/.local/state/yen/verify/YENVerify.app
+bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh --app "$APP" --keep-open
 ```
 
-The ad-hoc re-sign is required; an edited `Info.plist` otherwise fails launch with `-54`.
+`18-make-verify-copy.sh` writes one copy at a fixed path, with the bundle identifier `com.yenchat.yenverify`, the executable `yenverify`, and the release Developer ID signature plus the build's entitlements.
+Always use it; never build the copy by hand in a `mktemp` folder, re-sign it ad hoc, or invent another name or identifier.
+macOS keys an Accessibility or Automation grant to the code requirement, so an ad-hoc copy asked the operator for access on every build, and a deleted temp copy left System Settings with no row to toggle.
+The fixed identifier and Team ID let one grant cover every later copy; the script refuses while a copy is running.
 The renamed executable clears the running-instance guard honestly, because the guard keys on the target's executable name.
 Identify the scripted window by its scratch-directory tab titles and confirm it with `lsappinfo`.
 The verifier overwrites both `config.yen` locations and restores them on exit from a backup inside its temp directory, so copy any live config first.
@@ -211,9 +208,10 @@ The verifier overwrites both `config.yen` locations and restores them on exit fr
 For a manual or scripted UI pass, launch the same copy with a scratch config instead of running the verifier:
 
 ```bash
+SCRATCH=$(mktemp -d)
 defaults export com.yenchat.yenverify "$SCRATCH/yenverify-defaults.plist"
 defaults write com.yenchat.yenverify com.yenchat.yen.hasCompletedSetup -bool true
-open -n -a "$SCRATCH/YENVerify.app" --env YEN_CONFIG_PATH="$SCRATCH/config.yen"
+open -n -a "$HOME/.local/state/yen/verify/YENVerify.app" --env YEN_CONFIG_PATH="$SCRATCH/config.yen"
 ```
 
 - Confirm the process before the first observation: its start time, the `txt` mapping from `lsof -p`, and `lsappinfo info -app com.yenchat.yenverify`.

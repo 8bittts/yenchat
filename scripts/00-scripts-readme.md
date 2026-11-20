@@ -124,6 +124,7 @@ Manual utilities, outside the release and vendor gates:
 | `manual/14-verify-dmg-layout.sh [--skip-finder-check]`                         | DMG structure, backgrounds and Finder geometry                   |
 | `manual/15-verify-applescript.sh`, `manual/16-verify-applescript-if-needed.sh` | AppleScript and workspace verifier, and its stamp-driven wrapper |
 | `manual/17-verify-sparkle-delta-dryrun.sh`                                     | Delta generation against the live DMGs, with no writes           |
+| `manual/18-make-verify-copy.sh`                                                | Signed `YENVerify.app` copy of the local build at a fixed path   |
 | `manual/26-sync-theme-catalog.sh`                                              | Regenerates the catalog in `_docs/02-design-system.md`           |
 | `manual/27-run-settings-memory-benchmark.sh`                                   | Settings memory benchmark, retain versus release                 |
 | `manual/28-run-file-browser-preview-benchmark.sh`                              | File-browser preview benchmark                                   |
