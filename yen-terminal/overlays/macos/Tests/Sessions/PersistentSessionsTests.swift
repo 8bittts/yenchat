@@ -116,6 +116,44 @@ struct PersistentSessionsTests {
         #expect(FileManager.default.isExecutableFile(atPath: second))
     }
 
+    @Test func onlyTheReleaseAppKeepsSessionsByDefaultAndAnExplicitChoiceWins() throws {
+        let suite = "yen-persistent-sessions-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: "com.yenchat.yen"))
+        #expect(!PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: "com.yenchat.yen.debug"))
+        #expect(!PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: "com.yenchat.yenverify"))
+        #expect(!PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: nil))
+
+        defaults.set(false, forKey: PersistentSessions.enabledDefaultsKey)
+        #expect(!PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: "com.yenchat.yen"))
+        defaults.set(true, forKey: PersistentSessions.enabledDefaultsKey)
+        #expect(PersistentSessions.isEnabled(defaults: defaults, bundleIdentifier: "com.yenchat.yen.debug"))
+    }
+
+    @Test func turningThePreferenceOffKeepsAttachingALiveSession() throws {
+        // Short on purpose: a socket path over 103 bytes keeps a pane ephemeral.
+        let directory = URL(fileURLWithPath: "/tmp/yps-\(UUID().uuidString.prefix(8))")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        FileManager.default.createFile(atPath: directory.appendingPathComponent(paneID.uuidString).path, contents: Data())
+
+        var restored = YEN.SurfaceConfiguration()
+        PersistentSessions.prepare(
+            &restored, paneID: paneID, enabled: false, zmxAvailable: true,
+            socketDirectory: directory.path, resolveBinary: { _, _ in "/z/zmx-test" }
+        )
+        #expect(restored.environmentVariables[PersistentSessions.environmentKey] == paneID.uuidString)
+
+        var fresh = YEN.SurfaceConfiguration()
+        PersistentSessions.prepare(
+            &fresh, paneID: UUID(), enabled: false, zmxAvailable: true,
+            socketDirectory: directory.path, resolveBinary: { _, _ in "/z/zmx-test" }
+        )
+        #expect(fresh.environmentVariables[PersistentSessions.environmentKey] == nil)
+    }
+
     @Test func quittingAsksOnlyAboutPanesWithoutALiveSession() {
         #expect(PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in false })
         #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in true })

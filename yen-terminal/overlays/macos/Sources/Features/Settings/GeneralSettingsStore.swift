@@ -22,6 +22,7 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
 
         struct Behavior: Equatable {
             let copyOnSelect: Bool
+            let persistentSessions: Bool
             let scrollbarVisibility: String
         }
 
@@ -81,6 +82,7 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
                 ),
                 behavior: Behavior(
                     copyOnSelect: controller.copyOnSelect,
+                    persistentSessions: controller.persistentSessionsEnabled,
                     scrollbarVisibility: controller.scrollbarVisibility
                 ),
                 appearance: Appearance(
@@ -143,6 +145,10 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
 
     func setCopyOnSelect(_ value: Bool) {
         controller.copyOnSelect = value
+    }
+
+    func setPersistentSessions(_ value: Bool) {
+        controller.persistentSessionsEnabled = value
     }
 
     func setScrollbarVisibility(_ value: String) {

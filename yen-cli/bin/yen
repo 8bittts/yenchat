@@ -132,6 +132,7 @@ Core:
   agents  Adapter board + workspace templates (list/open/timeline/note/export/templates; timeline supports --tail/--event/--source/--kind)
   web  Native browser commands (open/back/forward/reload/close/status; open supports --split, stateful supports targets)
   pane  Report an agent's working directory for this pane (cwd <dir>/--hook/--clear)
+  sessions  Persistent pane sessions (list/attach/kill)
 
 Apps:
   browse (files, fm)  File browser
@@ -399,7 +400,7 @@ suggest_command() {
     fi
 
     # Add built-in commands and app binaries
-    commands+=(help version init ide agents web pane config reload update btop monitor fastfetch fetch bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
+    commands+=(help version init ide agents web pane sessions config reload update btop monitor fastfetch fetch bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
 
     # Prefix/substring matching; case-insensitivity via `nocasematch` (bash 3.1+,
     # still Bash 3.x compatible) — no subshell per candidate on this path.

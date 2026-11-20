@@ -417,6 +417,7 @@ struct SettingsGeneralPane: View {
     static let loginApprovalText =
         "Waiting for approval. YEN will not open at login until you allow it in Login Items."
     static let copyOnSelectHint = "Selecting text copies it to the clipboard."
+    static let persistentSessionsHint = "Panes keep running when YEN quits and reattach when their windows reopen."
     static let tabSidebarHint = "Lists tabs with their folder and Git branch."
     static let linksHint = "Web links from the terminal open in the built-in browser."
     static let scratchpadAction = "yen_toggle_scratchpad"
@@ -471,6 +472,12 @@ struct SettingsGeneralPane: View {
                     isOn: Binding(get: { behavior.copyOnSelect }, set: { general.setCopyOnSelect($0) })
                 ) {
                     SettingsStudioLabel(title: "Copy on Select", hint: Self.copyOnSelectHint)
+                }
+
+                Toggle(
+                    isOn: Binding(get: { behavior.persistentSessions }, set: { general.setPersistentSessions($0) })
+                ) {
+                    SettingsStudioLabel(title: "Keep Sessions Running", hint: Self.persistentSessionsHint)
                 }
 
                 Picker(

@@ -32,8 +32,18 @@ enum PersistentSessions {
     /// macOS; zmx refuses a longer `<dir>/<name>` with `NameTooLong`.
     static let maxSocketPathLength = 103
 
+    /// The release app keeps sessions by default. Any other identity (the Debug
+    /// build and its test host, the verify copy) needs the preference set, so a
+    /// test run never starts sessions in the user's state directory.
+    static let releaseBundleIdentifier = "com.yenchat.yen"
+
     static var isEnabled: Bool {
-        UserDefaults.standard.bool(forKey: enabledDefaultsKey)
+        isEnabled(defaults: .standard, bundleIdentifier: Bundle.main.bundleIdentifier)
+    }
+
+    nonisolated static func isEnabled(defaults: UserDefaults, bundleIdentifier: String?) -> Bool {
+        if let value = defaults.object(forKey: enabledDefaultsKey) as? Bool { return value }
+        return bundleIdentifier == releaseBundleIdentifier
     }
 
     /// Sessions live under the user's state directory, not `$TMPDIR` or `/tmp`,
@@ -161,7 +171,10 @@ enum PersistentSessions {
 
         // A pane started for an explicit command (AppleScript, a palette
         // action, a file opener) stays ephemeral: its command is the point.
-        guard enabled, zmxAvailable, config.command == nil else { return }
+        // Turning the preference off only affects new panes: a pane whose
+        // session is still alive keeps attaching, so nothing is stranded.
+        guard enabled || hasSession(paneID, socketDirectory: socketDirectory),
+              zmxAvailable, config.command == nil else { return }
         guard socketPath(for: paneID, socketDirectory: socketDirectory).utf8.count <= maxSocketPathLength else { return }
 
         config.environmentVariables[environmentKey] = sessionName(for: paneID)

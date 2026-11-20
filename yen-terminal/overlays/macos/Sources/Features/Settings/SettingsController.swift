@@ -208,6 +208,16 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             notifyGeneralSettingsObservers()
         }
     }
+    /// Persistent sessions are an app preference, not a config key; new panes
+    /// read it when they are created (PersistentSessions.prepare).
+    var persistentSessionsEnabled: Bool {
+        get { PersistentSessions.isEnabled }
+        set {
+            UserDefaults.standard.set(newValue, forKey: PersistentSessions.enabledDefaultsKey)
+            objectWillChange.send()
+            notifyGeneralSettingsObservers()
+        }
+    }
     @Published var scrollbarVisibility: String = SettingsController.defaultScrollbarVisibility {
         didSet {
             if canonicalizeIfNeeded(\.scrollbarVisibility, normalize: Self.normalizedScrollbarVisibility) { return }

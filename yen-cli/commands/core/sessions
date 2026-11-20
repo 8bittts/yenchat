@@ -1,0 +1,157 @@
+#!/bin/bash
+# YEN sessions command: list, attach to, and end persistent pane sessions.
+#
+# A persistent pane runs inside the bundled zmx; its session is named by the pane
+# UUID and lives in ~/.local/state/yen/zmx. Each session is attached and ended with
+# the zmx build recorded in <id>.zmx, because an update can ship a zmx with another
+# protocol (_docs/01-architecture.md -> Persistent sessions).
+
+source "${YEN_LIB}/init.sh"
+
+SESSIONS_DIR="${YEN_SESSIONS_DIR:-$HOME/.local/state/yen/zmx}"
+ZMX_BIN="${YEN_RESOURCES}/bin/zmx"
+DEV_ZMX_BIN="${YEN_RESOURCES}/../yen-terminal/customizations/vendor/zmx/zmx"
+UUID_PATTERN='^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
+
+usage() {
+    cat << 'EOF'
+Usage:
+  yen sessions              List persistent pane sessions
+  yen sessions list         Same as above
+  yen sessions attach <id>  Attach this terminal to a session
+  yen sessions kill <id>    End a session and the processes in it
+
+Notes:
+  A session keeps a pane's shell running when YEN quits; reopening the window
+  reattaches it. "detached" means no pane shows the session right now.
+  Attach from another terminal or over SSH to reach a session without its window.
+EOF
+}
+
+usage_error() {
+    echo "yen sessions: $1" >&2
+    echo "Run 'yen sessions --help' for usage." >&2
+    exit 2
+}
+
+resolve_zmx() {
+    if [[ -x "$ZMX_BIN" ]]; then
+        echo "$ZMX_BIN"
+        return 0
+    fi
+    if [[ -x "$DEV_ZMX_BIN" ]]; then
+        echo "$DEV_ZMX_BIN"
+        return 0
+    fi
+    return 1
+}
+
+# The build that created a session, or the current build for a session without a record.
+session_zmx() {
+    local id="$1" recorded=""
+    if [[ -f "${SESSIONS_DIR}/${id}.zmx" ]]; then
+        recorded="$(head -n 1 "${SESSIONS_DIR}/${id}.zmx")"
+    fi
+    if [[ "$recorded" == /* && -x "$recorded" ]]; then
+        echo "$recorded"
+        return 0
+    fi
+    resolve_zmx
+}
+
+require_session() {
+    local id="$1"
+    [[ "$id" =~ $UUID_PATTERN ]] || usage_error "'$id' is not a session id (run 'yen sessions' to list them)"
+    [[ -S "${SESSIONS_DIR}/${id}" ]] || {
+        echo "yen sessions: no session $id" >&2
+        exit 1
+    }
+}
+
+# zmx reports cwd as a file:// or kitty-shell-cwd:// URL; print the path, ~ for home.
+display_directory() {
+    local url="$1" path
+    path="${url#*://}"
+    path="/${path#*/}"
+    [[ "$url" == *://* ]] || path="$url"
+    # The ~ is display text for the listing, not a path to expand.
+    # shellcheck disable=SC2088
+    if [[ "$path" == "$HOME" ]]; then
+        path="~"
+    elif [[ "$path" == "$HOME/"* ]]; then
+        path="~/${path#"$HOME"/}"
+    fi
+    printf '%s' "$path"
+}
+
+list_sessions() {
+    local zmx line field key value name clients created cwd state started count=0
+    if [[ ! -d "$SESSIONS_DIR" ]]; then
+        echo "No persistent sessions."
+        return 0
+    fi
+    zmx="$(resolve_zmx)" || {
+        yen_error "zmx is not available; reinstall YEN."
+        exit 1
+    }
+    while IFS= read -r line; do
+        [[ "$line" == *name=* ]] || continue
+        name="" clients="" created="" cwd="" state=""
+        line="${line#*name=}"
+        line="name=${line}"
+        while IFS= read -r -d $'\t' field || [[ -n "$field" ]]; do
+            key="${field%%=*}"
+            value="${field#*=}"
+            case "$key" in
+                name) name="$value" ;;
+                clients) clients="$value" ;;
+                created) created="$value" ;;
+                cwd) cwd="$value" ;;
+                err) state="unreachable" ;;
+            esac
+        done <<< "$line"
+        [[ "$name" =~ $UUID_PATTERN ]] || continue
+        if [[ -z "$state" ]]; then
+            if [[ "$clients" == "0" ]]; then state="detached"; else state="attached"; fi
+        fi
+        started="-"
+        [[ "$created" =~ ^[0-9]+$ ]] && started="$(date -r "$created" '+%Y-%m-%d %H:%M' 2>/dev/null || echo -)"
+        if [[ $count -eq 0 ]]; then
+            printf '%-36s  %-11s  %-16s  %s\n' "ID" "STATE" "STARTED" "DIRECTORY"
+        fi
+        printf '%-36s  %-11s  %-16s  %s\n' "$name" "$state" "$started" "$(display_directory "${cwd:--}")"
+        count=$((count + 1))
+    done < <(ZMX_DIR="$SESSIONS_DIR" "$zmx" ls 2>/dev/null)
+    [[ $count -gt 0 ]] || echo "No persistent sessions."
+}
+
+case "${1:-list}" in
+    list | ls)
+        [[ $# -le 1 ]] || usage_error "list takes no arguments"
+        list_sessions
+        ;;
+    attach)
+        [[ $# -eq 2 ]] || usage_error "attach needs exactly one session id"
+        require_session "$2"
+        zmx="$(session_zmx "$2")" || { yen_error "zmx is not available; reinstall YEN."; exit 1; }
+        ZMX_DIR="$SESSIONS_DIR" exec "$zmx" attach "$2"
+        ;;
+    kill)
+        [[ $# -eq 2 ]] || usage_error "kill needs exactly one session id"
+        require_session "$2"
+        zmx="$(session_zmx "$2")" || { yen_error "zmx is not available; reinstall YEN."; exit 1; }
+        if ZMX_DIR="$SESSIONS_DIR" "$zmx" kill "$2" >/dev/null 2>&1; then
+            rm -f "${SESSIONS_DIR}/${2}.tty" "${SESSIONS_DIR}/${2}.zmx"
+            echo "Ended session $2"
+        else
+            echo "yen sessions: could not end session $2" >&2
+            exit 1
+        fi
+        ;;
+    -h | --help | help)
+        usage
+        ;;
+    *)
+        usage_error "unknown subcommand '$1'"
+        ;;
+esac

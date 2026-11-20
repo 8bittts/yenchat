@@ -40,7 +40,7 @@ The site has no database and Vercel functions run in `pdx1`.
 
 **Persistent sessions.**
 A persistent pane runs inside the bundled zmx (`Contents/Resources/bin/zmx`, vendored by `scripts/48-vendor-zmx.sh`), so its shell keeps running when the app quits, crashes or updates.
-The preference `com.yenchat.yen.persistentSessions` turns it on; it is off by default while Phase 2 of the plan in `_docs/todos.md` is open.
+Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSessions`. It is on by default only in the release app (`com.yenchat.yen`), so the Debug build, its test host and the verify copy never start sessions in the user's state directory unless the preference is set.
 - The app only marks a pane. `PersistentSessions.prepare` sets `YEN_PERSISTENT_SESSION=<pane UUID>`, `ZMX_DIR=~/.local/state/yen/zmx` and `ZMX_DIR_MODE=0700`, and always overwrites or removes an inherited marker, because a split or tab inherits its parent's environment.
 - The engine wraps the final command in `src/termio/yen_session.zig` after shell integration, as `zmx attach <UUID> /bin/bash --noprofile --norc -c 'exec -l <shell>'`, so integration and login semantics apply to the shell zmx starts; the marker never reaches the child.
 - A restored pane keeps its UUID, so restore reattaches to the same session and zmx replays the screen and scrollback.

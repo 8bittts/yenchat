@@ -438,6 +438,14 @@ extension TerminalCommandPaletteView {
             searchTags: ["fastfetch", "system", "info", "summary"],
             command: "fastfetch"
         ),
+        TerminalCommandBlueprint(
+            id: "terminal:sessions",
+            title: "Persistent Sessions",
+            description: "List sessions that keep running when YEN quits",
+            leadingIcon: "rectangle.stack",
+            searchTags: ["sessions", "persistent", "detached", "attach", "background", "zmx"],
+            command: "yen sessions"
+        ),
     ]
 
     static let ideQuickActionBlueprints: [TerminalCommandBlueprint] = [
