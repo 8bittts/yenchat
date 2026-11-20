@@ -5,10 +5,10 @@
         <description>YEN Terminal updates via Sparkle.</description>
         <language>en</language>
         <item>
-            <title>YEN 1.275</title>
+            <title>YEN 1.277</title>
             <link>https://yen.chat</link>
-            <sparkle:version>1275</sparkle:version>
-            <sparkle:shortVersionString>1.275</sparkle:shortVersionString>
+            <sparkle:version>1277</sparkle:version>
+            <sparkle:shortVersionString>1.277</sparkle:shortVersionString>
             <description><![CDATA[
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 12px; }
@@ -17,21 +17,22 @@
                     .tech { background: #f5f5f5; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
                     .tech strong { color: #333; }
                 </style>
-                <h2>YEN 1.275</h2>
-                <p class="quip">Panes keep running through quit, crash, update</p>
+                <h2>YEN 1.277</h2>
+                <p class="quip">Recover shell sessions across app updates</p>
                 <p class="tech"><strong>Full release notes:</strong> <a href="https://blog.yen.chat/releases">blog.yen.chat/releases</a></p>
             ]]></description>
-            <pubDate>Fri, 20 Nov 2026 09:54:49 -0800</pubDate>
+            <pubDate>Fri, 20 Nov 2026 10:51:09 -0800</pubDate>
             <enclosure
-                url="https://github.com/8bittts/yenchat/releases/download/v1.275/yen-1275.dmg"
-                length="116281860"
+                url="https://github.com/8bittts/yenchat/releases/download/v1.277/yen-1277.dmg"
+                length="116259443"
                 type="application/x-apple-diskimage"
-                sparkle:edSignature="4MyTofOlQVEplICJK70vdU4Kzbc+UuR7i+XdbJm5eMLUTdyKCobvfsfeDQx4t/LrbSxE4S8fBEm61XcG7hrbBQ==" />
+                sparkle:edSignature="waB23Wh7XZ7xO+xmd65c2Ix/QV2I27Mugaggh86b8KadwvTFOl7MTVk/0C4Jvgvl8W28uikIl8sKDYTDiD0vBA==" />
             <sparkle:deltas>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.275/YEN1275-1274.delta" sparkle:deltaFrom="1274" length="2201602" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="eeP65BD0E+1NqjFzngFycga2u5xeM7JarY5hlP+uvm/E+/gA+33vdU4nlO1Xf+J/CSzJ7YK68RkWNvTckxoFDw=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.275/YEN1275-1273.delta" sparkle:deltaFrom="1273" length="4787226" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Si4dmA2jY/iRIpeV5ahWDE5Z+74KR/4o2rT3+p8czoZoFz8LCikQtfemTiMnXvhEV1pAeOjXQe1BGrgnt+kXBA=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.275/YEN1275-1272.delta" sparkle:deltaFrom="1272" length="7547810" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UtiG0mrWPEAaJG+Vi2W6H7s5OcXtFHlFYQTqqwhPQV+GY5k6JVJgbobdk0jQDXpYQCOH+ReFe8YfGnJIicoSAw=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.275/YEN1275-1271.delta" sparkle:deltaFrom="1271" length="7569810" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="CDtUgmrabRLu7hA8AnzK7EPdVUcOb6OJtMB6xDZbVD/jnPa6bwjKHKlK1/BafPCIoyPqQFx9+Ixi8xQQNefUBA=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.277/YEN1277-1276.delta" sparkle:deltaFrom="1276" length="429142" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LL5iELyBQZGevHtEZ0MI1U+CtuSBuxPAfiEjQHc6ekGWCF9XOqDpsCpwWnk+7hBrhEUGoiDtV1KIzzuf8xDvDw=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.277/YEN1277-1275.delta" sparkle:deltaFrom="1275" length="1461430" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="rSUpRQy8FR+ptDs9+1lvYBFTo4oQd3xpG0matPD68NddyZr/cGM5z2iq775b/UPqmgNrgMNLBWJQF8cQIb1CAA=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.277/YEN1277-1274.delta" sparkle:deltaFrom="1274" length="2247098" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="FfbnPNcMh3nVwQLeQLXrvaPErmFg8ZGnhPof50vownYJgOfCqzSO2VhJLvQGM5XKBqS72OnjYfJIk12lTXlpCg=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.277/YEN1277-1273.delta" sparkle:deltaFrom="1273" length="4818302" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="JpTSqmZIII7YNJzqr+TzVodbzOygJvHo/UBfuzvxre+ox0xfVOdaTFu9hGhA15HyQubMFiO1780cbPS+4Y0lAg=="/>
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.277/YEN1277-1272.delta" sparkle:deltaFrom="1272" length="7594982" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="gCKHHu3RCE/zm9PNkzuqwk5szC4JEMUC3OGdK7RSAzg5JfRjSuD8SBJIcTVyUB5hkKZpYUYYbFDsL45OZdLhBg=="/>
             </sparkle:deltas>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
         </item>

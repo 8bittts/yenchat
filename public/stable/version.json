@@ -1,8 +1,8 @@
 {
-  "version": "1.275",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.275/yen-1275.dmg",
-  "sha256": "81b1cb367dce42a3169bc0d5411d0fe53d53a5a45b42109d2a807081b8fd8c2d",
-  "notes": "Panes keep running through quit, crash, update",
+  "version": "1.277",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.277/yen-1277.dmg",
+  "sha256": "313ba451d3759657f1654bb100b613e69acaaa2671bb77fc684b6811405729a6",
+  "notes": "Recover shell sessions across app updates",
   "minOS": "13.0",
   "releaseDate": ""
 }
