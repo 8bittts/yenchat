@@ -34,8 +34,6 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Reflow replayed history to the attaching pane's width: a restored pane showed history hard-wrapped at about 48 columns in a wider window.
-- [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.
 - [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle, then turn the preference on by default.
 - [ ] Prove force-kill and a Sparkle update in a running re-identified `zig-out` copy leave sessions alive (quit and restore are proven).
 

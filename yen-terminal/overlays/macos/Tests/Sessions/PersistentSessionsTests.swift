@@ -11,11 +11,12 @@ struct PersistentSessionsTests {
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables = ["TERM": "xterm-256color"]
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory)
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == paneID.uuidString)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryEnvironmentKey] == socketDirectory)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryModeEnvironmentKey] == "0700")
+        #expect(config.environmentVariables[PersistentSessions.binaryEnvironmentKey] == "/z/zmx-test")
         #expect(config.environmentVariables["TERM"] == "xterm-256color")
     }
 
@@ -23,7 +24,7 @@ struct PersistentSessionsTests {
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory)
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == paneID.uuidString)
     }
@@ -33,7 +34,7 @@ struct PersistentSessionsTests {
             var config = YEN.SurfaceConfiguration()
             config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
 
-            PersistentSessions.prepare(&config, paneID: paneID, enabled: enabled, zmxAvailable: zmxAvailable, socketDirectory: socketDirectory)
+            PersistentSessions.prepare(&config, paneID: paneID, enabled: enabled, zmxAvailable: zmxAvailable, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
 
             #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
         }
@@ -44,7 +45,7 @@ struct PersistentSessionsTests {
         config.command = "/usr/bin/top"
         config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory)
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryEnvironmentKey] == nil)
@@ -54,7 +55,7 @@ struct PersistentSessionsTests {
         let longDirectory = "/Users/" + String(repeating: "u", count: 70) + "/.local/state/yen/zmx"
         var config = YEN.SurfaceConfiguration()
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: longDirectory)
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: longDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
 
         #expect(PersistentSessions.socketPath(for: paneID, socketDirectory: longDirectory).utf8.count > PersistentSessions.maxSocketPathLength)
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
@@ -86,6 +87,33 @@ struct PersistentSessionsTests {
         #expect(closed.isEmpty)
         try await Task.sleep(for: PersistentSessions.closeGrace + .milliseconds(800))
         #expect(closed == [closedID])
+    }
+
+    @Test func aNewSessionRecordsTheCurrentBuildAndALiveOneKeepsItsRecordedBuild() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("yen-zmx-binary-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bundled = root.appendingPathComponent("bundled-zmx").path
+        FileManager.default.createFile(atPath: bundled, contents: Data("zmx build one".utf8), attributes: [.posixPermissions: 0o755])
+        let socketDirectory = root.appendingPathComponent("zmx").path
+        try FileManager.default.createDirectory(atPath: socketDirectory, withIntermediateDirectories: true)
+
+        // New pane: the current build is copied out of the bundle and recorded.
+        let first = try #require(PersistentSessions.sessionBinary(for: paneID, socketDirectory: socketDirectory, bundled: bundled))
+        #expect(first.hasPrefix(PersistentSessions.binaryDirectory(socketDirectory: socketDirectory) + "/zmx-"))
+        #expect(PersistentSessions.recordedBinary(for: paneID, socketDirectory: socketDirectory) == first)
+
+        // The session is live and the app updates to another zmx build.
+        FileManager.default.createFile(atPath: PersistentSessions.socketPath(for: paneID, socketDirectory: socketDirectory), contents: Data())
+        try Data("zmx build two, longer".utf8).write(to: URL(fileURLWithPath: bundled))
+        let afterUpdate = try #require(PersistentSessions.sessionBinary(for: paneID, socketDirectory: socketDirectory, bundled: bundled))
+        #expect(afterUpdate == first)
+
+        // A new pane after the update gets the new build.
+        let newPane = UUID()
+        let second = try #require(PersistentSessions.sessionBinary(for: newPane, socketDirectory: socketDirectory, bundled: bundled))
+        #expect(second != first)
+        #expect(FileManager.default.isExecutableFile(atPath: second))
     }
 
     @Test func quittingAsksOnlyAboutPanesWithoutALiveSession() {

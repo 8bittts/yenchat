@@ -16,6 +16,8 @@
 #   src/daemonize.zig  the daemon records its session tty in <ZMX_DIR>/<name>.tty,
 #                  so YEN can read the inner pty's termios (password detection);
 #                  zmx ls skips that non-socket file
+#   src/terminal.zig  the attach snapshot unwraps soft-wrapped rows, so the pane
+#                  re-wraps them itself and can reflow them when it grows
 #
 # Reproducible output, so the baseline output pin can hold across rebuilds:
 # - Debug info carries a timestamped object map, and the linker derives the
@@ -151,6 +153,17 @@ PY
         '.root_source_file = b.path("src/main.zig"),
         .strip = true,' 1 >&2
     patch_anchor "$source_dir/src/main.zig" 'ghostty_vt\t' 'engine\t\t' 1 >&2
+    patch_anchor "$source_dir/src/terminal.zig" \
+        '    scroll_fmt.extra = .none; // no modes, cursor, keyboard — just content' \
+        '    scroll_fmt.extra = .none; // no modes, cursor, keyboard — just content
+            // YEN: send soft-wrapped rows unwrapped; the pane re-wraps them and
+            // can then reflow them when it grows.
+            scroll_fmt.opts.unwrap = true;' 1 >&2
+    patch_anchor "$source_dir/src/terminal.zig" \
+        '    vis_fmt.format(&builder.writer) catch |err| {' \
+        '    // YEN: unwrap soft-wrapped rows here too (see the scrollback phase).
+    vis_fmt.opts.unwrap = true;
+    vis_fmt.format(&builder.writer) catch |err| {' 1 >&2
     patch_anchor "$source_dir/src/daemonize.zig" \
         'const pid = cross.forkpty(&master_fd, null, null, &ws);' \
         'var yen_tty_name: [1024]u8 = std.mem.zeroes([1024]u8);

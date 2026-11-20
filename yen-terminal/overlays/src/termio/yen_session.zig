@@ -35,6 +35,10 @@ pub fn zmxPath(alloc: Allocator, resources_dir: []const u8) !?[]const u8 {
 /// Socket directory variable the app sets beside the marker; zmx reads it too.
 pub const socket_dir_key = "ZMX_DIR";
 
+/// The zmx build that started this pane's session. Attaching with the same
+/// build keeps working when an update ships a zmx with another protocol.
+pub const zmx_key = "YEN_PERSISTENT_SESSION_ZMX";
+
 pub fn Prepared(comptime Command: type) type {
     return struct {
         command: Command,
@@ -55,14 +59,24 @@ pub fn prepare(
     resources_dir: ?[]const u8,
 ) !Prepared(@TypeOf(command)) {
     const unchanged: Prepared(@TypeOf(command)) = .{ .command = command };
+    const recorded: ?[]const u8 = if (env.get(zmx_key)) |v| try alloc.dupe(u8, v) else null;
+    _ = env.orderedRemove(zmx_key);
     const raw = env.get(env_key) orelse return unchanged;
     const name = try alloc.dupe(u8, raw);
     _ = env.orderedRemove(env_key);
     if (!validName(name)) return unchanged;
 
-    const dir = resources_dir orelse return unchanged;
-    const zmx = try zmxPath(alloc, dir) orelse return unchanged;
-    std.Io.Dir.accessAbsolute(io, zmx, .{}) catch return unchanged;
+    const zmx = zmx: {
+        if (recorded) |path| {
+            if (std.fs.path.isAbsolute(path)) {
+                if (std.Io.Dir.accessAbsolute(io, path, .{})) |_| break :zmx path else |_| {}
+            }
+        }
+        const dir = resources_dir orelse return unchanged;
+        const bundled = try zmxPath(alloc, dir) orelse return unchanged;
+        std.Io.Dir.accessAbsolute(io, bundled, .{}) catch return unchanged;
+        break :zmx bundled;
+    };
 
     const tty_file: ?[]const u8 = if (env.get(socket_dir_key)) |socket_dir|
         try std.fmt.allocPrint(alloc, "{s}/{s}.tty", .{ socket_dir, name })
@@ -321,4 +335,39 @@ test "innerTtyPath accepts only a /dev/tty path" {
     }
     var buf: [256]u8 = undefined;
     try std.testing.expect(innerTtyPath(&buf, "/nonexistent/x.tty") == null);
+}
+
+test "prepare attaches with the recorded zmx build and strips its variable" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const io = std.testing.io;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io, "Resources/yen");
+    try tmp.dir.createDirPath(io, "Resources/bin");
+    try tmp.dir.createDirPath(io, "state/bin");
+    try tmp.dir.writeFile(io, .{ .sub_path = "Resources/bin/zmx", .data = "" });
+    try tmp.dir.writeFile(io, .{ .sub_path = "state/bin/zmx-old", .data = "" });
+    const root = try tmp.dir.realPathFileAlloc(io, ".", alloc);
+    const resources_dir = try std.fs.path.join(alloc, &.{ root, "Resources", "yen" });
+    const old = try std.fs.path.join(alloc, &.{ root, "state", "bin", "zmx-old" });
+
+    var env = std.process.Environ.Map.init(alloc);
+    try env.put(env_key, "ABC-123");
+    try env.put(zmx_key, old);
+    const recorded = try prepare(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, resources_dir);
+    try std.testing.expect(std.mem.startsWith(u8, recorded.command.shell, "'"));
+    try std.testing.expect(std.mem.indexOf(u8, recorded.command.shell, "/state/bin/zmx-old' attach ABC-123 ") != null);
+    try std.testing.expect(env.get(zmx_key) == null);
+
+    // A recorded build that is gone, or a relative path, falls back to the bundled zmx.
+    for ([_][]const u8{ "/nonexistent/zmx-gone", "state/bin/zmx-old" }) |bad| {
+        try env.put(env_key, "ABC-123");
+        try env.put(zmx_key, bad);
+        const fallback = try prepare(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, resources_dir);
+        try std.testing.expect(std.mem.indexOf(u8, fallback.command.shell, "/Resources/bin/zmx' attach ABC-123 ") != null);
+        try std.testing.expect(env.get(zmx_key) == null);
+    }
 }

@@ -77,12 +77,23 @@ enum PersistentSessionReaper {
         return (kill.sorted(), next)
     }
 
-    /// `.tty` records whose session socket is gone: zmx deletes its socket when
-    /// a shell exits but knows nothing of YEN's record beside it.
-    nonisolated static func staleTtyRecords(in fileNames: [String]) -> [String] {
+    static let recordSuffixes = [".tty", ".zmx"]
+
+    /// `.tty` and `.zmx` records whose session socket is gone: zmx deletes its
+    /// socket when a shell exits but knows nothing of YEN's records beside it.
+    nonisolated static func staleSessionRecords(in fileNames: [String]) -> [String] {
         let names = Set(fileNames)
         return fileNames.filter { file in
-            file.hasSuffix(".tty") && !names.contains(String(file.dropLast(".tty".count)))
+            guard let suffix = recordSuffixes.first(where: { file.hasSuffix($0) }) else { return false }
+            return !names.contains(String(file.dropLast(suffix.count)))
+        }.sorted()
+    }
+
+    /// zmx copies under `bin/` that no live session records and that are not
+    /// the current build.
+    nonisolated static func unusedBinaryCopies(_ copies: [String], referenced: Set<String>, current: String?) -> [String] {
+        copies.filter { path in
+            (path as NSString).lastPathComponent.hasPrefix("zmx-") && !referenced.contains(path) && path != current
         }.sorted()
     }
 
@@ -113,9 +124,22 @@ enum PersistentSessionReaper {
         let interval = positive(UserDefaults.standard.double(forKey: intervalDefaultsKey)) ?? defaultInterval
 
         Task.detached(priority: .utility) {
-            let files = (try? FileManager.default.contentsOfDirectory(atPath: directory)) ?? []
-            for record in staleTtyRecords(in: files) {
-                try? FileManager.default.removeItem(atPath: (directory as NSString).appendingPathComponent(record))
+            let manager = FileManager.default
+            let files = (try? manager.contentsOfDirectory(atPath: directory)) ?? []
+            for record in staleSessionRecords(in: files) {
+                try? manager.removeItem(atPath: (directory as NSString).appendingPathComponent(record))
+            }
+            let remaining = (try? manager.contentsOfDirectory(atPath: directory)) ?? []
+            let referenced = Set(remaining.filter { $0.hasSuffix(".zmx") }.compactMap { record in
+                (try? String(contentsOfFile: (directory as NSString).appendingPathComponent(record), encoding: .utf8))?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            })
+            let binDirectory = PersistentSessions.binaryDirectory(socketDirectory: directory)
+            let copies = ((try? manager.contentsOfDirectory(atPath: binDirectory)) ?? [])
+                .map { (binDirectory as NSString).appendingPathComponent($0) }
+            let current = PersistentSessions.currentBinaryCopy(bundled: zmx, socketDirectory: directory)
+            for copy in unusedBinaryCopies(copies, referenced: referenced, current: current) {
+                try? manager.removeItem(atPath: copy)
             }
             let sessions = parseList(run(zmx, ["ls"], directory))
             let kill: [String] = await MainActor.run {
@@ -134,7 +158,13 @@ enum PersistentSessionReaper {
                 return result.kill
             }
             for name in kill where !PersistentSessions.isTerminating {
-                run(zmx, ["kill", name], directory)
+                let binary = UUID(uuidString: name).flatMap {
+                    PersistentSessions.recordedBinary(for: $0, socketDirectory: directory)
+                } ?? zmx
+                run(binary, ["kill", name], directory)
+                for suffix in recordSuffixes {
+                    try? FileManager.default.removeItem(atPath: (directory as NSString).appendingPathComponent(name + suffix))
+                }
             }
         }
     }

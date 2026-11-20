@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import Foundation
 
 /// Persistent sessions: a pane runs inside the bundled zmx so its shell keeps
@@ -24,6 +25,8 @@ enum PersistentSessions {
     static let socketDirectoryEnvironmentKey = "ZMX_DIR"
     static let socketDirectoryModeEnvironmentKey = "ZMX_DIR_MODE"
     static let socketDirectoryMode = "0700"
+    /// The zmx build that attaches this pane's session (yen_session.zig).
+    static let binaryEnvironmentKey = "YEN_PERSISTENT_SESSION_ZMX"
 
     /// A Unix socket path holds at most 104 bytes including its terminator on
     /// macOS; zmx refuses a longer `<dir>/<name>` with `NameTooLong`.
@@ -55,6 +58,87 @@ enum PersistentSessions {
         socketPath(for: paneID, socketDirectory: socketDirectory) + ".tty"
     }
 
+    /// Which zmx build started a session. A Sparkle update or vendor bump can
+    /// ship a zmx with another protocol, so a session is always attached and
+    /// ended with the build that created it.
+    nonisolated static func binaryRecordPath(for paneID: UUID, socketDirectory: String) -> String {
+        socketPath(for: paneID, socketDirectory: socketDirectory) + ".zmx"
+    }
+
+    nonisolated static func binaryDirectory(socketDirectory: String) -> String {
+        (socketDirectory as NSString).appendingPathComponent("bin")
+    }
+
+    nonisolated static func recordedBinary(for paneID: UUID, socketDirectory: String) -> String? {
+        let record = binaryRecordPath(for: paneID, socketDirectory: socketDirectory)
+        guard let path = try? String(contentsOfFile: record, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              path.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: path) else { return nil }
+        return path
+    }
+
+    nonisolated(unsafe) private static var binaryCopyCache: [String: String] = [:]
+    private static let binaryCopyLock = NSLock()
+
+    /// A digest-named copy of the bundled zmx under the socket directory. It
+    /// outlives the app bundle, so an update cannot remove the build a running
+    /// session needs.
+    nonisolated static func currentBinaryCopy(bundled: String, socketDirectory: String) -> String? {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: bundled)
+        let stamp = "\((attributes?[.size] as? NSNumber)?.int64Value ?? -1):\((attributes?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? -1)"
+        let key = [bundled, stamp, socketDirectory].joined(separator: "\u{0}")
+        if let cached = binaryCopyLock.withLock({ binaryCopyCache[key] }),
+           FileManager.default.isExecutableFile(atPath: cached) {
+            return cached
+        }
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: bundled), options: .mappedIfSafe) else { return nil }
+        let digest = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        let directory = binaryDirectory(socketDirectory: socketDirectory)
+        let target = (directory as NSString).appendingPathComponent("zmx-\(digest)")
+        let manager = FileManager.default
+        if !manager.isExecutableFile(atPath: target) {
+            do {
+                try manager.createDirectory(atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+                let staging = (directory as NSString).appendingPathComponent(".zmx-\(UUID().uuidString)")
+                try manager.copyItem(atPath: bundled, toPath: staging)
+                try manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: staging)
+                if rename(staging, target) != 0 {
+                    try? manager.removeItem(atPath: staging)
+                    guard manager.isExecutableFile(atPath: target) else { return nil }
+                }
+            } catch {
+                return nil
+            }
+        }
+        binaryCopyLock.withLock { binaryCopyCache[key] = target }
+        return target
+    }
+
+    /// The build that should attach this pane. A live session keeps the build
+    /// recorded for it; a session without a record predates the record and uses
+    /// the current build; a new session records the current build.
+    nonisolated static func sessionBinary(
+        for paneID: UUID,
+        socketDirectory: String,
+        bundled: String? = zmxPath()
+    ) -> String? {
+        if hasSession(paneID, socketDirectory: socketDirectory),
+           let recorded = recordedBinary(for: paneID, socketDirectory: socketDirectory) {
+            return recorded
+        }
+        guard let bundled, let current = currentBinaryCopy(bundled: bundled, socketDirectory: socketDirectory) else {
+            return nil
+        }
+        if !hasSession(paneID, socketDirectory: socketDirectory) {
+            try? current.write(
+                toFile: binaryRecordPath(for: paneID, socketDirectory: socketDirectory),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+        return current
+    }
+
     nonisolated static func socketPath(for paneID: UUID, socketDirectory: String) -> String {
         (socketDirectory as NSString).appendingPathComponent(sessionName(for: paneID))
     }
@@ -69,9 +153,11 @@ enum PersistentSessions {
         paneID: UUID,
         enabled: Bool = isEnabled,
         zmxAvailable: Bool = zmxPath() != nil,
-        socketDirectory: String = socketDirectory()
+        socketDirectory: String = socketDirectory(),
+        resolveBinary: (UUID, String) -> String? = { sessionBinary(for: $0, socketDirectory: $1) }
     ) {
         config.environmentVariables.removeValue(forKey: environmentKey)
+        config.environmentVariables.removeValue(forKey: binaryEnvironmentKey)
 
         // A pane started for an explicit command (AppleScript, a palette
         // action, a file opener) stays ephemeral: its command is the point.
@@ -81,6 +167,9 @@ enum PersistentSessions {
         config.environmentVariables[environmentKey] = sessionName(for: paneID)
         config.environmentVariables[socketDirectoryEnvironmentKey] = socketDirectory
         config.environmentVariables[socketDirectoryModeEnvironmentKey] = socketDirectoryMode
+        if let binary = resolveBinary(paneID, socketDirectory) {
+            config.environmentVariables[binaryEnvironmentKey] = binary
+        }
     }
 
     /// True when the pane runs inside a live session, which survives a quit.
@@ -125,8 +214,10 @@ enum PersistentSessions {
     ) {
         guard !terminating, let zmxPath else { return }
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
-        run(zmxPath, ["kill", sessionName(for: paneID)], [socketDirectoryEnvironmentKey: socketDirectory])
+        let binary = recordedBinary(for: paneID, socketDirectory: socketDirectory) ?? zmxPath
+        run(binary, ["kill", sessionName(for: paneID)], [socketDirectoryEnvironmentKey: socketDirectory])
         try? FileManager.default.removeItem(atPath: ttyRecordPath(for: paneID, socketDirectory: socketDirectory))
+        try? FileManager.default.removeItem(atPath: binaryRecordPath(for: paneID, socketDirectory: socketDirectory))
     }
 
     /// Grace added to the undo timeout before a departed pane is judged closed.
