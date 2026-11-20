@@ -57,9 +57,6 @@ enum SettingsSpacing {
     static let previewLeadingInset: CGFloat = 20
     /// The preview caption sits to the right of the window controls.
     static let previewCaptionLeading: CGFloat = 86
-    static let previewCaptionTop: CGFloat = 13
-    static let captionHorizontalPadding: CGFloat = 10
-    static let captionVerticalPadding: CGFloat = 4
 }
 
 /// The text styles the Settings window uses, by role. All are Dynamic Type
@@ -168,29 +165,33 @@ struct SettingsPanel: View {
     }
 
     var body: some View {
+        let previewTheme = SettingsStudioTheme.resolve(
+            selectedTheme: themes.snapshot.selectedTheme,
+            in: themes.snapshot.themes
+        )
         ZStack(alignment: .bottomLeading) {
             SettingsStudioPreview(
                 appearance: general.snapshot.appearance,
                 font: general.snapshot.font,
                 cursor: general.snapshot.cursor,
-                theme: SettingsStudioTheme.resolve(
-                    selectedTheme: themes.snapshot.selectedTheme,
-                    in: themes.snapshot.themes
-                )
+                theme: previewTheme
             )
             .ignoresSafeArea()
 
-            Text("Live Preview")
-                .font(SettingsTypography.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, SettingsSpacing.captionHorizontalPadding)
-                .padding(.vertical, SettingsSpacing.captionVerticalPadding)
-                .settingsGlass(in: Capsule())
-                .padding(.leading, SettingsSpacing.previewCaptionLeading)
-                .padding(.top, SettingsSpacing.previewCaptionTop)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .ignoresSafeArea()
-                .accessibilityHidden(true)
+            // A quiet label beside the traffic lights, in the preview's own dim
+            // text color so it reads on light and dark themes. The top safe-area
+            // inset is the titlebar band the traffic lights are centered in, so
+            // centering in it lines the label up with them on every macOS version.
+            GeometryReader { proxy in
+                Text("Live Preview")
+                    .font(SettingsTypography.caption)
+                    .foregroundStyle(previewTheme.foreground.opacity(0.6))
+                    .frame(height: proxy.safeAreaInsets.top)
+                    .padding(.leading, SettingsSpacing.previewCaptionLeading)
+                    .offset(y: -proxy.safeAreaInsets.top)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
 
             if selectedPane == .appearance {
                 SettingsStudioThemeDock(store: themes)
