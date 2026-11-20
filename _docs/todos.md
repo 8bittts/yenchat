@@ -18,9 +18,66 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions).
-This list holds only bug fixes and security work; new features, redesigns, refactors, performance work and growth work are out of scope unless the operator asks.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) until Phase 0 below lifts it for one feature.
+Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/yen-zip` and need no entry here.
+
+### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
+
+Goal: a YEN pane keeps running when the app quits, crashes or updates, and the operator can attach to it from another Mac on their tailnet.
+Today `window-save-state = always` restores windows, tabs, splits and working directories, but every shell is a child of the app process and dies with it.
+Facts the plan builds on:
+- Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
+- Upstream ships a tmux control-mode client in core (`src/terminal/tmux/viewer.zig`, built when `tmux_control_mode` is on) with no macOS UI yet.
+- Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
+Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the operator's own machines over Tailscale.
+
+#### Phase 0: Leave maintenance mode for this feature
+
+- [ ] Record the decision in `_docs/00-foundation.md` → Decisions and narrow `AGENTS.md` → Maintenance Mode to name this feature as in scope.
+- [ ] Update Claude project memory (`yen-maintenance-mode.md`) to match.
+
+#### Phase 1: Choose the session backend (spike, no shipping code)
+
+Candidates:
+- A native Swift daemon (`yend`) that owns the PTYs and runs as a LaunchAgent through `SMAppService`.
+- A bundled existing tool (zmx, shpool or abduco) driven by YEN.
+- tmux control mode on top of the upstream viewer, with tmux as a dependency.
+
+- [ ] Score each candidate on these criteria: survives app quit, crash and update; replays scrollback and screen state on attach; resize and multiple clients; license; bundle size; fit with the release fingerprint scan; and the native-before-bundled rule.
+- [ ] Prototype the best candidate: one pane survives Cmd+Q and relaunch with its process, scrollback and cursor intact.
+- [ ] Write the decision and the rejected options into `_docs/01-architecture.md`, then stop for operator review before Phase 2.
+
+#### Phase 2: Local persistent sessions
+
+- [ ] Start every new pane as an attach to session `<pane UUID>`, and reattach on restore.
+- [ ] Define lifecycle: closing a pane or tab ends its session; quitting, crashing or updating the app only detaches.
+- [ ] Handle a session that the restore state no longer names (list it, then reap after a timeout) and a restore entry whose session died (start a fresh shell in the saved directory).
+- [ ] Pass through shell integration, OSC title and working-directory reports, the `yen` CLI, dictation paste, Secure Input and the Quick Terminal.
+- [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.
+- [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle.
+- [ ] Prove it in a running re-identified `zig-out` copy: quit, force-kill and update each leave the session alive; add regression tests for lifecycle and restore mapping.
+
+#### Phase 3: Remote attach over Tailscale
+
+- [ ] Discover peers from the installed Tailscale (`tailscale status --json`); do not embed Tailscale or `tsnet`.
+- [ ] Attach to a remote Mac's sessions over Tailscale SSH, with YEN installed on both ends, and label remote panes and tabs with the host.
+- [ ] Reconnect automatically after sleep, a network change or a dropped link, without losing the remote session.
+- [ ] Add a Hosts view (palette and tab sidebar) that lists each peer's sessions.
+- [ ] Write the threat model into `_docs/04-security.md`: who can attach, what the daemon socket exposes, and how Tailscale ACLs gate it.
+
+#### Phase 4: Window chrome and split design pass
+
+Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
+
+- [ ] Verify the upstream split drag-and-drop in the running app, then make the drag handle and drop zones easy to find.
+- [ ] Design horizontal tabs and a tighter top bar that put the tab strip in the titlebar and give the terminal the reclaimed height.
+- [ ] Show session state (live, detached, remote host) in tabs and the tab sidebar.
+
+#### Phase 5: Docs and release
+
+- [ ] Update public `/docs`, `public/llms.txt`, privacy and terms for the daemon, the LaunchAgent and the Tailscale data flow.
+- [ ] Write release copy in `lib/release-notes/release-notes-copy.ts`, regenerate release notes, and ship through `/yen-zip`.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 
