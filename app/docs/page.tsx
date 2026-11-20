@@ -12,6 +12,7 @@ const navItems: DocNavItem[] = [
 		children: [
 			{ id: "tab-sidebar", title: "Tab Sidebar" },
 			{ id: "split-pane-labels", title: "Split Labels" },
+			{ id: "persistent-sessions", title: "Persistent Sessions" },
 		],
 	},
 	{ id: "clipboard", title: "Clipboard & Paste" },

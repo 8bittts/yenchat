@@ -51,6 +51,16 @@ export function LegalPrivacyContent() {
 						. This file never leaves your machine.
 					</p>
 				</div>
+				<div>
+					<h3 className="text-heading-sm mb-2">Persistent sessions</h3>
+					<p className="text-body-sm text-text-muted">
+						With Keep Sessions Running on, each pane&apos;s shell runs in a
+						local helper on your Mac. Its sockets and small session records live
+						in <code className="inline-code-brand">~/.local/state/yen/zmx</code>
+						, the screen and scrollback it restores stay in its memory, and it
+						sends nothing over the network.
+					</p>
+				</div>
 			</DocSection>
 
 			<DocSection id="website" title="Website (yen.chat and blog.yen.chat)">

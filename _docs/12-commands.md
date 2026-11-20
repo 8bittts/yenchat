@@ -28,7 +28,7 @@ Run as `yen <command>`; in YEN shells the app commands (`browse`, `btop`, ...) a
 | `ide` | IDE helper suite; see `yen ide` below | Yes |
 | `agents` | Agent adapter board: `claude` and `codex` profiles with probes, sessions, `timeline`, `note`, `export` evidence bundles, `templates` | Yes |
 | `pane` | `cwd <directory>`, `cwd --hook`, `cwd --clear`, `--dry-run`: report an agent's working directory for the pane (`_docs/13-desktop-features.md` → Agent worktrees) | Yes |
-| `sessions` | List persistent pane sessions; `attach <id>` and `kill <id>` use the zmx build that created the session (`_docs/01-architecture.md` → Persistent sessions) | No |
+| `sessions` | List persistent pane sessions; `attach <id>` and `kill <id>` use the zmx build that created the session (`_docs/01-architecture.md` → Persistent sessions) | Yes |
 | `browse` (`files`, `fm`) | File browser without cd-on-quit; works without shell integration | Yes |
 | `y` | File browser with cd-on-quit; only in YEN-launched shells | Yes |
 | `btop` (`monitor`, `resources`) | System monitor | Yes |

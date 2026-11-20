@@ -724,6 +724,34 @@ function SplitPaneLabelsSection() {
 	);
 }
 
+// Source: Sessions/{PersistentSessions,PersistentSessionReaper}.swift; yen-cli/commands/core/sessions; _docs/01-architecture.md → Persistent sessions.
+function PersistentSessionsSection() {
+	return (
+		<DocSection id="persistent-sessions" title="Persistent Sessions">
+			<p className="text-body">
+				With Settings &gt; General &gt; Keep Sessions Running on, the default,
+				each pane&apos;s shell keeps running when you quit YEN, when it updates,
+				or if it crashes. Reopen YEN and every pane reattaches with its screen
+				and scrollback, so a build, a server, or an SSH connection carries on
+				where you left it.
+			</p>
+			<p className="text-body">
+				Quitting no longer stops what runs in your panes: a dev server keeps its
+				port. Close a pane or its window to end its session, or run{" "}
+				<code className="inline-code-brand">yen sessions</code> to list sessions
+				and{" "}
+				<code className="inline-code-brand">yen sessions kill &lt;id&gt;</code>{" "}
+				to end one. Turning the setting off affects new panes only.
+			</p>
+			<p className="text-body">
+				Sessions stay on your Mac and end when it restarts. A session no window
+				shows reopens in a window the next time YEN starts; one that still has
+				no window ends after YEN has watched it for a day.
+			</p>
+		</DocSection>
+	);
+}
+
 // Source: yen-terminal/customizations/yazi-config/{keymap,yazi}.toml; customizations/shell-integration/{bash,zsh}/; AppDelegate+FileBrowser.swift.
 function FileBrowserSection() {
 	return (
@@ -1431,6 +1459,20 @@ function CommandsSection() {
 						</tr>
 						<tr className="border-b border-border-light">
 							<td className="align-top py-2 pl-4 pr-4">
+								<code className="inline-code-brand">yen sessions</code>
+							</td>
+							<td className="align-top py-2 pr-4 text-left">
+								List persistent sessions;{" "}
+								<code className="inline-code-brand">attach &lt;id&gt;</code> and{" "}
+								<code className="inline-code-brand">kill &lt;id&gt;</code> reach
+								or end one; see{" "}
+								<a href="#persistent-sessions" className="link-brand underline">
+									Persistent Sessions
+								</a>
+							</td>
+						</tr>
+						<tr className="border-b border-border-light">
+							<td className="align-top py-2 pl-4 pr-4">
 								<code className="inline-code-brand">yen +list-themes</code>
 							</td>
 							<td className="align-top py-2 pr-4 text-left">
@@ -1628,6 +1670,7 @@ export function DocsPageClient({ navItems }: DocsPageClientProps) {
 			<TerminalIDESection />
 			<TabSidebarSection />
 			<SplitPaneLabelsSection />
+			<PersistentSessionsSection />
 			<ClipboardSection />
 			<IDEWorkflowsSection />
 			<VoiceDictationSection />

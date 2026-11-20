@@ -39,6 +39,7 @@ Rendering latency and frame rate depend on the Mac and workload; YEN publishes n
 - Bundled CLI tools (fd, rg, fzf, zoxide, bat, jq, lazygit, delta, btop, fastfetch, yen-vidthumb, yen-pdfthumb, yen-svgthumb, resvg) plus native archive preview/extract via macOS bsdtar — `bat` is included as a standalone syntax pager CLI, while file-browser code previews use the built-in previewer; SVG previews run native-first with `resvg` fallback for `.svgz` and unsupported edge cases; `delta` is bundled as the Git diff renderer for the review baseline; pre-signed and ready without homebrew
 - Splits, tabs, tab sidebar (Cmd + Shift + B), scratchpad (Cmd + Shift + J), split layout presets (Cmd + Option + 1-0), and Quick Terminal (global hotkey dropdown)
 - Automatic window state restoration on every launch (splits, tabs, positions)
+- Persistent sessions (Settings > General > Keep Sessions Running, on by default) — each pane's shell keeps running when YEN quits, updates, or crashes and reattaches with its screen and scrollback; quitting no longer stops pane processes (a dev server keeps its port); close a pane or run `yen sessions kill <id>` to end one; sessions stay on the Mac in `~/.local/state/yen/zmx` and end when it restarts
 - Copy-on-select — enabled by default and configurable in Settings; selected text copies as plain text
 - Live settings reload — most changes apply while running; background opacity requires an app restart
 - Welcome message for new users with key shortcuts and getting-started tips
@@ -90,7 +91,7 @@ Inside the file browser (Cmd + Shift + O or y command):
 Press Cmd + , to open Settings. The window is a live terminal preview that shows every appearance change as you make it, with five panes in a Liquid Glass inspector beside it: Appearance, General, Notifications, Dictation, and Shortcuts. Settings has no search and no import or export; every setting is on one of the five panes. Configure:
 - Settings > Appearance: theme (a dock with every bundled theme as a swatch), font family and size, cursor style (block, bar, underline) and blink, background opacity, padding, a PNG or JPEG background image, and the window border
 - Window border: on/off, Theme or Accent color, and Thin/Regular/Thick weight, shown live in the preview; scope and focused/unfocused palettes from the command palette Window Border actions; Differentiate Without Color dashes the unfocused border; the border hides in fullscreen and Quick Terminal
-- Settings > General: open at login, copy on select, scroll bar, tab sidebar (Off, Floating, or Docked; Cmd + Shift + B), pane labels (default-off per-pane label pill, with optional worktree naming that names a pane after the git worktree its working directory sits in, falling back to the branch), scratchpad toggle (Cmd + Shift + J), link handling, and Reset All Settings
+- Settings > General: open at login, copy on select, keep sessions running, scroll bar, tab sidebar (Off, Floating, or Docked; Cmd + Shift + B), pane labels (default-off per-pane label pill, with optional worktree naming that names a pane after the git worktree its working directory sits in, falling back to the branch), scratchpad toggle (Cmd + Shift + J), link handling, and Reset All Settings
 - Settings > Notifications: command-finish alerts (Never, when the pane is unfocused, or always; minimum runtime; bell and/or notification), one system alert sound each for General and Build notifications, and sound/banner behavior while YEN is active
 - Settings > Dictation: Accessibility, Microphone, and Speech Recognition status, microphone selection, live transcript, and translation
 - Settings > Shortcuts: every rebindable keybind in five groups (Terminal, Windows, Tabs, Splits, YEN) with conflict detection (macOS system shortcuts + popular apps); click a shortcut to record new keys; Restore Default Shortcuts
@@ -193,6 +194,7 @@ They do not install it and do not define `y`.
 Core:
 - yen help (yen commands) — Show command listing and usage
 - yen version / yen --version — Show version
+- yen sessions — List persistent pane sessions; `yen sessions attach <id>` attaches a terminal to one and `yen sessions kill <id>` ends it
 - yen pane cwd <directory> — Report an agent worktree for the current pane; yen pane cwd --clear restores shell tracking. Run it from an agent or hook, not an interactive prompt; new splits still inherit the shell directory
 - yen init zsh — Output shell integration code for external zsh shells (add to ~/.zshrc)
 - yen init bash — Output shell integration code for external bash shells (add to ~/.bashrc)

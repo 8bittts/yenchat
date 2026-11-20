@@ -39,6 +39,7 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 - [ ] Reconnect automatically after sleep, a network change or a dropped link, without losing the remote session.
 - [ ] Add a Hosts view (palette and tab sidebar) that lists each peer's sessions.
 - [ ] Write the threat model into `_docs/04-security.md`: who can attach, what the daemon socket exposes, and how Tailscale ACLs gate it.
+- [ ] Document the Tailscale data flow in public `/docs`, `public/llms.txt`, privacy and terms.
 
 #### Phase 4: Window chrome and split design pass
 
@@ -50,7 +51,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 #### Phase 5: Docs and release
 
-- [ ] Update public `/docs`, `public/llms.txt`, privacy and terms for the daemon, the LaunchAgent and the Tailscale data flow.
 - [ ] Write release copy in `lib/release-notes/release-notes-copy.ts`, regenerate release notes, and ship through `/yen-zip`. The copy must say that quitting YEN now leaves pane processes running (a dev server keeps its port), how to end them (`yen sessions kill`, closing the pane), and where to turn the behavior off.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
