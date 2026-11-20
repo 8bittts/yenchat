@@ -3,7 +3,8 @@
 #
 # Copies yen-terminal/ghostty/zig-out/YEN.app to one fixed path as
 # YENVerify.app, renames its executable and bundle identifier, and re-signs it
-# with the release Developer ID identity.
+# and every nested framework, helper and tool with the release Developer ID
+# identity, so a local ad-hoc build works too.
 #
 # Why a fixed path and a real signature: macOS keys an Accessibility or
 # Automation grant to the app's code requirement. An ad-hoc signature changes
@@ -55,9 +56,13 @@ if lsappinfo info -only pid -app "$VERIFY_ID" 2>/dev/null | /usr/bin/grep -Eq 'p
 	exit 1
 fi
 
-ENTITLEMENTS="$(mktemp -t yenverify-entitlements)"
-trap '/bin/rm -f "$ENTITLEMENTS"' EXIT
-codesign -d --entitlements "$ENTITLEMENTS" --xml "$SOURCE_APP/Contents/MacOS/yen" 2>/dev/null
+# The release entitlements sit beside the build's zig-out folder. A local build
+# is ad-hoc signed and can carry none, so never read them from the binary.
+ENTITLEMENTS="$(cd "$SOURCE_APP/../.." && pwd)/macos/YEN.entitlements"
+[ -s "$ENTITLEMENTS" ] || {
+	echo "ERROR: release entitlements not found at $ENTITLEMENTS" >&2
+	exit 1
+}
 
 /bin/mkdir -p "$DEST_DIR"
 /bin/rm -rf "$DEST_APP"
@@ -68,15 +73,44 @@ PLIST="$DEST_APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $VERIFY_ID" "$PLIST"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName YENVerify' "$PLIST"
 
-# Nested frameworks and helpers keep the build's own Developer ID signatures;
-# only the outer bundle changed, so only it is re-signed.
-SIGN_ARGS=(--force --sign "$SIGNING_IDENTITY" --identifier "$VERIFY_ID" --options runtime --timestamp=none)
-if [ -s "$ENTITLEMENTS" ]; then
-	SIGN_ARGS+=(--entitlements "$ENTITLEMENTS")
+# Sign every piece inside-out with one identity, in finalize-build's order.
+# A local build is ad-hoc throughout, and the hardened runtime refuses to load
+# a framework whose Team ID differs from the app's, so the copy died at launch
+# with "Library not loaded: Sparkle" when only the outer bundle was re-signed.
+sign() {
+	codesign --force --sign "$SIGNING_IDENTITY" --options runtime --timestamp=none "$@"
+}
+for bin in "$DEST_APP"/Contents/Resources/bin/*; do
+	[ -f "$bin" ] || continue
+	/usr/bin/file "$bin" | /usr/bin/grep -q 'Mach-O' || continue
+	if [ -f "$bin.entitlements" ]; then
+		sign --entitlements "$bin.entitlements" "$bin"
+	else
+		sign "$bin"
+	fi
+done
+SPARKLE="$DEST_APP/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE" ]; then
+	for nested in "$SPARKLE"/Versions/B/XPCServices/*.xpc "$SPARKLE/Versions/B/Autoupdate.app" \
+		"$SPARKLE/Versions/B/Autoupdate" "$SPARKLE/Versions/B/Updater.app"; do
+		if [ -e "$nested" ]; then sign "$nested"; fi
+	done
+	sign "$SPARKLE"
 fi
-codesign "${SIGN_ARGS[@]}" "$DEST_APP"
+for plugin in "$DEST_APP"/Contents/PlugIns/*.plugin; do
+	if [ -d "$plugin" ]; then sign "$plugin"; fi
+done
+sign --identifier "$VERIFY_ID" --entitlements "$ENTITLEMENTS" "$DEST_APP"
 
 codesign --verify --deep --strict "$DEST_APP"
+for framework in "$DEST_APP"/Contents/Frameworks/*; do
+	[ -e "$framework" ] || continue
+	team="$(codesign -dv "$framework" 2>&1 | /usr/bin/sed -n 's/^TeamIdentifier=//p')"
+	[ "$team" = "$TEAM_ID" ] || {
+		echo "ERROR: $(basename "$framework") is not signed by team $TEAM_ID (found: ${team:-none})" >&2
+		exit 1
+	}
+done
 REQUIREMENT="$(codesign -d -r- "$DEST_APP" 2>&1 | /usr/bin/sed -n 's/^designated => //p')"
 case "$REQUIREMENT" in
 *"identifier \"$VERIFY_ID\""*"$TEAM_ID"*) ;;
