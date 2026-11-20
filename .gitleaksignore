@@ -1,0 +1,25 @@
+# Reviewed findings in the initial public snapshot. Each entry matches one historical line.
+# Synthetic input for the agent note redaction test
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:tests/78-ide-s2-agents.test.ts:generic-api-key:2275
+
+# Vendor release asset SHA-256 digests
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fastfetch-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fastfetch-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fzf-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fzf-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.lazygit-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.lazygit-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.resvg-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.resvg-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.ripgrep-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.ripgrep-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.yazi-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.yazi-baseline:generic-api-key:11
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.zoxide-baseline:generic-api-key:10
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.zoxide-baseline:generic-api-key:11
+
+# Workflow references to the notarization environment variable
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.github/workflows/release-tag.yml:generic-api-key:250
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.github/workflows/release-tip.yml:generic-api-key:336
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.github/workflows/release-tip.yml:generic-api-key:563
+df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.github/workflows/release-tip.yml:generic-api-key:751
