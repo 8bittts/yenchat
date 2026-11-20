@@ -1006,6 +1006,72 @@ ${patchBlock}`;
 		});
 	});
 
+	test("persistent session termios patches chain onto the exec wrap and fail closed on drift", () => {
+		const chain = [
+			"persistent-session-exec",
+			"persistent-session-prepare-call",
+			"persistent-session-subprocess-field",
+			"persistent-session-subprocess-return",
+			"persistent-session-threaddata-field",
+			"persistent-session-threaddata-init",
+			"persistent-session-termios-poll",
+		];
+		const patchBlock = patchCommands(chain);
+		const upstreamBlocks = [
+			"persistent-session-exec",
+			"persistent-session-subprocess-field",
+			"persistent-session-subprocess-return",
+			"persistent-session-threaddata-field",
+			"persistent-session-threaddata-init",
+			"persistent-session-termios-poll",
+		].map((name) => readFileSync(join(patchesDir, `${name}.old`), "utf8"));
+
+		withTempDir((fixtureRoot) => {
+			const termioDir = join(fixtureRoot, "ghostty/src/termio");
+			mkdirSync(termioDir, { recursive: true });
+			const execPath = join(termioDir, "Exec.zig");
+			writeFileSync(execPath, upstreamBlocks.join("\n// --\n"), "utf8");
+			const command = `set -euo pipefail
+cd "${fixtureRoot}"
+PATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}
+PATCHES_DIR="${patchesDir}"
+${patchBlock}`;
+
+			const firstRun = run("bash", ["-lc", command]);
+			expect(firstRun.status, output(firstRun)).toBe(0);
+			const exec = readFileSync(execPath, "utf8");
+			// The command handed to execCommand comes from prepare(), and the
+			// termios poll prefers the inner pty the subprocess recorded.
+			expect(exec).toContain('@import("yen_session.zig").prepare(');
+			expect(exec).not.toContain('@import("yen_session.zig").wrapFromEnv(');
+			expect(exec).toContain(
+				"const yen_session_command = yen_session.command;",
+			);
+			expect(exec).toContain(".yen_session_tty = yen_session.tty_file,");
+			expect(exec).toContain(
+				".yen_inner_tty_file = self.subprocess.yen_session_tty,",
+			);
+			expect(exec).toContain(
+				".master = yen_inner_fd orelse exec.read_thread_fd,",
+			);
+
+			const secondRun = run("bash", ["-lc", command]);
+			expect(secondRun.status).toBe(0);
+			expect(readFileSync(execPath, "utf8")).toBe(exec);
+
+			writeFileSync(
+				execPath,
+				upstreamBlocks
+					.join("\n// --\n")
+					.replace(".master = exec.read_thread_fd,", ".master = exec.pty_fd,"),
+				"utf8",
+			);
+			const driftRun = run("bash", ["-lc", command]);
+			expect(driftRun.status).toBe(1);
+			expect(output(driftRun)).toContain("patch anchor not found");
+		});
+	});
+
 	test("surface notification callback patch keeps async add guardrails", () => {
 		const patchBlock = patchCommands([
 			"surfaceview-async-notification-callback",

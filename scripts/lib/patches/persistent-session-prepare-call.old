@@ -1,0 +1,7 @@
+        const yen_session_command = try @import("yen_session.zig").wrapFromEnv(
+            alloc,
+            global.io(),
+            shell_command,
+            &env,
+            cfg.resources_dir,
+        );

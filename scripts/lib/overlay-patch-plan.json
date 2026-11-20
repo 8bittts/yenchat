@@ -795,7 +795,7 @@
 			"--mode",
 			"exact",
 			"--marker",
-			"@import(\"yen_session.zig\").wrapFromEnv(",
+			"// YEN: a persistent pane runs inside the bundled zmx.",
 			"--old-block",
 			"@$PATCHES_DIR/persistent-session-exec.old",
 			"--new-block",
@@ -830,6 +830,96 @@
 			"@$PATCHES_DIR/persistent-session-window-close.old",
 			"--new-block",
 			"@$PATCHES_DIR/persistent-session-window-close.new"
+		]
+	},
+	"persistent-session-prepare-call": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session prepare call",
+			"--mode",
+			"exact",
+			"--marker",
+			"@import(\"yen_session.zig\").prepare(",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-prepare-call.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-prepare-call.new"
+		]
+	},
+	"persistent-session-subprocess-field": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session subprocess field",
+			"--mode",
+			"exact",
+			"--marker",
+			"/// YEN: where zmx records a persistent pane's inner pty (yen_session.zig).",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-subprocess-field.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-subprocess-field.new"
+		]
+	},
+	"persistent-session-subprocess-return": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session subprocess return",
+			"--mode",
+			"exact",
+			"--marker",
+			".yen_session_tty = yen_session.tty_file,",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-subprocess-return.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-subprocess-return.new"
+		]
+	},
+	"persistent-session-threaddata-field": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session thread data field",
+			"--mode",
+			"exact",
+			"--marker",
+			"yen_inner_tty_file: ?[]const u8 = null,",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-threaddata-field.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-threaddata-field.new"
+		]
+	},
+	"persistent-session-threaddata-init": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session thread data init",
+			"--mode",
+			"exact",
+			"--marker",
+			".yen_inner_tty_file = self.subprocess.yen_session_tty,",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-threaddata-init.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-threaddata-init.new"
+		]
+	},
+	"persistent-session-termios-poll": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session termios poll",
+			"--mode",
+			"exact",
+			"--marker",
+			"const yen_inner_fd: ?posix.fd_t = if (exec.yen_inner_tty_file) |tty_file|",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-termios-poll.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-termios-poll.new"
 		]
 	}
 }

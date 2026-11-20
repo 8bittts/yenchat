@@ -49,6 +49,12 @@ enum PersistentSessions {
         paneID.uuidString
     }
 
+    /// The patched zmx daemon records a session's inner pty path here; the
+    /// engine reads it for password-prompt detection (yen_session.zig).
+    nonisolated static func ttyRecordPath(for paneID: UUID, socketDirectory: String) -> String {
+        socketPath(for: paneID, socketDirectory: socketDirectory) + ".tty"
+    }
+
     nonisolated static func socketPath(for paneID: UUID, socketDirectory: String) -> String {
         (socketDirectory as NSString).appendingPathComponent(sessionName(for: paneID))
     }
@@ -120,6 +126,7 @@ enum PersistentSessions {
         guard !terminating, let zmxPath else { return }
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
         run(zmxPath, ["kill", sessionName(for: paneID)], [socketDirectoryEnvironmentKey: socketDirectory])
+        try? FileManager.default.removeItem(atPath: ttyRecordPath(for: paneID, socketDirectory: socketDirectory))
     }
 
     /// Grace added to the undo timeout before a departed pane is judged closed.

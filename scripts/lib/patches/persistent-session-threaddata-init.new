@@ -1,0 +1,3 @@
+        .termios_timer = termios_timer,
+        .yen_inner_tty_file = self.subprocess.yen_session_tty,
+    } };

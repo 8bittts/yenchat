@@ -1,0 +1,13 @@
+    // YEN: read a persistent pane's inner pty when zmx recorded it; the fd is
+    // closed at once so it never keeps that pty alive.
+    const yen_inner_fd: ?posix.fd_t = if (exec.yen_inner_tty_file) |tty_file|
+        @import("yen_session.zig").openInnerTty(tty_file)
+    else
+        null;
+    defer if (yen_inner_fd) |fd| {
+        _ = posix.system.close(fd);
+    };
+    const mode: ptypkg.Mode = (Pty{
+        .master = yen_inner_fd orelse exec.read_thread_fd,
+        .slave = undefined,
+    }).getMode() catch |err| err: {

@@ -1,0 +1,4 @@
+    const mode: ptypkg.Mode = (Pty{
+        .master = exec.read_thread_fd,
+        .slave = undefined,
+    }).getMode() catch |err| err: {

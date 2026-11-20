@@ -34,7 +34,6 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Restore password-prompt detection in a persistent pane before the preference defaults on: the engine flags a password prompt from its own pty (`canonical and !echo`, `Exec.zig`), but that pty belongs to the zmx client, which runs raw (`cfmakeraw`), so `sudo` and `ssh` prompts never raise the password indicator or automatic Secure Input. Poll the inner pty instead (zmx or shell integration reports its tty path; termios is readable by the owning user).
 - [ ] Verify the `yen` CLI, dictation paste and the Quick Terminal inside a persistent pane; shell integration, the title and working-directory reports already pass through.
 - [ ] Reflow replayed history to the attaching pane's width: a restored pane showed history hard-wrapped at about 48 columns in a wider window.
 - [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.

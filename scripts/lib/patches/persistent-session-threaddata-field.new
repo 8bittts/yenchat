@@ -1,0 +1,5 @@
+    termios_mode: ptypkg.Mode = .{},
+
+    /// YEN: a persistent pane's inner pty record; the termios poll reads
+    /// that pty, because this pane's own pty belongs to the raw zmx client.
+    yen_inner_tty_file: ?[]const u8 = null,

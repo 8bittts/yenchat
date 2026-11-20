@@ -44,6 +44,12 @@ apply_overlay_patch undo-timeout-default-preservation
 EXEC_ZIG="ghostty/src/termio/Exec.zig"
 apply_overlay_patch yen-bin-dir-fix
 apply_overlay_patch persistent-session-exec
+apply_overlay_patch persistent-session-prepare-call
+apply_overlay_patch persistent-session-subprocess-field
+apply_overlay_patch persistent-session-subprocess-return
+apply_overlay_patch persistent-session-threaddata-field
+apply_overlay_patch persistent-session-threaddata-init
+apply_overlay_patch persistent-session-termios-poll
 
 # ============================================================================
 # RETIRED: Park Hidden Renderer Swap Chains on Embedded Builds

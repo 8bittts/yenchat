@@ -1,0 +1,5 @@
+    pty: ?Pty = null,
+    process: ?Process = null,
+
+    /// YEN: where zmx records a persistent pane's inner pty (yen_session.zig).
+    yen_session_tty: ?[]const u8 = null,

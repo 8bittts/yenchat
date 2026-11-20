@@ -24,7 +24,7 @@ describe("yen_session.zig", () => {
 			return;
 		}
 
-		const result = spawnSync("zig", ["test", source], {
+		const result = spawnSync("zig", ["test", "-lc", source], {
 			encoding: "utf8",
 			timeout: 240_000,
 		});
@@ -32,6 +32,6 @@ describe("yen_session.zig", () => {
 		expect(result.status, out).toBe(0);
 		const passed = out.match(/All (\d+) tests passed/);
 		expect(passed, out).not.toBeNull();
-		expect(Number(passed?.[1])).toBeGreaterThanOrEqual(7);
+		expect(Number(passed?.[1])).toBeGreaterThanOrEqual(9);
 	}, 300_000);
 });

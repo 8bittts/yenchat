@@ -32,9 +32,46 @@ pub fn zmxPath(alloc: Allocator, resources_dir: []const u8) !?[]const u8 {
     return try std.fs.path.join(alloc, &.{ resources, "bin", "zmx" });
 }
 
+/// Socket directory variable the app sets beside the marker; zmx reads it too.
+pub const socket_dir_key = "ZMX_DIR";
+
+pub fn Prepared(comptime Command: type) type {
+    return struct {
+        command: Command,
+        /// `<ZMX_DIR>/<name>.tty`, where the patched zmx daemon records the
+        /// session's pty path; null when the pane is not wrapped.
+        tty_file: ?[]const u8 = null,
+    };
+}
+
 /// Returns `command` wrapped in `zmx attach <name>` when the environment marks
 /// the pane as persistent and the bundled zmx exists; otherwise `command`
 /// unchanged. Always removes the marker from `env`.
+pub fn prepare(
+    alloc: Allocator,
+    io: std.Io,
+    command: anytype,
+    env: *std.process.Environ.Map,
+    resources_dir: ?[]const u8,
+) !Prepared(@TypeOf(command)) {
+    const unchanged: Prepared(@TypeOf(command)) = .{ .command = command };
+    const raw = env.get(env_key) orelse return unchanged;
+    const name = try alloc.dupe(u8, raw);
+    _ = env.orderedRemove(env_key);
+    if (!validName(name)) return unchanged;
+
+    const dir = resources_dir orelse return unchanged;
+    const zmx = try zmxPath(alloc, dir) orelse return unchanged;
+    std.Io.Dir.accessAbsolute(io, zmx, .{}) catch return unchanged;
+
+    const tty_file: ?[]const u8 = if (env.get(socket_dir_key)) |socket_dir|
+        try std.fmt.allocPrint(alloc, "{s}/{s}.tty", .{ socket_dir, name })
+    else
+        null;
+    return .{ .command = try wrap(alloc, command, zmx, name), .tty_file = tty_file };
+}
+
+/// `prepare` without the tty record.
 pub fn wrapFromEnv(
     alloc: Allocator,
     io: std.Io,
@@ -42,15 +79,36 @@ pub fn wrapFromEnv(
     env: *std.process.Environ.Map,
     resources_dir: ?[]const u8,
 ) !@TypeOf(command) {
-    const raw = env.get(env_key) orelse return command;
-    const name = try alloc.dupe(u8, raw);
-    _ = env.orderedRemove(env_key);
-    if (!validName(name)) return command;
+    return (try prepare(alloc, io, command, env, resources_dir)).command;
+}
 
-    const dir = resources_dir orelse return command;
-    const zmx = try zmxPath(alloc, dir) orelse return command;
-    std.Io.Dir.accessAbsolute(io, zmx, .{}) catch return command;
-    return try wrap(alloc, command, zmx, name);
+/// Read the pty path the zmx daemon recorded. Only a `/dev/tty*` path is
+/// accepted, so a stray file can never point the app at anything else.
+pub fn innerTtyPath(buf: *[256]u8, tty_file: []const u8) ?[:0]const u8 {
+    var path_buf: [1024]u8 = undefined;
+    const path = std.fmt.bufPrintSentinel(&path_buf, "{s}", .{tty_file}, 0) catch return null;
+    const fd = std.c.open(path.ptr, .{ .ACCMODE = .RDONLY }, @as(c_uint, 0));
+    if (fd < 0) return null;
+    defer _ = std.c.close(fd);
+    const n = std.c.read(fd, buf, buf.len - 1);
+    if (n <= 0) return null;
+    const content = std.mem.trimEnd(u8, buf[0..@intCast(n)], "\n");
+    if (!std.mem.startsWith(u8, content, "/dev/tty")) return null;
+    for (content["/dev/".len..]) |c| switch (c) {
+        'a'...'z', 'A'...'Z', '0'...'9' => {},
+        else => return null,
+    };
+    buf[content.len] = 0;
+    return buf[0..content.len :0];
+}
+
+/// Open the session's inner pty for a termios read. The caller closes it at
+/// once: holding the slave open would keep the pty alive after the shell exits.
+pub fn openInnerTty(tty_file: []const u8) ?c_int {
+    var buf: [256]u8 = undefined;
+    const path = innerTtyPath(&buf, tty_file) orelse return null;
+    const fd = std.c.open(path.ptr, .{ .ACCMODE = .RDONLY, .NOCTTY = true, .NONBLOCK = true }, @as(c_uint, 0));
+    return if (fd < 0) null else fd;
 }
 
 /// Wrap a command in `zmx attach <name>`.
@@ -208,4 +266,59 @@ test "wrapFromEnv wraps when the bundled zmx exists" {
     const result = try wrapFromEnv(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, resources_dir);
     try std.testing.expect(std.mem.indexOf(u8, result.shell, "/Resources/bin/zmx' attach ABC-123 ") != null);
     try std.testing.expect(env.get(env_key) == null);
+}
+
+test "prepare reports the tty record only when it wraps" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const io = std.testing.io;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io, "Resources/yen");
+    try tmp.dir.createDirPath(io, "Resources/bin");
+    try tmp.dir.writeFile(io, .{ .sub_path = "Resources/bin/zmx", .data = "" });
+    const root = try tmp.dir.realPathFileAlloc(io, ".", alloc);
+    const resources_dir = try std.fs.path.join(alloc, &.{ root, "Resources", "yen" });
+
+    var env = std.process.Environ.Map.init(alloc);
+    try env.put(env_key, "ABC-123");
+    try env.put(socket_dir_key, "/Users/dev/.local/state/yen/zmx");
+    const wrapped = try prepare(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, resources_dir);
+    try std.testing.expectEqualStrings("/Users/dev/.local/state/yen/zmx/ABC-123.tty", wrapped.tty_file.?);
+
+    const plain = try prepare(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, resources_dir);
+    try std.testing.expect(plain.tty_file == null);
+}
+
+test "innerTtyPath accepts only a /dev/tty path" {
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const root = try tmp.dir.realPathFileAlloc(io, ".", arena.allocator());
+
+    const cases = [_]struct { data: []const u8, want: ?[]const u8 }{
+        .{ .data = "/dev/ttys007\n", .want = "/dev/ttys007" },
+        .{ .data = "/dev/ttys012", .want = "/dev/ttys012" },
+        .{ .data = "/etc/passwd", .want = null },
+        .{ .data = "/dev/tty/../disk0", .want = null },
+        .{ .data = "", .want = null },
+    };
+    for (cases, 0..) |case, i| {
+        const name = try std.fmt.allocPrint(arena.allocator(), "s{d}.tty", .{i});
+        try tmp.dir.writeFile(io, .{ .sub_path = name, .data = case.data });
+        const file = try std.fs.path.join(arena.allocator(), &.{ root, name });
+        var buf: [256]u8 = undefined;
+        const got = innerTtyPath(&buf, file);
+        if (case.want) |want| {
+            try std.testing.expectEqualStrings(want, got.?);
+        } else {
+            try std.testing.expect(got == null);
+        }
+    }
+    var buf: [256]u8 = undefined;
+    try std.testing.expect(innerTtyPath(&buf, "/nonexistent/x.tty") == null);
 }

@@ -81,4 +81,9 @@ struct PersistentSessionReaperTests {
         )
         #expect(firstEver.kill.isEmpty)
     }
+
+    @Test func ttyRecordIsStaleOnlyWhenItsSocketIsGone() {
+        let files = [orphan, "\(orphan).tty", "\(held).tty", "logs", "notes.txt"]
+        #expect(PersistentSessionReaper.staleTtyRecords(in: files) == ["\(held).tty"])
+    }
 }

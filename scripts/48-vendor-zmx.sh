@@ -7,12 +7,15 @@
 # vendored engine instead of the upstream commit zmx pins. Replay and rendering
 # then share one engine, and the binary carries no upstream engine name.
 #
-# Five source edits, each fail-closed when its anchor is missing:
+# Source edits, each fail-closed when its anchor is missing:
 #   build.zig.zon  the engine dependency points at an in-tree clone (yen-engine)
 #   build.zig      the version banner reads the engine id, not the upstream hash
 #   build.zig      the vt module is looked up by YEN's branded name (yen-vt)
 #   build.zig      the executable is built without debug info (.strip = true)
 #   src/main.zig   the version banner label says "engine"
+#   src/daemonize.zig  the daemon records its session tty in <ZMX_DIR>/<name>.tty,
+#                  so YEN can read the inner pty's termios (password detection);
+#                  zmx ls skips that non-socket file
 #
 # Reproducible output, so the baseline output pin can hold across rebuilds:
 # - Debug info carries a timestamped object map, and the linker derives the
@@ -148,6 +151,26 @@ PY
         '.root_source_file = b.path("src/main.zig"),
         .strip = true,' 1 >&2
     patch_anchor "$source_dir/src/main.zig" 'ghostty_vt\t' 'engine\t\t' 1 >&2
+    patch_anchor "$source_dir/src/daemonize.zig" \
+        'const pid = cross.forkpty(&master_fd, null, null, &ws);' \
+        'var yen_tty_name: [1024]u8 = std.mem.zeroes([1024]u8);
+    const pid = cross.forkpty(&master_fd, &yen_tty_name, null, &ws);' 1 >&2
+    patch_anchor "$source_dir/src/daemonize.zig" \
+        '    std.log.info("pty spawned session={s} pid={d}", .{ sesh_name, pid });' \
+        '    std.log.info("pty spawned session={s} pid={d}", .{ sesh_name, pid });
+
+    // YEN: record the session tty beside the socket so the app can read the
+    // inner pty termios for password detection; zmx ls skips non-socket files.
+    yen_tty: {
+        const dir = std.c.getenv("ZMX_DIR") orelse break :yen_tty;
+        var path_buf: [1024]u8 = undefined;
+        const path = std.fmt.bufPrintSentinel(&path_buf, "{s}/{s}.tty", .{ std.mem.span(dir), sesh_name }, 0) catch break :yen_tty;
+        const fd = std.c.open(path.ptr, .{ .ACCMODE = .WRONLY, .CREAT = true, .TRUNC = true }, @as(c_uint, 0o600));
+        if (fd < 0) break :yen_tty;
+        defer _ = std.c.close(fd);
+        const tty = std.mem.sliceTo(&yen_tty_name, 0);
+        _ = std.c.write(fd, tty.ptr, tty.len);
+    }' 1 >&2
 }
 
 ZMX_BUILD_ROOT="/private/tmp/yen-vendor-zmx-build"

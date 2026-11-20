@@ -77,6 +77,15 @@ enum PersistentSessionReaper {
         return (kill.sorted(), next)
     }
 
+    /// `.tty` records whose session socket is gone: zmx deletes its socket when
+    /// a shell exits but knows nothing of YEN's record beside it.
+    nonisolated static func staleTtyRecords(in fileNames: [String]) -> [String] {
+        let names = Set(fileNames)
+        return fileNames.filter { file in
+            file.hasSuffix(".tty") && !names.contains(String(file.dropLast(".tty".count)))
+        }.sorted()
+    }
+
     // MARK: - Runner
 
     @MainActor private static var timer: Timer?
@@ -104,6 +113,10 @@ enum PersistentSessionReaper {
         let interval = positive(UserDefaults.standard.double(forKey: intervalDefaultsKey)) ?? defaultInterval
 
         Task.detached(priority: .utility) {
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: directory)) ?? []
+            for record in staleTtyRecords(in: files) {
+                try? FileManager.default.removeItem(atPath: (directory as NSString).appendingPathComponent(record))
+            }
             let sessions = parseList(run(zmx, ["ls"], directory))
             let kill: [String] = await MainActor.run {
                 guard !PersistentSessions.isTerminating else { return [] }

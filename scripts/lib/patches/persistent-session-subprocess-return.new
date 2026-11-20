@@ -1,0 +1,3 @@
+            .cwd = cwd,
+            .args = args,
+            .yen_session_tty = yen_session.tty_file,
