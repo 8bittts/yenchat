@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdtempSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 // `yen sessions` against the real vendored zmx in a throwaway socket directory:
@@ -52,6 +58,21 @@ describe("yen sessions", () => {
 			).toBe("1");
 		}
 	});
+
+	test.skipIf(!vendored)(
+		"reports a listing failure for an unreadable session directory",
+		() => {
+			chmodSync(socketDir, 0);
+			try {
+				const result = sessions([]);
+				expect(result.status).not.toBe(0);
+				expect(result.stderr.trim()).not.toBe("");
+				expect(result.stdout).not.toContain("No persistent sessions.");
+			} finally {
+				chmodSync(socketDir, 0o700);
+			}
+		},
+	);
 
 	test.skipIf(!vendored)(
 		"lists pane sessions, ends one, and refuses unusable ids",
