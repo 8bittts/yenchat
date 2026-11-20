@@ -55,7 +55,7 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 #### Phase 5: Docs and release
 
 - [ ] Update public `/docs`, `public/llms.txt`, privacy and terms for the daemon, the LaunchAgent and the Tailscale data flow.
-- [ ] Write release copy in `lib/release-notes/release-notes-copy.ts`, regenerate release notes, and ship through `/yen-zip`.
+- [ ] Write release copy in `lib/release-notes/release-notes-copy.ts`, regenerate release notes, and ship through `/yen-zip`. The copy must say that quitting YEN now leaves pane processes running (a dev server keeps its port), how to end them (`yen sessions kill`, closing the pane), and where to turn the behavior off.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 
