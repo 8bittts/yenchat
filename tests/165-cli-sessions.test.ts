@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
 	chmodSync,
 	existsSync,
+	mkdirSync,
 	mkdtempSync,
 	rmSync,
 	writeFileSync,
@@ -72,6 +74,53 @@ describe("yen sessions", () => {
 				chmodSync(socketDir, 0o700);
 			}
 		},
+	);
+
+	test.skipIf(!vendored)(
+		"discovers incompatible sessions alongside sessions without a build record",
+		() => {
+			const oldID = "DDDDDDDD-2222-3333-4444-555555555555";
+			// The current client cannot speak to this socket. The recorded client
+			// understands it and rejects a query that includes another build's socket.
+			const listener = Bun.listen({
+				unix: join(socketDir, oldID),
+				socket: {
+					data(socket) {
+						socket.end();
+					},
+				},
+			});
+			const client = [
+				"#!/bin/bash",
+				"set -eu",
+				'[[ "$1" == ls ]]',
+				`[[ -S "$ZMX_DIR/${oldID}" ]]`,
+				`[[ ! -S "$ZMX_DIR/${paneID}" ]]`,
+				`printf 'name=%s\\tclients=0\\tcreated=1\\n' ${oldID}`,
+			].join("\n");
+			const digest = createHash("sha256")
+				.update(client)
+				.digest("hex")
+				.slice(0, 16);
+			mkdirSync(join(socketDir, "bin"), { recursive: true });
+			const binary = join(socketDir, "bin", `zmx-${digest}`);
+			writeFileSync(binary, client, { mode: 0o700 });
+			writeFileSync(join(socketDir, `${oldID}.zmx`), binary);
+			try {
+				expect(zmxRun(["run", paneID, "-d", "sleep", "120"]).status).toBe(0);
+				const result = sessions([]);
+				expect(result.status, result.stderr).toBe(0);
+				for (const id of [oldID, paneID]) {
+					expect(
+						result.stdout.match(new RegExp(`^${id}\\s+detached\\s`, "gm")),
+					).toHaveLength(1);
+				}
+			} finally {
+				listener.stop(true);
+				zmxRun(["kill", paneID]);
+			}
+		},
+		30_000,
 	);
 
 	test.skipIf(!vendored)(
