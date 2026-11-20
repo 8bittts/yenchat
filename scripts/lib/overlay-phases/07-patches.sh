@@ -43,6 +43,7 @@ apply_overlay_patch undo-timeout-default-preservation
 
 EXEC_ZIG="ghostty/src/termio/Exec.zig"
 apply_overlay_patch yen-bin-dir-fix
+apply_overlay_patch persistent-session-exec
 
 # ============================================================================
 # RETIRED: Park Hidden Renderer Swap Chains on Embedded Builds
@@ -473,6 +474,19 @@ SURFACE_VIEW_SWIFT="ghostty/macos/Sources/YEN/Surface View/SurfaceView.swift"
 apply_overlay_patch surface-route-environment-helper
 
 apply_overlay_patch appkit-surface-route-environment-stamp
+
+# ============================================================================
+# Persistent sessions (_docs/01-architecture.md -> Persistent sessions)
+# ============================================================================
+# The pane marks itself for its zmx session right after the route stamp. A pane
+# that leaves its split tree or window ends its session once undo expires
+# (PersistentSessions.paneLeftTree); deinit is the fast path. Exec.zig wraps the final
+# command in `zmx attach` after shell integration (src/termio/yen_session.zig).
+
+apply_overlay_patch persistent-session-prepare
+apply_overlay_patch persistent-session-close
+apply_overlay_patch persistent-session-tree-leave
+apply_overlay_patch persistent-session-window-close
 
 # ============================================================================
 # Remove unsafe Sendable conformance from C-pointer wrapper classes

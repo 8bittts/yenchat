@@ -756,5 +756,80 @@
 			"--old-absent-drift-pattern",
 			"extension yen_surface_t: @unchecked @retroactive Sendable {}"
 		]
+	},
+	"persistent-session-prepare": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Persistent session prepare",
+			"--mode",
+			"exact",
+			"--marker",
+			"PersistentSessions.prepare(&surface_cfg, paneID: self.id)",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-prepare.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-prepare.new"
+		]
+	},
+	"persistent-session-close": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Persistent session close",
+			"--mode",
+			"exact",
+			"--marker",
+			"PersistentSessions.paneDidClose(self.id)",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-close.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-close.new"
+		]
+	},
+	"persistent-session-exec": {
+		"target": "ghostty/src/termio/Exec.zig",
+		"arguments": [
+			"--label",
+			"Persistent session exec wrap",
+			"--mode",
+			"exact",
+			"--marker",
+			"@import(\"yen_session.zig\").wrapFromEnv(",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-exec.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-exec.new"
+		]
+	},
+	"persistent-session-tree-leave": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"Persistent session tree leave",
+			"--mode",
+			"exact",
+			"--marker",
+			"PersistentSessions.paneLeftTree(surfaceView.id, undoExpiration: undoExpiration)",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-tree-leave.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-tree-leave.new"
+		]
+	},
+	"persistent-session-window-close": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"Persistent session window close",
+			"--mode",
+			"exact",
+			"--marker",
+			"PersistentSessions.panesLeftClosingWindow(",
+			"--old-block",
+			"@$PATCHES_DIR/persistent-session-window-close.old",
+			"--new-block",
+			"@$PATCHES_DIR/persistent-session-window-close.new"
+		]
 	}
 }

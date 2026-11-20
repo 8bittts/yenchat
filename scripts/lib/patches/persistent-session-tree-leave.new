@@ -1,0 +1,4 @@
+        for surfaceView in from where !to.contains(surfaceView) {
+            cancelPendingClipboardConfirmation(for: surfaceView)
+            PersistentSessions.paneLeftTree(surfaceView.id, undoExpiration: undoExpiration)
+        }

@@ -1,0 +1,5 @@
+        deinit {
+            // A pane the user closed ends its persistent session; an app quit only detaches.
+            PersistentSessions.paneDidClose(self.id)
+
+            // Resolve clipboard callback state while surfaceModel is still

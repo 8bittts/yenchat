@@ -1,0 +1,5 @@
+        // Build our args list
+        const args: []const [:0]const u8 = execCommand(
+            alloc,
+            shell_command,
+            internal_os.passwd,

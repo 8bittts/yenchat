@@ -1,0 +1,4 @@
+        for surfaceView in surfaceTree {
+            cancelPendingClipboardConfirmation(for: surfaceView)
+        }
+        PersistentSessions.panesLeftClosingWindow(surfaceTree.map(\.id), undoExpiration: undoExpiration)

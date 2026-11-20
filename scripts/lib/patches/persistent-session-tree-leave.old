@@ -1,0 +1,3 @@
+        for surfaceView in from where !to.contains(surfaceView) {
+            cancelPendingClipboardConfirmation(for: surfaceView)
+        }

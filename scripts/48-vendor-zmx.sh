@@ -21,8 +21,9 @@
 #   compiles a cache path into a string, so every build runs from one fixed
 #   path ($ZMX_BUILD_ROOT), guarded by a lock directory.
 #
-# The engine id (upstream commit + a digest of the engine sources) is passed as
-# VENDOR_BUILD_INPUT_ID, so an engine bump rebuilds zmx and re-records its pin.
+# The engine id (upstream commit plus a digest of the tracked YEN inputs that
+# shape the engine's Zig sources) is passed as VENDOR_BUILD_INPUT_ID, so an
+# engine bump or an engine patch rebuilds zmx and re-records its pin.
 #
 # Stores at yen-terminal/customizations/vendor/zmx/
 #
@@ -58,23 +59,46 @@ for required in "$ENGINE_DIR/build.zig" "$ENGINE_DIR/build.zig.zon" "$ENGINE_DIR
     fi
 done
 
-# Engine identity: the pinned upstream commit plus a digest of every file the
-# engine build can read, so a YEN patch to the engine also counts as a change.
+# Engine identity, from tracked files only so every checkout computes the same
+# id whether or not overlays are applied: the pinned upstream commit and its
+# archive digest, plus every YEN input that can change engine Zig sources (Zig
+# overlays, patch blocks aimed at src/, build.zig or pkg/, and the branding,
+# rename and emoji phases), plus this recipe itself.
 engine_input_id() {
-    local commit digest
-    commit=$(baseline_value "upstream_commit" "$ENGINE_BASELINE") || true
-    if ! echo "$commit" | grep -Eq '^[0-9a-f]{40}$'; then
-        echo "ERROR: engine baseline has no upstream_commit" >&2
-        return 1
-    fi
-    digest=$(cd "$ENGINE_DIR" && find build.zig build.zig.zon src pkg -type f \
-        ! -path '*/.zig-cache/*' ! -name '.DS_Store' -print0 2>/dev/null \
-        | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)
-    if ! echo "$digest" | grep -Eq '^[0-9a-f]{16}$'; then
-        echo "ERROR: could not digest the engine sources" >&2
-        return 1
-    fi
-    echo "engine-${commit:0:12}-${digest}"
+    python3 - "$REPO_ROOT" "$ENGINE_BASELINE" "$0" <<'PY'
+import hashlib, json, os, re, sys
+root, baseline_path, recipe = sys.argv[1], sys.argv[2], sys.argv[3]
+baseline = dict(l.split("=", 1) for l in open(baseline_path).read().splitlines() if "=" in l and not l.startswith("#"))
+commit, archive = baseline.get("upstream_commit", ""), baseline.get("source_archive_sha256", "")
+if not re.fullmatch(r"[0-9a-f]{40}", commit) or not re.fullmatch(r"[0-9a-f]{64}", archive):
+    sys.exit("ERROR: engine baseline lacks upstream_commit or source_archive_sha256")
+files = set()
+for top in ["yen-terminal/overlays/src"]:
+    for d, _, names in os.walk(os.path.join(root, top)):
+        files.update(os.path.relpath(os.path.join(d, n), root) for n in names if n != ".DS_Store")
+plan = json.load(open(os.path.join(root, "scripts/lib/overlay-patch-plan.json")))
+for entry in plan.values():
+    if entry["target"].startswith(("ghostty/src/", "ghostty/build.zig", "ghostty/pkg/")):
+        for arg in entry["arguments"]:
+            for ref in re.findall(r"@\$PATCHES_DIR/([^:]+)", arg):
+                files.add(os.path.join("scripts/lib/patches", ref))
+files.update([
+    "scripts/lib/overlay-patch-plan.json",
+    "scripts/lib/overlay-branding.sh",
+    "scripts/lib/overlay-phases/01-branding.sh",
+    "scripts/lib/overlay-phases/02-renames.sh",
+    "scripts/lib/overlay-phases/05-emoji.sh",
+    os.path.relpath(os.path.realpath(recipe), root),
+])
+h = hashlib.sha256()
+h.update(f"{commit}\n{archive}\n".encode())
+for rel in sorted(files):
+    path = os.path.join(root, rel)
+    if not os.path.isfile(path):
+        sys.exit(f"ERROR: engine input missing: {rel}")
+    h.update(rel.encode() + b"\0" + hashlib.sha256(open(path, "rb").read()).hexdigest().encode() + b"\n")
+print(f"engine-{commit[:12]}-{h.hexdigest()[:16]}")
+PY
 }
 
 ENGINE_ID="$(engine_input_id)"

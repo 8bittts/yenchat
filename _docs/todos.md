@@ -34,14 +34,12 @@ Product boundaries hold: no YEN account, no YEN relay, no terminal content sent 
 
 #### Phase 2: Local persistent sessions
 
-- [ ] Start every new pane as an attach to session `<pane UUID>`, and reattach on restore; the macOS layer must pass the restore `UUID`, because `YEN_SURFACE_ID` is a random per-run number (`Surface.zig`).
-- [ ] Keep the session socket directory short: a Unix socket path caps at 104 bytes, and zmx refused a long `ZMX_DIR` with `NameTooLong`.
-- [ ] Define lifecycle: closing a pane or tab ends its session; quitting, crashing or updating the app only detaches.
 - [ ] Handle a session that the restore state no longer names (list it, then reap after a timeout) and a restore entry whose session died (start a fresh shell in the saved directory).
-- [ ] Restore the pane title and working directory after reattach (the spike's relaunched pane showed the title `YEN`, not `~`, because replay restores the screen, not OSC state), and pass through shell integration, the `yen` CLI, dictation paste, Secure Input and the Quick Terminal.
+- [ ] Verify the `yen` CLI, dictation paste, Secure Input and the Quick Terminal inside a persistent pane; shell integration, the title and working-directory reports already pass through.
+- [ ] Reflow replayed history to the attaching pane's width: a restored pane showed history hard-wrapped at about 48 columns in a wider window.
 - [ ] Handle a daemon/app version mismatch across `/yen-zip` updates without killing live sessions.
-- [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle.
-- [ ] Prove it in a running re-identified `zig-out` copy: quit, force-kill and update each leave the session alive; add regression tests for lifecycle and restore mapping.
+- [ ] Add `yen sessions` (list, attach, kill) to the bundled CLI and a Settings toggle, then turn the preference on by default.
+- [ ] Prove force-kill and a Sparkle update in a running re-identified `zig-out` copy leave sessions alive (quit and restore are proven).
 
 #### Phase 3: Remote attach over Tailscale
 

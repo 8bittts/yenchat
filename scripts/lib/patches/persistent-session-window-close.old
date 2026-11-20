@@ -1,0 +1,3 @@
+        for surfaceView in surfaceTree {
+            cancelPendingClipboardConfirmation(for: surfaceView)
+        }

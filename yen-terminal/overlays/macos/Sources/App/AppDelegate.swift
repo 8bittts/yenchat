@@ -557,6 +557,9 @@ class AppDelegate: NSObject,
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // From here on a pane teardown is the app leaving, so persistent
+        // sessions detach instead of ending (PersistentSessions.paneDidClose).
+        PersistentSessions.markTerminating()
         tearDownLocalEventMonitor()
         SettingsController.shared.flushPendingRealTimeConfigSyncForApplicationTermination()
     }
@@ -1727,9 +1730,16 @@ extension AppDelegate: NSMenuItemValidation {
 
 extension AppDelegate {
     func terminate() -> NSApplication.TerminateReply {
+        // A pane in a persistent session keeps running after quit, so only an
+        // ephemeral pane with a running process makes quitting kill something.
         let controllersNeedConfirmation = NSApplication.shared.windows
             .compactMap { $0.windowController as? BaseTerminalController }
-            .filter { !$0.windowCanBeClosedWithoutConfirmation() }
+            .filter { controller in
+                guard !controller.windowCanBeClosedWithoutConfirmation() else { return false }
+                return controller.surfaceTree.contains { surface in
+                    PersistentSessions.quitKillsProcess(needsConfirmQuit: surface.needsConfirmQuit, paneID: surface.id)
+                }
+            }
 
         guard !controllersNeedConfirmation.isEmpty else {
             return .terminateNow

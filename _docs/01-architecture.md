@@ -38,6 +38,16 @@ The site has no database and Vercel functions run in `pdx1`.
 `apply-overlays.sh` brands upstream text, copies overlays, and applies fail-closed patches; the result survives every vendor bump.
 `build-release.sh` assembles `ghostty/zig-out/YEN.app` and bundles the CLI, helpers and vendored binaries.
 
+**Persistent sessions.**
+A persistent pane runs inside the bundled zmx (`Contents/Resources/bin/zmx`, vendored by `scripts/48-vendor-zmx.sh`), so its shell keeps running when the app quits, crashes or updates.
+The preference `com.yenchat.yen.persistentSessions` turns it on; it is off by default while Phase 2 of the plan in `_docs/todos.md` is open.
+- The app only marks a pane. `PersistentSessions.prepare` sets `YEN_PERSISTENT_SESSION=<pane UUID>`, `ZMX_DIR=~/.local/state/yen/zmx` and `ZMX_DIR_MODE=0700`, and always overwrites or removes an inherited marker, because a split or tab inherits its parent's environment.
+- The engine wraps the final command in `src/termio/yen_session.zig` after shell integration, as `zmx attach <UUID> /bin/bash --noprofile --norc -c 'exec -l <shell>'`, so integration and login semantics apply to the shell zmx starts; the marker never reaches the child.
+- A restored pane keeps its UUID, so restore reattaches to the same session and zmx replays the screen and scrollback.
+- A pane with an explicit command (AppleScript, palette actions, file openers) stays ephemeral, and so does a pane whose socket path would pass 103 bytes.
+- Closing a pane ends its session: `paneLeftTree` checks once undo can no longer bring the pane back and kills the session unless a terminal window holds it again. Ghostty can keep a closed pane alive long after that, so `SurfaceView.deinit` is only the fast path.
+- Quitting only detaches: `applicationWillTerminate` sets `PersistentSessions.markTerminating()`, and quit confirmation skips panes with a live session (`quitKillsProcess`).
+
 ## Native Patterns
 
 ### Native-First Interaction Parity

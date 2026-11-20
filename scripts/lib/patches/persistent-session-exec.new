@@ -1,0 +1,15 @@
+        // YEN: a persistent pane runs inside the bundled zmx. The helper also
+        // strips the pane's YEN_PERSISTENT_SESSION marker from the child env.
+        const yen_session_command = try @import("yen_session.zig").wrapFromEnv(
+            alloc,
+            global.io(),
+            shell_command,
+            &env,
+            cfg.resources_dir,
+        );
+
+        // Build our args list
+        const args: []const [:0]const u8 = execCommand(
+            alloc,
+            yen_session_command,
+            internal_os.passwd,

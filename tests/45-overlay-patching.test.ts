@@ -874,6 +874,138 @@ ${patchBlock}`;
 		});
 	});
 
+	test("persistent session patches apply, are idempotent, and fail closed on drift", () => {
+		const patchBlock = patchCommands([
+			"persistent-session-prepare",
+			"persistent-session-close",
+			"persistent-session-tree-leave",
+			"persistent-session-window-close",
+			"persistent-session-exec",
+		]);
+		const prepareOld = readFileSync(
+			join(patchesDir, "persistent-session-prepare.old"),
+			"utf8",
+		);
+		const closeOld = readFileSync(
+			join(patchesDir, "persistent-session-close.old"),
+			"utf8",
+		);
+		const execOld = readFileSync(
+			join(patchesDir, "persistent-session-exec.old"),
+			"utf8",
+		);
+		const treeLeaveOld = readFileSync(
+			join(patchesDir, "persistent-session-tree-leave.old"),
+			"utf8",
+		);
+		const windowCloseOld = readFileSync(
+			join(patchesDir, "persistent-session-window-close.old"),
+			"utf8",
+		);
+
+		withTempDir((fixtureRoot) => {
+			const surfaceDir = join(
+				fixtureRoot,
+				"ghostty/macos/Sources/YEN/Surface View",
+			);
+			const termioDir = join(fixtureRoot, "ghostty/src/termio");
+			mkdirSync(surfaceDir, { recursive: true });
+			mkdirSync(termioDir, { recursive: true });
+			const appKitPath = join(surfaceDir, "SurfaceView_AppKit.swift");
+			const execPath = join(termioDir, "Exec.zig");
+			writeFileSync(
+				appKitPath,
+				["func appkit() {", prepareOld, "}", closeOld, "}"].join("\n"),
+				"utf8",
+			);
+			writeFileSync(execPath, ["fn exec() {", execOld, "}"].join("\n"), "utf8");
+			const terminalDir = join(
+				fixtureRoot,
+				"ghostty/macos/Sources/Features/Terminal",
+			);
+			mkdirSync(terminalDir, { recursive: true });
+			const controllerPath = join(terminalDir, "BaseTerminalController.swift");
+			writeFileSync(
+				controllerPath,
+				[
+					"func surfaceTreeDidChange() {",
+					treeLeaveOld,
+					"",
+					"        // If our surface tree becomes empty then we have no focused surface.",
+					"}",
+					"func windowWillClose() {",
+					windowCloseOld,
+					"}",
+				].join("\n"),
+				"utf8",
+			);
+
+			const command = `set -euo pipefail
+cd "${fixtureRoot}"
+PATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}
+PATCHES_DIR="${patchesDir}"
+${patchBlock}`;
+			const firstRun = run("bash", ["-lc", command]);
+			expect(firstRun.status).toBe(0);
+			expect(output(firstRun)).toContain("Applied Persistent session prepare");
+			expect(output(firstRun)).toContain("Applied Persistent session close");
+			expect(output(firstRun)).toContain(
+				"Applied Persistent session exec wrap",
+			);
+			const appKit = readFileSync(appKitPath, "utf8");
+			// The pane is marked after the route stamp and before the surface is created.
+			expect(appKit.indexOf("setRouteEnvironmentID(self.id)")).toBeLessThan(
+				appKit.indexOf(
+					"PersistentSessions.prepare(&surface_cfg, paneID: self.id)",
+				),
+			);
+			expect(
+				appKit.indexOf(
+					"PersistentSessions.prepare(&surface_cfg, paneID: self.id)",
+				),
+			).toBeLessThan(appKit.indexOf("surface_cfg.withCValue"));
+			expect(appKit).toContain("PersistentSessions.paneDidClose(self.id)");
+			expect(output(firstRun)).toContain(
+				"Applied Persistent session tree leave",
+			);
+			expect(output(firstRun)).toContain(
+				"Applied Persistent session window close",
+			);
+			// Both controller hooks land, once each.
+			const controller = readFileSync(controllerPath, "utf8");
+			expect(controller).toContain(
+				"PersistentSessions.paneLeftTree(surfaceView.id, undoExpiration: undoExpiration)",
+			);
+			expect(controller).toContain(
+				"PersistentSessions.panesLeftClosingWindow(surfaceTree.map(\\.id), undoExpiration: undoExpiration)",
+			);
+			const exec = readFileSync(execPath, "utf8");
+			// execCommand must receive the wrapped command, not the raw shell command.
+			expect(exec).toContain('@import("yen_session.zig").wrapFromEnv(');
+			expect(exec).toContain("            yen_session_command,\n");
+			expect(exec).not.toContain(
+				"            shell_command,\n            internal_os.passwd",
+			);
+
+			const secondRun = run("bash", ["-lc", command]);
+			expect(secondRun.status).toBe(0);
+			expect(output(secondRun)).toContain("already applied (idempotent skip)");
+
+			writeFileSync(
+				execPath,
+				[
+					"fn exec() {",
+					execOld.replace("execCommand(", "execCommandRenamed("),
+					"}",
+				].join("\n"),
+				"utf8",
+			);
+			const driftRun = run("bash", ["-lc", command]);
+			expect(driftRun.status).toBe(1);
+			expect(output(driftRun)).toContain("patch anchor not found");
+		});
+	});
+
 	test("surface notification callback patch keeps async add guardrails", () => {
 		const patchBlock = patchCommands([
 			"surfaceview-async-notification-callback",

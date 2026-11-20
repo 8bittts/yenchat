@@ -1,0 +1,2 @@
+        deinit {
+            // Resolve clipboard callback state while surfaceModel is still

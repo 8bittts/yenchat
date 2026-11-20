@@ -1,0 +1,3 @@
+            surface_cfg.setRouteEnvironmentID(self.id)
+            PersistentSessions.prepare(&surface_cfg, paneID: self.id)
+            let surface = surface_cfg.withCValue(view: self) { surface_cfg_c in
