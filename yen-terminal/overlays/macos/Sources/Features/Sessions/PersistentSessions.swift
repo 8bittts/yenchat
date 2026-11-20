@@ -233,6 +233,37 @@ enum PersistentSessions {
         try? FileManager.default.removeItem(atPath: binaryRecordPath(for: paneID, socketDirectory: socketDirectory))
     }
 
+    /// Pane sessions named in a listing of the socket directory. Records
+    /// (`<UUID>.tty`, `<UUID>.zmx`), `bin/` and foreign names are not sessions.
+    nonisolated static func sessionIDs(in fileNames: [String]) -> [UUID] {
+        fileNames.compactMap { UUID(uuidString: $0) }.sorted { $0.uuidString < $1.uuidString }
+    }
+
+    /// Pane sessions whose socket exists now, open in a window or not.
+    nonisolated static func liveSessionIDs(socketDirectory: String = socketDirectory()) -> [UUID] {
+        let manager = FileManager.default
+        let names = (try? manager.contentsOfDirectory(atPath: socketDirectory)) ?? []
+        return sessionIDs(in: names).filter { id in
+            let path = socketPath(for: id, socketDirectory: socketDirectory)
+            return (try? manager.attributesOfItem(atPath: path)[.type] as? FileAttributeType) == .typeSocket
+        }
+    }
+
+    /// End every pane session (Settings > General > End All Sessions). A pane
+    /// still open in a window loses its shell, exactly as if it exited.
+    @discardableResult
+    nonisolated static func endAllSessions(
+        socketDirectory: String = socketDirectory(),
+        zmxPath: String? = zmxPath(),
+        run: (String, [String], [String: String]) -> Void = launchDetached
+    ) -> Int {
+        let ids = liveSessionIDs(socketDirectory: socketDirectory)
+        for id in ids {
+            paneDidClose(id, socketDirectory: socketDirectory, zmxPath: zmxPath, terminating: false, run: run)
+        }
+        return ids.count
+    }
+
     /// Grace added to the undo timeout before a departed pane is judged closed.
     static let closeGrace: Duration = .seconds(2)
 

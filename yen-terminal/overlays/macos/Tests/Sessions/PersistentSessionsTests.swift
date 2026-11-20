@@ -154,6 +154,46 @@ struct PersistentSessionsTests {
         #expect(fresh.environmentVariables[PersistentSessions.environmentKey] == nil)
     }
 
+    @Test func onlyPaneSessionSocketsCountAsSessions() {
+        let names = [paneID.uuidString, "\(paneID.uuidString).tty", "\(parentID.uuidString).zmx", "bin", "dev", "notes.txt"]
+        #expect(PersistentSessions.sessionIDs(in: names) == [paneID])
+    }
+
+    @Test func endAllEndsEverySessionSocketAndSkipsPlainFiles() throws {
+        // Short on purpose: a Unix socket path must stay under 104 bytes.
+        let directory = "/tmp/yps-\(UUID().uuidString.prefix(8))"
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: directory) }
+        let live = [paneID, parentID]
+        var sockets: [Int32] = []
+        for id in live {
+            let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+            var address = sockaddr_un()
+            address.sun_family = sa_family_t(AF_UNIX)
+            let path = PersistentSessions.socketPath(for: id, socketDirectory: directory)
+            withUnsafeMutableBytes(of: &address.sun_path) { buffer in
+                buffer.copyBytes(from: Array(path.utf8) + [0])
+            }
+            let bound = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+            }
+            #expect(bound == 0)
+            sockets.append(fd)
+        }
+        defer { sockets.forEach { close($0) } }
+        // A plain file with a session name is not a session.
+        let plain = UUID()
+        FileManager.default.createFile(atPath: "\(directory)/\(plain.uuidString)", contents: Data())
+
+        var killed: [String] = []
+        let ended = PersistentSessions.endAllSessions(socketDirectory: directory, zmxPath: "/z/zmx") { _, arguments, _ in
+            killed.append(arguments.last ?? "")
+        }
+
+        #expect(ended == 2)
+        #expect(killed.sorted() == live.map(\.uuidString).sorted())
+    }
+
     @Test func quittingAsksOnlyAboutPanesWithoutALiveSession() {
         #expect(PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in false })
         #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in true })

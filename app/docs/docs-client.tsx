@@ -737,11 +737,13 @@ function PersistentSessionsSection() {
 			</p>
 			<p className="text-body">
 				Quitting no longer stops what runs in your panes: a dev server keeps its
-				port. Close a pane or its window to end its session, or run{" "}
-				<code className="inline-code-brand">yen sessions</code> to list sessions
+				port. Close a pane or its window to end its session. Settings &gt;
+				General shows how many sessions run and has End All Sessions to stop
+				them at once. In a shell,{" "}
+				<code className="inline-code-brand">yen sessions</code> lists sessions
 				and{" "}
 				<code className="inline-code-brand">yen sessions kill &lt;id&gt;</code>{" "}
-				to end one. Turning the setting off affects new panes only.
+				ends one. Turning the setting off affects new panes only.
 			</p>
 			<p className="text-body">
 				Sessions stay on your Mac and end when it restarts. A session no window

@@ -1789,6 +1789,17 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         }
     }
 
+    func confirmEndAllPersistentSessions(count: Int, onEnded: @escaping () -> Void) {
+        presentSettingsConfirmationAlert(
+            title: count == 1 ? "End 1 Session?" : "End All \(count) Sessions?",
+            message: "Every pane's shell and the programs running in it stop, including panes open now. You cannot undo this.",
+            confirmButtonTitle: "End Sessions"
+        ) {
+            PersistentSessions.endAllSessions()
+            onEnded()
+        }
+    }
+
     func confirmRestoreDefaultShortcuts() {
         presentSettingsConfirmationAlert(
             title: "Restore Default Shortcuts?",

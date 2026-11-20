@@ -413,6 +413,7 @@ struct SettingsGeneralPane: View {
     let controller: SettingsController
     @ObservedObject var general: GeneralSettingsStore
     @StateObject private var workspace: WorkspaceSettingsStore
+    @State private var sessionCount = 0
 
     static let loginApprovalText =
         "Waiting for approval. YEN will not open at login until you allow it in Login Items."
@@ -478,6 +479,20 @@ struct SettingsGeneralPane: View {
                     isOn: Binding(get: { behavior.persistentSessions }, set: { general.setPersistentSessions($0) })
                 ) {
                     SettingsStudioLabel(title: "Keep Sessions Running", hint: Self.persistentSessionsHint)
+                }
+                // The switch always renders, so it owns the refresh; a task on a
+                // row that is hidden while no session runs would never start.
+                .task {
+                    while !Task.isCancelled {
+                        sessionCount = PersistentSessions.liveSessionIDs().count
+                        try? await Task.sleep(for: .seconds(3))
+                    }
+                }
+
+                if sessionCount > 0 {
+                    PersistentSessionsStatusRow(controller: controller, count: sessionCount) {
+                        sessionCount = PersistentSessions.liveSessionIDs().count
+                    }
                 }
 
                 Picker(
@@ -572,6 +587,34 @@ struct SettingsGeneralPane: View {
                 LabeledContent("Reset All Settings") {
                     Button("Reset…", role: .destructive) {
                         controller.confirmResetAllSettings()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Persistent Sessions
+
+/// How many pane sessions run now, and a way to end them all without the CLI.
+/// The General pane lists the socket directory every few seconds while it is
+/// visible (a single `readdir`) and shows this row only while a session runs.
+struct PersistentSessionsStatusRow: View {
+    let controller: SettingsController
+    let count: Int
+    let refresh: () -> Void
+
+    static func title(count: Int) -> String {
+        count == 1 ? "1 session running" : "\(count) sessions running"
+    }
+
+    var body: some View {
+        LabeledContent(Self.title(count: count)) {
+            Button("End All Sessions…", role: .destructive) {
+                controller.confirmEndAllPersistentSessions(count: count) {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(500))
+                        refresh()
                     }
                 }
             }

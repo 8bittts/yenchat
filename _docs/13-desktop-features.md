@@ -269,7 +269,10 @@ Restorable state is versioned and persists the focused surface, split tree, per-
 
 ## Terminal Behavior
 
-**Keep Sessions Running.** Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSessions`; it is on by default in the release app and off in every other identity (Debug, test host, verify copy) unless set. New panes read it when they are created, and a pane whose session is still alive keeps attaching after it is turned off. `yen sessions` lists, attaches and ends sessions (`_docs/12-commands.md`); the contract is `_docs/01-architecture.md` → Persistent sessions.
+**Keep Sessions Running.** Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSessions`; it is on by default in the release app and off in every other identity (Debug, test host, verify copy) unless set. New panes read it when they are created, and a pane whose session is still alive keeps attaching after it is turned off.
+Below the switch, `PersistentSessionsStatusRow` shows how many session sockets exist and End All Sessions, which confirms and then ends every one, open panes included; it is hidden while none run.
+The General pane owns the 3-second refresh on the switch itself, because a `.task` on a row hidden at zero never starts and the count would never appear.
+`yen sessions` lists, attaches and ends sessions (`_docs/12-commands.md`); the contract is `_docs/01-architecture.md` → Persistent sessions.
 
 **Copy on Select.** Settings > General > Copy on Select (`both` or `false`) covers terminal surfaces, the scratchpad, and the shared diff view in the Git drawer, PR Review and Merge Conflict.
 Upstream defaults to a private selection clipboard; YEN patches the default to `both`.

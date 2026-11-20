@@ -254,10 +254,10 @@ describe("web client UI smoke", () => {
 		expect(document.body.textContent).not.toContain("Summarize via AI:");
 
 		expect(document.body.textContent).toContain(
-			"Customizable, GPU-accelerated terminal built for one thing: Speed.",
+			"Quit, crash, update. Your terminal keeps running.",
 		);
 		expect(document.querySelector("h1")?.textContent).toBe(
-			"Customizable, GPU-accelerated terminal built for one thing: Speed.",
+			"Quit, crash, update. Your terminal keeps running.",
 		);
 		expect(document.querySelector("h1")?.className).toContain("sr-only");
 		expect(document.body.textContent).toContain(
