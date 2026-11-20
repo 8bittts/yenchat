@@ -1274,3 +1274,19 @@ describe("Step 0f vendor-run reaper is falsifiable", () => {
 		}
 	});
 });
+
+test("release metadata allows the release notes host and rejects other subdomains", () => {
+	const patterns = readFileSync(
+		join(repoRoot, "scripts/lib/artifact-url-domain-allowlist.txt"),
+		"utf8",
+	)
+		.split("\n")
+		.filter((line) => line && !line.startsWith("#"));
+	const isAllowed = (host: string) =>
+		spawnSync("grep", ["-Eq", patterns.join("\n")], { input: host }).status ===
+		0;
+
+	expect(isAllowed("unlisted.yen.chat")).toBe(false);
+	expect(isAllowed("blog.yen.chat.example.org")).toBe(false);
+	expect(isAllowed("blog.yen.chat")).toBe(true);
+});
