@@ -98,3 +98,22 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 - `.vercelignore` excludes `scripts/*` behind an allowlist, and `tests/135-static-csp-prerender.test.ts` fails when a script the install or build runs is missing from it (`8leeai/_docs/13-starter-kit.md` → Files to copy).
 - Verify the production Vercel target by the pushed commit SHA and `READY` state.
 - Verify representative live routes after promotion.
+
+## Rule enforcement
+
+| Rule | Enforced by |
+|------|-------------|
+| Never edit `yen-terminal/ghostty/`; change it through overlays or patches | `.gitignore` (the mirror is untracked, so a direct edit cannot be committed) and `scripts/lib/overlay-phases/07-patches.sh` (fail-closed anchors) |
+| No AI attribution in commits | `.githooks/commit-msg`, proven by `tests/156-commit-msg-hook.test.ts` |
+| Never push the pre-open-source history | `pre-push` hook from `scripts/setup-hooks.ts`, proven by `tests/157-pre-push-hook.test.ts` |
+| Vercel builds only a `[deploy]` subject | `vercel.json` `ignoreCommand` |
+| `.vercelignore` keeps every script the build runs | `tests/135-static-csp-prerender.test.ts` |
+| Releases go only to the public repository | `scripts/01-verify-release-target.sh` |
+| The vendored engine tree must exist before the full suite | `tests/45-overlay-patching.test.ts` and `tests/119-vendor-process-guardrails.test.ts` (fail unless `YEN_ALLOW_MISSING_VENDOR_TREE=1`) |
+| Indexable pages carry canonical and social metadata | `tests/121-seo-guardrails.test.ts` |
+| `/library` stays noindex and unlinked | `tests/130-library-workbench.test.ts` |
+| Route blog.yen.chat only in `proxy.ts` | `tests/159-blog-host-routing.test.ts` |
+| Do not edit `lib/release-notes/release-notes-data.ts` by hand | none (prose) |
+| Run `gitleaks` before pushing scripts, config or fixtures | none (prose) |
+| No personal identity or home paths in the public repository | none (prose) |
+| Verify native UI in a running copy before reporting it | none (prose) |

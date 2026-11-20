@@ -201,6 +201,7 @@ bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh -
 Always use it; never build the copy by hand in a `mktemp` folder, re-sign it ad hoc, or invent another name or identifier.
 macOS keys an Accessibility or Automation grant to the code requirement, so an ad-hoc copy asked the operator for access on every build, and a deleted temp copy left System Settings with no row to toggle.
 The fixed identifier and Team ID let one grant cover every later copy; the script refuses while a copy is running.
+When two sessions verify at once, give each its own folder with `YEN_VERIFY_DIR`: the grant follows the identifier and Team ID, not the path, while one shared path lets a later build replace an earlier session's copy in the middle of its test.
 The renamed executable clears the running-instance guard honestly, because the guard keys on the target's executable name.
 Identify the scripted window by its scratch-directory tab titles and confirm it with `lsappinfo`.
 The verifier overwrites both `config.yen` locations and restores them on exit from a backup inside its temp directory, so copy any live config first.
@@ -286,6 +287,7 @@ The x86_64 compile gate is stricter than arm64 Debug:
 ## Environment Variables
 
 The web app reads no environment variable beyond `NODE_ENV`; contributors need no secrets to run `bun run dev`.
+`next dev` appends a `nextjs-agent-rules` block to `AGENTS.md` on every start (`node_modules/next/dist/server/lib/generate-agent-files.js`); restore the file before committing.
 The Vercel project holds no environment variable, and the project's Infisical `dev` and `prod` hold no web key; a stale gitignored `.env.local` is harmless because nothing reads it.
 Add a variable only with the code that reads it, through Infisical, which auto-syncs to Vercel Production as a Sensitive variable; this file then lists its name and reason, never a value.
 The rules for changing a value are in [AGENTS.md](../AGENTS.md#infisical).
