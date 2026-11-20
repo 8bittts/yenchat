@@ -52,8 +52,20 @@ final class WorkspaceTabStrip {
     private weak var group: NSWindowTabGroup?
     private var preferredWidth: NSLayoutConstraint?
     private var observation: NSKeyValueObservation?
+    private var focusObservation: AnyCancellable?
     private weak var controls: NSView?
     private var controlsGap: NSLayoutConstraint?
+
+    init() {
+        // AppKit can keep the accessory when a tab moves to another window.
+        // Reconcile its width even when the tab bar needs no other setup.
+        focusObservation = NotificationCenter.default.publisher(for: NSWindow.didBecomeMainNotification)
+            .sink { [weak self] notification in
+                guard let self, let host = self.host,
+                      let window = notification.object as? NSWindow, host.window === window else { return }
+                self.fit(host, to: window.tabGroup)
+            }
+    }
 
     static func start(_ view: NSView, at anchor: NSLayoutXAxisAnchor, inset: CGFloat = 0) -> NSLayoutConstraint {
         let start = view.leftAnchor.constraint(equalTo: anchor, constant: inset)
@@ -73,14 +85,18 @@ final class WorkspaceTabStrip {
     }
 
     func fit(_ view: NSView, to group: NSWindowTabGroup?) {
-        if host === view, self.group === group, preferredWidth?.isActive == true { return }
+        let targetWidth = Self.width(for: group)
+        if host === view, self.group === group, let preferredWidth, preferredWidth.isActive {
+            if preferredWidth.constant != targetWidth { preferredWidth.constant = targetWidth }
+            return
+        }
         observation = nil
         preferredWidth?.isActive = false
         controlsGap?.isActive = false
         host = view
         place(after: controls)
         self.group = group
-        let width = view.widthAnchor.constraint(equalToConstant: Self.width(for: group))
+        let width = view.widthAnchor.constraint(equalToConstant: targetWidth)
         // Let the window shrink below the preferred strip width when AppKit
         // measures its minimum size. The native tab bar handles overflow.
         width.priority = NSLayoutConstraint.Priority(rawValue: NSLayoutConstraint.Priority.fittingSizeCompression.rawValue - 1)
