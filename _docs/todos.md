@@ -20,7 +20,7 @@
 
 YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) except for the always-on sessions feature below.
 Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
-Vendor updates and desktop releases run through `/yen-zip` and need no entry here.
+Vendor updates and desktop releases run through `/update-yen` and need no entry here.
 
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
 
@@ -77,5 +77,5 @@ Owner doc: `_docs/04-security.md`.
 
 Do not start these until the trigger fires.
 
-- **Ghostty forge migration.** Destination/timeline still TBD (https://mitchellh.com/writing/ghostty-leaving-github). When announced, recover the one-shot plan from the private pre-open-source history (then-named `docs/00-todos.md`) and re-validate against the actual forge. Plumbing already lives in `scripts/lib/upstream.sh`. The `/yen-zip` vendor phase stops working when upstream leaves GitHub, so this is maintenance work.
+- **Ghostty forge migration.** Destination/timeline still TBD (https://mitchellh.com/writing/ghostty-leaving-github). When announced, recover the one-shot plan from the private pre-open-source history (then-named `docs/00-todos.md`) and re-validate against the actual forge. Plumbing already lives in `scripts/lib/upstream.sh`. The `/update-yen` vendor phase stops working when upstream leaves GitHub, so this is maintenance work.
 - **Scripted `send key` warnings.** Upstream does not derive `send key` text from the active keyboard layout and marks it with six `Issue.record(severity: .warning)` calls in `ScriptKeyEventCommandTests`, the whole 6-warning baseline of a clean native run. When a vendor bump makes the warnings disappear, update the baseline in `_docs/09-quality.md` → Native Test Suite.

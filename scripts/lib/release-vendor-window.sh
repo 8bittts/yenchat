@@ -2,9 +2,9 @@
 # Release vendor window — may a shipping build proceed while Ghostty upstream
 # is ahead of the committed baseline?
 #
-# /yen-zip Step 1 asks `14-vendor.sh --check --release`. The vendor gate exists
+# /update-yen Step 1 asks `14-vendor.sh --check --release`. The vendor gate exists
 # to block in-flight vendor mutations and unaudited engines; a Ghostty baseline
-# that the /yen-zip vendor phase audited, built and pushed satisfies that even when upstream
+# that the /update-yen vendor phase audited, built and pushed satisfies that even when upstream
 # `main` gained commits during the lap. Measured: 4 of 12 releases failed the
 # plain check for that reason, each costing another full vendor run.
 #
@@ -73,7 +73,7 @@ release_vendor_window_accepts_ghostty() {
     esac
     age_hours=$(( (now - committed_at) / 3600 ))
     if [ "$age_hours" -ge "$RELEASE_VENDOR_WINDOW_HOURS" ]; then
-        RELEASE_VENDOR_WINDOW_REASON="baseline commit ${baseline_commit:0:12} is ${age_hours}h old, outside the ${RELEASE_VENDOR_WINDOW_HOURS}h release window; run the /yen-zip vendor phase"
+        RELEASE_VENDOR_WINDOW_REASON="baseline commit ${baseline_commit:0:12} is ${age_hours}h old, outside the ${RELEASE_VENDOR_WINDOW_HOURS}h release window; run the /update-yen vendor phase"
         return 1
     fi
 

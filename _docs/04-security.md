@@ -2,7 +2,7 @@
 
 Upstream overlap, fail-closed vendor gate contracts and the bundled binary inventory that make up the supply-chain posture of YEN; the product privacy boundary is in AGENTS.md.
 
-The `/yen-zip` vendor phase owns the procedure; this file owns what each bump is checked against.
+The `/update-yen` vendor phase owns the procedure; this file owns what each bump is checked against.
 Yazi runtime and plugin behavior live in `_docs/14-file-browser.md`.
 
 ## Sources of truth
@@ -45,7 +45,7 @@ zmx_version=v1.0.1
 
 ## Upstream Coordinates
 
-Every Ghostty URL in `/yen-zip` resolves through the `upstream_*` helpers in `scripts/lib/upstream.sh`.
+Every Ghostty URL in `/update-yen` resolves through the `upstream_*` helpers in `scripts/lib/upstream.sh`.
 `YEN_UPSTREAM_HOST`, `YEN_UPSTREAM_OWNER`, `YEN_UPSTREAM_REPO` and `YEN_UPSTREAM_FORGE` exist only for parity tests and a forge cutover.
 `forge_github` is the only adapter; the forge migration is wait-gated in `_docs/todos.md`.
 Before any upstream-plumbing change, run `scripts/40-vendor-parity-snapshot.sh --baseline <path>`, then `--verify <path>` after it.
@@ -82,7 +82,7 @@ Per-bump assessments live in the vendor commit messages, not here.
 Exact block replacements use `scripts/lib/patch-file.py` with payloads in `scripts/lib/patches/`.
 Structural patches use named helpers in `scripts/lib/`, never inline heredocs.
 `scripts/42-lint-overlay-recurrence-gates.sh` fails if an inline `python3 - <<` heredoc returns to `apply-overlays.sh`; its allowlist stays empty.
-Every anchor fails closed on drift; retire a patch with the checklist in `.agents/skills/yen-zip/references/vendor-audit.md`.
+Every anchor fails closed on drift; retire a patch with the checklist in `.agents/skills/update-yen/references/vendor-audit.md`.
 
 | Patch | Anchor | Risk | Retire or watch condition |
 |-------|--------|------|---------------------------|
@@ -206,7 +206,7 @@ A new Go binary built on `tcell` or Bubble Tea will need its own entry.
 
 ### Fail-Closed Gate Contracts (Do Not Regress)
 
-Every `/yen-zip` vendor and release gate is on `scripts/lib/gate-roster.txt`.
+Every `/update-yen` vendor and release gate is on `scripts/lib/gate-roster.txt`.
 A gate declares its units in `scripts/lib/units/<gate>.units` and cannot print a passing `RECEIPT` unless each unit records `RAN|` with a measurement or `SKIP|` with a reason.
 A skip route nobody anticipated fails because its unit goes unaccounted for.
 `tests/145-gate-receipt-contract.test.ts` fails any roster entry not on the contract and fails on an empty roster.

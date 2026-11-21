@@ -1,6 +1,6 @@
 #!/bin/bash
 # verify-agent-work.sh — Verify agent decisions (not script output)
-# Checks the two /yen-zip outcomes no eval check covers on its own: the staged
+# Checks the two /update-yen outcomes no eval check covers on its own: the staged
 # release set (after Step 7a) and the published, clean result (after Step 11).
 # The former preflight and build phases only repeated PF-01, BD-01 and BD-03.
 # Usage: verify-agent-work.sh <phase> [args...]

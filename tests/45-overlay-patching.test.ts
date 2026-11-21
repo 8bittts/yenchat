@@ -37,7 +37,7 @@ function phaseSource(name: string): string {
 
 const vendorSkillAuditPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/vendor-audit.md",
+	".agents/skills/update-yen/references/vendor-audit.md",
 );
 
 type OverlayPatchOperation = { target: string; arguments: string[] };

@@ -14,8 +14,8 @@
 # untracked files -- so committing a change to a tripwire path disarmed the
 # tripwire that exists to catch it. The gate then printed a checkmark and exited
 # 0, and because it emitted no receipt, both callers' evals (vendor VB-04,
-# /yen-zip VF-01) recorded that skip as a pass. `zip-verify.md` mandates committing a
-# vendor bump BEFORE starting /yen-zip, so in the documented order this gate could
+# /update-yen VF-01) recorded that skip as a pass. `zip-verify.md` mandates committing a
+# vendor bump BEFORE starting /update-yen, so in the documented order this gate could
 # never fire for a vendor-introduced change. Measured on 2c3a40580: the same
 # TerminalViewContainer.swift edit triggered the gate while dirty and reported
 # "no AppleScript/workspace contract changes detected" once committed.

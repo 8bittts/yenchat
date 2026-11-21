@@ -15,14 +15,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const repoRoot = process.cwd();
-const vendorSkillPath = join(repoRoot, ".agents/skills/yen-zip/SKILL.md");
+const vendorSkillPath = join(repoRoot, ".agents/skills/update-yen/SKILL.md");
 const vendorBuildRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/vendor-build.md",
+	".agents/skills/update-yen/references/vendor-build.md",
 );
 const vendorCommitRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/vendor-commit.md",
+	".agents/skills/update-yen/references/vendor-commit.md",
 );
 const scriptsReadmePath = join(repoRoot, "scripts/00-scripts-readme.md");
 const vendorScriptPath = join(repoRoot, "scripts/14-vendor.sh");
@@ -158,9 +158,9 @@ describe("vendor process guardrails", () => {
 		}
 	});
 	test("the retired /yen-vendor skill leaves no skill, pointer or backup copy in the repo", () => {
-		// /yen-vendor was folded into /yen-zip as its vendor phase. A leftover skill
+		// /yen-vendor was folded into /update-yen as its vendor phase. A leftover skill
 		// directory would list a second entry point in the picker, and a repo-local
-		// pointer would shadow the global /yen-zip command inside this repo.
+		// pointer would shadow the global /update-yen command inside this repo.
 		for (const rel of [
 			".agents/skills/yen-vendor",
 			".claude/commands/vendor.md",
@@ -173,11 +173,50 @@ describe("vendor process guardrails", () => {
 		}
 	});
 
-	test("the /yen-zip skill carries the vendor phase and its mirror rule", () => {
+	test("the retired /yen-zip name leaves no skill directory in the repo", () => {
+		// /yen-zip was renamed /update-yen when it took over yenchat's dependency
+		// updates from /update-projs. A leftover directory would list a second,
+		// stale entry point in the picker.
+		expect(existsSync(join(repoRoot, ".agents/skills/yen-zip"))).toBe(false);
+		expect(existsSync(join(repoRoot, ".agents/skills/update-yen"))).toBe(true);
+	});
+
+	test("the /update-yen deps phase runs first and owns yenchat's package updates", () => {
+		const skill = readFileSync(vendorSkillPath, "utf8");
+		const deps = readFileSync(
+			join(repoRoot, ".agents/skills/update-yen/references/deps-update.md"),
+			"utf8",
+		);
+		// The deps phase precedes the vendor phase in the phase map and in full mode.
+		const map = skill.slice(skill.indexOf("## Phase Map"));
+		expect(map.indexOf("references/deps-update.md")).toBeGreaterThan(-1);
+		expect(map.indexOf("references/deps-update.md")).toBeLessThan(
+			map.indexOf("references/vendor-check.md"),
+		);
+		expect(skill).toContain("Before Step D1, `cd $HOME/Documents/yenchat`");
+		expect(skill).toContain("`/update-projs` does not cover yenchat");
+		// The phase covers every updater /update-projs used to run here.
+		for (const needle of [
+			"bunx npm-check-updates",
+			"bun audit",
+			"tools/sparkle/VERSION",
+			"releases/latest",
+			"bun run check:full",
+			"`deps: ",
+			"eval-phase.sh begin yen-deps",
+		]) {
+			expect(deps).toContain(needle);
+		}
+		// Every deps eval ID in the table matches the namespace contract.
+		const ids = [...deps.matchAll(/^\| (DP-\d\d) \|/gm)].map((m) => m[1]);
+		expect(ids).toEqual(["DP-01", "DP-02", "DP-03", "DP-04", "DP-05", "DP-06"]);
+	});
+
+	test("the /update-yen skill carries the vendor phase and its mirror rule", () => {
 		const skill = readFileSync(vendorSkillPath, "utf8").toLowerCase();
 
 		for (const needle of [
-			"name: yen-zip",
+			"name: update-yen",
 			"mirror update rule",
 			"vendor phase",
 			"steps v1 to v5",
@@ -292,7 +331,7 @@ describe("vendor process guardrails", () => {
 			// ...with the non-code classification (code bumps must NOT skip the gate)...
 			expect(doc).toContain("build.zig");
 			expect(doc).toContain("overlay");
-			// ...and the standalone-bump guard (no /yen-zip following → still build).
+			// ...and the standalone-bump guard (no /update-yen following → still build).
 			expect(doc).toContain("not following immediately");
 		}
 	});
@@ -310,7 +349,7 @@ describe("vendor process guardrails", () => {
 		);
 		expect(buildRef).toContain("| VB-05 |");
 		expect(buildRef).toContain(
-			"bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/run-native-slice-if-needed.sh yen-vendor",
+			"bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/run-native-slice-if-needed.sh yen-vendor",
 		);
 		expect(buildRef).toContain("SKIP|native-slice-vb05|");
 		expect(buildRef).toContain("RAN|native-slice-vb05|forcing the slice:");
@@ -324,10 +363,10 @@ describe("vendor process guardrails", () => {
 		// yesterday's SMOKE_EXIT_CODE=0. Every saved-file check now tests -nt
 		// against the run id file that `begin` writes.
 		const checks: Array<[string, string]> = [
-			[".agents/skills/yen-zip/references/vendor-check.md", "| VC-01 |"],
-			[".agents/skills/yen-zip/references/vendor-update.md", "| VU-01 |"],
-			[".agents/skills/yen-zip/references/vendor-build.md", "| VB-02 |"],
-			[".agents/skills/yen-zip/references/zip-build.md", "| BD-03 |"],
+			[".agents/skills/update-yen/references/vendor-check.md", "| VC-01 |"],
+			[".agents/skills/update-yen/references/vendor-update.md", "| VU-01 |"],
+			[".agents/skills/update-yen/references/vendor-build.md", "| VB-02 |"],
+			[".agents/skills/update-yen/references/zip-build.md", "| BD-03 |"],
 		];
 		for (const [rel, rowId] of checks) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
@@ -462,7 +501,7 @@ describe("vendor process guardrails", () => {
 
 	test("Yazi audit uses a supported non-interactive liveness command", () => {
 		const auditReference = readFileSync(
-			join(repoRoot, ".agents/skills/yen-zip/references/vendor-audit.md"),
+			join(repoRoot, ".agents/skills/update-yen/references/vendor-audit.md"),
 			"utf8",
 		);
 		const fileBrowserDoc = readFileSync(
@@ -695,7 +734,7 @@ describe("unknown-status fail-closed gates", () => {
 	const analyzeImpactPath = join(repoRoot, "scripts/09-analyze-impact.sh");
 	const auditLayersPath = join(
 		repoRoot,
-		".agents/skills/yen-zip/scripts/verify-audit-layers.sh",
+		".agents/skills/update-yen/scripts/verify-audit-layers.sh",
 	);
 
 	test("forge auth header is centralized and used by every API caller", () => {
@@ -815,7 +854,9 @@ describe("unknown-status fail-closed gates", () => {
 	});
 
 	test("zip preflight keychain check exercises signing, not a negated grep", () => {
-		for (const rel of [".agents/skills/yen-zip/references/zip-preflight.md"]) {
+		for (const rel of [
+			".agents/skills/update-yen/references/zip-preflight.md",
+		]) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
 			// `security show-keychain-info | grep -qv locked` passes on the locked
 			// error string, and the non-negated variant blocks on an unlock prompt.
@@ -1019,7 +1060,7 @@ describe("vendor manifest is the single roster", () => {
 describe("eval-phase.sh fails closed", () => {
 	const evalScriptPath = join(
 		repoRoot,
-		".agents/skills/yen-zip/scripts/eval-phase.sh",
+		".agents/skills/update-yen/scripts/eval-phase.sh",
 	);
 
 	// eval-phase.sh derives REPO_ROOT four levels up from its own directory and
@@ -1027,7 +1068,7 @@ describe("eval-phase.sh fails closed", () => {
 	// dir so a test run never writes into the real telemetry log.
 	function sandbox(): { root: string; script: string } {
 		const root = mkdtempSync(join(tmpdir(), "yen-evalphase-"));
-		const scriptDir = join(root, ".agents/skills/yen-zip/scripts");
+		const scriptDir = join(root, ".agents/skills/update-yen/scripts");
 		mkdirSync(scriptDir, { recursive: true });
 		const script = join(scriptDir, "eval-phase.sh");
 		writeFileSync(script, readFileSync(evalScriptPath, "utf8"));
@@ -1103,7 +1144,7 @@ describe("eval-phase.sh fails closed", () => {
 	test("summary with no eval file at all reports FAIL, not PASS", () => {
 		const { root, script } = sandbox();
 		try {
-			const r = run(script, ["summary", "yen-zip"]);
+			const r = run(script, ["summary", "update-yen"]);
 			expect(r.stdout).toContain("Result: FAIL");
 			expect(r.stdout).not.toContain("Result: PASS");
 			expect(r.status).toBe(1);
@@ -1117,7 +1158,9 @@ describe("eval-phase.sh fails closed", () => {
 		try {
 			const cases: Array<[string, string]> = [
 				["yen-vendor", "VG1"],
-				["yen-zip", "SMOKE-01"],
+				["update-yen", "SMOKE-01"],
+				["yen-deps", "VC-01"],
+				["yen-deps", "DP1"],
 			];
 			for (const [skill, badId] of cases) {
 				const r = run(script, ["check", skill, badId, "desc", "true"]);
@@ -1139,8 +1182,14 @@ describe("eval-phase.sh fails closed", () => {
 				run(script, ["check", "yen-vendor", "VC-01", "ok", "true"]).status,
 			).toBe(0);
 			expect(
-				run(script, ["check", "yen-zip", "PF-01", "ok", "true"]).status,
+				run(script, ["check", "update-yen", "PF-01", "ok", "true"]).status,
 			).toBe(0);
+			expect(
+				run(script, ["check", "yen-deps", "DP-01", "ok", "true"]).status,
+			).toBe(0);
+			const deps = run(script, ["summary", "yen-deps"]);
+			expect(deps.stdout).toContain("Result: PASS");
+			expect(deps.status).toBe(0);
 
 			const r = run(script, ["summary", "yen-vendor"]);
 			expect(r.stdout).toContain("Result: PASS");
@@ -1370,6 +1419,7 @@ describe("eval-phase.sh fails closed", () => {
 		expect(
 			script.match(/CHECK_ID_PATTERN='\^\(PF\|BD\|VF\|RL\)/g)?.length,
 		).toBe(1);
+		expect(script.match(/CHECK_ID_PATTERN='\^DP-/g)?.length).toBe(1);
 	});
 });
 
@@ -1384,9 +1434,9 @@ describe("eval-phase.sh fails closed", () => {
 // ---------------------------------------------------------------------------
 describe("skill scripts resolve REPO_ROOT physically", () => {
 	const skillScripts = [
-		".agents/skills/yen-zip/scripts/verify-audit-layers.sh",
-		".agents/skills/yen-zip/scripts/eval-phase.sh",
-		".agents/skills/yen-zip/scripts/verify-agent-work.sh",
+		".agents/skills/update-yen/scripts/verify-audit-layers.sh",
+		".agents/skills/update-yen/scripts/eval-phase.sh",
+		".agents/skills/update-yen/scripts/verify-agent-work.sh",
 	];
 
 	test("no skill script derives REPO_ROOT with a logical cd", () => {
@@ -1404,7 +1454,7 @@ describe("skill scripts resolve REPO_ROOT physically", () => {
 	});
 
 	test("eval records written through a symlinked skill path land in the repo", () => {
-		// A two-hop symlink chain into the repo skill dir, as ~/.codex/skills/yen-zip
+		// A two-hop symlink chain into the repo skill dir, as ~/.codex/skills/update-yen
 		// is one hop. Four levels up from the LOGICAL path is the sandbox, so an unfixed script
 		// writes its eval records there. A fixed one writes into the repo instead.
 		// The probe skill name keeps `begin` from resetting a real run's id.
@@ -1413,18 +1463,18 @@ describe("skill scripts resolve REPO_ROOT physically", () => {
 			mkdirSync(join(sandbox, "codex/skills"), { recursive: true });
 			mkdirSync(join(sandbox, "claude/skills"), { recursive: true });
 			symlinkSync(
-				join(repoRoot, ".agents/skills/yen-zip"),
-				join(sandbox, "codex/skills/yen-zip"),
+				join(repoRoot, ".agents/skills/update-yen"),
+				join(sandbox, "codex/skills/update-yen"),
 			);
 			symlinkSync(
-				join(sandbox, "codex/skills/yen-zip"),
-				join(sandbox, "claude/skills/yen-zip"),
+				join(sandbox, "codex/skills/update-yen"),
+				join(sandbox, "claude/skills/update-yen"),
 			);
 
 			const r = spawnSync(
 				"bash",
 				[
-					join(sandbox, "claude/skills/yen-zip/scripts/eval-phase.sh"),
+					join(sandbox, "claude/skills/update-yen/scripts/eval-phase.sh"),
 					"begin",
 					"yen-repo-root-probe",
 				],

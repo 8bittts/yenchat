@@ -7,7 +7,7 @@
 #   ./scripts/14-vendor.sh              # Check + update all vendors
 #   ./scripts/14-vendor.sh --check      # Check only (no downloads)
 #   ./scripts/14-vendor.sh --check --release  # Release gate: accept a Ghostty baseline
-#                                       # pushed by the /yen-zip vendor phase within the release window
+#                                       # pushed by the /update-yen vendor phase within the release window
 #   ./scripts/14-vendor.sh --force      # Force re-download all
 #   ./scripts/14-vendor.sh ghostty      # Update only Ghostty
 #   ./scripts/14-vendor.sh yazi         # Update only Yazi
@@ -169,7 +169,7 @@ acquire_vendor_lock() {
         VENDOR_LOCK_ACQUIRED \
         "14-vendor.sh" \
         "ERROR: Another vendor run is in progress (pid {pid})
-Wait for it to finish before starting a new /yen-zip vendor phase or vendor gate." \
+Wait for it to finish before starting a new /update-yen vendor phase or vendor gate." \
         "ERROR: Vendor lock exists without a PID file: $VENDOR_LOCK_DIR
 If no vendor process is running, remove the stale lock and retry." \
         "ERROR: Could not acquire vendor lock: $VENDOR_LOCK_DIR" || exit 1
@@ -1137,7 +1137,7 @@ if [ "$RELEASE_CHECK" = true ]; then
         echo "--------------------------------------------"
         echo "  Accepted: Ghostty is $GHOSTTY_BEHIND_COMMITS commit(s) behind upstream, and the committed baseline"
         echo "  was audited and pushed by the vendor phase inside the ${RELEASE_VENDOR_WINDOW_HOURS}h window ($RELEASE_VENDOR_WINDOW_EVIDENCE)."
-        echo "  The release ships that baseline; the newer upstream commits wait for the next /yen-zip vendor phase."
+        echo "  The release ships that baseline; the newer upstream commits wait for the next /update-yen vendor phase."
         BEHIND_COUNT=$((BEHIND_COUNT - 1))
         RELEASE_WINDOW_UNIT_RAN="accepted_behind_commits=$GHOSTTY_BEHIND_COMMITS $RELEASE_VENDOR_WINDOW_EVIDENCE"
     else
@@ -1223,7 +1223,7 @@ if [ "$ERROR_COUNT" -gt 0 ]; then
 fi
 
 if [ "$BEHIND_COUNT" -gt 0 ]; then
-    echo "  $BEHIND_COUNT vendor(s) behind or unknown. Run /yen-zip; its vendor phase updates them."
+    echo "  $BEHIND_COUNT vendor(s) behind or unknown. Run /update-yen; its vendor phase updates them."
     gate_end 1
 fi
 

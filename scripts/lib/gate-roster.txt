@@ -7,7 +7,7 @@
 #
 # Add a gate to this file in the same commit that migrates it — never before.
 #
-# MIGRATION COMPLETE. Every gate on the /yen-zip vendor and release paths is listed below.
+# MIGRATION COMPLETE. Every gate on the /update-yen vendor and release paths is listed below.
 #
 # An entry may name a subdirectory (`manual/16-...`). The path is resolved under
 # scripts/, and the gate NAME is the basename -- that is what appears in the

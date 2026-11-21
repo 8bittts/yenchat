@@ -68,7 +68,7 @@ yen-terminal/customizations/vendor/yazi/yazi --version
 
 ## Vendor Watch
 
-The `/yen-zip` vendor phase carries the Yazi checks in `.agents/skills/yen-zip/references/vendor-audit.md`; when Yazi updates, confirm:
+The `/update-yen` vendor phase carries the Yazi checks in `.agents/skills/update-yen/references/vendor-audit.md`; when Yazi updates, confirm:
 
 - `theme.toml` still matches the schema (`[tabs]`, `[indicator]`, `[cmp]`, `[icon].{prepend,append}_globs`, `filetype.rules` with `url`); `tests/35-yazi-config.test.ts` guards it.
 - Flavor fields still validate, and `bat --list-themes` still accepts `bat-theme` after a `bat` update.

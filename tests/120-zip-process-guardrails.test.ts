@@ -17,34 +17,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const repoRoot = process.cwd();
-const zipSkillPath = join(repoRoot, ".agents/skills/yen-zip/SKILL.md");
+const zipSkillPath = join(repoRoot, ".agents/skills/update-yen/SKILL.md");
 const zipPreflightRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/zip-preflight.md",
+	".agents/skills/update-yen/references/zip-preflight.md",
 );
 const zipBuildRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/zip-build.md",
+	".agents/skills/update-yen/references/zip-build.md",
 );
 const zipVerifyRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/zip-verify.md",
+	".agents/skills/update-yen/references/zip-verify.md",
 );
 const zipReleaseRefPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/references/zip-release.md",
+	".agents/skills/update-yen/references/zip-release.md",
 );
 const zipAgentVerifierPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/scripts/verify-agent-work.sh",
+	".agents/skills/update-yen/scripts/verify-agent-work.sh",
 );
 const nativeSliceDeciderPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/scripts/run-native-slice-if-needed.sh",
+	".agents/skills/update-yen/scripts/run-native-slice-if-needed.sh",
 );
 const vendorRunReaperPath = join(
 	repoRoot,
-	".agents/skills/yen-zip/scripts/reap-vendor-runs.sh",
+	".agents/skills/update-yen/scripts/reap-vendor-runs.sh",
 );
 const brandingScriptPath = join(repoRoot, "scripts/04-verify-branding.sh");
 const scriptsReadmePath = join(repoRoot, "scripts/00-scripts-readme.md");
@@ -83,12 +83,12 @@ const releaseTargetVerifierPath = join(
 
 describe("zip process guardrails", () => {
 	// Mirror-parity assertions prove the copies match each other, never that they
-	// match reality: `tests/53` stayed advertised across all four /yen-zip surfaces
+	// match reality: `tests/53` stayed advertised across all four /update-yen surfaces
 	// for months after the file was deleted, and every parity test stayed green.
 	test("every tests/ path advertised by the zip surfaces resolves to a real file", () => {
 		const surfaces: Array<[string, string]> = [
-			[".agents/skills/yen-zip/references/zip-build.md", zipBuildRefPath],
-			[".agents/skills/yen-zip/SKILL.md", zipSkillPath],
+			[".agents/skills/update-yen/references/zip-build.md", zipBuildRefPath],
+			[".agents/skills/update-yen/SKILL.md", zipSkillPath],
 		];
 		const testFiles = readdirSync(join(repoRoot, "tests"));
 
@@ -141,12 +141,12 @@ describe("zip process guardrails", () => {
 	});
 
 	test("the zip command is global, so the repo carries no pointer or backup copy", () => {
-		// /yen-zip is the global Claude command ~/.claude/commands/yen-zip.md, which runs
+		// /update-yen is the global Claude command ~/.claude/commands/update-yen.md, which runs
 		// from any directory. A repo-local pointer would shadow it inside this repo, and
 		// the operator's global backups live in 8leeai/_global/, not here.
 		for (const rel of [
 			".claude/commands/zip.md",
-			".claude/commands/yen-zip.md",
+			".claude/commands/update-yen.md",
 			"claude-commands",
 		]) {
 			expect(existsSync(join(repoRoot, rel)), `${rel} must not exist`).toBe(
@@ -192,17 +192,17 @@ describe("zip process guardrails", () => {
 		const skill = readFileSync(zipSkillPath, "utf8").toLowerCase();
 
 		for (const needle of [
-			"name: yen-zip",
-			"$yen-zip",
-			"/yen-zip local",
+			"name: update-yen",
+			"$update-yen",
+			"/update-yen local",
 			"mirror update rule",
 			"runtime sync rule",
-			"~/.claude/commands/yen-zip.md",
-			"~/.codex/skills/yen-zip",
-			"8leeai/_global/claude-commands/yen-zip.md",
+			"~/.claude/commands/update-yen.md",
+			"~/.codex/skills/update-yen",
+			"8leeai/_global/claude-commands/update-yen.md",
 			"runs from any directory",
 			"cd $home/documents/yenchat",
-			".agents/skills/yen-zip/skill.md",
+			".agents/skills/update-yen/skill.md",
 			"references",
 			"same commit",
 			"tests/120-zip-process-guardrails.test.ts",
@@ -227,7 +227,7 @@ describe("zip process guardrails", () => {
 		expect(buildRef).toContain(
 			"The build script prints 9 numbered steps, `[1/9]` to `[9/9]`",
 		);
-		expect(buildRef).toContain("~/.claude/commands/yen-zip.md");
+		expect(buildRef).toContain("~/.claude/commands/update-yen.md");
 	});
 
 	test("component verification count stays synced across zip docs", () => {
@@ -348,7 +348,7 @@ describe("zip process guardrails", () => {
 		expect(script).toContain("YEN_COMPONENT_XCODE_REGRESSION_MODE");
 		expect(script).toContain("latest [deploy] release");
 		// The auto-mode window anchors on the last RELEASE commit. A bare
-		// [deploy] anchor also matched the release-notes commit that every /yen-zip
+		// [deploy] anchor also matched the release-notes commit that every /update-yen
 		// pushes right after shipping, plus "chore: update packages [deploy]",
 		// which moved the window past native work and reported no native changes.
 		expect(script).toContain("--grep='^v[0-9]+\\.[0-9]+: '");
@@ -393,9 +393,9 @@ describe("zip process guardrails", () => {
 		const buildRef = readFileSync(zipBuildRefPath, "utf8");
 		const verifyRef = readFileSync(zipVerifyRefPath, "utf8");
 		const savedReceipt =
-			"tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-components.out";
+			"tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-components.out";
 		const decider =
-			"bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/run-native-slice-if-needed.sh";
+			"bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/run-native-slice-if-needed.sh";
 
 		expect(buildRef).toContain(
 			`set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 | ${savedReceipt}`,
@@ -418,9 +418,9 @@ describe("zip process guardrails", () => {
 		// RAN|verifier| or SKIP|verifier| line left to judge after a pass.
 		const verifyRef = readFileSync(zipVerifyRefPath, "utf8");
 		expect(verifyRef).toContain(
-			"16-verify-applescript-if-needed.sh 2>&1 \\| tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-applescript.out",
+			"16-verify-applescript-if-needed.sh 2>&1 \\| tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-applescript.out",
 		);
-		expect(verifyRef).toContain("in the saved `yen-zip-applescript.out`");
+		expect(verifyRef).toContain("in the saved `update-yen-applescript.out`");
 	});
 
 	test("build-release vendor-gate guidance uses absolute script paths", () => {
@@ -587,14 +587,14 @@ describe("gate-mode documentation matches the script", () => {
 		}
 		expect(detector).toContain("YEN_ALLOW_GATE_DOWNGRADE");
 
-		for (const rel of [".agents/skills/yen-zip/references/zip-verify.md"]) {
+		for (const rel of [".agents/skills/update-yen/references/zip-verify.md"]) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
 			expect(doc).toContain("YEN_ALLOW_GATE_DOWNGRADE");
 		}
 	});
 
 	test("zip version guidance is not pinned to a past milestone", () => {
-		for (const rel of [".agents/skills/yen-zip/references/zip-build.md"]) {
+		for (const rel of [".agents/skills/update-yen/references/zip-build.md"]) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
 			// 1.000 shipped long ago; guidance framed as "the next bump" is stale.
 			expect(doc).not.toContain("next bump from `0.999`");
@@ -608,7 +608,7 @@ describe("gate-mode documentation matches the script", () => {
 // untracked baseline reveals the problem — so they have to be written down.
 describe("release-process gotchas stay documented", () => {
 	test("the push-HEAD ignoreCommand trap is documented in every zip surface", () => {
-		for (const rel of [".agents/skills/yen-zip/references/zip-release.md"]) {
+		for (const rel of [".agents/skills/update-yen/references/zip-release.md"]) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
 			expect(doc).toContain("Push the release-notes commit ALONE");
 			// The mechanism, not just the instruction — an instruction without a
@@ -619,7 +619,7 @@ describe("release-process gotchas stay documented", () => {
 	});
 
 	test("the vendor-artifacts-not-staged trap is documented", () => {
-		for (const rel of [".agents/skills/yen-zip/references/zip-verify.md"]) {
+		for (const rel of [".agents/skills/update-yen/references/zip-verify.md"]) {
 			const doc = readFileSync(join(repoRoot, rel), "utf8");
 			expect(doc).toContain("Commit any vendor bump BEFORE");
 			expect(doc).toContain("VENDOR_INFO.txt");
@@ -658,8 +658,8 @@ describe("zip verify-phase agent check is falsifiable", () => {
 	];
 
 	function sandbox(stage: string[]): { root: string; script: string } {
-		const root = mkdtempSync(join(tmpdir(), "yen-zipverify-"));
-		const scriptDir = join(root, ".agents/skills/yen-zip/scripts");
+		const root = mkdtempSync(join(tmpdir(), "update-yenverify-"));
+		const scriptDir = join(root, ".agents/skills/update-yen/scripts");
 		mkdirSync(scriptDir, { recursive: true });
 		mkdirSync(join(root, "public/stable"), { recursive: true });
 		const script = join(scriptDir, "verify-agent-work.sh");
@@ -723,9 +723,9 @@ describe("zip verify-phase agent check is falsifiable", () => {
 
 describe("zip release agent check supports isolated worktrees", () => {
 	function sandbox() {
-		const root = mkdtempSync(join(tmpdir(), "yen-ziprelease-"));
-		const remote = mkdtempSync(join(tmpdir(), "yen-ziprelease-remote-"));
-		const scriptDir = join(root, ".agents/skills/yen-zip/scripts");
+		const root = mkdtempSync(join(tmpdir(), "update-yenrelease-"));
+		const remote = mkdtempSync(join(tmpdir(), "update-yenrelease-remote-"));
+		const scriptDir = join(root, ".agents/skills/update-yen/scripts");
 		mkdirSync(scriptDir, { recursive: true });
 		const script = join(scriptDir, "verify-agent-work.sh");
 		writeFileSync(script, readFileSync(zipAgentVerifierPath, "utf8"));
@@ -999,9 +999,9 @@ describe("Step 6a native-slice decision is falsifiable", () => {
 		step4: string | null,
 		opts: { stale?: boolean; gateExit?: number; skill?: string } = {},
 	) {
-		const skill = opts.skill ?? "yen-zip";
-		const root = mkdtempSync(join(tmpdir(), "yen-zip6a-"));
-		const scriptDir = join(root, ".agents/skills/yen-zip/scripts");
+		const skill = opts.skill ?? "update-yen";
+		const root = mkdtempSync(join(tmpdir(), "update-yen6a-"));
+		const scriptDir = join(root, ".agents/skills/update-yen/scripts");
 		const telemetry = join(root, "tmp/skill-telemetry");
 		mkdirSync(scriptDir, { recursive: true });
 		mkdirSync(join(root, "scripts"), { recursive: true });
@@ -1118,9 +1118,9 @@ describe("Step 0f vendor-run reaper is falsifiable", () => {
 	// copy at the real skill path, a git repo that ignores tmp/, and a private
 	// TMPDIR, so no live lock on this machine can change the outcome.
 	function sandbox(opts: { ignored?: boolean } = {}) {
-		const root = realpathSync(mkdtempSync(join(tmpdir(), "yen-zipreap-")));
-		const locks = mkdtempSync(join(tmpdir(), "yen-zipreap-locks-"));
-		const scriptDir = join(root, ".agents/skills/yen-zip/scripts");
+		const root = realpathSync(mkdtempSync(join(tmpdir(), "update-yenreap-")));
+		const locks = mkdtempSync(join(tmpdir(), "update-yenreap-locks-"));
+		const scriptDir = join(root, ".agents/skills/update-yen/scripts");
 		mkdirSync(scriptDir, { recursive: true });
 		const script = join(scriptDir, "reap-vendor-runs.sh");
 		writeFileSync(script, readFileSync(vendorRunReaperPath, "utf8"));
@@ -1245,7 +1245,7 @@ describe("Step 0f vendor-run reaper is falsifiable", () => {
 
 	test("refuses a symlinked folder and leaves its target alone", () => {
 		const box = sandbox();
-		const target = mkdtempSync(join(tmpdir(), "yen-zipreap-target-"));
+		const target = mkdtempSync(join(tmpdir(), "update-yenreap-target-"));
 		try {
 			rmSync(box.runs, { recursive: true, force: true });
 			const kept = makeRun(target, "20261005-old", DAY_AGO);

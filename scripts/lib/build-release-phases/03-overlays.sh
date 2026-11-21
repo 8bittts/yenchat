@@ -4,7 +4,7 @@
 echo "[5/9] Applying overlays..."
 
 # Quiet by default: apply-overlays.sh streams ~37 per-patch "Applied/idempotent
-# skip" lines that drown the /yen-zip log. Capture them and surface only warnings/
+# skip" lines that drown the /update-yen log. Capture them and surface only warnings/
 # errors plus a one-line summary. Full output streams on failure, or set
 # YEN_VERBOSE_OVERLAYS=1 to see every patch line.
 if [ "${YEN_VERBOSE_OVERLAYS:-0}" = "1" ]; then

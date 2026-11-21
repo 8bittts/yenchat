@@ -44,7 +44,7 @@ Do not wait for the post-notarization upload to discover a missing login or perm
 ### 0f. Reap Leftover Vendor Runs
 
 ```bash
-bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/reap-vendor-runs.sh
+bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/reap-vendor-runs.sh
 ```
 
 Each directory under the gitignored `tmp/vendor-runs/` holds a full Ghostty mirror plus baselines from a vendor run, about 4 GB, and nothing else removes it.
@@ -59,11 +59,11 @@ Step 1 takes the vendor locks itself, so the reap runs before it.
 bash $HOME/Documents/yenchat/scripts/14-vendor.sh --check --release
 ```
 
-Checks every vendor in `scripts/lib/vendor-manifest.sh` for upstream updates. `--release` changes one reading: a Ghostty `behind` is accepted when the committed `.ghostty-baseline` was pushed by a `vendor:` commit within the 24h window in `scripts/lib/release-vendor-window.sh`, the vendor files are clean in the tree, and that commit is on `origin/main` after a fresh fetch. The output then carries a `Release Window` block and `RAN|release-window|accepted_behind_commits=N ...`; the release ships the audited baseline and the newer upstream commits wait for the next `/yen-zip` vendor phase. Unknown status, errors, a missing binary, a binary vendor behind, and a Ghostty baseline older than the window still block.
+Checks every vendor in `scripts/lib/vendor-manifest.sh` for upstream updates. `--release` changes one reading: a Ghostty `behind` is accepted when the committed `.ghostty-baseline` was pushed by a `vendor:` commit within the 24h window in `scripts/lib/release-vendor-window.sh`, the vendor files are clean in the tree, and that commit is on `origin/main` after a fresh fetch. The output then carries a `Release Window` block and `RAN|release-window|accepted_behind_commits=N ...`; the release ships the audited baseline and the newer upstream commits wait for the next `/update-yen` vendor phase. Unknown status, errors, a missing binary, a binary vendor behind, and a Ghostty baseline older than the window still block.
 
 Default behavior:
 - Exit 0: every vendor is current. Proceed to build phase.
-- Missing vendor binary: run `bash $HOME/Documents/yenchat/scripts/14-vendor.sh`, then restart `/yen-zip` from Step 0.
+- Missing vendor binary: run `bash $HOME/Documents/yenchat/scripts/14-vendor.sh`, then restart `/update-yen` from Step 0.
 - Behind/unknown vendor: run the vendor phase again (Steps V1 to V5, including its audit), then restart from Step 0.
 
 Read a non-zero exit from the `Summary` block, because three different states produce it:
@@ -72,7 +72,7 @@ Read a non-zero exit from the `Summary` block, because three different states pr
 - `ERROR: Another workflow is running` is the shared `yen-workflow` lock held by a live `14-vendor.sh`, `build-release.sh` or `finalize-build.sh`; wait for that PID, never remove a live lock.
 
 Pinned-by-rollback exception:
-- If a vendor is reported behind and the current baseline commit matches `_docs/04-security.md` -> `Ghostty Rollback History`, the pin is deliberate and `/yen-zip` may proceed from that materialized baseline. The ledger table is empty while no range is pinned, so the exception is dormant until a row exists; do not read an ordinary upstream-moved `Behind: 1` as this case.
+- If a vendor is reported behind and the current baseline commit matches `_docs/04-security.md` -> `Ghostty Rollback History`, the pin is deliberate and `/update-yen` may proceed from that materialized baseline. The ledger table is empty while no range is pinned, so the exception is dormant until a row exists; do not read an ordinary upstream-moved `Behind: 1` as this case.
 - PF-04 records the raw check, so a run that proceeds under the exception carries a PF-04 FAIL into `summary`; re-record PF-04 with the ledger match as its command (a `grep` of the baseline commit against the ledger row) before continuing, or the final summary fails.
 - No `YEN_ZIP_ALLOW_STALE_VENDORS` bypass exists. If a sub-script starts enforcing currency despite the documented pin, fix that script or add the row to the rollback ledger; do not invent an env override.
 - Any other behind state blocks shipping.
@@ -80,7 +80,7 @@ Pinned-by-rollback exception:
 Rollback-history warning:
 - `14-vendor.sh --check` can warn when the fetched `current...main` range overlaps the rollback ledger.
 - The warning is informational only. It records prior bad ranges, not a current hard block.
-- `YEN_VENDOR_BLOCK_ON_ROLLBACK=1` makes that warning fail closed for update audits, but normal `/yen-zip` preflight treats it as a warning.
+- `YEN_VENDOR_BLOCK_ON_ROLLBACK=1` makes that warning fail closed for update audits, but normal `/update-yen` preflight treats it as a warning.
 
 This is a HARD GATE. Do not proceed unless vendors are current, Ghostty is accepted by the release window, or the pinned-by-rollback exception applies.
 
@@ -93,4 +93,4 @@ This is a HARD GATE. Do not proceed unless vendors are current, Ghostty is accep
 | PF-03 | No untriaged crashes | `bash $HOME/Documents/yenchat/scripts/manual/12-check-recent-crashes.sh --days 3` |
 | PF-04 | Every vendor current, or Ghostty behind inside the release window, or pinned by rollback | `bash $HOME/Documents/yenchat/scripts/14-vendor.sh --check --release` |
 | PF-05 | GitHub release target public and pushable | `bash $HOME/Documents/yenchat/scripts/01-verify-release-target.sh` |
-| PF-06 | Leftover vendor runs reaped or held | `bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/reap-vendor-runs.sh` |
+| PF-06 | Leftover vendor runs reaped or held | `bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/reap-vendor-runs.sh` |

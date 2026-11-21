@@ -20,7 +20,7 @@ Commit message rules:
 - Version matches `public/stable/version.json`
 - No AI/Claude attribution (per global rules)
 - Description summarizes what changed in this release
-- `[deploy]` is required because `/yen-zip` always stages `public/stable/*`, which Vercel serves
+- `[deploy]` is required because `/update-yen` always stages `public/stable/*`, which Vercel serves
 
 ## Step 9: Verify the GitHub Release Upload
 
@@ -50,7 +50,7 @@ Only push after:
 
 ## Step 11: Publish Release Notes + Feature Documentation
 
-**Release notes — REQUIRED on every `/yen-zip`, never "if applicable":**
+**Release notes — REQUIRED on every `/update-yen`, never "if applicable":**
 
 The public release notes voice (blog.yen.chat/releases) comes from the hand-curated `lib/release-notes/release-notes-copy.ts` (`RELEASE_COPY`), merged by `scripts/gen-release-notes.ts` over the terse commit line. The ship date comes from this release's `version.json` bump commit (Step 8), so notes ship as a short follow-up commit right after the release. Builds from before the open-source history come from the frozen `lib/release-notes/release-ledger.ts`, so a regeneration must still report every earlier week; a run that prints far fewer weeks than `/release` shows is the ledger not being read, and `tests/161` fails on it. A maintenance build with no user-facing change goes in `RELEASE_EXCLUDE` instead of `RELEASE_COPY`. See `_docs/10-gtm.md` -> "Release Notes".
 
@@ -87,7 +87,7 @@ Then read representative live routes: `https://blog.yen.chat/releases` carries t
 
 ## Step 12: Release Summary
 
-**Always end `/yen-zip` with a clear summary table.** Include the vendor phase's Vendor Summary and Upstream Changelog (`references/vendor-commit.md`) when it updated anything.
+**Always end `/update-yen` with a clear summary table.** Include the vendor phase's Vendor Summary and Upstream Changelog (`references/vendor-commit.md`) when it updated anything.
 
 ```text
 ## Release Summary: v<version> [deploy]
@@ -129,7 +129,7 @@ It must not push a second time.
 
 ## Local Mode
 
-For `/yen-zip local`, this phase is skipped entirely. Local builds:
+For `/update-yen local`, this phase is skipped entirely. Local builds:
 - Do not commit
 - Do not upload
 - Do not push

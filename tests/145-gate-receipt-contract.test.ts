@@ -282,7 +282,7 @@ describe("gate roster", () => {
 	test("the roster reaches scripts/manual/", () => {
 		// scripts/manual/ was outside this loop's reach because entries were
 		// resolved as scripts/<entry>.sh with no directory component. That is how
-		// 16-verify-applescript-if-needed ran on both the /yen-zip vendor and release paths
+		// 16-verify-applescript-if-needed ran on both the /update-yen vendor and release paths
 		// while emitting no receipt at all.
 		expect(roster.some((g) => g.startsWith("manual/"))).toBe(true);
 	});

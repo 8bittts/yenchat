@@ -1,6 +1,6 @@
 #!/bin/bash
 # run-native-slice-if-needed.sh — run the native xcodebuild slice exactly once
-# per run. /yen-zip Step 6a (VF-04) and vendor Step V4 (VB-05) share this decision.
+# per run. /update-yen Step 6a (VF-04) and vendor Step V4 (VB-05) share this decision.
 #
 # Forces the slice after the build ONLY when the pre-build component gate
 # (Step 4 and Step V4) did not run it. Step 4 tees the component gate output
@@ -11,8 +11,8 @@
 # YENKit.xcframework, so Step 4 records SKIP there and the build is the first
 # point at which the slice can run at all.
 #
-# Usage: run-native-slice-if-needed.sh [yen-zip|yen-vendor]   (default: yen-zip)
-# The argument names the eval namespace: yen-zip is the release, yen-vendor the vendor phase.
+# Usage: run-native-slice-if-needed.sh [update-yen|yen-vendor]   (default: update-yen)
+# The argument names the eval namespace: update-yen is the release, yen-vendor the vendor phase.
 # Bash 3.2 compatible.
 
 set -euo pipefail
@@ -22,12 +22,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -P "$(dirname "$0")" && pwd -P)"
 REPO_ROOT="$(cd -P "$SCRIPT_DIR/../../../.." && pwd -P)"
 
-skill="${1:-yen-zip}"
+skill="${1:-update-yen}"
 case "$skill" in
-    yen-zip) LABEL="native-slice-6a" ;;
+    update-yen) LABEL="native-slice-6a" ;;
     yen-vendor) LABEL="native-slice-vb05" ;;
     *)
-        echo "Usage: run-native-slice-if-needed.sh [yen-zip|yen-vendor]" >&2
+        echo "Usage: run-native-slice-if-needed.sh [update-yen|yen-vendor]" >&2
         exit 2
         ;;
 esac

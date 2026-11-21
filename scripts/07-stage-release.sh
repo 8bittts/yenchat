@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stage Release Files Script
-# Used in /yen-zip Step 7: Stage Release
+# Used in /update-yen Step 7: Stage Release
 #
 # Stages release metadata and version bump files for commit.
 # DMG is hosted on GitHub Releases (uploaded by finalize-build.sh).

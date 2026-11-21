@@ -20,7 +20,7 @@ import { join } from "node:path";
  * because it emitted no receipt, the vendor VB-04 and release VF-01 evals scored
  * that skip as a pass.
  *
- * `zip-verify.md` mandates committing a vendor bump BEFORE starting /yen-zip, so in
+ * `zip-verify.md` mandates committing a vendor bump BEFORE starting /update-yen, so in
  * the documented order the gate could never fire for a vendor-introduced change.
  * Measured on 2c3a40580: the same TerminalViewContainer.swift edit triggered the
  * gate while dirty and reported "no changes detected" once committed.

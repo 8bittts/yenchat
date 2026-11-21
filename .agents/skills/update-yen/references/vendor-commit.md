@@ -30,7 +30,7 @@ On Claude Code the push to `main` needs `dangerouslyDisableSandbox: true` on tha
 
 ## Vendor Summary
 
-Keep a summary for the final `/yen-zip` report. All 14 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
+Keep a summary for the final `/update-yen` report. All 14 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
 
 ```
 ## Vendor Summary
@@ -61,7 +61,7 @@ Then report every upstream change in the range, per commit for Ghostty (`https:/
 
 ## Eval Summary
 
-After the commit checks, run `bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/eval-phase.sh summary yen-vendor` and quote its `Result: PASS` line before the release starts at Step 0.
+After the commit checks, run `bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/eval-phase.sh summary yen-vendor` and quote its `Result: PASS` line before the release starts at Step 0.
 
 ## Eval Checks
 

@@ -101,7 +101,7 @@ should_run_component_xcode_regression() {
     # Anchor on the last RELEASE commit ("v1.167: ... [deploy]"), not on any
     # commit carrying [deploy]. That marker also rides web-only deploys — most
     # reliably the "docs: publish v<version> release notes [deploy]" commit that
-    # every /yen-zip pushes immediately AFTER the release, plus routine package
+    # every /update-yen pushes immediately AFTER the release, plus routine package
     # bumps. Anchoring on [deploy] therefore moved the window past the native
     # changes the release had just shipped, and the gate reported "no native
     # macOS changes" for work that was never covered by the native slice.
@@ -516,7 +516,7 @@ else
     COMMAND_PALETTE_EDGE_CASES_TEST="$REPO_ROOT/yen-terminal/overlays/macos/Tests/Settings/TerminalCommandPaletteAuditEdgeCaseTests.swift"
 
     # The gate/process guardrail suites run here too. They were previously
-    # invoked by nothing — not this script, not /yen-zip, not a hook — so the
+    # invoked by nothing — not this script, not /update-yen, not a hook — so the
     # fingerprint scanner shipped release-wired while the test proving it fails
     # closed only ran if somebody typed `bun test` by hand. Folding them into
     # this existing check keeps the pinned 16-check count unchanged.

@@ -6,10 +6,10 @@
 
 A Ghostty vendor bump cleans `YENKit.xcframework`, so Step 4 cannot run the native `xcodebuild` slice and records `SKIP|xcode-regression|xcframework missing/incomplete`. Step 5 rebuilds it, so this is the only point in such a release where the slice can run at all; skipping it ships the command-palette, browser, keyboard, and utility-window suites unexecuted. When Step 4 did run the slice, the forced invocation re-runs all 17 component units and repeats Step 4 for no added coverage.
 
-Run Step 6a only through VF-04, which makes the decision from Step 4's saved receipt (`tmp/skill-telemetry/yen-zip-components.out`, written by BD-02's `tee`):
+Run Step 6a only through VF-04, which makes the decision from Step 4's saved receipt (`tmp/skill-telemetry/update-yen-components.out`, written by BD-02's `tee`):
 
 ```bash
-bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/run-native-slice-if-needed.sh
+bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/run-native-slice-if-needed.sh
 ```
 
 - `SKIP|native-slice-6a|Step 4 already ran it: RAN|xcode-regression|suites=<n> executed=<N>` — the receipt is from this run, passed, and executed at least one test; quote the line and move on.
@@ -51,10 +51,10 @@ The script must exit 0. Any failure blocks the release.
 Run the conditional AppleScript/workspace verifier:
 
 ```bash
-set -o pipefail; bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh 2>&1 | tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-applescript.out
+set -o pipefail; bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh 2>&1 | tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-applescript.out
 ```
 
-The wrapper triggers on AppleScript/workspace contract paths changed in the worktree OR committed since the verified commit stamped in `yen-terminal/.applescript-verified`, and runs the verifier when that stamp is missing or unresolvable. It emits `RECEIPT gate=16-verify-applescript-if-needed`; read `SKIP|verifier|` versus `RAN|verifier|` in the saved `yen-zip-applescript.out` to tell a skip from a pass, never the exit code alone, because `eval-phase.sh` deletes a passing check's own log. When it must run, follow `_docs/05-infrastructure.md` -> "Validating the local `zig-out` build without quitting your own YEN.app": the verifier writes a temporary config override and fails closed if another YEN process is using an older config, so ask the operator to quit `YEN.app` or use the re-identified scratch bundle, never kill `/Applications/YEN.app`, and never launch `zig-out/YEN.app` by hand, because it shares `com.yenchat.yen` and LaunchServices activates the installed instance instead. Use `--keep-open` when AppleScript or workspace-shortcut handling changed and the final physical `Cmd + Option + 2` spot-check is wanted; AppleScript key injection bypasses the app-wide local key monitor, so it is not authoritative for that layout check.
+The wrapper triggers on AppleScript/workspace contract paths changed in the worktree OR committed since the verified commit stamped in `yen-terminal/.applescript-verified`, and runs the verifier when that stamp is missing or unresolvable. It emits `RECEIPT gate=16-verify-applescript-if-needed`; read `SKIP|verifier|` versus `RAN|verifier|` in the saved `update-yen-applescript.out` to tell a skip from a pass, never the exit code alone, because `eval-phase.sh` deletes a passing check's own log. When it must run, follow `_docs/05-infrastructure.md` -> "Validating the local `zig-out` build without quitting your own YEN.app": the verifier writes a temporary config override and fails closed if another YEN process is using an older config, so ask the operator to quit `YEN.app` or use the re-identified scratch bundle, never kill `/Applications/YEN.app`, and never launch `zig-out/YEN.app` by hand, because it shares `com.yenchat.yen` and LaunchServices activates the installed instance instead. Use `--keep-open` when AppleScript or workspace-shortcut handling changed and the final physical `Cmd + Option + 2` spot-check is wanted; AppleScript key injection bypasses the app-wide local key monitor, so it is not authoritative for that layout check.
 
 ## Step 7: Stage Release
 
@@ -73,7 +73,7 @@ This stages:
 ### 7b. Agent Verification
 
 ```bash
-bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/verify-agent-work.sh verify
+bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/verify-agent-work.sh verify
 ```
 
 Asserts that all five artifacts above are actually staged, and fails when any is missing.
@@ -84,9 +84,9 @@ It previously passed on both branches (staged, or "staging deferred"), so it cou
 
 | Check ID | Description | Command |
 |----------|-------------|---------|
-| VF-01 | AppleScript verifier passes when its contract paths changed, receipt saved | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-applescript.out` |
+| VF-01 | AppleScript verifier passes when its contract paths changed, receipt saved | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-applescript.out` |
 | VF-02 | Post-build failure detection passes | `bash $HOME/Documents/yenchat/scripts/05-detect-failures.sh` |
 | VF-03 | Release staging passes | `bash $HOME/Documents/yenchat/scripts/07-stage-release.sh` |
-| VF-04 | Native slice covered exactly once: Step 6a forces it only when Step 4's saved receipt from this run shows it did not run | `bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/run-native-slice-if-needed.sh` |
+| VF-04 | Native slice covered exactly once: Step 6a forces it only when Step 4's saved receipt from this run shows it did not run | `bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/run-native-slice-if-needed.sh` |
 
 **Commit any vendor bump BEFORE release Step 0.** `07-stage-release.sh` stages only `public/stable/*`, `version.json`, `version.sig`, `appcast.xml`, the DMG checksum and `package.json`. It does **not** stage `yen-terminal/.*-baseline`, `yen-terminal/VENDOR_INFO.txt` or `_docs/04-security.md`. If the vendor phase ran without its own commit first, the release ships from an engine whose baseline is untracked, and the release commit will look complete while those files sit dirty. Step V5 exists for exactly this — do not skip it just because the release follows.

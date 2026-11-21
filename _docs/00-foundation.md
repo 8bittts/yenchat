@@ -20,6 +20,7 @@ Dates are the evidence in this doc; the owner docs carry none.
   The same change moves release downloads from Supabase Storage to GitHub Releases and removes the download database, the owner daily report, and the `yen-tunes/` music pipeline.
   The Supabase project, its `auth.yen.chat` DNS record, and every web environment variable in Infisical and Vercel were deleted the same day.
 - 2026-11-19: the operator lifts maintenance mode for one feature, always-on sessions: panes that outlive the app and attach from another Mac over Tailscale, plus the window-chrome and split design work around them.
+- 2026-11-21: `/yen-zip` becomes `/update-yen`, which adds a deps phase (Bun packages and Sparkle) ahead of the vendor phase and the release cut; `/update-projs` stops covering yenchat, so one command owns every YEN update.
 
 ## Decisions
 
@@ -38,7 +39,7 @@ Dates are the evidence in this doc; the owner docs carry none.
 - **Native frameworks before bundled binaries.** Every bundled binary is pinned, inventoried and verified by the vendor audit ([04-security.md](04-security.md)).
 - **Deploy by subject marker.** Vercel builds only `[deploy]` in the commit subject; a marker written in a commit body once launched an unintended build ([05-infrastructure.md](05-infrastructure.md)).
 - **Releases live on GitHub Releases.** Each version is a release tagged `v<version>` on the public repository, holding the DMG, its checksum and the Sparkle deltas ([05-infrastructure.md](05-infrastructure.md)).
-- **The release cost model is settled.** Reusing a prior build for the shipping artifact, caching the SDK probe, and skipping `/yen-zip` Step 4's native slice after the vendor phase's VB-05 were each rejected as determinism hazards ([05-infrastructure.md](05-infrastructure.md)).
+- **The release cost model is settled.** Reusing a prior build for the shipping artifact, caching the SDK probe, and skipping `/update-yen` Step 4's native slice after the vendor phase's VB-05 were each rejected as determinism hazards ([05-infrastructure.md](05-infrastructure.md)).
 - **Gate receipts account for every unit.** The unit contract replaced per-incident skip markers ([04-security.md](04-security.md)).
 - **Native UI findings are verified in a running build.** The shortcut list once stayed one update behind in the running app, which no test showed because the suites exercised the derived-state model and never the view path that fed it ([09-quality.md](09-quality.md)).
 - **The hero typewriter grows the layout.** Reserving its final height was tried and reverted ([02-design-system.md](02-design-system.md)).

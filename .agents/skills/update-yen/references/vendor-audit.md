@@ -86,7 +86,7 @@ xcodebuild -project $HOME/Documents/yenchat/yen-terminal/ghostty/macos/YEN.xcode
 ## Layer 6: Decision and Documentation
 
 1. `_docs/04-security.md` — `14-vendor.sh` already synced the snapshot metadata and overlap header via `11-sync-vendor-audit.sh`; run `bash $HOME/Documents/yenchat/scripts/12-verify-vendor-audit.sh` to confirm. Hand-edit the Source Patches table and overlap notes only when a patch, risk, or watch item changed.
-2. Skill docs — if upstream-source, forge-adapter, parity-harness, or vendor-gate behavior changed, update the `/yen-zip` `SKILL.md` and the affected `references/vendor-*.md` in the same commit.
+2. Skill docs — if upstream-source, forge-adapter, parity-harness, or vendor-gate behavior changed, update the `/update-yen` `SKILL.md` and the affected `references/vendor-*.md` in the same commit.
 3. Memory — a new pattern (anchor shape, API shift, retirement) goes into the `vendor-workflow` memory file, not the `MEMORY.md` index.
 4. Baselines — already written by the vendor scripts.
 
@@ -118,4 +118,4 @@ Re-run `bun test tests/45-overlay-patching.test.ts` afterwards, and run `bun run
 | VA-01 | Overlays re-apply idempotently | `bash $HOME/Documents/yenchat/yen-terminal/apply-overlays.sh` |
 | VA-02 | Overlay patch regression gate | `bun test tests/45-overlay-patching.test.ts` |
 | VA-03 | Branding clean, with a `result=PASS` receipt | `bash $HOME/Documents/yenchat/scripts/04-verify-branding.sh` |
-| VA-04 | Every required layer has a recorded finding | `bash $HOME/Documents/yenchat/.agents/skills/yen-zip/scripts/verify-audit-layers.sh <vendor> "$AUDIT_LOG"` |
+| VA-04 | Every required layer has a recorded finding | `bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/verify-audit-layers.sh <vendor> "$AUDIT_LOG"` |

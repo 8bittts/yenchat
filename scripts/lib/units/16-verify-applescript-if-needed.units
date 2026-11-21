@@ -4,7 +4,7 @@
 # only the working tree (`git diff HEAD`, `--cached`, untracked), so COMMITTING a
 # change to a tripwire path disarmed the tripwire meant to catch it. The gate
 # then printed a checkmark and exited 0, which its callers' evals recorded as a
-# pass. `zip-verify.md` mandates committing a vendor bump BEFORE /yen-zip, so in the
+# pass. `zip-verify.md` mandates committing a vendor bump BEFORE /update-yen, so in the
 # documented order the gate could never fire for a vendor-introduced change.
 #
 # The scan now also reads the committed range since the last verified commit

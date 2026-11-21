@@ -469,7 +469,7 @@ describe("branding gate upstream-path coverage", () => {
 // The guardrail suites must stay wired into a gate that actually runs.
 //
 // Before this, tests/46, 47, 53, 119, 120, 124 and 127 were invoked by no
-// script, no /yen-zip step and no hook — the fingerprint scanner shipped
+// script, no /update-yen step and no hook — the fingerprint scanner shipped
 // release-wired while the test proving it fails closed only ran if somebody
 // typed `bun test` by hand. A test nothing runs is documentation.
 // ---------------------------------------------------------------------------
@@ -535,7 +535,7 @@ describe("guardrail suites are wired into the release path", () => {
 		const script = readFileSync(componentsPath, "utf8");
 
 		// [deploy] rides web-only deploys too — most reliably the
-		// "docs: publish v<version> release notes [deploy]" commit that every /yen-zip
+		// "docs: publish v<version> release notes [deploy]" commit that every /update-yen
 		// pushes right AFTER the release, plus routine "chore: update packages
 		// [deploy]" bumps. Anchoring on it moved the comparison window past native
 		// work, so the gate reported "no native macOS changes" for code the native
@@ -597,7 +597,7 @@ describe("guardrail suites are wired into the release path", () => {
 // An EXIT trap swallows a `set -euo pipefail` fatal abort in bash 3.2 — $? is
 // already 0 when the trap fires. 05-detect-failures.sh hit exactly that: with
 // version.json absent it printed one "unbound variable" line and exited 0,
-// which /yen-zip Step 6 reads as PASS on a shipping gate.
+// which /update-yen Step 6 reads as PASS on a shipping gate.
 // ---------------------------------------------------------------------------
 describe("post-build gate cannot exit 0 without completing", () => {
 	const detectPath = join(repoRoot, "scripts/05-detect-failures.sh");

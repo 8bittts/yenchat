@@ -81,7 +81,7 @@ else
         bash "$REPO_ROOT/scripts/14-vendor.sh" --check || {
             echo "  ERROR: Vendor hard gate failed"
             echo "  Run: bash $REPO_ROOT/scripts/14-vendor.sh"
-            echo "  Then complete the /yen-zip vendor audit (Step V3) and update _docs/04-security.md"
+            echo "  Then complete the /update-yen vendor audit (Step V3) and update _docs/04-security.md"
             exit 1
         }
     else

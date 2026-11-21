@@ -7,7 +7,7 @@ This file contains only YEN-specific constraints.
 
 YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the decision.
 
-- In scope: vendor updates and desktop releases through `/yen-zip`, dependency updates through `/update-projs`, and fixes for bugs, crashes, security issues and broken builds.
+- In scope: dependency updates, vendor updates and desktop releases through `/update-yen` (`/update-projs` does not cover this repo), and fixes for bugs, crashes, security issues and broken builds.
 - Also in scope: the always-on sessions feature in `_docs/todos.md` (persistent panes, Tailscale remote attach, and its window-chrome and split design pass).
 - Out of scope unless the operator asks: other new features, redesigns, refactors, performance work, and growth or SEO work.
 - `_docs/todos.md` holds only in-scope work; record an out-of-scope finding in the final report, not the backlog.
@@ -78,7 +78,7 @@ bunx react-doctor@latest . --verbose --scope changed --base main
 Verify a native UI finding or fix in a running re-identified `zig-out` copy before reporting it; a code read, a unit test or an offscreen render is not evidence that a control renders or responds ([_docs/09-quality.md](_docs/09-quality.md) → Native Test Suite).
 The vendored `Config.zig` and bundled `jq` must exist before the full test suite.
 Do not acknowledge a missing vendor tree as a successful verification run.
-A `/yen-zip` vendor-phase Zig toolchain preflight failure means Ghostty raised `.minimum_zig_version`; install the required toolchain instead of setting `YEN_VENDOR_SKIP_TOOLCHAIN_PREFLIGHT=1`.
+A `/update-yen` vendor-phase Zig toolchain preflight failure means Ghostty raised `.minimum_zig_version`; install the required toolchain instead of setting `YEN_VENDOR_SKIP_TOOLCHAIN_PREFLIGHT=1`.
 
 ## Infisical
 

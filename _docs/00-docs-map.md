@@ -36,7 +36,7 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 | `README.md`                                                           | Repository overview; points here                                                                 |
 | `LICENSE`, `CONTRIBUTING.md`                                          | MIT License with Ghostty's notice, and the contributor guide                                     |
 | `scripts/00-scripts-readme.md`, `tests/00-tests-readme.md`, `yen-cli/00-core-readme.md` | Script catalog, test lanes, CLI internals                                     |
-| `.agents/skills/yen-zip/`, `.claude/commands/`                        | Procedures; they cite owner docs and never restate them                                         |
+| `.agents/skills/update-yen/`, `.claude/commands/`                        | Procedures; they cite owner docs and never restate them                                         |
 | `.claude/README.md`                                                   | Slash-command index                                                                              |
 | `public/README.md`, `public/skills.md`                                | Note on the deployed `public/` tree, and a served article                                        |
 | `yen-pdfthumb/`, `yen-svgthumb/`, `yen-vidthumb/` (`README.md` each)  | Native thumbnail helpers for the file browser                                                    |

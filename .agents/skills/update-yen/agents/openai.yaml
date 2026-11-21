@@ -1,0 +1,3 @@
+name: "YEN Update"
+description: "Update YEN's Bun packages and Sparkle, then every manifest vendor with a 6-layer audit, then build, sign, notarize, and ship a new YEN desktop release with eval verification."
+default_prompt: "Execute the update-yen workflow. Start with deps Step D1, then vendor Step V1, running the vendor phase when anything is behind, then the release from preflight, phase by phase. Run the full 6-layer audit for Ghostty. Stop on any gate failure."

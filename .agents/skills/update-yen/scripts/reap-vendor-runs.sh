@@ -1,5 +1,5 @@
 #!/bin/bash
-# reap-vendor-runs.sh — /yen-zip Step 0f (PF-06)
+# reap-vendor-runs.sh — /update-yen Step 0f (PF-06)
 # Deletes leftover vendor scratch runs under tmp/vendor-runs/. Each run holds a full
 # Ghostty mirror plus baselines, and nothing else ever removed one: two October runs
 # were found by hand still holding 8.3 GB. A run directory is reaped only when no

@@ -2,8 +2,8 @@
 
 Desktop toolchain, build loops, overlay rules, signing, DMG, release hosting, Sparkle, versioning, the web release practice, media retention and environment variables for YEN.
 
-The `/yen-zip` skill owns the release procedure, and `.agents/skills/yen-zip/references/zip-build.md` is the only copy of the build-step list.
-Web deploys follow Public Web Release Practice below and never need `/yen-zip`.
+The `/update-yen` skill owns the release procedure, and `.agents/skills/update-yen/references/zip-build.md` is the only copy of the build-step list.
+Web deploys follow Public Web Release Practice below and never need `/update-yen`.
 
 ## Sources of truth
 
@@ -61,7 +61,7 @@ Locale verification requires at least one compiled catalog and reports the numbe
 `--local` keeps caches and never ships; `--build-only` cleans but skips packaging.
 Both refresh an ad-hoc signature so `open yen-terminal/ghostty/zig-out/YEN.app` launches, which is why `05-detect-failures.sh` needs a full Developer ID build.
 `--skip-vendor` skips only `14-vendor.sh --check`; the vendor-audit doc check still runs before and after the build.
-`14-vendor.sh --check --release` is the `/yen-zip` Step 1 form: `scripts/lib/release-vendor-window.sh` accepts a Ghostty `behind` when the committed baseline was pushed by a `vendor:` commit within 24h, the vendor files are clean, and the commit is on `origin/main`; nothing else that is behind, unknown, or missing is accepted, and the window is a constant rather than an env override.
+`14-vendor.sh --check --release` is the `/update-yen` Step 1 form: `scripts/lib/release-vendor-window.sh` accepts a Ghostty `behind` when the committed baseline was pushed by a `vendor:` commit within 24h, the vendor files are clean, and the commit is on `origin/main`; nothing else that is behind, unknown, or missing is accepted, and the window is a constant rather than an env override.
 `scripts/lib/zig-toolchain.sh` is the one comparison of `zig version` against `.minimum_zig_version`; `14-vendor.sh` and `validate-environment.sh` both call it with their own bypass variables.
 `YEN_PREBUILD_COMPONENT_GATE_MODE=off|report|enforce` controls the pre-build `03-verify-components.sh` run; turn it off only when the caller already ran it.
 `YEN_VERBOSE_OVERLAYS=1` shows every overlay patch line.
@@ -109,14 +109,14 @@ The patch phases call named operations in their required order, and `overlay-pat
 - `build-release.sh`, `finalize-build.sh` and `14-vendor.sh` share `$TMPDIR/yen-workflow-<cksum>.lock` plus a per-script lock. Remove a lock only when it is stale and no workflow PID is alive.
 - Finder-prone clean targets go through `remove_dir_robust`, which sweeps `.DS_Store` and retries; a plain `rm -rf` of `zig-out` races Finder and aborts under `set -e`.
 - `scripts/manual/12-check-recent-crashes.sh --days 3` blocks a release while recent `yen` crash reports exist: macOS `.ips` reports and the bundled reporter's `~/.local/state/yen/crash/*.yencrash` files whose main executable is `/Applications/YEN.app`. A framework abort, such as an AttributeGraph precondition, writes only the `.yencrash`, so the `.ips` scan alone misses it (guard: `tests/151-recent-crash-gate.test.ts`). Override only with `YEN_ALLOW_RECENT_CRASHES=1` after triage.
-- Release cost model: the clean compile and notarization are irreducible. The shipping artifact never reuses a prior build, the SDK probe is never cached, and the release tree runs its own native slice in `/yen-zip` Step 4 even when the vendor phase's VB-05 ran it on the same sources minutes earlier.
+- Release cost model: the clean compile and notarization are irreducible. The shipping artifact never reuses a prior build, the SDK probe is never cached, and the release tree runs its own native slice in `/update-yen` Step 4 even when the vendor phase's VB-05 ran it on the same sources minutes earlier.
 
 [CRITICAL] Test `zig-out/YEN.app`, and never quit or kill `/Applications/YEN.app` during a build, test or release.
-The agent session and the running `/yen-zip` are often hosted inside it, so killing it kills them (`exit 137`).
+The agent session and the running `/update-yen` are often hosted inside it, so killing it kills them (`exit 137`).
 If versions conflict, run `yen-terminal/customizations/clear-app-cache.sh`.
 
 **Release-push ordering.** `vercel.json`'s `ignoreCommand` reads only the HEAD commit of a push, so push the `[deploy]` release-notes commit by itself.
-`07-stage-release.sh` does not stage baselines, `VENDOR_INFO.txt` or `_docs/04-security.md`; commit a vendor bump before `/yen-zip` starts.
+`07-stage-release.sh` does not stage baselines, `VENDOR_INFO.txt` or `_docs/04-security.md`; commit a vendor bump before `/update-yen` starts.
 
 ## Signing and Notarization
 
@@ -307,7 +307,7 @@ A contributor build with no credentials fails that last step by design, so `bun 
 
 ## Public Web Release Practice
 
-Web, SEO, PSEO and legal changes ship separately from `/yen-zip`:
+Web, SEO, PSEO and legal changes ship separately from `/update-yen`:
 
 1. Verify the edited route, `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`, `public/llms.txt` and the owning docs; run `bun run seo:source-check` for PSEO edits.
 2. Run `tests/121-seo-guardrails.test.ts` and the page-family tests (`tests/130`, `tests/131`).

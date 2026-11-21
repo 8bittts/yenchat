@@ -1,5 +1,5 @@
 #!/bin/bash
-# Milestone notifications for the /yen-zip release pipeline.
+# Milestone notifications for the /update-yen release pipeline.
 #
 # Posts the same DistributedNotification that YEN.app observes and forwards
 # to UNUserNotificationCenter (com.yenchat.yen.buildNotification — name must

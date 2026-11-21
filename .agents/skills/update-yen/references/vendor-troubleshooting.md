@@ -1,6 +1,6 @@
 # Vendor Troubleshooting
 
-Recovery patterns for the `/yen-zip` vendor phase. Each entry names the symptom, the cause, and the smallest fix.
+Recovery patterns for the `/update-yen` vendor phase. Each entry names the symptom, the cause, and the smallest fix.
 
 **Upstream status UNKNOWN or rate limited** — `14-vendor.sh` counts it as its own outcome and exits non-zero in update mode. Authenticate (`GITHUB_TOKEN=$(gh auth token)`) and rerun; do not set `YEN_VENDOR_ALLOW_UNKNOWN_STATUS=1` to make it green.
 

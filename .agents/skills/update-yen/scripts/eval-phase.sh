@@ -82,11 +82,14 @@ current_run_id() {
 # checks exist. An unknown skill keeps the permissive default.
 CHECK_ID_PATTERN='.*'
 case "$skill" in
-    yen-zip)
+    update-yen)
         CHECK_ID_PATTERN='^(PF|BD|VF|RL)-[0-9][0-9]$'
         ;;
     yen-vendor)
         CHECK_ID_PATTERN='^(VC|VU|VA|VB|VK)-[0-9][0-9]$'
+        ;;
+    yen-deps)
+        CHECK_ID_PATTERN='^DP-[0-9][0-9]$'
         ;;
 esac
 

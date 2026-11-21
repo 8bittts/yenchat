@@ -17,7 +17,7 @@ bun run test:ide-integration
 - `bun run test:policy`: editorial and shipped-data policy gates that should not run on every default test pass.
   Documentation-copy contracts live in `tests/154-documentation-contracts.policy.ts`.
 - `bun run test:prod`: live production probes against `https://yen.chat` and the GitHub Release it points to.
-- `bun run test:ide-integration`: opt-in managed-debugger, remote, and devcontainer IDE integration coverage in `tests/*.integration.ts`; it is not part of default `bun test` or `/yen-zip`.
+- `bun run test:ide-integration`: opt-in managed-debugger, remote, and devcontainer IDE integration coverage in `tests/*.integration.ts`; it is not part of default `bun test` or `/update-yen`.
 
 ## Key Live Suites
 
@@ -35,7 +35,7 @@ The same rule applies to scripts that scan a tree: see the scanned-file floor in
 Do not use `bun test` for source-text/doc-copy parity checks, editorial policy checks, or live production probes. Keep those in purpose-built verification scripts or separate entrypoints so the default suite stays focused on local behavior regressions.
 
 The one carve-out is a **process guardrail**: a test that reads a shipped doc in order to prove a _gate_ still exists and still fails closed, not to police its wording.
-`tests/119`/`tests/120` spawn the real vendor and release scripts and assert non-zero exits; the doc reads there exist because the `/yen-zip` skill files ARE the executable procedure.
+`tests/119`/`tests/120` spawn the real vendor and release scripts and assert non-zero exits; the doc reads there exist because the `/update-yen` skill files ARE the executable procedure.
 The line is intent — asserting a gate's behavior is in scope, asserting prose is not.
 Two rules keep that carve-out honest: mirror-parity proves copies match each other and never that they match reality, so `tests/120` also resolves every `tests/` path those surfaces advertise against the real directory; and every such scan needs a per-surface non-empty floor, because one global counter lets a surface go silently empty.
 

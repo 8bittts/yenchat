@@ -40,7 +40,7 @@ cleanup_parallel_gate_dir() {
 # Completion sentinel. An EXIT trap SWALLOWS a `set -euo pipefail` fatal abort
 # in bash 3.2: $? is already 0 when the trap fires, so the script exits 0 having
 # verified nothing. Reproduced — with version.json absent this printed only
-# "VERSION_FILENAME: unbound variable" and exited 0, which /yen-zip Step 6 reads as
+# "VERSION_FILENAME: unbound variable" and exited 0, which /update-yen Step 6 reads as
 # PASS on a shipping gate. The `set -u` hole itself is fixed below by
 # initializing the filenames, but any future abort in a 1000-line script would
 # do the same, so assert we actually reached the summary.
@@ -1117,7 +1117,7 @@ if [ "$FAILED" -ne 0 ]; then
     echo "  X Post-build verification failed"
     echo -e "$DETAILS"
     echo ""
-    echo "  DO NOT COMMIT. Fix issues and restart /yen-zip from Step 1."
+    echo "  DO NOT COMMIT. Fix issues and restart /update-yen from Step 1."
 fi
 
 # gate_end prints every unit on BOTH branches. $DETAILS previously carried

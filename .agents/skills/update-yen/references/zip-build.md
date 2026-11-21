@@ -34,7 +34,7 @@ bash $HOME/Documents/yenchat/scripts/02-sync-versions.sh
 ## Step 4: Verify Components (17 declared units)
 
 ```bash
-set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 | tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-components.out
+set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 | tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-components.out
 ```
 
 Keep the `tee`: `eval-phase.sh` deletes a passing check's own log, so the saved file is the only copy of Step 4's receipt, and Step 6a decides from it.
@@ -80,7 +80,7 @@ Key flags:
 
 For local mode, the smoke helper applies the same non-shipping defaults automatically: vendor gate skipped, pre-build component gate off, local packaging path only.
 
-**Build-phase single source:** the build-step list below is the only copy of it. `~/.claude/commands/yen-zip.md` and its backup are pointers to this skill, so a step count, description, or skip-behavior change is made here and nowhere else; `_docs/05-infrastructure.md` owns the xcframework and Zig/Xcode workaround mechanics.
+**Build-phase single source:** the build-step list below is the only copy of it. `~/.claude/commands/update-yen.md` and its backup are pointers to this skill, so a step count, description, or skip-behavior change is made here and nowhere else; `_docs/05-infrastructure.md` owns the xcframework and Zig/Xcode workaround mechanics.
 
 The build script prints 9 numbered steps, `[1/9]` to `[9/9]`:
 1. Validate environment (Xcode, Zig, Go), signing access, and positive notarization credentials for shipping builds.
@@ -110,5 +110,5 @@ Run Step 4 through BD-02 on its first execution.
 | Check ID | Description | Command |
 |----------|-------------|---------|
 | BD-01 | `version.json` bumped, format valid | `source $HOME/Documents/yenchat/scripts/lib/version-utils.sh && is_valid_release_version "$(get_version $HOME/Documents/yenchat/public/stable/version.json)"` |
-| BD-02 | Component verification passes, receipt saved for Step 6a | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-components.out` |
-| BD-03 | Build artifacts exist and were built in this run | `test $HOME/Documents/yenchat/yen-terminal/ghostty/zig-out/YEN.app/Contents/MacOS/yen -nt $HOME/Documents/yenchat/tmp/skill-telemetry/yen-zip-eval-run.id` |
+| BD-02 | Component verification passes, receipt saved for Step 6a | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-components.out` |
+| BD-03 | Build artifacts exist and were built in this run | `test $HOME/Documents/yenchat/yen-terminal/ghostty/zig-out/YEN.app/Contents/MacOS/yen -nt $HOME/Documents/yenchat/tmp/skill-telemetry/update-yen-eval-run.id` |

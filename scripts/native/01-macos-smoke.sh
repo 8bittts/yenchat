@@ -32,7 +32,7 @@ Notes:
   - --local / --build-only default YEN_PREBUILD_COMPONENT_GATE_MODE=off for fast iteration.
     Set YEN_PREBUILD_COMPONENT_GATE_MODE=enforce|report if you want build-release.sh to rerun
     the pre-build component gate.
-  - Release packaging/signing stays on /yen-zip and build-release.sh outside this helper.
+  - Release packaging/signing stays on /update-yen and build-release.sh outside this helper.
   - A native UI change is verified only in a running build you have identified:
     zig-out/YEN.app and /Applications/YEN.app share com.yenchat.yen, and finding a
     string in the binary proves nothing. A view that does not render is usually its
@@ -457,7 +457,7 @@ EOF
             echo "  WARNING: build failed after changing vendor-tracking files."
             echo "  To roll back to the previous known-good state, run:"
             echo "    git -C \"$REPO_ROOT\" checkout -- ${SMOKE_VENDOR_SNAPSHOT_PATHS[*]}"
-            echo "  (Do this BEFORE re-running the /yen-zip vendor phase so 10-update-ghostty.sh can see the old baseline.)"
+            echo "  (Do this BEFORE re-running the /update-yen vendor phase so 10-update-ghostty.sh can see the old baseline.)"
         fi
         exit "$SMOKE_BUILD_EXIT"
         ;;

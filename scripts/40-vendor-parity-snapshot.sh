@@ -60,7 +60,7 @@ while [ $# -gt 0 ]; do
 done
 
 # `|| true` used to swallow every failure mode. With the shared workflow lock
-# held by a concurrent /yen-zip, `14-vendor.sh --check` prints only
+# held by a concurrent /update-yen, `14-vendor.sh --check` prints only
 # "ERROR: Another workflow is running" and exits 1 — and this script then wrote
 # that error string as the baseline, reported "[OK] Wrote vendor parity
 # baseline", and on a later --verify compared the error string against itself

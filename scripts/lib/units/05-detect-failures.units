@@ -2,7 +2,7 @@
 #
 # This is the gate whose EXIT trap swallowed a `set -euo pipefail` fatal in
 # bash 3.2 and exited 0 having verified nothing -- reproduced with version.json
-# absent, and /yen-zip Step 6 read it as PASS. The hand-written sentinel that fixed
+# absent, and /update-yen Step 6 read it as PASS. The hand-written sentinel that fixed
 # it is now the shared one in gate-receipt.sh.
 
 build-artifacts

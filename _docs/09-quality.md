@@ -21,7 +21,7 @@ Missing, empty, unreadable, or changed fixture inputs fail the gate.
 `--fast` fails closed on `RECEIPT gate=native-fast executed=<n>`; quote that number.
 Swift Testing single-case filters need the display name with trailing parentheses, such as `-only-testing:'YENTests/TabSidebarBehaviorTests/toggleHotkeyMatchesCommandShiftB()'`, and target suite type names, not file names.
 The one or two `Executed 0 tests` lines `test-without-building` prints before Swift Testing output are a preamble, not the result.
-`--fast` links the prebuilt `YENKit.xcframework` and never rebuilds the engine, so a patch that changes a `Config.zig` default fails its Swift test until the engine is rebuilt (`--local` or `/yen-zip`); compare the framework's modification time with the patch commit before treating that failure as a regression.
+`--fast` links the prebuilt `YENKit.xcframework` and never rebuilds the engine, so a patch that changes a `Config.zig` default fails its Swift test until the engine is rebuilt (`--local` or `/update-yen`); compare the framework's modification time with the patch commit before treating that failure as a regression.
 
 **Verify UI in the app you think you are running.** Finding a string in the binary with `strings` proves nothing.
 Four stale layers have each produced a confident false result: an old `zig-out` bundle, a process started before the build (`open -a` only activates it), incremental `macos/build` state, and identity.

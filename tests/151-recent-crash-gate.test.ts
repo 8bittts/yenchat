@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// /yen-zip PF-03. A framework abort (an AttributeGraph precondition) writes only
+// /update-yen PF-03. A framework abort (an AttributeGraph precondition) writes only
 // the bundled reporter's .yencrash, never an .ips, so a gate that read .ips alone
 // passed a release while the installed app was crashing on the first Scratchpad open.
 const script = join(process.cwd(), "scripts/manual/12-check-recent-crashes.sh");
