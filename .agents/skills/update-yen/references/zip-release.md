@@ -4,15 +4,35 @@
 
 ### 8a. Review Staged Changes
 ```bash
-git -C $HOME/Documents/yenchat diff --cached --stat
-git -C $HOME/Documents/yenchat diff --cached
+git diff --cached --stat
+git diff --cached
 ```
 
-Verify only release artifacts are staged. Never `git add .` or `git add -A`.
+The public SEO gate checks the new version against the generated weekly history before commit.
+Prepare its factual copy in `RELEASE_COPY` and update any source-preview wording before running the repository gates.
+The generator reads the ship date from Git history.
+To give it the pending bump, use a temporary bare repository with the staged release tree, the intended subject, and the same author date as the release commit:
+
+```bash
+release_history=$(mktemp -d)
+release_version=$(jq -er .version public/stable/version.json)
+release_subject="v${release_version}: $(jq -er .notes public/stable/version.json) [deploy]"
+release_tree=$(git write-tree)
+release_date="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+git clone --bare --shared --quiet . "$release_history"
+release_draft=$(GIT_AUTHOR_DATE="$release_date" git --git-dir="$release_history" commit-tree "$release_tree" -p HEAD -m "$release_subject")
+git --git-dir="$release_history" update-ref HEAD "$release_draft"
+GIT_DIR="$release_history" bun scripts/gen-release-notes.ts
+```
+
+Run the required gates and stage the release artifacts, current public copy, generated notes, and CSP hashes by path.
+After committing, regenerate from the real history and verify that the data matches before pushing.
+Step 11 publishes the finished weekly story.
+Never `git add .` or `git add -A`.
 
 ### 8b. Commit
 ```bash
-git -C $HOME/Documents/yenchat commit -m "v<version>: <description> [deploy]"
+GIT_AUTHOR_DATE="$release_date" git commit -m "$release_subject"
 ```
 
 Commit message rules:
@@ -36,7 +56,7 @@ On a 404, check `finalize-build.sh` output for upload errors and re-run it.
 ## Step 10: Push
 
 ```bash
-git -C $HOME/Documents/yenchat push origin main
+git push origin HEAD:main
 ```
 
 Claude Code runners must pass `dangerouslyDisableSandbox: true` on this Bash call. Its sandbox heuristic can block default-branch pushes even when broad permissions are enabled.
@@ -54,7 +74,7 @@ Only push after:
 
 The public release notes voice (blog.yen.chat/releases) comes from the hand-curated `lib/release-notes/release-notes-copy.ts` (`RELEASE_COPY`), merged by `scripts/gen-release-notes.ts` over the terse commit line. The ship date comes from this release's `version.json` bump commit (Step 8), so notes ship as a short follow-up commit right after the release. Builds from before the open-source history come from the frozen `lib/release-notes/release-ledger.ts`, so a regeneration must still report every earlier week; a run that prints far fewer weeks than `/release` shows is the ledger not being read, and `tests/161` fails on it. A maintenance build with no user-facing change goes in `RELEASE_EXCLUDE` instead of `RELEASE_COPY`. See `_docs/10-gtm.md` -> "Release Notes".
 
-1. Add the factual customer-facing line for `v<version>` to `RELEASE_COPY`, then create or refresh the current Monday-start `RELEASE_WEEK_COPY` story in `lib/release-notes/release-notes-copy.ts`. Write the weekly story for the person considering the updates: establish the meaningful theme or user situation, name the most important concrete improvements, and close on why YEN is better to use or worth downloading. Break the story into blank-line-separated paragraphs (a literal `\n\n` in the string) — the page renders one `<p>` per paragraph, so a missing break ships a wall of text; target 2-3 paragraphs for a substantial week, 1-2 for a thin one. Write it so the reader wants to try it: lead with the change a person would feel, address them in the second person, and prefer one concrete detail over a category. Keep it specific and proportional to the evidence; do not concatenate every build into a feature inventory. No invented benefits, emojis, hype, exclamation-mark marketing, upstream engine name, or retired runtimes. Missing copy in either layer fails generation; do not weaken that gate.
+1. Check the factual line for `v<version>` in `RELEASE_COPY`, then create or refresh the current Monday-start `RELEASE_WEEK_COPY` story in `lib/release-notes/release-notes-copy.ts`. Write the weekly story for the person considering the updates: establish the meaningful theme or user situation, name the most important concrete improvements, and close on why YEN is better to use or worth downloading. Break the story into blank-line-separated paragraphs (a literal `\n\n` in the string) — the page renders one `<p>` per paragraph, so a missing break ships a wall of text; target 2-3 paragraphs for a substantial week, 1-2 for a thin one. Write it so the reader wants to try it: lead with the change a person would feel, address them in the second person, and prefer one concrete detail over a category. Keep it specific and proportional to the evidence; do not concatenate every build into a feature inventory. No invented benefits, emojis, hype, exclamation-mark marketing, upstream engine name, or retired runtimes. Missing copy in either layer fails generation; do not weaken that gate.
 2. From repo root: `bun scripts/gen-release-notes.ts` then `bun run build` (refreshes CSP inline-script hashes). The generator prints curated/fallback counts and warns on typo'd keys; confirm the new version uses curated copy.
 **Push the release-notes commit ALONE.** `vercel.json`'s `ignoreCommand` evaluates only the **HEAD commit of a push**, not every commit in it. If any commit without `[deploy]` lands on top of the notes commit in the same push, Vercel cancels the build and the regenerated `release-notes-data.ts` never reaches production — `/release` keeps serving the previous version while `version.json` and the appcast already show the new one. This is silent: the notes commit shows `[deploy]`, the push succeeds, and only the live page is wrong. It happened on v1.160, where a `vendor:` commit was pushed alongside the notes. If it does happen, the fix is an empty `[deploy]` commit to re-trigger.
 
@@ -76,12 +96,15 @@ Skip only the feature-docs subsection for a bugfix-only release; the release-not
 The notes commit is the HEAD of the last push, so it is the deploy that must reach production. Verify it by exact SHA, never by the latest deployment:
 
 ```bash
-S=$(git -C $HOME/Documents/yenchat rev-parse HEAD)
+S=$(git rev-parse HEAD)
 gh api repos/8bittts/yenchat/commits/$S/status --jq '[.statuses[] | "\(.context)=\(.state)"] | join(" ")'
 ```
 
 Poll until `Vercel=success`; `pending` is a build still running, and `failure` or `error` stops the release for a build-log review. A cancelled build (the `ignoreCommand` saw a HEAD without `[deploy]`) shows no `Vercel=success` for that SHA and needs an empty `[deploy]` commit.
-Then read representative live routes: `https://blog.yen.chat/releases` carries the new week text, `/stable/version.json` reports the new version, `/stable/appcast.xml` and `/docs` return 200. `/download` returns 302 by design, and a local run must never click it because it writes to production.
+Check the weekly story at `https://blog.yen.chat/releases` and the version at `/stable/version.json`.
+Check that `/stable/appcast.xml` and `/docs` return 200.
+A GET to `/download` returns a 302 whose Location matches the GitHub asset URL in the manifest.
+The route records no download.
 
 ---
 
@@ -123,9 +146,9 @@ It must not push a second time.
 
 | Check ID | Description | Command |
 |----------|-------------|---------|
-| RL-01 | The release commit for this version carries the deploy suffix | `v="$(jq -r .version $HOME/Documents/yenchat/public/stable/version.json)"; git -C $HOME/Documents/yenchat log --extended-regexp --grep="^v${v}: .*\\[deploy\\]$" -1 --format=%s \| /usr/bin/grep -qE "^v${v}: .*\\[deploy\\]$"` (binds the match to `version.json`'s version, so an older release commit cannot satisfy it; the newest match is still read after the required notes follow-up, without an early-closing pipe) |
-| RL-02 | DMG served with HTTP 200 | `test "$(curl -sIL -o /dev/null -w '%{http_code}' "$(jq -r .url $HOME/Documents/yenchat/public/stable/version.json)")" = 200` |
-| RL-03 | Published remote matches local HEAD | `test "$(git -C $HOME/Documents/yenchat rev-parse HEAD)" = "$(git -C $HOME/Documents/yenchat ls-remote origin refs/heads/main \| awk 'NR == 1 {print $1}')"` |
+| RL-01 | The release commit for this version carries the deploy suffix | `v="$(jq -r .version public/stable/version.json)"; git log --extended-regexp --grep="^v${v}: .*\\[deploy\\]$" -1 --format=%s \| /usr/bin/grep -qE "^v${v}: .*\\[deploy\\]$"` (binds the match to `version.json`'s version, so an older release commit cannot satisfy it; the newest match is still read after the required notes follow-up, without an early-closing pipe) |
+| RL-02 | DMG served with HTTP 200 | `test "$(curl -sIL -o /dev/null -w '%{http_code}' "$(jq -r .url public/stable/version.json)")" = 200` |
+| RL-03 | Published remote matches local HEAD | `test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main \| awk 'NR == 1 {print $1}')"` |
 
 ## Local Mode
 

@@ -175,8 +175,8 @@ describe("zip process guardrails", () => {
 		expect(skill).toContain("newest matching versioned release commit");
 		expect(skill).toContain("not `head`");
 		for (const doc of [release]) {
-			expect(doc).toContain("git -c $home/documents/yenchat log");
-			expect(doc).toContain("--extended-regexp");
+			expect(doc).toContain("git log --extended-regexp");
+			expect(doc).toContain("git push origin head:main");
 			expect(doc).toContain("--grep=");
 			expect(doc).toContain("-1 --format=%s");
 			expect(doc).not.toContain("grep -m1");
