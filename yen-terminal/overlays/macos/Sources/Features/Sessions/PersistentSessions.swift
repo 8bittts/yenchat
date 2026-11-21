@@ -87,7 +87,7 @@ enum PersistentSessions {
         return path
     }
 
-    nonisolated(unsafe) private static var binaryCopyCache: [String: String] = [:]
+    nonisolated(unsafe) private static var binaryCopyCache: (key: String, path: String)?
     private static let binaryCopyLock = NSLock()
 
     /// A digest-named copy of the bundled zmx under the socket directory. It
@@ -97,7 +97,7 @@ enum PersistentSessions {
         let attributes = try? FileManager.default.attributesOfItem(atPath: bundled)
         let stamp = "\((attributes?[.size] as? NSNumber)?.int64Value ?? -1):\((attributes?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? -1)"
         let key = [bundled, stamp, socketDirectory].joined(separator: "\u{0}")
-        if let cached = binaryCopyLock.withLock({ binaryCopyCache[key] }),
+        if let cached = binaryCopyLock.withLock({ binaryCopyCache.flatMap { $0.key == key ? $0.path : nil } }),
            FileManager.default.isExecutableFile(atPath: cached) {
             return cached
         }
@@ -120,7 +120,7 @@ enum PersistentSessions {
                 return nil
             }
         }
-        binaryCopyLock.withLock { binaryCopyCache[key] = target }
+        binaryCopyLock.withLock { binaryCopyCache = (key, target) }
         return target
     }
 
@@ -229,8 +229,7 @@ enum PersistentSessions {
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
         let binary = recordedBinary(for: paneID, socketDirectory: socketDirectory) ?? zmxPath
         run(binary, ["kill", sessionName(for: paneID)], [socketDirectoryEnvironmentKey: socketDirectory])
-        try? FileManager.default.removeItem(atPath: ttyRecordPath(for: paneID, socketDirectory: socketDirectory))
-        try? FileManager.default.removeItem(atPath: binaryRecordPath(for: paneID, socketDirectory: socketDirectory))
+        // The reaper removes recovery records after the daemon releases its socket.
     }
 
     /// Pane sessions named in a listing of the socket directory. Records

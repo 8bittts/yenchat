@@ -87,6 +87,23 @@ struct PersistentSessionReaperTests {
         #expect(PersistentSessionReaper.staleSessionRecords(in: files) == ["\(held).tty", "\(held).zmx"])
     }
 
+    @Test func newRecoveryRecordsHaveTimeToAcquireASocket() throws {
+        let manager = FileManager.default
+        let directory = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: directory) }
+        let build = try #require(PersistentSessions.currentBinaryCopy(bundled: "/usr/bin/true", socketDirectory: directory.path))
+        let record = directory.appendingPathComponent(UUID().uuidString + ".zmx")
+        try build.write(to: record, atomically: true, encoding: .utf8)
+        let written = try #require(record.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+
+        PersistentSessionReaper.cleanRecoveryFiles(in: directory.path, bundled: "/usr/bin/true", now: written)
+        #expect(manager.fileExists(atPath: record.path))
+        PersistentSessionReaper.cleanRecoveryFiles(in: directory.path, bundled: "/usr/bin/true", now: written.addingTimeInterval(3600))
+        #expect(!manager.fileExists(atPath: record.path))
+        #expect(manager.isExecutableFile(atPath: build))
+    }
+
     @Test func onlyUnrecordedNonCurrentZmxCopiesAreUnused() {
         let copies = ["/s/bin/zmx-aaaaaaaaaaaaaaaa", "/s/bin/zmx-bbbbbbbbbbbbbbbb", "/s/bin/zmx-cccccccccccccccc", "/s/bin/.zmx-staging", "/s/bin/zmx-notes", "/s/bin/notes"]
         let unused = PersistentSessionReaper.unusedBinaryCopies(copies, referenced: ["/s/bin/zmx-aaaaaaaaaaaaaaaa"], current: "/s/bin/zmx-cccccccccccccccc")

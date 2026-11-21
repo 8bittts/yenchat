@@ -92,17 +92,18 @@ struct PaneActivityIcon: View {
 
     var body: some View {
         let style = activity.appearance
+        let badge = RoundedRectangle(cornerRadius: 4)
         Group {
             if let icon = Self.agentImages[activity] {
                 Image(nsImage: icon).resizable().scaledToFit()
             } else {
                 Image(systemName: style.symbol)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(style.tint)
                     .frame(width: 20, height: 16)
-                    .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
+                    .background(Color(nsColor: .windowBackgroundColor), in: badge)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 4).strokeBorder(style.tint.opacity(0.45))
+                        badge.strokeBorder(style.tint.opacity(0.45))
                     }
             }
         }
@@ -112,23 +113,34 @@ struct PaneActivityIcon: View {
 }
 
 struct PaneTabIcons: View {
-    let surfaces: [YEN.SurfaceView]
+    private static let visibleLimit = 3
+    private let surfaces: [YEN.SurfaceView]
+    private let count: Int
+
+    init(surfaces: [YEN.SurfaceView]) {
+        count = surfaces.count
+        self.surfaces = Array(surfaces.prefix(Self.visibleLimit))
+    }
+
+    func showsSamePanes(as other: Self) -> Bool {
+        count == other.count && surfaces.elementsEqual(other.surfaces, by: { $0 === $1 })
+    }
 
     var body: some View {
         HStack(spacing: 3) {
             HStack(spacing: -5) {
-                ForEach(Array(surfaces.prefix(3).enumerated()), id: \.element.id) { index, surface in
+                ForEach(Array(surfaces.enumerated()), id: \.element.id) { index, surface in
                     PaneActivityReader(surface: surface) { PaneActivityIcon(activity: $0) }
-                        .zIndex(Double(3 - index))
+                        .zIndex(Double(surfaces.count - index))
                 }
             }
-            if surfaces.count > 3 {
-                Text("+\(surfaces.count - 3)").font(.caption2.monospacedDigit())
+            if count > surfaces.count {
+                Text("+\(count - surfaces.count)").font(.caption2.monospacedDigit())
             }
         }
         .fixedSize()
         .accessibilityElement(children: .combine)
-        .help(surfaces.count == 1 ? "1 pane" : "\(surfaces.count) panes")
+        .help(count == 1 ? "1 pane" : "\(count) panes")
     }
 }
 
@@ -141,9 +153,9 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabIcons> {
         guard let stack = window.tab.accessoryView as? NSStackView else { return }
         let host = PaneTabIconAccessory(rootView: PaneTabIcons(surfaces: []))
         stack.insertArrangedSubview(host, at: 0)
-        host.observation = controller.$surfaceTree.map { Array($0) }
-            .removeDuplicates { $0.map(\.id) == $1.map(\.id) }
-            .sink { [weak host] in host?.rootView = PaneTabIcons(surfaces: $0) }
+        host.observation = controller.$surfaceTree.map { PaneTabIcons(surfaces: $0.root?.leaves() ?? []) }
+            .removeDuplicates { $0.showsSamePanes(as: $1) }
+            .sink { [weak host] in host?.rootView = $0 }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }

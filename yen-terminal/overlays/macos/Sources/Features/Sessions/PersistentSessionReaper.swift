@@ -87,15 +87,23 @@ enum PersistentSessionReaper {
         let names = Set(fileNames)
         return fileNames.filter { file in
             guard let suffix = recordSuffixes.first(where: { file.hasSuffix($0) }) else { return false }
-            return !names.contains(String(file.dropLast(suffix.count)))
+            let name = String(file.dropLast(suffix.count))
+            return UUID(uuidString: name) != nil && !names.contains(name)
         }.sorted()
     }
 
     /// zmx copies under `bin/` that no live session records and that are not
     /// the current build.
     nonisolated static func unusedBinaryCopies(_ copies: [String], referenced: Set<String>, current: String?) -> [String] {
-        copies.filter { path in
-            (path as NSString).lastPathComponent.hasPrefix("zmx-") && !referenced.contains(path) && path != current
+        // A record may spell the same directory through a filesystem alias.
+        let keptNames = Set(referenced.map { ($0 as NSString).lastPathComponent })
+        let currentName = current.map { ($0 as NSString).lastPathComponent }
+        return copies.filter { path in
+            let name = (path as NSString).lastPathComponent
+            let digest = name.dropFirst(4)
+            return name.hasPrefix("zmx-") && digest.utf8.count == 16
+                && digest.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
+                && !keptNames.contains(name) && name != currentName
         }.sorted()
     }
 
@@ -148,23 +156,7 @@ enum PersistentSessionReaper {
         let interval = positive(UserDefaults.standard.double(forKey: intervalDefaultsKey)) ?? defaultInterval
 
         Task.detached(priority: .utility) {
-            let manager = FileManager.default
-            let files = (try? manager.contentsOfDirectory(atPath: directory)) ?? []
-            for record in staleSessionRecords(in: files) {
-                try? manager.removeItem(atPath: (directory as NSString).appendingPathComponent(record))
-            }
-            let remaining = (try? manager.contentsOfDirectory(atPath: directory)) ?? []
-            let referenced = Set(remaining.filter { $0.hasSuffix(".zmx") }.compactMap { record in
-                (try? String(contentsOfFile: (directory as NSString).appendingPathComponent(record), encoding: .utf8))?
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            })
-            let binDirectory = PersistentSessions.binaryDirectory(socketDirectory: directory)
-            let copies = ((try? manager.contentsOfDirectory(atPath: binDirectory)) ?? [])
-                .map { (binDirectory as NSString).appendingPathComponent($0) }
-            let current = PersistentSessions.currentBinaryCopy(bundled: zmx, socketDirectory: directory)
-            for copy in unusedBinaryCopies(copies, referenced: referenced, current: current) {
-                try? manager.removeItem(atPath: copy)
-            }
+            cleanRecoveryFiles(in: directory, bundled: zmx)
             guard let resources = Bundle.main.resourceURL else { return }
             let helper = resources.appendingPathComponent("lib/list-pane-sessions.sh").path
             guard let listing = run("/bin/bash", [helper, directory, zmx], directory, accepting: [0, 2]) else { return }
@@ -195,11 +187,41 @@ enum PersistentSessionReaper {
                 let binary = UUID(uuidString: name).flatMap {
                     PersistentSessions.recordedBinary(for: $0, socketDirectory: directory)
                 } ?? zmx
-                guard run(binary, ["kill", name], directory) != nil else { continue }
-                for suffix in recordSuffixes {
-                    try? FileManager.default.removeItem(atPath: (directory as NSString).appendingPathComponent(name + suffix))
-                }
+                run(binary, ["kill", name], directory)
             }
+        }
+    }
+
+    /// A new pane writes its binary record before the daemon binds its socket.
+    /// Give it one normal sweep interval to finish starting.
+    nonisolated static func cleanRecoveryFiles(in directory: String, bundled: String, now: Date = Date()) {
+        let manager = FileManager.default
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        guard let files = try? manager.contentsOfDirectory(atPath: directory) else { return }
+        for record in staleSessionRecords(in: files) {
+            let url = root.appendingPathComponent(record)
+            guard let metadata = try? url.resourceValues(forKeys: [.contentModificationDateKey, .isRegularFileKey]),
+                  metadata.isRegularFile == true, let modified = metadata.contentModificationDate,
+                  now.timeIntervalSince(modified) >= defaultInterval,
+                  !manager.fileExists(atPath: url.deletingPathExtension().path) else { continue }
+            try? manager.removeItem(at: url)
+        }
+
+        // An incomplete inventory cannot establish which builds are unused.
+        guard let remaining = try? manager.contentsOfDirectory(atPath: directory),
+              let current = PersistentSessions.currentBinaryCopy(bundled: bundled, socketDirectory: directory) else { return }
+        var referenced: Set<String> = []
+        for file in remaining where file.hasSuffix(".zmx") && UUID(uuidString: String(file.dropLast(4))) != nil {
+            let record = root.appendingPathComponent(file)
+            guard (try? manager.attributesOfItem(atPath: record.path)[.type] as? FileAttributeType) == .typeRegular,
+                  let path = try? String(contentsOf: record, encoding: .utf8) else { return }
+            referenced.insert(path.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        let bin = root.appendingPathComponent("bin", isDirectory: true)
+        guard let copies = try? manager.contentsOfDirectory(at: bin, includingPropertiesForKeys: nil) else { return }
+        for path in unusedBinaryCopies(copies.map(\.path), referenced: referenced, current: current) {
+            guard (try? manager.attributesOfItem(atPath: path)[.type] as? FileAttributeType) == .typeRegular else { continue }
+            try? manager.removeItem(atPath: path)
         }
     }
 

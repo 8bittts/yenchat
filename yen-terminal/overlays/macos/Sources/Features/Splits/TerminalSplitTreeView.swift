@@ -358,16 +358,16 @@ private struct SplitPaneLabelView: View {
             let directory = surfaceView.effectiveWorkingDirectory.map { NSString(string: $0).abbreviatingWithTildeInPath }
             let title = displayTitle(for: activity)
             HStack(spacing: 0) {
-                HStack(spacing: 7) {
+                HStack(spacing: SettingsSpacing.iconTextSpacing) {
                     PaneActivityIcon(activity: activity)
                     Text(title)
-                        .settingsScaledSystemFont(size: 11, weight: .semibold)
+                        .font(.caption.weight(.semibold))
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .layoutPriority(1)
                     if let directory, directory != title {
                         Text(directory)
-                            .settingsScaledSystemFont(size: 11)
+                            .font(.caption)
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .opacity(0.68)
@@ -375,7 +375,7 @@ private struct SplitPaneLabelView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, SettingsSpacing.controlSpacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 .overlay {

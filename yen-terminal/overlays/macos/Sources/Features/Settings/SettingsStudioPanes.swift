@@ -514,6 +514,13 @@ struct SettingsGeneralPane: View {
         }
     }
 
+    private func refreshSessionCount() async {
+        let count = await Task.detached(priority: .utility) {
+            PersistentSessions.liveSessionIDs().count
+        }.value
+        if !Task.isCancelled { sessionCount = count }
+    }
+
     var body: some View {
         let startup = general.snapshot.startup
         let behavior = general.snapshot.behavior
@@ -549,14 +556,14 @@ struct SettingsGeneralPane: View {
                 // row that is hidden while no session runs would never start.
                 .task {
                     while !Task.isCancelled {
-                        sessionCount = PersistentSessions.liveSessionIDs().count
+                        await refreshSessionCount()
                         try? await Task.sleep(for: .seconds(3))
                     }
                 }
 
                 if sessionCount > 0 {
                     PersistentSessionsStatusRow(controller: controller, count: sessionCount) {
-                        sessionCount = PersistentSessions.liveSessionIDs().count
+                        await refreshSessionCount()
                     }
                 }
 
@@ -663,11 +670,11 @@ struct SettingsGeneralPane: View {
 
 /// How many pane sessions run now, and a way to end them all without the CLI.
 /// The General pane lists the socket directory every few seconds while it is
-/// visible (a single `readdir`) and shows this row only while a session runs.
+/// visible and shows this row only while a session runs.
 struct PersistentSessionsStatusRow: View {
     let controller: SettingsController
     let count: Int
-    let refresh: () -> Void
+    let refresh: () async -> Void
 
     static func title(count: Int) -> String {
         count == 1 ? "1 session running" : "\(count) sessions running"
@@ -679,7 +686,7 @@ struct PersistentSessionsStatusRow: View {
                 controller.confirmEndAllPersistentSessions(count: count) {
                     Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(500))
-                        refresh()
+                        await refresh()
                     }
                 }
             }
