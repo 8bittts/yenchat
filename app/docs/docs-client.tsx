@@ -618,8 +618,9 @@ function AgentTokenUsageSection() {
 				</li>
 				<li>
 					<strong>OpenCode</strong> counts assistant usage across gateways in
-					its local database. Older installations can supply a usage log
-					instead.
+					its local database. If only session counters are available, usage
+					belongs to the day the session started. Older installations can supply
+					a usage log instead.
 				</li>
 			</ul>
 			<p className="text-body">

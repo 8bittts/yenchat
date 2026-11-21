@@ -118,3 +118,13 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Run `gitleaks` before pushing scripts, config or fixtures | none (prose) |
 | No personal identity or home paths in the public repository | none (prose) |
 | Verify native UI in a running copy before reporting it | none (prose) |
+| Keep work and backlog entries within the approved maintenance scope | none (prose) |
+| Preserve the MIT notices and the desktop account, privacy and dictation boundaries | none (prose) |
+| Serve the current GitHub DMG from the download route | `tests/10-production.prod.ts` |
+| Keep owner documents current, use one backlog, and align public documentation and legal copy | `tests/154-documentation-contracts.policy.ts` covers named public contracts. Other changes require manual review. |
+| Scan the bundled shell CLI before release | `scripts/13-scan-artifact-fingerprints.sh`, proven by `tests/46-artifact-fingerprint-gate.test.ts` |
+| Isolate browser preview state | `yen-terminal/overlays/macos/Tests/Browser/WebPreviewRepresentableTests.swift` |
+| Use the shared web design system and verify layouts at desktop and mobile widths | `tests/55-web-ui-dom.test.tsx` checks shared shell behavior. Visual verification requires a browser. |
+| Regenerate public release notes and verify public comparison sources when they change | `scripts/gen-release-notes.ts` and `scripts/43-check-library-sources.ts` implement the checks. Invocation is manual. |
+| Run the declared gates before commit with the bundled jq and the required Zig toolchain | `package.json` defines the lanes and `scripts/lib/zig-toolchain.sh` checks the compiler. Precommit invocation is manual. |
+| Verify the serving commit and run live checks after promotion | `tests/10-production.prod.ts` checks live routes. The ship workflow verifies the serving commit. |

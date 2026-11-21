@@ -3,23 +3,47 @@ import Foundation
 /// Local message projection and log-format decoder adapted from JP the Cat under MIT.
 struct TokenOpenCode {
     let db: SQLiteDatabase
+    private static let total = """
+        COALESCE(t_input,0)+COALESCE(t_output,0)+COALESCE(t_reasoning,0)+COALESCE(t_cache_read,0)+COALESCE(t_cache_write,0)
+        """
+    private static let sessions = """
+        SELECT time_created AS created, tokens_input AS t_input, tokens_output AS t_output,
+               tokens_reasoning AS t_reasoning, tokens_cache_read AS t_cache_read, tokens_cache_write AS t_cache_write
+        FROM session
+        """
+
     func count(in day: DateInterval) throws -> Int {
-        let tables = try existingTables([Self.legacyMessageTable, Self.sessionMessageTable])
-        let projection = Self.assistantProjection(tables: tables) ?? """
-            SELECT time_created AS created, tokens_input AS t_input, tokens_output AS t_output,
-                   tokens_reasoning AS t_reasoning, tokens_cache_read AS t_cache_read, tokens_cache_write AS t_cache_write
-            FROM session
-            """
+        var result = 0
+        try db.transaction { result = try snapshotCount(in: day) }
+        return result
+    }
+
+    private func snapshotCount(in day: DateInterval) throws -> Int {
+        let tables = try existingTables([Self.legacyMessageTable, Self.sessionMessageTable, "session"])
+        guard let messages = Self.assistantProjection(tables: tables) else {
+            return try sum(Self.sessions, in: day)
+        }
+        let today = try sum(messages, in: day)
+        guard today == 0, tables.contains("session") else { return today }
+        // An empty day does not justify attributing lifetime session counters to today.
+        let history = try db.prepare("SELECT 1 FROM (\(messages)) WHERE created>0 AND (\(Self.total))>0 LIMIT 1")
+        if try history.step() { return 0 }
+        // Modern schemas can have sessions without the legacy cumulative counters.
+        let counters = try db.prepare("SELECT 1 FROM pragma_table_info('session') WHERE name='tokens_input'")
+        guard try counters.step() else { return 0 }
+        return try sum(Self.sessions, in: day)
+    }
+
+    private func sum(_ projection: String, in day: DateInterval) throws -> Int {
         let stmt = try db.prepare("""
-            SELECT COALESCE(SUM(COALESCE(t_input,0)+COALESCE(t_output,0)+COALESCE(t_reasoning,0)
-                +COALESCE(t_cache_read,0)+COALESCE(t_cache_write,0)),0)
-            FROM (\(projection)) WHERE created >= ? AND created < ?
+            SELECT COALESCE(SUM(\(Self.total)),0) FROM (\(projection)) WHERE created >= ? AND created < ?
             """)
         stmt.bind(1, Int(day.start.timeIntervalSince1970 * 1000))
         stmt.bind(2, Int(day.end.timeIntervalSince1970 * 1000))
         guard try stmt.step() else { throw CocoaError(.fileReadUnknown) }
         return stmt.int(0)
     }
+
 	static let legacyMessageTable = "message"
 	static let sessionMessageTable = "session_message"
 

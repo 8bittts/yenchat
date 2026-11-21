@@ -12,6 +12,7 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 
 `TokenUsageIndexTests` uses local provider fixtures for replay, rotation, partial writes, day rollover and OpenCode schema migration.
 The provider comparison covers streamed Claude snapshots, Codex counter resets, per-model Grok replay and legacy OpenCode log identities.
+The OpenCode database tests distinguish empty message history from a day without usage.
 Check the menu anchor before and after expanding a provider row.
 Its filesystem test exercises changes through a symbolic link.
 For native acceptance, check that an appended record changes the menu without opening it.

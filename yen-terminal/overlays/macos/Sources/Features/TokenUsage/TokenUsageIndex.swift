@@ -122,7 +122,8 @@ struct TokenUsageIndex: Sendable {
     }
 
     private func openCodeCount(_ url: URL, day: DateInterval, cache: SQLiteDatabase) throws -> Int {
-        let signature = [url.path, url.path + "-wal"].map { path -> String in
+        // Invalidate counts saved before legacy session fallback was supported.
+        let signature = "2:" + [url.path, url.path + "-wal"].map { path -> String in
             var info = Darwin.stat()
             guard lstat(path, &info) == 0 else { return "-" }
             return "\(info.st_ino)/\(info.st_size)/\(info.st_ctimespec.tv_sec)/\(info.st_ctimespec.tv_nsec)"
