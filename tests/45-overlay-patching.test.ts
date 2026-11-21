@@ -642,7 +642,7 @@ describe("apply-overlays shell guardrails", () => {
 				const result = runBrandingHelper(root, "configure_overlay_project");
 				expect(result.status, output(result)).toBe(0);
 				expect(readFileSync(project, "utf8")).toBe(
-					"MACOSX_DEPLOYMENT_TARGET = 13.0;\npath = YEN.app;\nINFOPLIST_PREPROCESS = NO;\n",
+					"MACOSX_DEPLOYMENT_TARGET = 27.0;\npath = YEN.app;\nINFOPLIST_PREPROCESS = NO;\n",
 				);
 			}
 		});
