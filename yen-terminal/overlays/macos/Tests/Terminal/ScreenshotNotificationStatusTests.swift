@@ -29,6 +29,23 @@ private final class ScreenshotPasteboardStub: ScreenshotPasteboardWriting {
 }
 
 struct ScreenshotNotificationStatusTests {
+    @available(macOS 14.4, *)
+    @Test @MainActor func capturesAnActualWindowOfTheCurrentProcess() async throws {
+        let window = NSWindow(
+            contentRect: NSRect(x: 120, y: 120, width: 240, height: 160),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.orderFront(nil)
+        defer { window.close() }
+
+        let image = try #require(await AppDelegate.captureCurrentProcessImage(windowID: CGWindowID(window.windowNumber)))
+        #expect(image.width >= 240)
+        #expect(image.height >= 160)
+    }
+
     @Test func sharedToastRoutingPreservesWindowAndMessagePolicies() {
         for (windowKey, messageKey) in [
             (Notification.Name.yenHotkeyDisabledWindowNumberKey, Notification.Name.yenHotkeyDisabledMessageKey),

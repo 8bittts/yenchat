@@ -224,7 +224,7 @@ extension AppDelegate {
     }
 
     @available(macOS 14.4, *)
-    private static func captureCurrentProcessImage(windowID: CGWindowID) async -> CGImage? {
+    static func captureCurrentProcessImage(windowID: CGWindowID) async -> CGImage? {
         do {
             let content = try await SCShareableContent.currentProcess
             guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
