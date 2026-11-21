@@ -13,10 +13,14 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"iso": "2026-11-16",
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
-		"summary": "Open a second tab on macOS 14 or later and both tabs sit beside the window controls. In fullscreen, the two buttons at the upper left open the sidebar and return you to a window.\n\nLeave a dev server running in a shell pane and quit YEN. When you reopen it, the server still has its port and the pane brings back its screen and scrollback. After a crash, YEN can reopen up to eight detached shells, including shells from an older version. Closing a pane still ends its session. Run yen sessions to see what's running, or use End All Sessions in Settings to stop them together.\n\nIf you use Retina and non-Retina displays together, Japanese text and other fallback characters keep the right glyphs after your Mac wakes. In the diff viewer, deleted files keep their syntax highlighting, and you can see when a submodule has uncommitted changes.\n\nThe online manual now covers split headers in builds from source. Click a header to focus its pane or drag it to a highlighted edge. The icons in a tab show which tools its panes are running.",
-		"builds": 5,
-		"latestVersion": "1.278",
+		"summary": "Open a second tab on macOS 14 or later and both tabs sit beside the window controls. In fullscreen, the two buttons at the upper left open the sidebar and return you to a window.\n\nLeave a dev server running in a shell pane and quit YEN. When you reopen it, the server still has its port and the pane brings back its screen and scrollback. After a crash, YEN can reopen up to eight detached shells, including shells from an older version. Closing a pane still ends its session. Run yen sessions to see what's running, or use End All Sessions in Settings to stop them together.\n\nIf you use Retina and non-Retina displays together, Japanese text and other fallback characters keep the right glyphs after your Mac wakes. In the diff viewer, deleted files keep their syntax highlighting, and you can see when a submodule has uncommitted changes.\n\nSplit headers are on by default in 1.279. Click a header to focus its pane or drag it to a highlighted edge. The icons in a tab show which tools its panes are running.",
+		"builds": 6,
+		"latestVersion": "1.279",
 		"versions": [
+			{
+				"version": "1.279",
+				"shippedOn": "2026-11-20"
+			},
 			{
 				"version": "1.278",
 				"shippedOn": "2026-11-20"

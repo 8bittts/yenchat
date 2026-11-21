@@ -1,8 +1,8 @@
 {
-  "version": "1.278",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.278/yen-1278.dmg",
-  "sha256": "4c341c818b897a8894d288a4b6b7f24f842f104c09f7245ba260fd59f0427429",
-  "notes": "Compact titlebar tabs and a quieter sidebar",
+  "version": "1.279",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.279/yen-1279.dmg",
+  "sha256": "7e6ee311758795f4768561962c1473ef0c08fbd1a3bbcf5aa98b63d1fdef6b8f",
+  "notes": "Draggable split headers and stable tab widths",
   "minOS": "13.0",
   "releaseDate": ""
 }
