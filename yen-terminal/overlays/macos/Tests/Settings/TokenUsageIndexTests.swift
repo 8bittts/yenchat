@@ -3,6 +3,42 @@ import Testing
 @testable import YEN
 
 struct TokenUsageIndexTests {
+    @Test func resumedSessionsMatchReferenceProviderTotals() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let instant = Date()
+        let stamp = instant.ISO8601Format()
+        func write(_ path: String, _ rows: String) throws {
+            let file = home.appendingPathComponent(path)
+            try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data((rows + "\n").utf8).write(to: file)
+        }
+        try write(".claude/projects/a.jsonl", """
+        {"type":"assistant","timestamp":"\(stamp)","requestId":"r","message":{"id":"a","model":"claude-sonnet","usage":{"input_tokens":100,"output_tokens":1}}}
+        {"type":"assistant","timestamp":"\(stamp)","requestId":"r","message":{"id":"a","model":"claude-sonnet","usage":{"input_tokens":5,"output_tokens":9}}}
+        {"type":"assistant","timestamp":"\(stamp)","requestId":"","message":{"id":"a","model":"claude-sonnet","usage":{"input_tokens":500,"output_tokens":1}}}
+        """)
+        try write(".codex/sessions/rollout-example.jsonl", """
+        {"type":"event_msg","timestamp":"\(stamp)","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":90,"output_tokens":2}}}}
+        {"type":"event_msg","timestamp":"\(stamp)","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":50,"cached_input_tokens":0,"output_tokens":2}}}}
+        """)
+        try write(".grok/sessions/project/session/updates.jsonl", """
+        {"timestamp":\(instant.timeIntervalSince1970),"_meta":{"eventId":"turn"},"params":{"sessionId":"session","update":{"sessionUpdate":"turn_completed","prompt_id":"prompt","usage":{"modelUsage":{"one":{"inputTokens":5,"outputTokens":1}}}}}}
+        {"timestamp":\(instant.timeIntervalSince1970),"_meta":{"eventId":"turn"},"params":{"sessionId":"session","update":{"sessionUpdate":"turn_completed","prompt_id":"prompt","usage":{"modelUsage":{"two":{"inputTokens":7,"outputTokens":3}}}}}}
+        """)
+        try write(".local/share/opencode/log/opencode.log", """
+        timestamp=\(stamp) id=undefined session.id=session-1 tokens.input=4.0 tokens.output=1 model=sample
+        timestamp=\(stamp) id=undefined session.id=session-2 tokens.input=4.0 tokens.output=1 model=sample
+        """)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        let counts = try index.read(now: instant, tools: Set(TokenTool.allCases))
+        #expect(counts[.claude] == 14)
+        #expect(counts[.codex] == 154)
+        #expect(counts[.grok] == 16)
+        #expect(counts[.openCode] == 10)
+    }
+
     @Test func todayCountsSurvivePartialLinesReplayAndRotation() throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -15,7 +51,7 @@ struct TokenUsageIndexTests {
         for root in roots { try fm.createDirectory(at: root, withIntermediateDirectories: true) }
         let claude = TokenTool.claude.root(home: home).appendingPathComponent("a.jsonl")
         let first = """
-        {"type":"assistant","timestamp":"\(timestamp)","requestId":"r","message":{"id":"a","usage":{"input_tokens":12,"output_tokens":4,"cache_read_input_tokens":5,"cache_creation_input_tokens":6}}}
+        {"type":"assistant","timestamp":"\(timestamp)","requestId":"r","message":{"id":"a","model":"claude-sonnet","usage":{"input_tokens":12,"output_tokens":4,"cache_read_input_tokens":5,"cache_creation_input_tokens":6}}}
         """
         try Data((first + "\n" + first + "\n" + first.replacingOccurrences(of: "\"a\"", with: "\"b\"")).utf8).write(to: claude)
         let codex = TokenTool.codex.root(home: home).appendingPathComponent("rollout-test.jsonl")
