@@ -97,6 +97,7 @@ Every anchor fails closed on drift; retire a patch with the checklist in `.agent
 | Command-finish managed delivery | `Ghostty.App.swift` notification helper | MEDIUM | Routes through `AppDelegate.deliverManagedSurfaceNotification(...)` |
 | Terminal browser-link routing | `Ghostty.App.swift` hyperlink helper | MEDIUM | Keeps link decisions in YEN's browser-link policy |
 | Notification callback cleanup | `SurfaceView_AppKit.swift` notification scheduling | MEDIUM | Captures `self` weakly |
+| Native config ownership | `Ghostty.Config.swift` deinitializer | LOW | Retire when upstream frees the final native config directly |
 | Undo-timeout default | `Ghostty.Config.swift` `undoTimeout` | LOW | Retire if the Swift bridge honors the missing-key fallback |
 | Tab title restore invalidation | `titleOverride` didSet in `BaseTerminalController.swift` | MEDIUM | Retire if upstream dirties restorable state on rename |
 | Resign-key focus deferral | `BaseTerminalController.windowDidResignKey(_:)` | MEDIUM | Defers `yen_surface_set_focus` to avoid re-entering the focus lock |

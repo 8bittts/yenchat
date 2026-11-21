@@ -1,0 +1,3 @@
+        deinit {
+            self.config = nil
+        }

@@ -1,0 +1,4 @@
+        deinit {
+            // Swift skips property observers during deinitialization.
+            yen_config_free(config)
+        }

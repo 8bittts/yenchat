@@ -18,6 +18,21 @@
 			"@$PATCHES_DIR/quick-terminal-shared-motion-out.old:::@$PATCHES_DIR/quick-terminal-shared-motion-out.new"
 		]
 	},
+	"config-owner-teardown": {
+		"target": "ghostty/macos/Sources/YEN/Ghostty.Config.swift",
+		"arguments": [
+			"--label",
+			"native configuration ownership",
+			"--mode",
+			"exact",
+			"--marker",
+			"yen_config_free(config)",
+			"--old-block",
+			"@$PATCHES_DIR/config-owner-teardown.old",
+			"--new-block",
+			"@$PATCHES_DIR/config-owner-teardown.new"
+		]
+	},
 	"undo-timeout-default-preservation": {
 		"target": "ghostty/macos/Sources/YEN/Ghostty.Config.swift",
 		"arguments": [
