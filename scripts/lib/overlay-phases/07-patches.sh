@@ -25,6 +25,7 @@ apply_overlay_patch workspace-titlebar-default
 apply_overlay_patch workspace-tabs-tahoe
 apply_overlay_patch workspace-tabs-ventura
 apply_overlay_patch workspace-tab-height
+apply_overlay_patch workspace-tab-centering
 apply_overlay_patch workspace-tab-accessory
 
 # ============================================================================

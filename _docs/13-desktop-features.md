@@ -257,7 +257,12 @@ The focused pane must belong to the target tree before new terminal surfaces are
 `Single Pane` is destructive and needs a second invocation.
 Shortcuts need exact Cmd + Option and a foreground terminal window; new panes inherit the focused split's baseline, zoom identity is preserved where possible, and one undo restores the whole layout.
 
-**Split pane labels.**
+**Split pane style and labels.**
+Settings → General → Panes offers two styles that update open splits immediately.
+Comfortable is the default and gives each pane a rounded border and a gutter.
+Compact places panes edge to edge with a draggable divider.
+Single and zoomed panes use the entire terminal area in both styles.
+
 Each split header shows an activity icon, title and working directory above the terminal.
 It uses the pane background and balances the space above and below the icon and title.
 Click the header to focus the pane, drag it to a highlighted edge to move it, or click the pencil to rename it.

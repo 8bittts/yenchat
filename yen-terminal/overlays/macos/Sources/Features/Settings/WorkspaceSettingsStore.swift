@@ -5,6 +5,7 @@ final class WorkspaceSettingsStore: SettingsSnapshotStore<WorkspaceSettingsStore
     struct Snapshot: Equatable {
         let tabSidebarEnabled: Bool
         let tabSidebarPresentationMode: TabSidebarPresentationMode
+        let paneStyle: PaneStyle
         let splitPaneLabelsEnabled: Bool
         let splitPaneWorktreeNamingEnabled: Bool
         let browserTerminalLinkCaptureEnabled: Bool
@@ -16,6 +17,7 @@ final class WorkspaceSettingsStore: SettingsSnapshotStore<WorkspaceSettingsStore
             Snapshot(
                 tabSidebarEnabled: controller.tabSidebarEnabled,
                 tabSidebarPresentationMode: controller.tabSidebarPresentationMode,
+                paneStyle: controller.paneStyle,
                 splitPaneLabelsEnabled: controller.splitPaneLabelsEnabled,
                 splitPaneWorktreeNamingEnabled: controller.splitPaneWorktreeNamingEnabled,
                 browserTerminalLinkCaptureEnabled: controller.browserTerminalLinkCaptureEnabled,
@@ -42,6 +44,10 @@ final class WorkspaceSettingsStore: SettingsSnapshotStore<WorkspaceSettingsStore
 
     func setTabSidebarPresentationMode(_ value: TabSidebarPresentationMode) {
         controller.tabSidebarPresentationMode = value
+    }
+
+    func setPaneStyle(_ style: PaneStyle) {
+        controller.paneStyle = style
     }
 
     func setSplitPaneLabelsEnabled(_ value: Bool) {

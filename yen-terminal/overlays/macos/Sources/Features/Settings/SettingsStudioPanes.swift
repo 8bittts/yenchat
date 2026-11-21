@@ -600,6 +600,34 @@ struct SettingsGeneralPane: View {
                 .accessibilityLabel("Tab Sidebar")
 
                 Toggle(
+                    isOn: Binding(
+                        get: { space.scratchpadEnabled },
+                        set: { workspace.setScratchpadEnabled($0) }
+                    )
+                ) {
+                    HStack(spacing: SettingsSpacing.controlSpacing) {
+                        Text("Scratchpad")
+                        if !scratchpadShortcut.isEmpty {
+                            Text(scratchpadShortcut)
+                                .font(SettingsTypography.note)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Shortcut \(scratchpadShortcut)")
+                        }
+                    }
+                }
+            }
+
+            Section("Panes") {
+                Picker("Pane Style", selection: Binding(
+                    get: { space.paneStyle },
+                    set: { workspace.setPaneStyle($0) }
+                )) {
+                    Text("Comfortable").tag(PaneStyle.comfortable)
+                    Text("Compact").tag(PaneStyle.compact)
+                }
+                .pickerStyle(.segmented)
+
+                Toggle(
                     "Pane Labels",
                     isOn: Binding(
                         get: { space.splitPaneLabelsEnabled },
@@ -615,23 +643,6 @@ struct SettingsGeneralPane: View {
                         )
                     ) {
                         SettingsStudioLabel(title: "Name Panes After Their Worktree", isChild: true)
-                    }
-                }
-
-                Toggle(
-                    isOn: Binding(
-                        get: { space.scratchpadEnabled },
-                        set: { workspace.setScratchpadEnabled($0) }
-                    )
-                ) {
-                    HStack(spacing: SettingsSpacing.controlSpacing) {
-                        Text("Scratchpad")
-                        if !scratchpadShortcut.isEmpty {
-                            Text(scratchpadShortcut)
-                                .font(SettingsTypography.note)
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel("Shortcut \(scratchpadShortcut)")
-                        }
                     }
                 }
             }

@@ -149,6 +149,7 @@ struct TerminalSplitTreeView: View {
 private struct TerminalSplitSubtreeView: View {
     @EnvironmentObject var yen: YEN.App
 
+    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
     let node: SplitTree<YEN.SurfaceView>.Node
     var isRoot: Bool = false
     let action: (TerminalSplitOperation) -> Void
@@ -171,7 +172,7 @@ private struct TerminalSplitSubtreeView: View {
                 }, set: {
                     action(.resize(.init(node: node, ratio: $0)))
                 }),
-                dividerColor: yen.config.splitDividerColor,
+                dividerColor: paneSettings.paneStyle == .compact ? yen.config.splitDividerColor : .clear,
                 resizeIncrements: .init(width: 1, height: 1),
                 left: {
                     TerminalSplitSubtreeView(node: split.left, action: action)
@@ -184,6 +185,7 @@ private struct TerminalSplitSubtreeView: View {
                     yen.splitEqualize(surface: surface)
                 }
             )
+            .padding(isRoot && paneSettings.paneStyle == .comfortable ? 4 : 0)
         }
     }
 }
@@ -200,10 +202,13 @@ private struct TerminalSplitLeaf: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let framed = isSplit && splitPaneLabelSettings.paneStyle == .comfortable
+            let inset: CGFloat = framed ? 4 : 0
+            let shape = RoundedRectangle(cornerRadius: framed ? YENDesignTokens.terminalFacingCornerRadius : 0, style: .continuous)
             let showSplitLabel = SplitPaneLabelRules.isVisible(
                 enabled: splitPaneLabelSettings.isEnabled,
                 isSplit: isSplit,
-                availableSize: geometry.size
+                availableSize: CGSize(width: geometry.size.width - 2 * inset, height: geometry.size.height - 2 * inset)
             )
 
             VStack(spacing: 0) {
@@ -213,6 +218,15 @@ private struct TerminalSplitLeaf: View {
                 YEN.InspectableSurface(surfaceView: surfaceView, isSplit: isSplit)
                     .environment(\.paneHeaderVisible, showSplitLabel)
             }
+            .clipShape(shape)
+            .overlay {
+                if framed {
+                    let background = NSColor(surfaceView.backgroundColor ?? surfaceView.derivedConfig.backgroundColor)
+                    shape.strokeBorder(Color(nsColor: SplitPaneLabelRules.textColor(backgroundColor: background)).opacity(0.15))
+                        .allowsHitTesting(false)
+                }
+            }
+            .padding(inset)
             .background {
                 // If we're dragging ourself, we hide the entire drop zone. This makes
                 // it so that a released drop animates back to its source properly

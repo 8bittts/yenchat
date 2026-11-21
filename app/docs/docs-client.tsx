@@ -716,6 +716,12 @@ function SplitPaneLabelsSection() {
 	return (
 		<DocSection id="split-pane-labels" title="Split Pane Labels">
 			<p className="text-body">
+				In builds with Pane Style, open Settings &gt; General &gt; Panes.
+				Comfortable gives each split a rounded border and space around it.
+				Choose Compact for edge-to-edge panes with a thin divider. Pane Labels
+				works with either style.
+			</p>
+			<p className="text-body">
 				In YEN 1.277 and 1.278, enable Settings &gt; General &gt; Pane Labels to
 				show a name above each split. Run{" "}
 				<code className="inline-code-brand">Rename Split Label</code> to set a

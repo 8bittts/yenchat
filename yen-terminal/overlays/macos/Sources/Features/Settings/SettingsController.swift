@@ -512,6 +512,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
                     tabSidebarEnabled: oldValue,
                     tabSidebarPresentationMode: tabSidebarPresentationMode,
                     tabSidebarPersistentVisible: TabSidebarController.persistentVisible,
+                    paneStyle: paneStyle,
                     splitPaneLabelsEnabled: splitPaneLabelsEnabled,
                     splitPaneWorktreeNamingEnabled: splitPaneWorktreeNamingEnabled,
                     browserTerminalLinkCaptureEnabled: browserTerminalLinkCaptureEnabled,
@@ -540,6 +541,17 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             if !suppressWorkspacePreferencePersistence {
                 TabSidebarController.shared.setPresentationMode(tabSidebarPresentationMode)
             }
+            notifyWorkspaceSettingsObservers()
+        }
+    }
+
+    @Published var paneStyle: PaneStyle = .stored() {
+        didSet {
+            guard paneStyle != oldValue else { return }
+            if !suppressWorkspacePreferencePersistence {
+                UserDefaults.standard.set(paneStyle.rawValue, forKey: PaneStyle.preferenceKey)
+            }
+            notifySplitPaneLabelObservers()
             notifyWorkspaceSettingsObservers()
         }
     }
@@ -2662,6 +2674,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             tabSidebarEnabled: tabSidebarEnabled,
             tabSidebarPresentationMode: tabSidebarPresentationMode,
             tabSidebarPersistentVisible: TabSidebarController.persistentVisible,
+            paneStyle: paneStyle,
             splitPaneLabelsEnabled: splitPaneLabelsEnabled,
             splitPaneWorktreeNamingEnabled: splitPaneWorktreeNamingEnabled,
             browserTerminalLinkCaptureEnabled: browserTerminalLinkCaptureEnabled,
@@ -2692,6 +2705,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             tabSidebarEnabled: TabSidebarPreferences.enabled(from: defaults),
             tabSidebarPresentationMode: TabSidebarPreferences.repairedPresentationMode(in: defaults),
             tabSidebarPersistentVisible: TabSidebarPreferences.persistentVisible(from: defaults),
+            paneStyle: PaneStyle.stored(in: defaults),
             splitPaneLabelsEnabled: SplitPaneLabelsPreferences.enabled(from: defaults),
             splitPaneWorktreeNamingEnabled:
                 SplitPaneLabelsPreferences.worktreeNamingEnabled(from: defaults),
@@ -2705,6 +2719,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
 
     private func storeWorkspacePreferenceState(_ state: WorkspacePreferenceState) {
         let defaults = UserDefaults.standard
+        defaults.set(state.paneStyle.rawValue, forKey: PaneStyle.preferenceKey)
         defaults.set(state.tabSidebarEnabled, forKey: TabSidebarPreferences.enabledPreferenceKey)
         defaults.set(
             state.tabSidebarPresentationMode.rawValue,
@@ -2748,6 +2763,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         suppressWorkspacePreferencePersistence = true
         tabSidebarEnabled = state.tabSidebarEnabled
         tabSidebarPresentationMode = state.tabSidebarPresentationMode
+        paneStyle = state.paneStyle
         splitPaneLabelsEnabled = state.splitPaneLabelsEnabled
         splitPaneWorktreeNamingEnabled = state.splitPaneWorktreeNamingEnabled
         browserTerminalLinkCaptureEnabled = state.browserTerminalLinkCaptureEnabled

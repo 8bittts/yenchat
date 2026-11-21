@@ -1092,7 +1092,24 @@
 			"--extra-replace",
 			"clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: 2):::clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: WorkspaceTabStrip.topInset)",
 			"--marker-all",
-			"constant: WorkspaceTabStrip.topInset"
+			"constant: WorkspaceTabStrip.topInset",
+			"--already-valid-pattern",
+			"tabBarView.centerYAnchor.constraint(equalTo: container.centerYAnchor)"
+		]
+	},
+	"workspace-tab-centering": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"center visible workspace tabs",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"tabBarView.centerYAnchor.constraint(equalTo: container.centerYAnchor)",
+			"--old-block",
+			"clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: WorkspaceTabStrip.topInset)",
+			"--new-block",
+			"tabBarView.centerYAnchor.constraint(equalTo: container.centerYAnchor)"
 		]
 	}
 }

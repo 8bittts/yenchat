@@ -85,6 +85,7 @@ struct WorkspaceSettingsStoreTests {
             TabSidebarPresentationMode.persistent.rawValue,
             forKey: TabSidebarPreferences.presentationModePreferenceKey
         )
+        defaults.set(PaneStyle.compact.rawValue, forKey: PaneStyle.preferenceKey)
         defaults.set(true, forKey: SplitPaneLabelsPreferences.enabledPreferenceKey)
         defaults.set(true, forKey: SplitPaneLabelsPreferences.worktreeNamingEnabledPreferenceKey)
         defaults.set(true, forKey: NativeBrowserPreferences.terminalLinkCaptureEnabledPreferenceKey)
@@ -97,6 +98,7 @@ struct WorkspaceSettingsStoreTests {
         #expect(store.snapshot == .init(
             tabSidebarEnabled: false,
             tabSidebarPresentationMode: .persistent,
+            paneStyle: .compact,
             splitPaneLabelsEnabled: true,
             splitPaneWorktreeNamingEnabled: true,
             browserTerminalLinkCaptureEnabled: true,
@@ -121,6 +123,16 @@ struct WorkspaceSettingsStoreTests {
         #expect(controller.tabSidebarEnabled == false)
         #expect(store.snapshot.tabSidebarEnabled == false)
 
+        controller.splitPaneLabelsEnabled = false
+        let presentation = SplitPaneLabelSettings(settingsController: controller)
+        store.setPaneStyle(.compact)
+        drainMainRunLoop()
+
+        #expect(store.snapshot.paneStyle == .compact)
+        #expect(presentation.paneStyle == .compact)
+        #expect(PaneStyle.stored() == .compact)
+        #expect(!presentation.isEnabled)
+
         store.setSplitPaneWorktreeNamingEnabled(true)
         drainMainRunLoop()
 
@@ -135,6 +147,7 @@ struct WorkspaceSettingsStoreTests {
         controller._testResetWindowState()
         controller.selectedSettingsPane = .general
         controller.resetKeybindReloadStateForTesting()
+        controller.paneStyle = .comfortable
         controller.tabSidebarEnabled = TabSidebarPreferences.defaultEnabled
         controller.tabSidebarPresentationMode = TabSidebarPreferences.defaultPresentationMode
         controller.splitPaneLabelsEnabled = SplitPaneLabelsPreferences.defaultEnabled

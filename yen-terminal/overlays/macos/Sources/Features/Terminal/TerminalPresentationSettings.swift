@@ -65,6 +65,7 @@ final class TerminalPresentationSettings: ObservableObject {
 final class SplitPaneLabelSettings: ObservableObject {
     static let shared = SplitPaneLabelSettings()
 
+    @Published private(set) var paneStyle: PaneStyle
     @Published private(set) var isEnabled: Bool
     /// True only when split labels are on AND worktree naming is on, so callers never have to
     /// re-check the parent toggle.
@@ -76,6 +77,7 @@ final class SplitPaneLabelSettings: ObservableObject {
     init(settingsController: SettingsController? = nil) {
         let settingsController = settingsController ?? .shared
         self.settingsController = settingsController
+        self.paneStyle = settingsController.paneStyle
         self.isEnabled = settingsController.splitPaneLabelsEnabled
         self.isWorktreeNamingEnabled = Self.worktreeNamingEnabled(in: settingsController)
 
@@ -90,6 +92,9 @@ final class SplitPaneLabelSettings: ObservableObject {
     }
 
     private func refreshIfNeeded() {
+        if paneStyle != settingsController.paneStyle {
+            paneStyle = settingsController.paneStyle
+        }
         let updatedValue = settingsController.splitPaneLabelsEnabled
         if updatedValue != isEnabled {
             isEnabled = updatedValue

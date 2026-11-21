@@ -48,8 +48,7 @@ final class TerminalChromeAppearance: ObservableObject {
 /// a preferred width, while its required trailing edge keeps narrow windows usable.
 @MainActor
 final class WorkspaceTabStrip {
-    static let trackHeight: CGFloat = 34
-    static let topInset: CGFloat = 5
+    static let trackHeight: CGFloat = 30
     private static let preferredTabWidth: CGFloat = 240
 
     private weak var host: NSView?

@@ -422,6 +422,7 @@ struct WorkspacePreferenceState: Equatable {
     var tabSidebarEnabled: Bool
     var tabSidebarPresentationMode: TabSidebarPresentationMode
     var tabSidebarPersistentVisible: Bool
+    var paneStyle: PaneStyle = .comfortable
     var splitPaneLabelsEnabled: Bool
     var splitPaneWorktreeNamingEnabled: Bool
     var browserTerminalLinkCaptureEnabled: Bool
@@ -470,6 +471,17 @@ enum TabSidebarPreferences {
 
     static func persistentVisible(from defaults: UserDefaults = .standard) -> Bool {
         defaults.object(forKey: persistentVisiblePreferenceKey) as? Bool ?? defaultPersistentVisible
+    }
+}
+
+enum PaneStyle: String {
+    case comfortable
+    case compact
+
+    static let preferenceKey = "com.yenchat.yen.paneStyle"
+
+    static func stored(in defaults: UserDefaults = .standard) -> Self {
+        defaults.string(forKey: preferenceKey).flatMap(Self.init(rawValue:)) ?? .comfortable
     }
 }
 
