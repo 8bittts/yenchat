@@ -20,7 +20,10 @@ import termios
 import time
 
 zmx, sock = sys.argv[1], sys.argv[2]
-env = dict(os.environ, ZMX_DIR=sock, ZMX_NO_DETACH_KEY="1")
+# Drop inherited ZMX_* variables: run from a YEN pane with Keep Sessions
+# Running on, ZMX_SESSION makes this attach a nested one and zmx refuses it.
+env = {k: v for k, v in os.environ.items() if not k.startswith("ZMX_")}
+env.update(ZMX_DIR=sock, ZMX_NO_DETACH_KEY="1")
 name = "wrap-probe-" + str(os.getpid())
 marker = "R" * 50 + "S" * 50
 
