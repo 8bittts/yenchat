@@ -10,6 +10,11 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 
 ## Native Test Suite
 
+`TokenUsageIndexTests` uses local provider fixtures for replay, rotation, partial writes, day rollover and OpenCode schema migration.
+Its filesystem test exercises changes through a symbolic link.
+For native acceptance, check that an appended record changes the menu without opening it.
+Verify that disabling Moving Wallpaper removes its desktop panel and restores the system wallpaper.
+
 Native fast tests inspect a temporary snapshot of their Swift source, shortcut docs, and vendored config.
 `scripts/native/source-fixtures.py` verifies file counts and hashes against the current checkout before and after execution.
 The host receives that path through Xcode's `TEST_RUNNER_` environment forwarding, so source assertions do not require Documents access.

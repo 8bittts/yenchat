@@ -42,6 +42,12 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 - 20 curated themes, previewed live in Settings.
 - Metal rendering at 60 FPS and up.
 
+### Optional desktop features in source builds after 1.282
+
+Settings > General can show a local token count for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
+On macOS 27 or later, Experimental > Moving Wallpaper plays a video or GIF behind desktop icons.
+Both switches start off.
+
 ### Private by default
 
 No YEN account.

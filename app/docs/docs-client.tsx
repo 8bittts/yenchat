@@ -651,6 +651,30 @@ function SettingsSection() {
 					shortcuts are locked.
 				</li>
 			</ul>
+			<h3 className="text-heading-sm">Token usage in the menu bar</h3>
+			<p className="text-body">
+				In builds after 1.282, go to General, then Menu Bar, and turn on Show
+				Token Usage. Click the YEN icon to see today’s token counts for Claude
+				Code, Codex, Grok Build, and OpenCode. Expand a provider for its exact
+				count and share. Counts include cached tokens. An asterisk marks a
+				partial total. Unavailable means YEN could not read that tool’s local
+				usage. A zero means it read the source and found no tokens today. Turn
+				the switch off to stop reading and remove the icon.
+			</p>
+			<h3 className="text-heading-sm">Experimental moving wallpaper</h3>
+			<p className="text-body">
+				In builds after 1.282 on macOS 27 or later, open General, then
+				Experimental. Turn on Moving Wallpaper and click Wallpaper Controls.
+				Choose a video or GIF, paste a YouTube link, pick a video from Photos,
+				or shuffle from Photos. Use Wallpaper per Desktop to choose separate
+				assignments. The same menu controls pause, sound, and removal.
+			</p>
+			<p className="text-body">
+				Playback starts muted. YEN draws behind desktop icons and preserves your
+				Mac’s wallpaper. Switch the feature off to reveal it immediately. YEN
+				keeps your selections for next time. Standalone MovingPaper takes
+				priority while it runs. Both YEN features are off by default.
+			</p>
 			<p className="text-body">
 				Reset All Settings in General restores every setting and shortcut;
 				Restore Default Shortcuts in Shortcuts restores only shortcuts.

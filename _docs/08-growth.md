@@ -34,3 +34,5 @@ They are nominative only: never imply affiliation, endorsement or compatibility 
 It renders for a direct URL but stays out of public chrome, `PUBLIC_PAGE_SEO`, `public/llms.txt` and the sitemap, and lists only page links (no notes, queues or PDFs).
 `lib/library/seo-inventory.ts` derives it from the shared eligibility predicate, and `tests/130-library-workbench.test.ts` proves it mirrors the sitemap and stays undiscoverable.
 PSEO management surfaces never appear in the shared header or footer unless the operator asks.
+
+The optional desktop usage menu reads local tool counts only. Its readings never enter site analytics.

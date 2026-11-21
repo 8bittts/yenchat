@@ -271,3 +271,12 @@ Wrapper scripts `browse`, `yen`, `yen-quicklook` and `yen-yazi-edit` also ship h
 The artifact fingerprint gate force-scans the bundled shell CLI at `Contents/Resources/bin/yen` even though it is not Mach-O.
 `lazygit` ships unmodified; YEN behavior comes from `yen-terminal/customizations/lazygit/config.yml` and the `yengit`, `gitlazy` and `gityen` wrappers, and bundling fails if the retired in-binary patch marker reappears.
 `lazygit` and `delta` resolve the bundled binary and fall back to the system copy only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
+
+## Optional local usage and wallpaper sources
+
+The usage reader takes counts from local provider records without provider credentials or requests.
+Its cache holds record identifiers, source paths, read positions and counts.
+The desktop wallpaper picker grants access to selected media, while random Photos selection requests library permission.
+YouTube playback fetches its downloader from a pinned GitHub release and verifies its SHA-256 before execution.
+Only a chosen YouTube video or restoration of that choice can start a media download.
+The app bundles the MIT notices for the adapted JP the Cat readers and MovingPaper engine.

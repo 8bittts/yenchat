@@ -18,8 +18,8 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) except for the always-on sessions feature below.
-Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with the operator-approved sessions, token usage and experimental wallpaper work below.
+Apart from those features, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/update-yen` and need no entry here.
 
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
@@ -50,6 +50,15 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 #### Phase 5: Docs and release
 
 - [ ] Document and release remote attach and window changes when their phases are complete.
+
+### Token usage in the macOS menu bar
+
+- [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
+- [ ] Validate day rollover, locked databases, concurrent provider writes and repeated toggles in the release candidate.
+
+### Experimental moving wallpaper
+
+- [ ] Verify Photos picker and shuffle permissions, multi-display Spaces and power-state changes before desktop release.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 

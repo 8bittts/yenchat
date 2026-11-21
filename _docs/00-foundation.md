@@ -22,12 +22,15 @@ Dates are the evidence in this doc; the owner docs carry none.
 - 2026-11-19: the operator lifts maintenance mode for one feature, always-on sessions: panes that outlive the app and attach from another Mac over Tailscale, plus the window-chrome and split design work around them.
 - 2026-11-21: `/yen-zip` becomes `/update-yen`, which adds a deps phase (Bun packages and Sparkle) ahead of the vendor phase and the release cut; `/update-projs` stops covering yenchat, so one command owns every YEN update.
 
+- 2026-11-21: the operator approves an opt-in local token menu and built-in MovingPaper controls on supported Macs.
+
 ## Decisions
 
 - **Maintenance mode.** YEN gets vendor updates, dependency updates, desktop releases, and fixes for bugs, crashes, security issues and broken builds.
   New features, redesigns, refactors, performance work, and growth or SEO work wait for an explicit operator request, because a solo project cannot compete with a funded team on the same engine (Timeline, 2026-11-16).
   `AGENTS.md` → Maintenance Mode carries the rule; `_docs/todos.md` holds only work inside it.
-- **Always-on sessions are the one exception.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); the plan lives in `_docs/todos.md`.
+- **Approved feature work.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); the plan lives in `_docs/todos.md`.
+  The local token menu and experimental desktop wallpaper also have explicit operator approval.
 - **zmx is the session backend.** zmx (MIT, Zig 0.17, built on libghostty-vt) owns each pane's PTY in its own process group, so a pane survives the app quitting and replays its screen and scrollback on reattach.
   A spike proved it in a re-identified copy of the shipping app: a pane whose `command` was `zmx attach` kept its counter running through an AppleScript quit and showed the whole history after relaunch.
   No macOS framework keeps a PTY and its screen state alive after the app exits, so the native-first rule allows this bundled binary.

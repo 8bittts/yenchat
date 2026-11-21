@@ -6,6 +6,9 @@ import { createIdeTemp } from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
+// Port discovery runs several subprocesses, including two bounded Docker probes.
+const portsDiscoveryTimeoutMs = 15_000;
+
 const repoRoot = process.cwd();
 const yenBinPath = join(repoRoot, "yen-cli/bin/yen");
 
@@ -316,79 +319,91 @@ exit 1
 }
 
 describe("IDE ports", () => {
-	test("default json filters non-dev listeners, dedups dual binds, and enriches framework/container metadata", () => {
-		const harness = createPortsHarness("yen-ide-ports-default-");
-		const res = runYen(
-			["ide", "ports", "--json"],
-			{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
-			harness.harnessRoot,
-		);
+	test(
+		"default json filters non-dev listeners, dedups dual binds, and enriches framework/container metadata",
+		() => {
+			const harness = createPortsHarness("yen-ide-ports-default-");
+			const res = runYen(
+				["ide", "ports", "--json"],
+				{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
+				harness.harnessRoot,
+			);
 
-		expect(res.status).toBe(0);
-		const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
-		expect(payload.map((row: { port: string }) => row.port)).toEqual([
-			"3000",
-			"3100",
-			"5432",
-			"8000",
-		]);
-		expect(
-			payload.find((row: { port: string }) => row.port === "3000")?.framework,
-		).toBe("Next.js");
-		expect(
-			payload.find((row: { port: string }) => row.port === "3100")?.framework,
-		).toBe("Vite");
-		expect(
-			payload.find((row: { port: string }) => row.port === "5432")?.framework,
-		).toBe("Docker");
-		expect(
-			payload.find((row: { port: string }) => row.port === "5432")?.container,
-		).toBe("postgres-dev");
-		expect(
-			payload.find((row: { port: string }) => row.port === "8000")?.framework,
-		).toBe("Django");
-		expect(
-			payload.some((row: { port: string }) => row.port === "5000"),
-		).toBeFalse();
-	});
+			expect(res.status).toBe(0);
+			const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
+			expect(payload.map((row: { port: string }) => row.port)).toEqual([
+				"3000",
+				"3100",
+				"5432",
+				"8000",
+			]);
+			expect(
+				payload.find((row: { port: string }) => row.port === "3000")?.framework,
+			).toBe("Next.js");
+			expect(
+				payload.find((row: { port: string }) => row.port === "3100")?.framework,
+			).toBe("Vite");
+			expect(
+				payload.find((row: { port: string }) => row.port === "5432")?.framework,
+			).toBe("Docker");
+			expect(
+				payload.find((row: { port: string }) => row.port === "5432")?.container,
+			).toBe("postgres-dev");
+			expect(
+				payload.find((row: { port: string }) => row.port === "8000")?.framework,
+			).toBe("Django");
+			expect(
+				payload.some((row: { port: string }) => row.port === "5000"),
+			).toBeFalse();
+		},
+		portsDiscoveryTimeoutMs,
+	);
 
-	test("all mode restores non-dev listeners", () => {
-		const harness = createPortsHarness("yen-ide-ports-all-");
-		const res = runYen(
-			["ide", "ports", "--all", "--json"],
-			{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
-			harness.harnessRoot,
-		);
+	test(
+		"all mode restores non-dev listeners",
+		() => {
+			const harness = createPortsHarness("yen-ide-ports-all-");
+			const res = runYen(
+				["ide", "ports", "--all", "--json"],
+				{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
+				harness.harnessRoot,
+			);
 
-		expect(res.status).toBe(0);
-		const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
-		expect(payload.map((row: { port: string }) => row.port)).toEqual([
-			"3000",
-			"3100",
-			"5000",
-			"5432",
-			"8000",
-		]);
-	});
+			expect(res.status).toBe(0);
+			const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
+			expect(payload.map((row: { port: string }) => row.port)).toEqual([
+				"3000",
+				"3100",
+				"5000",
+				"5432",
+				"8000",
+			]);
+		},
+		portsDiscoveryTimeoutMs,
+	);
 
-	test("detail json returns the selected port metadata including git branch", () => {
-		const harness = createPortsHarness("yen-ide-ports-detail-");
-		const res = runYen(
-			["ide", "ports", "3000", "--json"],
-			{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
-			harness.harnessRoot,
-		);
+	test(
+		"detail json returns the selected port metadata including git branch",
+		() => {
+			const harness = createPortsHarness("yen-ide-ports-detail-");
+			const res = runYen(
+				["ide", "ports", "3000", "--json"],
+				{ PATH: `${harness.binDir}:${process.env.PATH ?? ""}` },
+				harness.harnessRoot,
+			);
 
-		expect(res.status).toBe(0);
-		const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
-		const resolvedNextApp = realpathSync(harness.nextApp);
-		expect(payload.port).toBe("3000");
-		expect(payload.framework).toBe("Next.js");
-		expect(payload.cwd).toBe(harness.nextApp);
-		expect(payload.projectRoot).toBe(resolvedNextApp);
-		expect(payload.container).toBe("");
-		expect(payload.gitBranch).toBe("main");
-	});
+			expect(res.status).toBe(0);
+			const payload = JSON.parse(`${res.stdout ?? ""}`.trim());
+			const resolvedNextApp = realpathSync(harness.nextApp);
+			expect(payload.port).toBe("3000");
+			expect(payload.framework).toBe("Next.js");
+			expect(payload.cwd).toBe(harness.nextApp);
+			expect(payload.projectRoot).toBe(resolvedNextApp);
+			expect(payload.container).toBe("");
+			expect(payload.gitBranch).toBe("main");
+		},
+		portsDiscoveryTimeoutMs,
+	);
 
 	test("ps json keeps dev processes and collapses docker runtime rows into one summary entry", () => {
 		const harness = createPortsHarness("yen-ide-ports-ps-");

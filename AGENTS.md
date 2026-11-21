@@ -9,6 +9,7 @@ YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the deci
 
 - In scope: dependency updates, vendor updates and desktop releases through `/update-yen` (`/update-projs` does not cover this repo), and fixes for bugs, crashes, security issues and broken builds.
 - Also in scope: the always-on sessions feature in `_docs/todos.md` (persistent panes, Tailscale remote attach, and its window-chrome and split design pass).
+- The opt-in token menu and built-in experimental moving wallpaper are also operator-approved; see `_docs/13-desktop-features.md`.
 - Out of scope unless the operator asks: other new features, redesigns, refactors, performance work, and growth or SEO work.
 - `_docs/todos.md` holds only in-scope work; record an out-of-scope finding in the final report, not the backlog.
 - Maintenance mode covers the desktop app and the yen.chat website.

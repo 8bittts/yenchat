@@ -788,6 +788,13 @@ describe("resource bundling phases", () => {
 		fixture((root) => {
 			for (const name of ["commands", "lib", "fixtures"])
 				write(join(root, "cli", name, "payload"), name);
+			const custom = "yen-terminal/customizations";
+			const resources: [string, string][] = [
+				["icons/YENMenuMark.svg", "YENMenuMark.svg"],
+				["notices/JPtheCat.txt", "Notices/JPtheCat.txt"],
+				["notices/MovingPaper.txt", "Notices/MovingPaper.txt"],
+			];
+			for (const [source] of resources) copy(root, join(custom, source));
 			write(join(root, "YEN.app/Contents/Resources/stale"), "stale");
 			write(
 				join(root, "YEN.app/Contents/Info.plist"),
@@ -795,7 +802,7 @@ describe("resource bundling phases", () => {
 			);
 			const result = shell(
 				root,
-				'set -e; APP_PATH="$1/YEN.app"; YEN_CLI_DIR="$1/cli"; VERSION=1.260; VERSION_INT=1260; COMMIT=fixture; source "$2"',
+				'set -e; APP_PATH="$1/YEN.app"; YEN_CLI_DIR="$1/cli"; CUSTOMIZATIONS_DIR="$1/yen-terminal/customizations"; VERSION=1.260; VERSION_INT=1260; COMMIT=fixture; source "$2"',
 				[
 					root,
 					join(
@@ -812,6 +819,11 @@ describe("resource bundling phases", () => {
 						"utf8",
 					),
 				).toBe(name);
+			for (const [source, destination] of resources) {
+				expect(
+					readFileSync(join(root, "YEN.app/Contents/Resources", destination)),
+				).toEqual(readFileSync(join(repoRoot, custom, source)));
+			}
 			const plist = spawnSync(
 				"/usr/libexec/PlistBuddy",
 				["-c", "Print :YENCommit", join(root, "YEN.app/Contents/Info.plist")],

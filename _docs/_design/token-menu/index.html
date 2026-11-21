@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
+<link rel="icon" href="mark.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+<title>Token usage · YEN Design Review</title>
+<script src="menu.js" defer></script>
+</head>
+<body>
+<header class="mast"><div class="brand"><i class="mark"></i> YEN <span>/</span> <small>Design review</small></div><span class="fixture">Sample data</span></header>
+<main>
+<div class="heading"><h1>Token usage</h1><nav aria-label="Dropdown design"><a href="#overview">Overview</a><a href="#activity">Activity</a><a href="#compact">Compact</a></nav></div>
+<section class="desktop" aria-label="Interactive macOS preview">
+<div class="menubar"><div class="appmenu" aria-hidden="true"><strong>YEN</strong><span>File</span><span>Edit</span><span>View</span><span>Window</span></div><div class="status-area"><button id="status" aria-label="YEN token usage" aria-controls="popup" aria-expanded="true"><i class="mark"></i><span></span></button><span class="time">16:40</span></div></div>
+<div class="canvas">
+<section class="settings" aria-label="General settings preview">
+<div class="win-title"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>Settings</div>
+<div class="form"><h2>General</h2><h3>Panes</h3><div class="group"><div class="setting">Pane Style <span class="value">Comfortable</span></div><div class="setting">Pane Labels <i class="switch"></i></div></div>
+<h3>Menu Bar</h3><div class="group"><label class="setting active" for="enabled"><span>Show Token Usage<small>Show local tokens in the menu bar.</small></span><input type="checkbox" id="enabled" role="switch" checked><i class="switch"></i></label></div>
+<h3>Links</h3><div class="group"><div class="setting">Open Links in YEN <i class="switch"></i></div></div>
+</div></section>
+<div class="menu-column">
+<section id="popup" aria-label="Token usage dropdown">
+<div class="popup-head"><span class="lockup"><i class="mark"></i> Token usage</span><span class="day">Today</span></div>
+<div id="body"></div><div class="local"><span class="local-dot"></span><span id="source-status"></span></div>
+</section>
+<p id="hint" hidden></p>
+</div></div>
+</section>
+<footer><p id="caption"></p><label>Sample <select id="sample"><option value="full">All providers</option><option value="partial">Partial data</option><option value="empty">No sources</option></select></label></footer>
+</main>
+</body></html>

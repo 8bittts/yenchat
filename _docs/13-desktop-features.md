@@ -123,6 +123,24 @@ Tried and reverted, do not retry without new evidence:
 
 - Deferring the launch theme-catalog build needs a new single-theme resolution path that exactly reproduces name normalization and curated-versus-user precedence, or a Match Theme border flips color after the first frame. Measured cost was about 3.5 ms.
 
+### Optional menu and desktop features
+
+General → Menu Bar → Show Token Usage creates a YEN status item and opens an Overview with the local day’s total.
+Expand a provider row to see its exact count and share.
+An asterisk marks partial coverage.
+A readable source with no usage contributes zero, and an unavailable source is omitted from the total.
+Turning the switch off cancels collection and removes the item.
+The [architecture](01-architecture.md) owns the reader and cache boundaries.
+
+On macOS 27 or newer, General → Experimental → Moving Wallpaper exposes Wallpaper Controls inside Settings.
+Select a local movie or GIF, a YouTube link, a video from Photos or a random Photos video.
+Playback starts muted and supports pause, sound and per-desktop assignments.
+YEN owns only its background windows and saved selections.
+Turning it off reveals the system wallpaper and keeps assignments for the next enable.
+The wallpaper engine yields while standalone MovingPaper runs.
+Open YEN at Login remains the single startup control.
+Both features default to off and a successful Reset All Settings switches both off.
+
 ### Settings hitch benchmark
 
 [CRITICAL] Only the operator runs the recording, with no agent session active: a live agent session measured `100.6%` CPU, more than a busy browser, so numbers recorded from inside one are indicative only.
