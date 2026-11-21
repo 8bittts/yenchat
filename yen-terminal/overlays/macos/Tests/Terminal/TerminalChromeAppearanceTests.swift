@@ -98,6 +98,11 @@ struct TerminalChromeAppearanceTests {
             await Task.yield()
             let root = try #require(selected.contentView?.superview)
             root.layoutSubtreeIfNeeded()
+            let tabBar = try #require(selected.tabBarView)
+            let close = try #require(selected.standardWindowButton(.closeButton))
+            let track = tabBar.convert(tabBar.bounds, to: root)
+            let trafficLight = close.convert(close.bounds, to: root)
+            #expect(abs(track.midY - trafficLight.midY) <= 1, "Tab bar \(track) and close button \(trafficLight)")
             let labels = root.descendants(withClassName: "NSTextField").compactMap { $0 as? NSTextField }
             for (index, window) in windows.enumerated() {
                 let icon = icons[index]
