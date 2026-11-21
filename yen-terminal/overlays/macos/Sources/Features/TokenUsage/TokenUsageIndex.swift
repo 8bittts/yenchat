@@ -13,12 +13,7 @@ struct TokenUsageIndex: Sendable {
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let db = try SQLiteDatabase(path: directory.appendingPathComponent("today.sqlite").path)
-        try db.execute("""
-            CREATE TABLE IF NOT EXISTS day(start INTEGER);
-            CREATE TABLE IF NOT EXISTS opencode(stamp TEXT PRIMARY KEY, count INTEGER);
-            CREATE TABLE IF NOT EXISTS cursors(path TEXT PRIMARY KEY, inode INTEGER, size INTEGER, stamp REAL, offset INTEGER, previous INTEGER, tail BLOB);
-            CREATE TABLE IF NOT EXISTS events(tool TEXT,path TEXT,id TEXT,n INTEGER,PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
-            """)
+        try prepareIndex(db)
         let start = Int(day.start.timeIntervalSince1970)
         let stored = try db.prepare("SELECT start FROM day")
         if try !stored.step() || stored.int(0) != start {
@@ -35,6 +30,37 @@ struct TokenUsageIndex: Sendable {
             catch { counts[tool] = nil }
         }
         return counts
+    }
+
+    private func prepareIndex(_ db: SQLiteDatabase) throws {
+        let version = try db.prepare("PRAGMA user_version")
+        guard try version.step(), version.int(0) != 2 else { return }
+        version.reset()
+        // Only YEN's disposable cache is migrated. Re-read unchanged logs using the new counting rules.
+        try db.transaction {
+            try db.execute("""
+                DROP TABLE IF EXISTS day; DROP TABLE IF EXISTS opencode;
+                DROP TABLE IF EXISTS cursors; DROP TABLE IF EXISTS events;
+                CREATE TABLE day(start INTEGER);
+                CREATE TABLE opencode(stamp TEXT PRIMARY KEY,count INTEGER);
+                CREATE TABLE cursors(path TEXT PRIMARY KEY,inode INTEGER,size INTEGER,stamp REAL,offset INTEGER,state TEXT,tail TEXT,tool TEXT);
+                CREATE TABLE events(tool TEXT,path TEXT,id TEXT,n INTEGER,output INTEGER,input INTEGER,cached INTEGER,seq INTEGER,
+                    PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
+                CREATE INDEX best ON events(tool,id,output DESC,n DESC);
+                CREATE INDEX recent ON events(path,seq DESC);
+                PRAGMA user_version=2;
+                """)
+        }
+    }
+
+    private func forget(_ path: String, db: SQLiteDatabase) throws {
+        try db.transaction {
+            for sql in ["DELETE FROM cursors WHERE path=?", "DELETE FROM events WHERE path=?"] {
+                let remove = try db.prepare(sql)
+                remove.bind(1, path)
+                _ = try remove.step()
+            }
+        }
     }
 
     private func count(_ tool: TokenTool, db: SQLiteDatabase, day: DateInterval, changes: Set<URL>?) throws -> Int {
@@ -71,8 +97,25 @@ struct TokenUsageIndex: Sendable {
             if let readError { throw readError }
             files = recent
         }
+        if let changes {
+            for url in changes where tool.accepts(url) && !fm.fileExists(atPath: url.path) {
+                try forget(url.standardizedFileURL.resolvingSymlinksInPath().path, db: db)
+            }
+        } else {
+            let known = try db.prepare("SELECT path FROM cursors WHERE tool=?")
+            known.bind(1, tool.rawValue)
+            var missing: [String] = []
+            while try known.step() {
+                if let path = known.text(0), !fm.fileExists(atPath: path) { missing.append(path) }
+            }
+            for path in missing { try forget(path, db: db) }
+        }
         for file in files { try ingest(file.standardizedFileURL.resolvingSymlinksInPath(), tool: tool, day: day, db: db) }
-        let query = try db.prepare("SELECT COALESCE(SUM(n),0) FROM (SELECT MAX(n) AS n FROM events WHERE tool=? GROUP BY id)")
+        let query = try db.prepare("""
+            SELECT COALESCE(SUM(n),0) FROM (
+                SELECT n,ROW_NUMBER() OVER (PARTITION BY id ORDER BY output DESC,n DESC) AS rank
+                FROM events WHERE tool=?) WHERE rank=1
+            """)
         query.bind(1, tool.rawValue)
         guard try query.step() else { throw CocoaError(.fileReadUnknown) }
         return max(0, query.int(0))
@@ -103,7 +146,7 @@ struct TokenUsageIndex: Sendable {
         guard lstat(url.path, &stat) == 0, stat.st_mode & S_IFMT == S_IFREG else { throw CocoaError(.fileReadUnknown) }
         let size = Int(stat.st_size), inode = Int(truncatingIfNeeded: stat.st_ino)
         let stamp = Double(stat.st_ctimespec.tv_sec) + Double(stat.st_ctimespec.tv_nsec) / 1e9
-        let cursor = try db.prepare("SELECT inode,size,stamp,offset,previous,tail FROM cursors WHERE path=?")
+        let cursor = try db.prepare("SELECT inode,size,stamp,offset,state,tail FROM cursors WHERE path=?")
         cursor.bind(1, url.path)
         let exists = try cursor.step()
         if exists && cursor.int(0) == inode && cursor.int(1) == size && cursor.double(2) == stamp { return }
@@ -112,7 +155,10 @@ struct TokenUsageIndex: Sendable {
         var offset = exists ? cursor.int(3) : 0
         let samePrefix = try exists && size > cursor.int(1) && cursor.int(0) == inode &&
             checkpoint(handle, offset: offset) == cursor.text(5)
-        var previous = samePrefix ? cursor.int(4) : 0
+        var codex = TokenCodex()
+        if tool == .codex, samePrefix, let state = cursor.text(4) {
+            codex = try JSONDecoder().decode(TokenCodex.self, from: Data(state.utf8))
+        }
         if !samePrefix { offset = 0 }
         try handle.seek(toOffset: UInt64(offset))
         try db.transaction {
@@ -120,19 +166,28 @@ struct TokenUsageIndex: Sendable {
                 let clear = try db.prepare("DELETE FROM events WHERE tool=? AND path=?")
                 clear.bind(1, tool.rawValue); clear.bind(2, url.path); _ = try clear.step()
             }
-            let insert = try db.prepare("INSERT INTO events VALUES(?,?,?,?) ON CONFLICT(tool,path,id) DO UPDATE SET n=MAX(n,excluded.n)")
-            let basename = url.deletingPathExtension().lastPathComponent
-            let end = try stream(handle, from: offset, through: size) { bytes, position in
-                guard let entry = TokenRecord.decode(bytes, tool: tool, previous: &previous, ordinal: position),
-                      entry.date >= day.start, entry.date < day.end else { return }
-                insert.reset()
-                insert.bind(1, tool.rawValue); insert.bind(2, url.path)
-                insert.bind(3, tool == .codex ? basename + "/" + entry.key : entry.key)
-                insert.bind(4, entry.count); _ = try insert.step()
+            let insert = try db.prepare("""
+                INSERT INTO events(tool,path,id,n,output) VALUES(?,?,?,?,?) ON CONFLICT(tool,path,id)
+                DO UPDATE SET n=excluded.n,output=excluded.output WHERE (excluded.output,excluded.n)>(output,n)
+                """)
+            let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
+            let end = try stream(handle, from: offset, through: size) { bytes, _ in
+                if tool == .codex {
+                    try codex.ingest(bytes, file: url.path, rollout: rollout, day: day, db: db)
+                    return
+                }
+                for entry in TokenRecord.decode(bytes, tool: tool, day: day) {
+                    insert.reset()
+                    insert.bind(1, tool.rawValue); insert.bind(2, url.path); insert.bind(3, entry.key)
+                    insert.bind(4, entry.count); insert.bind(5, entry.output)
+                    _ = try insert.step()
+                }
             }
-            let save = try db.prepare("INSERT OR REPLACE INTO cursors VALUES(?,?,?,?,?,?,?)")
+            let save = try db.prepare("INSERT OR REPLACE INTO cursors VALUES(?,?,?,?,?,?,?,?)")
             save.bind(1, url.path); save.bind(2, inode); save.bind(3, size); save.bind(4, stamp)
-            save.bind(5, end); save.bind(6, previous); save.bind(7, try checkpoint(handle, offset: end))
+            save.bind(5, end)
+            if tool == .codex { save.bind(6, String(decoding: try JSONEncoder().encode(codex), as: UTF8.self)) }
+            save.bind(7, try checkpoint(handle, offset: end)); save.bind(8, tool.rawValue)
             _ = try save.step()
         }
     }

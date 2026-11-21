@@ -17,6 +17,7 @@ const navItems: DocNavItem[] = [
 	},
 	{ id: "clipboard", title: "Clipboard & Paste" },
 	{ id: "ide-workflows", title: "IDE Workflows" },
+	{ id: "agent-token-usage", title: "Agent Token Usage" },
 	{ id: "voice-dictation", title: "Speech-to-Text" },
 	{ id: "settings", title: "Settings" },
 	{ id: "file-browser", title: "File Browser" },

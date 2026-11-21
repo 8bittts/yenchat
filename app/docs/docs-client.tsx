@@ -574,6 +574,63 @@ function VoiceDictationSection() {
 }
 
 // Source: Settings/{SettingsPanel,SettingsStudioPreview,SettingsStudioPanes,SettingsShortcutsPane,SettingsController,SettingsThemeCatalog}.swift.
+function AgentTokenUsageSection() {
+	return (
+		<DocSection id="agent-token-usage" title="Agent token usage">
+			<p className="text-body">
+				This experiment shows how many tokens your local coding agents used
+				today. In source builds after 1.282, open Settings → General → Menu Bar
+				and turn on Show Token Usage. The switch is off by default.
+			</p>
+			<p className="text-body">
+				Click the YEN icon in the macOS menu bar for a breakdown by tool. Expand
+				a row for its exact count and share of the total. The total follows your
+				Mac’s local day and includes activity recorded by these tools outside
+				YEN.
+			</p>
+			<figure>
+				<Image
+					src="/doc-images/agent-token-usage.png"
+					alt="The YEN token menu shows 194 tokens across four providers. The expanded Codex row shows 154 tokens and 79.4% of usage."
+					width={640}
+					height={848}
+					sizes="(max-width: 360px) 100vw, 320px"
+					className="h-auto w-full max-w-xs"
+				/>
+				<figcaption className="media-caption">
+					Example counts from local test sessions.
+				</figcaption>
+			</figure>
+			<ul className="list-disc space-y-2 pl-5 text-body">
+				<li>
+					<strong>Claude Code</strong> counts input, output, cache reads and
+					cache writes. Streamed copies of a reply count once.
+				</li>
+				<li>
+					<strong>Codex</strong> counts changes in rollout totals. Its input
+					already includes cached tokens, and its output includes reasoning.
+				</li>
+				<li>
+					<strong>Grok Build</strong> counts completed turns, including each
+					model in a turn. An active turn appears after Grok records its
+					completion.
+				</li>
+				<li>
+					<strong>OpenCode</strong> counts assistant usage across gateways in
+					its local database. Older installations can supply a usage log
+					instead.
+				</li>
+			</ul>
+			<p className="text-body">
+				An asterisk marks a partial total. Unavailable means the source could
+				not be read. Zero means it was readable and recorded no tokens today.
+				YEN reads these records locally. Turn the switch off to stop collection
+				and remove the menu item.
+			</p>
+		</DocSection>
+	);
+}
+
 function SettingsSection() {
 	return (
 		<DocSection id="settings" title="Settings">
@@ -634,7 +691,11 @@ function SettingsSection() {
 				<li>
 					<strong>General:</strong> open at login, copy on select, the scroll
 					bar, the tab sidebar, pane labels, the scratchpad, and how terminal
-					links open.
+					links open. Under Menu Bar, you can enable{" "}
+					<a href="#agent-token-usage" className="link-brand underline">
+						experimental agent token usage
+					</a>
+					.
 				</li>
 				<li>
 					<strong>Notifications:</strong> command-finish alerts, one alert sound
@@ -651,16 +712,6 @@ function SettingsSection() {
 					shortcuts are locked.
 				</li>
 			</ul>
-			<h3 className="text-heading-sm">Token usage in the menu bar</h3>
-			<p className="text-body">
-				In builds after 1.282, go to General, then Menu Bar, and turn on Show
-				Token Usage. Click the YEN icon to see today’s token counts for Claude
-				Code, Codex, Grok Build, and OpenCode. Expand a provider for its exact
-				count and share. Counts include cached tokens. An asterisk marks a
-				partial total. Unavailable means YEN could not read that tool’s local
-				usage. A zero means it read the source and found no tokens today. Turn
-				the switch off to stop reading and remove the icon.
-			</p>
 			<h3 className="text-heading-sm">Experimental moving wallpaper</h3>
 			<p className="text-body">
 				In builds after 1.282 on macOS 27 or later, open General, then
@@ -673,7 +724,7 @@ function SettingsSection() {
 				Playback starts muted. YEN draws behind desktop icons and preserves your
 				Mac’s wallpaper. Switch the feature off to reveal it immediately. YEN
 				keeps your selections for next time. Standalone MovingPaper takes
-				priority while it runs. Both YEN features are off by default.
+				priority while it runs. Moving Wallpaper is off by default.
 			</p>
 			<p className="text-body">
 				Reset All Settings in General restores every setting and shortcut;
@@ -1739,6 +1790,7 @@ export function DocsPageClient({ navItems }: DocsPageClientProps) {
 			<PersistentSessionsSection />
 			<ClipboardSection />
 			<IDEWorkflowsSection />
+			<AgentTokenUsageSection />
 			<VoiceDictationSection />
 			<SettingsSection />
 			<FileBrowserSection />

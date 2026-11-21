@@ -125,7 +125,8 @@ Tried and reverted, do not retry without new evidence:
 
 ### Optional menu and desktop features
 
-General → Menu Bar → Show Token Usage creates a YEN status item and opens an Overview with the local day’s total.
+General → Menu Bar → Show Token Usage enables the experimental agent token counter.
+Click its YEN status item to open the local day’s overview beneath the icon on the same display.
 Expand a provider row to see its exact count and share.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.

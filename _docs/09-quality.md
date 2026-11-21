@@ -11,6 +11,8 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 ## Native Test Suite
 
 `TokenUsageIndexTests` uses local provider fixtures for replay, rotation, partial writes, day rollover and OpenCode schema migration.
+The provider comparison covers streamed Claude snapshots, Codex counter resets, per-model Grok replay and legacy OpenCode log identities.
+Check the menu anchor before and after expanding a provider row.
 Its filesystem test exercises changes through a symbolic link.
 For native acceptance, check that an appended record changes the menu without opening it.
 Verify that disabling Moving Wallpaper removes its desktop panel and restores the system wallpaper.

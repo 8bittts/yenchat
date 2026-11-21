@@ -126,6 +126,9 @@ The token status item owns a cancelable utility worker and filesystem notificati
 Counts belong to the recording tool and use the local calendar day.
 JSONL cursors and event contributions commit together in a YEN-owned SQLite cache.
 OpenCode reads its database in read-only mode and prefers the current copy of a message during schema migration.
+The index ranks duplicate snapshots by output and then total tokens.
+Codex corrections reconcile input, cached input and output independently within a rollout.
+Grok uses completed turns, and OpenCode includes all gateways in its store.
 Terminal panes and the renderer do not subscribe to usage updates.
 
 The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behind desktop icons.

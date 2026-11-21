@@ -44,7 +44,7 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 
 ### Optional desktop features in source builds after 1.282
 
-Settings > General can show a local token count for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
+The [agent token usage experiment](https://yen.chat/docs#agent-token-usage) shows daily counts for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
 On macOS 27 or later, Experimental > Moving Wallpaper plays a video or GIF behind desktop icons.
 Both switches start off.
 

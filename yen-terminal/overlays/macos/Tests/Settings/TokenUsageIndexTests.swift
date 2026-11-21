@@ -79,6 +79,39 @@ struct TokenUsageIndexTests {
         #expect(try index.read(now: tomorrow, tools: [.claude])[.claude] == 0)
     }
 
+    @Test func codexCorrectionsStayInTheirRolloutAndRespectMidnight() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let root = TokenTool.codex.root(home: home)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        let now = Date(), yesterday = Calendar.current.startOfDay(for: now).addingTimeInterval(-1)
+        func row(_ input: Int, _ cached: Int, _ date: Date) -> String {
+            """
+            {"type":"event_msg","timestamp":"\(date.ISO8601Format())","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\(input),"cached_input_tokens":\(cached)}}}}
+            """ + "\n"
+        }
+        let uuid = UUID().uuidString
+        let original = root.appendingPathComponent("rollout-a-\(uuid).jsonl")
+        let replay = root.appendingPathComponent("rollout-b-\(uuid).jsonl")
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        let prefix = row(100, 10, yesterday) + row(110, 10, now)
+        try Data(prefix.utf8).write(to: original)
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 10)
+        let correction = row(100, 15, now)
+        let handle = try FileHandle(forWritingTo: original)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data(correction.utf8))
+        try handle.close()
+        // Remove today's ten uncached tokens, then add five cached tokens.
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 5)
+        try Data(("{}\n" + prefix + correction).utf8).write(to: replay)
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 5)
+        try fm.removeItem(at: original)
+        try fm.removeItem(at: replay)
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 0)
+    }
+
     @MainActor @Test func observesAppendsThroughAnAliasedProviderDirectory() async throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)

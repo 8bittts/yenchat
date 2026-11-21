@@ -2,9 +2,11 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class TokenUsageMenu: NSObject, NSPopoverDelegate {
+final class TokenUsageMenu: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private let popover = NSPopover()
+    private var panel: TokenPanel?
+    private var localMonitor: Any?
+    private var outsideMonitor: Any?
     private let snapshot = TokenMenuSnapshot()
     private let index: TokenUsageIndex
     private var watcher: TokenSourceWatcher?
@@ -30,8 +32,6 @@ final class TokenUsageMenu: NSObject, NSPopoverDelegate {
         button?.imagePosition = .imageLeading
         button?.target = self
         button?.action = #selector(toggle)
-        popover.delegate = self
-        popover.behavior = .transient
         updateTitle()
         watcher = TokenSourceWatcher(home: index.home) { [weak self] tool, paths in
             guard let self else { return }
@@ -56,21 +56,78 @@ final class TokenUsageMenu: NSObject, NSPopoverDelegate {
         delay?.cancel()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
-        popover.close()
-        popover.contentViewController = nil
+        closePanel()
         NSStatusBar.system.removeStatusItem(item)
     }
 
     @objc private func toggle() {
-        if popover.isShown { popover.performClose(nil); return }
-        guard let button = item.button else { return }
-        popover.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
-        popover.contentViewController = NSHostingController(rootView: TokenUsageOverview(snapshot: snapshot, mark: item.button?.image))
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if panel != nil { closePanel(); return }
+        guard let button = item.button, button.window != nil else { return }
+        let window = TokenPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        window.title = "YEN Token Usage"
+        window.level = .popUpMenu
+        window.collectionBehavior = [.transient, .fullScreenAuxiliary, .moveToActiveSpace]
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
+        window.hidesOnDeactivate = false
+        window.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
+        window.dismiss = { [weak self] in self?.closePanel() }
+        panel = window
+        let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, mark: button.image)
+            .fixedSize().background(GeometryReader { geometry in
+                Color.clear.preference(key: TokenPanelSize.self, value: geometry.size)
+            }).onPreferenceChange(TokenPanelSize.self) { [weak self, weak window] size in
+                DispatchQueue.main.async {
+                    guard let self, let window, self.panel === window else { return }
+                    self.position(size)
+                }
+            })
+        window.contentView = host
+        position(host.fittingSize)
+        window.makeKeyAndOrderFront(nil)
+        button.highlight(true)
+        let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: clicks.union(.keyDown)) { [weak self] event in
+            guard let self else { return event }
+            if event.type == .keyDown {
+                guard event.keyCode == 53 else { return event }
+                self.closePanel()
+                return nil
+            }
+            guard event.window !== self.panel else { return event }
+            if let itemWindow = self.item.button?.window, event.window === itemWindow { return event }
+            self.closePanel()
+            return event
+        }
+        outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: clicks) { [weak self] _ in self?.closePanel() }
+        NotificationCenter.default.addObserver(self, selector: #selector(closePanel),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closePanel),
+            name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         refreshAll()
     }
 
-    func popoverDidClose(_ notification: Notification) { popover.contentViewController = nil }
+    private func position(_ size: CGSize) {
+        guard size.width > 0, size.height > 0, let panel, let button = item.button, let window = button.window else { return }
+        let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
+        guard let screen = window.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return }
+        let frame = TokenPanel.frame(below: anchor, size: size, visible: screen.visibleFrame)
+        if frame != panel.frame { panel.setFrame(frame, display: true) }
+    }
+
+    @objc private func closePanel() {
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let outsideMonitor { NSEvent.removeMonitor(outsideMonitor) }
+        localMonitor = nil
+        outsideMonitor = nil
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        panel?.orderOut(nil)
+        panel?.contentView = nil
+        panel = nil
+        item.button?.highlight(false)
+    }
 
     @objc private func refreshAll() {
         let day = Calendar.current.startOfDay(for: Date())
@@ -128,7 +185,32 @@ final class TokenUsageMenu: NSObject, NSPopoverDelegate {
         let title = counts == nil ? "Reading local token usage" : "Token usage today: \(sum.formatted()) from \(counts?.count ?? 0) of 4 sources"
         item.button?.toolTip = title
         item.button?.setAccessibilityLabel(title)
+        if panel != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let size = self.panel?.contentView?.fittingSize else { return }
+                self.position(size)
+            }
+        }
     }
+}
+
+private final class TokenPanel: NSPanel {
+    var dismiss: (() -> Void)?
+    override var canBecomeKey: Bool { true }
+    override func cancelOperation(_ sender: Any?) { dismiss?() }
+
+    /// Match JPtheCat's six-point anchor gap and eight-point visible-display inset.
+    static func frame(below anchor: CGRect, size: CGSize, visible: CGRect) -> CGRect {
+        let safe = visible.insetBy(dx: 8, dy: 8)
+        let x = max(safe.minX, min(anchor.midX - size.width / 2, safe.maxX - size.width))
+        let top = min(anchor.minY - 6, safe.maxY)
+        return CGRect(x: x.rounded(), y: max(safe.minY, top - size.height).rounded(), width: size.width, height: size.height)
+    }
+}
+
+private struct TokenPanelSize: PreferenceKey {
+    static let defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }
 
 @MainActor
@@ -196,7 +278,10 @@ private struct TokenUsageOverview: View {
             Text(snapshot.counts == nil ? "Reading local sources…" : counts.isEmpty ? "No readable local sources" :
                     counts.count == 4 ? "4 local sources" : "Partial total · \(counts.count) of 4 local sources")
                 .font(.caption).foregroundStyle(.secondary)
-        }.padding(16).frame(width: 320).background(Color(nsColor: .windowBackgroundColor))
+        }.padding(16).frame(width: 320)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(.primary.opacity(0.14)))
     }
 
     private func detail(for count: Int?, total: Int) -> String {

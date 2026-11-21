@@ -79,7 +79,7 @@ struct TokenUsagePreference: View {
     @ObservedObject private var extras = DesktopExtras.shared
     var body: some View {
         Toggle(isOn: Binding(get: { extras.showsUsage }, set: extras.setUsage)) {
-            SettingsStudioLabel(title: "Show Token Usage", hint: "Show local tokens in the menu bar.")
+            SettingsStudioLabel(title: "Show Token Usage", hint: "Experimental. Count local agent tokens in the menu bar.")
         }
         .accessibilityLabel("Show Token Usage")
     }
