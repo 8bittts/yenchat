@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import SwiftUI
 import Testing
+import YENKit
 @testable import YEN
 
 /// The Tab Sidebar once re-derived its background from the Settings theme
@@ -12,6 +13,18 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct TerminalChromeAppearanceTests {
+    @Test func releasingAConfigFreesItsNativeAllocation() throws {
+        let raw = try #require(yen_config_new())
+        let zone = try #require(malloc_zone_from_ptr(raw))
+        var probe = AllocationProbe(address: UInt(bitPattern: raw))
+        var owner: YEN.Config? = YEN.Config(config: raw)
+        let wasLive = withExtendedLifetime(owner) { probe.isLive(in: zone) }
+        owner = nil
+        let stillLive = probe.isLive(in: zone)
+        #expect(wasLive)
+        #expect(!stillLive)
+    }
+
     @Test func refocusingATabUsesTheCurrentGroupWidth() throws {
         let windows = (0..<3).map { _ in
             NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
@@ -188,5 +201,26 @@ struct TerminalChromeAppearanceTests {
             green: Int((converted.greenComponent * 255).rounded()),
             blue: Int((converted.blueComponent * 255).rounded())
         )
+    }
+}
+
+// Observe the allocation without dereferencing a pointer after its owner goes away.
+private struct AllocationProbe {
+    let address: UInt
+    var found = false
+
+    mutating func isLive(in zone: UnsafeMutablePointer<malloc_zone_t>) -> Bool {
+        found = false
+        let status = zone.pointee.introspect.pointee.enumerator(
+            mach_task_self_, &self, UInt32(MALLOC_PTR_IN_USE_RANGE_TYPE), UInt(bitPattern: zone), nil
+        ) { _, context, _, ranges, count in
+            guard let context, let ranges else { return }
+            let probe = context.assumingMemoryBound(to: AllocationProbe.self)
+            for range in UnsafeBufferPointer(start: ranges, count: Int(count)) where range.address == probe.pointee.address {
+                probe.pointee.found = true
+            }
+        }
+        precondition(status == KERN_SUCCESS)
+        return found
     }
 }
