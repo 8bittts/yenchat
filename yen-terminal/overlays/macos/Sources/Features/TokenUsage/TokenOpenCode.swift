@@ -1,0 +1,150 @@
+import Foundation
+
+/// Local message projection and log-format decoder adapted from JP the Cat under MIT.
+struct TokenOpenCode {
+    let db: SQLiteDatabase
+    func count(in day: DateInterval) throws -> Int {
+        let tables = try existingTables([Self.legacyMessageTable, Self.sessionMessageTable])
+        let projection = Self.assistantProjection(tables: tables) ?? """
+            SELECT time_created AS created, tokens_input AS t_input, tokens_output AS t_output,
+                   tokens_reasoning AS t_reasoning, tokens_cache_read AS t_cache_read, tokens_cache_write AS t_cache_write
+            FROM session
+            """
+        let stmt = try db.prepare("""
+            SELECT COALESCE(SUM(COALESCE(t_input,0)+COALESCE(t_output,0)+COALESCE(t_reasoning,0)
+                +COALESCE(t_cache_read,0)+COALESCE(t_cache_write,0)),0)
+            FROM (\(projection)) WHERE created >= ? AND created < ?
+            """)
+        stmt.bind(1, Int(day.start.timeIntervalSince1970 * 1000))
+        stmt.bind(2, Int(day.end.timeIntervalSince1970 * 1000))
+        guard try stmt.step() else { throw CocoaError(.fileReadUnknown) }
+        return stmt.int(0)
+    }
+	static let legacyMessageTable = "message"
+	static let sessionMessageTable = "session_message"
+
+	/// The subset of `names` that exist as tables. Throws when `sqlite_master` itself cannot be read.
+	func existingTables(_ names: [String]) throws -> Set<String> {
+		let stmt = try db.prepare("SELECT name FROM sqlite_master WHERE type='table'")
+		var found = Set<String>()
+		while try stmt.step() {
+			if let name = stmt.text(0), names.contains(name) { found.insert(name) }
+		}
+		return found
+	}
+
+	/// One projection over every assistant row, whichever table holds it, with stable column names:
+	/// `session_id, id, created, model_id, provider_id, t_input, t_output, t_reasoning, t_cache_read,
+	/// t_cache_write`. Nil when neither table exists (a legacy session-only store).
+	static func assistantProjection(tables: Set<String>) -> String? {
+		let v2 = tables.contains(sessionMessageTable)
+		let v1 = tables.contains(legacyMessageTable)
+		let sessionMessages = """
+			SELECT session_id, id,
+			       json_extract(data, '$.time.created') AS created,
+			       json_extract(data, '$.model.id') AS model_id,
+			       json_extract(data, '$.model.providerID') AS provider_id,
+			       json_extract(data, '$.tokens.input') AS t_input,
+			       json_extract(data, '$.tokens.output') AS t_output,
+			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,
+			       json_extract(data, '$.tokens.cache.read') AS t_cache_read,
+			       json_extract(data, '$.tokens.cache.write') AS t_cache_write
+			FROM session_message
+			WHERE type = 'assistant'
+			"""
+		let legacyMessages = """
+			SELECT session_id, id,
+			       json_extract(data, '$.time.created') AS created,
+			       json_extract(data, '$.modelID') AS model_id,
+			       json_extract(data, '$.providerID') AS provider_id,
+			       json_extract(data, '$.tokens.input') AS t_input,
+			       json_extract(data, '$.tokens.output') AS t_output,
+			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,
+			       json_extract(data, '$.tokens.cache.read') AS t_cache_read,
+			       json_extract(data, '$.tokens.cache.write') AS t_cache_write
+			FROM message
+			WHERE json_extract(data, '$.role') = 'assistant'
+			"""
+		switch (v1, v2) {
+		case (false, false): return nil
+		case (true, false): return legacyMessages
+		case (false, true): return sessionMessages
+		case (true, true):
+			return sessionMessages + "\nUNION ALL\n" + legacyMessages
+				+ "  AND id NOT IN (SELECT id FROM session_message)\n"
+		}
+	}
+
+	static func parseFields(_ line: String) -> [String: String] {
+		var line = line
+		return line.withUTF8 { bytes -> [String: String] in
+			let space = UInt8(ascii: " ")
+			let equals = UInt8(ascii: "=")
+			let quote = UInt8(ascii: "\"")
+			let backslash = UInt8(ascii: "\\")
+			let count = bytes.count
+			var fields: [String: String] = [:]
+			var i = 0
+
+			func slice(_ range: Range<Int>) -> String {
+				range.isEmpty
+					? "" : String(decoding: UnsafeBufferPointer(rebasing: bytes[range]), as: UTF8.self)
+			}
+
+			while i < count {
+				while i < count, bytes[i] == space { i += 1 }
+				let keyStart = i
+				while i < count, bytes[i] != equals, bytes[i] != space { i += 1 }
+				guard i < count, bytes[i] == equals else {
+					while i < count, bytes[i] != space { i += 1 }
+					continue
+				}
+				let key = slice(keyStart..<i)
+				i += 1
+
+				let value: String
+				if i < count, bytes[i] == quote {
+					i += 1
+					let valueStart = i
+					var hasEscape = false
+					while i < count {
+						if bytes[i] == backslash, i + 1 < count {
+							hasEscape = true
+							i += 2
+							continue
+						}
+						if bytes[i] == quote { break }
+						i += 1
+					}
+					let valueEnd = min(i, count)
+					if hasEscape {
+						var out: [UInt8] = []
+						out.reserveCapacity(valueEnd - valueStart)
+						var j = valueStart
+						while j < valueEnd {
+							if bytes[j] == backslash, j + 1 < count {
+								out.append(bytes[j + 1])
+								j += 2
+								continue
+							}
+							out.append(bytes[j])
+							j += 1
+						}
+						value = String(decoding: out, as: UTF8.self)
+					} else {
+						value = slice(valueStart..<valueEnd)
+					}
+					if i < count, bytes[i] == quote { i += 1 }
+				} else {
+					let valueStart = i
+					while i < count, bytes[i] != space { i += 1 }
+					value = slice(valueStart..<i)
+				}
+				if !key.isEmpty { fields[key] = value }
+			}
+
+			return fields
+		}
+	}
+
+}

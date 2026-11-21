@@ -647,6 +647,8 @@ struct SettingsGeneralPane: View {
                 }
             }
 
+            Section("Menu Bar") { TokenUsagePreference() }
+
             Section("Links") {
                 Toggle(
                     isOn: Binding(
@@ -664,6 +666,10 @@ struct SettingsGeneralPane: View {
                         set: { workspace.setBrowserSplitEnabled($0) }
                     )
                 )
+            }
+
+            if #available(macOS 27, *) {
+                Section("Experimental") { MovingWallpaperPreference() }
             }
 
             Section {

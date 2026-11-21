@@ -182,6 +182,7 @@ case "$MODE" in
                 -only-testing:YENTests/MergeConflictResolutionModelTests
                 -only-testing:YENTests/IDEBlockingProcessRunnerTests
                 -only-testing:YENTests/GeneralSettingsStoreTests
+                -only-testing:YENTests/TokenUsageIndexTests
                 -only-testing:YENTests/KeyboardSettingsStoreTests
                 -only-testing:YENTests/SoundsSettingsStoreTests
                 -only-testing:YENTests/ThemesSettingsStoreTests

@@ -1,0 +1,164 @@
+import CoreGraphics
+import CoreMedia
+import Foundation
+
+/// A single per-desktop wallpaper assignment. The optional `youtubeOrigin` is
+/// retained so persistence can re-download a missing local file on next launch.
+@available(macOS 27.0, *)
+struct WallpaperEntry: Equatable {
+    var localURL: URL
+    var youtubeOrigin: String?
+}
+
+/// All in-memory wallpaper state. Replaces the previous parallel dictionaries
+/// (`desktopFiles`, `youtubeURLs`, `playbackPositions`, `knownSpaces`) so that
+/// every mutation touches one canonical store.
+@available(macOS 27.0, *)
+struct WallpaperState: Equatable {
+    var entries: [DesktopKey: WallpaperEntry] = [:]
+    var playbackPositions: [DesktopKey: CMTime] = [:]
+    /// Every Space we've ever observed on each display. macOS exposes no API to
+    /// enumerate Spaces, so we accumulate them as the user visits.
+    var knownSpaces: [CGDirectDisplayID: Set<UInt64>] = [:]
+
+    var isEmpty: Bool { entries.isEmpty }
+
+    func localURL(for key: DesktopKey) -> URL? { entries[key]?.localURL }
+
+    /// The entry with the smallest `DesktopKey`, chosen deterministically so that
+    /// collapsing differing per-desktop assignments to one shared wallpaper always
+    /// picks the same one (dictionary order is otherwise arbitrary). In
+    /// `.allDesktops` mode every entry is identical, so this is stable there too.
+    var canonicalEntry: WallpaperEntry? {
+        entries.min {
+            ($0.key.displayID, $0.key.spaceID) < ($1.key.displayID, $1.key.spaceID)
+        }?.value
+    }
+
+    /// The single shared URL when all desktops share one wallpaper, or `nil`.
+    var sharedLocalURL: URL? { canonicalEntry?.localURL }
+
+    /// Write one assignment. A saved playback position belongs to the file that
+    /// was playing, so it is dropped when the key gets a different file;
+    /// otherwise a new video would start at the old one's offset.
+    private mutating func store(_ entry: WallpaperEntry, at key: DesktopKey) {
+        if entries[key]?.localURL != entry.localURL {
+            playbackPositions.removeValue(forKey: key)
+        }
+        entries[key] = entry
+    }
+
+    mutating func setEntry(_ entry: WallpaperEntry, for key: DesktopKey) {
+        store(entry, at: key)
+        // Recording the all-desktops sentinel would surface a phantom "Desktop 1"
+        // row in the Per Desktop menu after an all-desktops restore-redownload.
+        if !key.isAllDesktops {
+            knownSpaces[key.displayID, default: []].insert(key.spaceID)
+        }
+    }
+
+    mutating func clearEntry(for key: DesktopKey) {
+        entries.removeValue(forKey: key)
+        playbackPositions.removeValue(forKey: key)
+    }
+
+    /// Replace all assignments with a single shared entry across the given displays.
+    /// Used when switching to `.allDesktops` mode or when the wallpaper changes globally.
+    mutating func applyShared(entry: WallpaperEntry, across displayIDs: [CGDirectDisplayID]) {
+        let keys = Set(displayIDs.map(DesktopKey.init(displayID:)))
+        for key in Array(entries.keys) where !keys.contains(key) {
+            entries.removeValue(forKey: key)
+        }
+        playbackPositions = playbackPositions.filter { keys.contains($0.key) }
+        for key in keys {
+            store(entry, at: key)
+        }
+    }
+
+    /// Apply one wallpaper choice according to the current mode.
+    ///
+    /// - allDesktops: pin the entry on every connected display (sentinel space 0).
+    /// - perDesktop with a display: assign that display's given or current Space.
+    /// - perDesktop with no display ("for all"): assign every connected display's current Space.
+    @discardableResult
+    mutating func assign(
+        _ entry: WallpaperEntry,
+        mode: WallpaperMode,
+        displayID: CGDirectDisplayID?,
+        spaceID: UInt64?,
+        connectedDisplayIDs: [CGDirectDisplayID],
+        currentSpaceID: (CGDirectDisplayID) -> UInt64
+    ) -> [DesktopKey] {
+        switch mode {
+        case .allDesktops:
+            applyShared(entry: entry, across: connectedDisplayIDs)
+            return connectedDisplayIDs.map { DesktopKey(displayID: $0) }
+        case .perDesktop:
+            if let displayID {
+                let space = spaceID ?? currentSpaceID(displayID)
+                let key = DesktopKey(displayID: displayID, spaceID: space)
+                setEntry(entry, for: key)
+                return [key]
+            }
+            return connectedDisplayIDs.map { id in
+                let key = DesktopKey(displayID: id, spaceID: currentSpaceID(id))
+                setEntry(entry, for: key)
+                return key
+            }
+        }
+    }
+
+    /// Replace this state's entries and playback positions with `persisted`'s,
+    /// but keep every Space we already saw from the live system snapshot.
+    /// Used after `refreshManagedDisplaySpaces()` so loading persistence does
+    /// not erase Spaces the user can currently switch to — those would never
+    /// appear in the Per Desktop menu otherwise.
+    mutating func adopt(persisted: WallpaperState) {
+        let liveKnownSpaces = knownSpaces
+        self = persisted
+        for (displayID, spaces) in liveKnownSpaces {
+            knownSpaces[displayID, default: []].formUnion(spaces)
+        }
+    }
+
+    /// Drop assignments for displays not in `connectedDisplayIDs` and pin the
+    /// shared value (if any) to every connected display.
+    @discardableResult
+    mutating func reconcileAllDesktops(connectedDisplayIDs: [CGDirectDisplayID]) -> Bool {
+        guard let shared = canonicalEntry else { return false }
+        let expected = Set(connectedDisplayIDs.map(DesktopKey.init(displayID:)))
+        var changed = false
+
+        for key in Array(entries.keys) where !expected.contains(key) {
+            entries.removeValue(forKey: key)
+            playbackPositions.removeValue(forKey: key)
+            changed = true
+        }
+
+        for id in connectedDisplayIDs {
+            let key = DesktopKey(displayID: id)
+            if entries[key] != shared {
+                store(shared, at: key)
+                changed = true
+            }
+        }
+
+        return changed
+    }
+
+    /// Re-key existing assignments to (display, currentSpace) so per-desktop
+    /// switching from `.allDesktops` preserves the wallpaper on the active Space.
+    mutating func migrateToPerDesktop(currentSpace: (CGDirectDisplayID) -> UInt64) {
+        let snapshot = entries
+        let positions = playbackPositions
+        entries.removeAll()
+        playbackPositions.removeAll()
+        for (oldKey, entry) in snapshot {
+            let space = currentSpace(oldKey.displayID)
+            let newKey = DesktopKey(displayID: oldKey.displayID, spaceID: space)
+            entries[newKey] = entry
+            playbackPositions[newKey] = positions[oldKey]
+            knownSpaces[oldKey.displayID, default: []].insert(space)
+        }
+    }
+}

@@ -64,9 +64,10 @@ export function TermsPageClient({
 					>
 						source repository
 					</a>
-					. YEN is built on Ghostty, which is also MIT licensed. Bundled
-					third-party components remain governed by their own licenses. The YEN
-					name and logo are not licensed under the MIT License.
+					. YEN is built on Ghostty, which is also MIT licensed. Bundled Use
+					wallpaper media you have permission to display. Third-party components
+					remain governed by their own licenses. The YEN name and logo are not
+					licensed under the MIT License.
 				</p>
 			</DocSection>
 

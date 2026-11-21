@@ -25,7 +25,8 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 
 ## Not applicable
 
-- `03-data.md`: the app has no database; the theme catalog is generated from its manifest and owned by `02-design-system.md`.
+- `03-data.md`: YEN has no hosted database.
+  The disposable local token index belongs to `01-architecture.md` and the theme catalog belongs to `02-design-system.md`.
 - `06-payments.md`: the app is free and sells nothing.
 
 ## Other surfaces

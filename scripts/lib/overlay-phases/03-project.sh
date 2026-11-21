@@ -57,6 +57,7 @@ if [ -f "$INFO_PLIST" ]; then
     plist_upsert "$INFO_PLIST" "LSMinimumSystemVersion" "string" "13.0"
 
     # Add microphone usage description for dictation feature
+    plist_upsert "$INFO_PLIST" "NSPhotoLibraryUsageDescription" "string" "YEN uses Photos to shuffle videos when you choose Shuffle from Photos for your wallpaper."
     plist_upsert "$INFO_PLIST" "NSMicrophoneUsageDescription" "string" "YEN uses your microphone for Option + Space speech-to-text dictation in any app."
 
     # Add speech recognition usage description for dictation feature

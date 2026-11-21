@@ -122,3 +122,17 @@ Gate contracts and overlap watch items: `_docs/04-security.md`.
 Test lanes and the test philosophy: `tests/00-tests-readme.md`.
 Gate scripts: `scripts/00-scripts-readme.md`.
 Native test rules (TCC, real config, green-but-empty runs): `_docs/09-quality.md` → Native Test Suite.
+
+## Optional desktop integrations
+
+The token status item owns a cancelable utility worker and filesystem notifications for local Claude Code, Codex, Grok Build and OpenCode records.
+Counts belong to the recording tool and use the local calendar day.
+JSONL cursors and event contributions commit together in a YEN-owned SQLite cache.
+OpenCode reads its database in read-only mode and prefers the current copy of a message during schema migration.
+Terminal panes and the renderer do not subscribe to usage updates.
+
+The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behind desktop icons.
+Video playback uses AVFoundation and animated GIFs use ImageIO.
+The wallpaper engine suspends occluded playback and responds to power and thermal pressure.
+Its cache, preferences and controls belong to YEN, independent of standalone MovingPaper.
+Reset and disable tear down feature-owned workers, observers and windows.

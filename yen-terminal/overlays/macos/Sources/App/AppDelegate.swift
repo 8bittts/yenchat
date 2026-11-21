@@ -294,6 +294,7 @@ class AppDelegate: NSObject,
     func applicationDidFinishLaunching(_ notification: Notification) {
         // End persistent sessions no pane holds any more, after restore settles.
         PersistentSessionReaper.start()
+        DesktopExtras.shared.restore()
 
         // System settings overrides
         UserDefaults.standard.register(defaults: [
@@ -560,6 +561,7 @@ class AppDelegate: NSObject,
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        DesktopExtras.shared.stop()
         // From here on a pane teardown is the app leaving, so persistent
         // sessions detach instead of ending (PersistentSessions.paneDidClose).
         PersistentSessions.markTerminating()

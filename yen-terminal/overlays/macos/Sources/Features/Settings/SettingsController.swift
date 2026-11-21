@@ -1921,7 +1921,11 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         withCoalescedSettingsNotifications {
             performConfigurationResetTransaction(
                 successMessage: "All settings reset to defaults",
-                postSuccess: { try? TerminalBackgroundImageStore.cleanupManagedImages() }
+                postSuccess: {
+                    DesktopExtras.shared.setUsage(false)
+                    DesktopExtras.shared.setWallpaper(false)
+                    try? TerminalBackgroundImageStore.cleanupManagedImages()
+                }
             ) {
                 suppressRealTimeConfigSync = true
                 resetTypographyConfigDefaults()

@@ -24,7 +24,24 @@ export function LegalPrivacyContent() {
 							the site you selected. YEN uses a non-persistent WebKit data store
 							and does not receive your browsing activity.
 						</li>
+						<li>
+							<strong className="text-text-primary">
+								Experimental wallpaper.
+							</strong>{" "}
+							Choosing a YouTube link can download a verified helper from GitHub
+							and contact YouTube and its media servers. Restoring a selected
+							video can repeat the download if its cached file is missing.
+							Apple’s Photos picker shares the video you select. Shuffle from
+							Photos requests library permission. iCloud Photos can download
+							media. YEN keeps selections and cached media on your Mac.
+						</li>
 					</ul>
+					<p className="text-body-sm text-text-muted mb-4">
+						If you enable Show Token Usage, YEN reads local tool records and
+						keeps a daily index of counts, record identifiers, source paths and
+						read positions in its cache. YEN does not transmit these records,
+						request credentials, or store conversation text in that index.
+					</p>
 				</div>
 
 				<div>

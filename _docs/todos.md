@@ -18,7 +18,7 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with two operator-approved features below: always-on sessions and the token usage menu.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with the operator-approved sessions, token usage and experimental wallpaper work below.
 Apart from those features, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/update-yen` and need no entry here.
 
@@ -53,51 +53,12 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 ### Token usage in the macOS menu bar
 
-Add one switch in Settings → General → Menu Bar, between Panes and Links.
-When enabled, the YEN status item shows today's combined local token count and opens the provider breakdown.
-The first four rows represent tools: Claude Code, Codex, Grok Build (labeled Grok), and OpenCode.
-JP the Cat and YEN can run independently or together.
+- [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
+- [ ] Validate day rollover, locked databases, concurrent provider writes and repeated toggles in the release candidate.
 
-#### Phase 1: Choose the dropdown
+### Experimental moving wallpaper
 
-- [ ] Review the [interactive designs](_design/token-menu/index.html) with populated, partial and empty sample data.
-- [ ] Choose Overview (provider share), Activity (hourly counts), or Compact (exact counts).
-- [ ] Approve the local calendar day, inclusion of cache tokens, and the distinction between a measured zero and an unavailable source.
-
-#### Phase 2: Port local counting
-
-Use the MIT-licensed readers and accounting tests from `8bittts/JPtheCat` at `90d87ee6` as the starting point.
-Keep the upstream notice with copied sources and in the distributed app.
-Port only the parsing, deduplication and cursor logic needed by these four rows into YEN's macOS overlays.
-
-| Row | Local source and accounting |
-| --- | --- |
-| Claude Code | Stream assistant usage from project JSONL. Deduplicate replayed message and request IDs and count uncached input, output, cache writes and reads once. |
-| Codex | Reconcile cumulative token snapshots from rollout JSONL. Preserve resume, fork and reset handling. Cached input and reasoning output are already subsets. |
-| Grok | Read completed Grok Build turns from session updates. Preserve per-model deduplication and the reader's cache and reasoning rules. |
-| OpenCode | Read assistant token columns from the local SQLite store in read-only mode. Support the legacy log where it supplies counts. Select one source and count each message once across gateways and model brands. |
-
-- [ ] Test fixtures against the JP readers for repeated, partial, corrected, rotated and malformed records and both supported OpenCode table shapes.
-- [ ] Group by recording tool, independent of model name or shell host, and reconcile the four rows to the exact total before display rounding.
-- [ ] Use the user's local calendar for day boundaries, including midnight, sleep, timezone changes and daylight saving transitions.
-- [ ] Distinguish a readable source with zero activity, a missing source, a temporarily locked or unreadable source, and a scan in progress.
-- [ ] Read usage locally without a YEN account, JP installation, hooks, provider credentials, network requests or writes to either app's provider data.
-
-#### Phase 3: Connect Settings and the status item
-
-- [ ] Add one persisted switch, **Show Token Usage**, to the General pane in `SettingsStudioPanes.swift`, using YEN's preference and reset paths.
-- [ ] Default to off. At first enable, create one YEN template-icon status item and start one cancelable collector after the UI responds.
-- [ ] Show the last available snapshot while updating, label partial totals, and display an unavailable state when there are no readable sources.
-- [ ] On disable, reset or quit, cancel pending work, release watchers, file handles and views, and discard late results after rapid off/on changes.
-- [ ] Keep the status item independent of windows, panes, dictation's status item and JP's own defaults, cache, hooks, menu and updater.
-
-#### Phase 4: Prove the resource budget and native behavior
-
-- [ ] Compare a ReleaseFast control against feature-off, enabled idle, cold discovery, incremental updates and repeated enable/disable on the same Mac and fixture.
-- [ ] Require zero feature-owned reads, watchers and timers while off. While enabled, watch the allowed roots once per app, coalesce changes, and discover newly created sources without rescanning history on a timer.
-- [ ] Stream bounded batches on one utility worker. Checkpoint offsets and SQLite watermarks atomically with totals in YEN-owned storage. Bound deduplication state on disk and keep only display aggregates in memory.
-- [ ] Profile physical footprint, wakeups, bytes read and terminal input-to-draw latency during large appends. Proposed targets above the control are at most 8 MiB at rest and 32 MiB during ingestion. Require a memory plateau across repeated toggles and typing latency within the control run’s variation. Record host load, repetitions and ranges before accepting the native implementation.
-- [ ] In a re-identified running YEN build, verify settings order, relaunch, reset, keyboard and VoiceOver navigation, light/dark appearance, sleep/wake and coexistence with JP and dictation. Update the desktop, architecture, privacy and public feature docs and run the declared gates before release.
+- [ ] Verify Photos picker and shuffle permissions, multi-display Spaces and power-state changes before desktop release.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 
