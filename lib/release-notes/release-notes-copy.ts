@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.281":
+		"Horizontal tabs have more room around their names. The titlebar groups each tab name with its pane icons. When a tab gets narrow, the icons hide so you can still read its name.",
 	"1.280":
 		"Open About YEN to see the rounded monitor icon. Its green phosphor slowly brightens and fades while the window is active. With Reduce Motion on, the glow stays steady.",
 	"1.279":
