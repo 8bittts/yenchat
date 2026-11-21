@@ -45,32 +45,6 @@ struct TerminalClipboardShortcutTests {
         #expect(missingMenuAction == nil)
     }
 
-    @Test func fixedGitDrawerShortcutBypassesTerminalBindingGate() {
-        let shouldDispatch = YEN.SurfaceView.shouldPerformYENMenuShortcutBeforeTerminalEncoding(
-            menuAction: #selector(AppDelegate.toggleGitDrawer(_:)),
-            bindingFlags: nil,
-            keySequenceIsEmpty: true,
-            keyTablesAreEmpty: true
-        )
-
-        #expect(shouldDispatch)
-    }
-
-    @Test func fixedGitDrawerShortcutDoesNotInterruptKeySequencesOrTables() {
-        #expect(!YEN.SurfaceView.shouldPerformYENMenuShortcutBeforeTerminalEncoding(
-            menuAction: #selector(AppDelegate.toggleGitDrawer(_:)),
-            bindingFlags: nil,
-            keySequenceIsEmpty: false,
-            keyTablesAreEmpty: true
-        ))
-        #expect(!YEN.SurfaceView.shouldPerformYENMenuShortcutBeforeTerminalEncoding(
-            menuAction: #selector(AppDelegate.toggleGitDrawer(_:)),
-            bindingFlags: nil,
-            keySequenceIsEmpty: true,
-            keyTablesAreEmpty: false
-        ))
-    }
-
     @Test func nonFixedMenuShortcutStillRequiresConsumedTerminalBinding() {
         #expect(!YEN.SurfaceView.shouldPerformYENMenuShortcutBeforeTerminalEncoding(
             menuAction: #selector(YEN.SurfaceView.copy(_:)),

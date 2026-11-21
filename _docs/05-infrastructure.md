@@ -35,7 +35,7 @@ Do not make a beta macOS SDK the default `xcode-select` or release path.
 On macOS 27, AppKit decides whether a menu item's image is shown and typically hides it.
 YEN follows that system default on purpose: `setImageIfDesired` sets the image and leaves `NSMenuItem.preferredImageVisibility` at automatic.
 Setting `.visible` is a product decision, not a fix; it would also need every menu icon checked by eye.
-On an SDK change, run `scripts/native/01-macos-smoke.sh` (`--fast`); its slice covers menus, the Git Drawer, Tab Sidebar and Scratchpad panels, clipboard snapshot and restore, and dictation paste.
+On an SDK change, run `scripts/native/01-macos-smoke.sh` (`--fast`); its slice covers menus, the Tab Sidebar and Scratchpad panels, clipboard snapshot and restore, and dictation paste.
 The component gate's forced slice (`YEN_COMPONENT_XCODE_REGRESSION_MODE=always`) runs only the command-palette, Settings, keyboard, web-preview and utility-window suites, so it does not replace that run.
 Quick Terminal has no suite, so open and close it by hand.
 

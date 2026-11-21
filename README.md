@@ -36,7 +36,7 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 
 ### A terminal-first IDE
 
-- A native file browser, Git drawer, command palette, tab sidebar and scratchpad, all one shortcut away.
+- A native file browser, command palette, tab sidebar and scratchpad, all one shortcut away.
 - A built-in WebKit browser for docs and local dev servers, in a window or a split.
 - Project detection, trust, diagnostics, test runs, review and automation through the bundled `yen` command.
 - 20 curated themes, previewed live in Settings.

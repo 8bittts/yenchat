@@ -2,71 +2,20 @@
 import AppKit
 import SwiftUI
 
-/// Right-side scratchpad editor view.
+/// Editor for the floating scratchpad.
 struct ScratchpadView: View {
     @ObservedObject var controller: ScratchpadController
 
-    // The Scratchpad docks flush against the terminal window's right edge, so
-    // only its leading (left) corners face into the terminal and round; the
-    // trailing edge stays square. Mirrors the Tab Sidebar's docked clip and the
-    // shared terminal-facing corner radius. (Previously rounded all four
-    // corners.)
-    private var panelShape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            topLeadingRadius: YENDesignTokens.terminalFacingCornerRadius,
-            bottomLeadingRadius: YENDesignTokens.terminalFacingCornerRadius,
-            bottomTrailingRadius: 0,
-            topTrailingRadius: 0,
-            style: .continuous
-        )
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            ScratchpadTextEditor(text: $controller.text) { textView in
-                controller.registerTextView(textView)
-            }
-        }
-        .frame(width: ScratchpadController.panelWidth)
-        .background(panelShape.fill(Color(NSColor.windowBackgroundColor)))
-        .overlay(
-            panelShape.stroke(Color(NSColor.separatorColor).opacity(0.45), lineWidth: 0.9)
-        )
-        .clipShape(panelShape)
-    }
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "square.and.pencil")
-                .settingsScaledSystemFont(size: 12, weight: .medium)
-                .foregroundColor(.secondary)
-
-            Text("Scratchpad")
-                .settingsScaledSystemFont(size: 12, weight: .semibold)
-
-            Spacer()
-
-            Button {
-                controller.toggle()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .settingsScaledSystemFont(size: 13, weight: .medium)
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Close Scratchpad")
-            .accessibilityLabel("Close Scratchpad")
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        ScratchpadTextEditor(text: $controller.text) { controller.registerTextView($0) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .textBackgroundColor))
     }
 }
 
 private struct ScratchpadTextEditor: NSViewRepresentable {
-    private static let horizontalInset: CGFloat = 12
-    private static let verticalInset: CGFloat = 10
+    private static let horizontalInset = YENDesignTokens.contentInset
+    private static let verticalInset = YENDesignTokens.contentInset
 
     @Binding var text: String
     let onReady: (NSTextView) -> Void
@@ -82,7 +31,8 @@ private struct ScratchpadTextEditor: NSViewRepresentable {
         }
 
         textView.delegate = context.coordinator
-        textView.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.font = .monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        textView.setAccessibilityLabel("Scratchpad notes")
         textView.isEditable = true
         textView.isSelectable = true
         textView.isRichText = false

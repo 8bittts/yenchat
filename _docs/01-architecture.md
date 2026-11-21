@@ -65,10 +65,10 @@ Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSes
 ### Native-First Interaction Parity
 
 When a YEN surface has a native analog, mirror the analog's mechanism, curve, duration and secondary effects exactly.
-Surfaces with no analog (Git drawer content, layout templates, dictation) define their own interaction.
+Surfaces with no analog (layout templates, dictation) define their own interaction.
 
-The four sliding surfaces (Quick Terminal, Local Git Drawer, Tab Sidebar, Scratchpad) share one motion: each emerges inward from behind an edge and covers what is beneath it.
-Quick Terminal hides behind the screen edge; the other three hide behind the terminal window's edge (Git drawer bottom, Tab Sidebar left, Scratchpad right).
+Quick Terminal slides from the screen edge.
+The transient Tab Sidebar slides from the terminal edge.
 
 - One motion runner: `SlidingUtilityPanel.transition`.
 - Constant geometry and rigid translation of one full extent; never animate a constraint from zero, which reflows content like an accordion.
@@ -82,16 +82,13 @@ Quick Terminal hides behind the screen edge; the other three hide behind the ter
 Quick Terminal keeps upstream geometry, screen state, dock handling, focus restoration and lifecycle unchanged.
 A fail-closed patch replaces only its two `NSAnimationContext` calls with `SlidingUtilityPanel.transition`, and `applyTerminalFacingCorners` runs only after the native controller establishes the window.
 
-The other three use `EdgeRevealView`, which applies Quick Terminal's `setInitial`/`setFinal` to content instead of a window.
+The transient Tab Sidebar uses `EdgeRevealView`, which applies Quick Terminal's `setInitial`/`setFinal` to content instead of a window.
 It clips to its bounds, parks its content one full extent past its edge, and slides it to rest inside the shared envelope.
-The Git drawer hosts one at the bottom of `TerminalViewContainer`; the Scratchpad and transient Tab Sidebar panels use one as their content view.
-Those two panels rest flush inside the window's content area (`contentLayoutRect`, below the titlebar) and never move their own frames.
-A moving panel has no edge to hide behind, so it fades in mid-air over the desktop; every earlier normalization that tuned only curve and timing left that difference in place.
-The panels carry no window shadow, which would outline the full panel before the content arrives, and round the outer corners they share with the window to the window's radius.
-[CRITICAL] `park()` lays the hosted SwiftUI content out synchronously, so a panel's first `makeNSView` runs inside that layout pass.
-Never change key window or first responder from a representable's `makeNSView`/`updateNSView` callback: the nested layout trips AttributeGraph's precondition and aborts the app on the first open.
-Focus belongs to the enter completion and the re-anchor paths.
-Guards: `TerminalViewContainerTests.gitDrawerHostAttachesAndRemovesBottomOverlay()`, `gitDrawerAnimatedAttachKeepsConstantHeightAndClips()`, the reveal, rest-frame and `firstLayoutRegistersEditorWithoutChangingFocus()` tests in `ScratchpadControllerTests` and `TabSidebarBehaviorTests`, and the sequence checks in `tests/45-overlay-patching.test.ts`.
+The sidebar hosts this view inside its panel.
+The sidebar rests flush inside the window's content area (`contentLayoutRect`, below the titlebar) and keeps a fixed frame.
+The sidebar uses its host window’s corner radius and has no separate window shadow.
+The scratchpad uses an AppKit utility panel with a native title bar, resize handles, and window shadow.
+Its first layout registers the text editor before the panel gives it keyboard focus.
 
 ### Scrollable Text Surface Alignment
 

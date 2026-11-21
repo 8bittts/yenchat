@@ -2,12 +2,12 @@
 import Cocoa
 import SwiftUI
 
-/// Manages the right-side scratchpad panel.
+/// Manages the floating scratchpad editor.
 /// Singleton with one app-global text buffer shared across all windows/tabs.
 @MainActor
-final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidation {
+final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidation, NSWindowDelegate {
     static let shared = ScratchpadController()
-    static let panelWidth: CGFloat = 360
+    private static let sizeKey = "com.yenchat.yen.scratchpadSize"
     nonisolated static let scratchpadEnabledPreferenceKey = "com.yenchat.yen.scratchpadEnabled"
 
     @Published var text: String = "" {
@@ -24,7 +24,25 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
     // controller is split across feature-local extension files.
     let storage: ScratchpadStorage
     var panel: ScratchpadPanel?
-    var revealView: EdgeRevealView? { panel?.contentView as? EdgeRevealView }
+    var placingPanel = false
+    var relativeCenter = CGPoint(x: 0.5, y: 0.5)
+
+    var preferredPanelSize: CGSize? {
+        let saved = UserDefaults.standard.dictionary(forKey: Self.sizeKey)
+        guard let width = saved?["width"] as? CGFloat, let height = saved?["height"] as? CGFloat,
+              width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
+        return CGSize(width: width, height: height)
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        guard !placingPanel, visible, let panel, notification.object as? NSWindow === panel else { return }
+        UserDefaults.standard.set(["width": panel.frame.width, "height": panel.frame.height], forKey: Self.sizeKey)
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        dismiss()
+        return false
+    }
     weak var textView: NSTextView?
     weak var anchorWindow: NSWindow?
     private var hasSetup = false
@@ -55,12 +73,6 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
         return defaults.bool(forKey: scratchpadEnabledPreferenceKey)
     }
 
-    nonisolated static func animationDuration(
-        reduceMotion: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-    ) -> TimeInterval {
-        SlidingUtilityPanel.animationDuration(reduceMotion: reduceMotion)
-    }
-
     deinit {
         if let monitor = escapeMonitor {
             NSEvent.removeMonitor(monitor)
@@ -82,7 +94,7 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
 
     func toggle() {
         if visible, panel?.isVisible != false {
-            animateOut()
+            dismiss()
             return
         }
 
@@ -92,15 +104,12 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
             return
         }
         visible = false
-        animateIn()
+        present()
     }
 
     // MARK: - Panel
 
-    /// Stores the editor only. SwiftUI calls this from `makeNSView` during the panel's
-    /// first layout, which `EdgeRevealView.park()` forces synchronously; changing key
-    /// window or first responder there re-enters that layout and AttributeGraph aborts
-    /// the process. The reveal completion and re-anchor paths own focus.
+    // Focus after the hosting view finishes its first layout.
     func registerTextView(_ textView: NSTextView) {
         self.textView = textView
     }
@@ -108,17 +117,15 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
     func ensurePanel() -> ScratchpadPanel {
         if let existing = panel { return existing }
         let panel = ScratchpadPanel()
-        let reveal = EdgeRevealView(edge: .trailing)
-        reveal.embed(
-            NSHostingView(rootView: ScratchpadView(controller: self)),
-            extent: Self.panelWidth
-        )
-        panel.contentView = reveal
+        let host = NSHostingView(rootView: ScratchpadView(controller: self))
+        host.sizingOptions = []
+        panel.contentView = host
+        panel.delegate = self
         self.panel = panel
         return panel
     }
 
-    func animateIn() {
+    func present() {
         guard !visible else { return }
         guard let terminalWindow = activeTerminalWindow() else { return }
 
@@ -127,57 +134,23 @@ final class ScratchpadController: NSObject, ObservableObject, NSMenuItemValidati
         installEscapeMonitor()
 
         let panel = ensurePanel()
-        guard let reveal = revealView else { return }
-        // Quick Terminal's sequence: rest frame, content parked behind the window's
-        // right edge at alpha 0, then slide in. Focus only after the reveal completes.
+        relativeCenter = CGPoint(x: 0.5, y: 0.5)
         positionPanel(panel, relativeTo: terminalWindow)
-        reveal.park()
-        panel.orderFront(nil)
-        reveal.slide(
-            .entering,
-            duration: SlidingUtilityPanel.currentAnimationDuration(),
-            completion: { [weak self] in
-                guard let self, self.visible else { return }
-                self.focusTextEditor()
-            }
-        )
+        panel.makeKeyAndOrderFront(nil)
+        panel.contentView?.layoutSubtreeIfNeeded()
+        focusTextEditor()
     }
 
-    func animateOut(restoringFocus: Bool = true) {
+    func dismiss(restoringFocus: Bool = true) {
         guard visible else { return }
-        guard let panel else {
-            visible = false
-            anchorWindow = nil
-            removeEscapeMonitor()
-            return
-        }
-
         visible = false
         removeEscapeMonitor()
         flushPendingSave()
-
-        let restoreWindow = anchorWindow ?? activeTerminalWindow()
-        guard let terminalWindow = restoreWindow, let reveal = revealView else {
-            panel.orderOut(nil)
-            anchorWindow = nil
-            return
+        panel?.orderOut(nil)
+        if restoringFocus, let anchorWindow, anchorWindow.isVisible {
+            anchorWindow.makeKeyAndOrderFront(nil)
         }
-
-        // Match Quick Terminal: slide back behind the edge, then orderOut synchronously
-        // in the exit completion (no Task hop).
-        reveal.slide(
-            .exiting,
-            duration: SlidingUtilityPanel.currentAnimationDuration(),
-            completion: { [weak self] in
-                guard let self else { return }
-                guard !self.visible else { return }
-                panel.orderOut(nil)
-                if restoringFocus {
-                    terminalWindow.makeKeyAndOrderFront(nil)
-                }
-                self.anchorWindow = nil
-            }
-        )
+        anchorWindow = nil
     }
 
     func focusTextEditor() {

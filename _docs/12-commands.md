@@ -84,7 +84,6 @@ Before adding a default shortcut, check `KeybindRegistry.defaults`, the fixed ha
 | `Cmd + Shift + O` | File browser (fixed) | Yes |
 | `Cmd + Shift + S` | Screenshot to file and clipboard (fixed) | Yes |
 | `Cmd + Shift + B` | Tab sidebar (fixed) | Yes |
-| `Cmd + Shift + G` | Local Git drawer (fixed) | Yes |
 | `Cmd + Shift + J` | Scratchpad (fixed) | Yes |
 | `Cmd + Option + 1` … `0` | Layouts: Single Pane, Three Columns, Right Stack, Bottom Stack, Quad, Eastward 1-3, Eastward 2-1, Eastward 2-3, Center Stage, Three Column Bottom (fixed) | Yes |
 | `` Ctrl + ` `` | Quick Terminal | Yes |

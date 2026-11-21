@@ -699,24 +699,6 @@ struct TerminalCommandPalettePresentationTests {
         #expect(path == "/tmp/custom-ide-state/trusted-workflow-projects")
     }
 
-    @Test func gitDrawerPaletteActionAdvertisesShortcutAndExecutesAppAction() {
-        var didExecute = false
-        let descriptor = TerminalCommandPaletteView.gitDrawerActionDescriptorForTesting {
-            didExecute = true
-        }
-
-        #expect(descriptor.id == "terminal:git-drawer")
-        #expect(descriptor.title == "Git Drawer")
-        #expect(descriptor.description == "Toggle the read-only local Git drawer")
-        #expect(descriptor.symbols == ["⌘", "⇧", "G"])
-        #expect(descriptor.leadingIcon == "point.3.connected.trianglepath.dotted")
-        #expect(descriptor.searchTags.contains("git"))
-        #expect(descriptor.searchTags.contains("diff"))
-
-        descriptor.execute()
-        #expect(didExecute)
-    }
-
     @Test func repositoryWorkspaceActionBlueprintsAdvertiseTheirActualRenderingModes() {
         let blueprints = TerminalCommandPaletteView.repositoryWorkspaceActionBlueprints
 

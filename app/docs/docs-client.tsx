@@ -102,8 +102,9 @@ function TerminalIDESection() {
 			<ul className="list-disc list-outside pl-5 space-y-3 text-body mb-6">
 				<li>
 					<strong>Scratchpad:</strong> one locally saved notes buffer shared
-					across windows. It supports copy, paste, and copy-on-select when
-					enabled.
+					across windows. In source builds after 1.282 it opens centered. Drag
+					its title bar to move it or an edge to resize it. YEN remembers the
+					size. It supports copy, paste, and copy-on-select when enabled.
 				</li>
 				<li>
 					<strong>Layouts:</strong> ten presets from the File menu, the command
@@ -131,12 +132,9 @@ function TerminalIDESection() {
 				Local Git changes
 			</h3>
 			<p className="text-body">
-				Press <code className="inline-code-brand">Cmd + Shift + G</code> for the
-				read-only Git drawer. It shows branch status, changed files, stashes,
-				and raw diffs for the focused split. It follows directory and focus
-				changes independently of the tab sidebar. Use{" "}
-				<code className="inline-code-brand">yengit</code> for Git operations, or
-				the command palette for PR review and merge-conflict workspaces.
+				Use <code className="inline-code-brand">yengit</code> for Git
+				operations, or the command palette for PR review and merge-conflict
+				workspaces.
 			</p>
 		</DocSection>
 	);
@@ -723,6 +721,11 @@ function SplitPaneLabelsSection() {
 				the active pane and its header.
 			</p>
 			<p className="text-body">
+				In source builds after 1.282, horizontal tabs line up on the right and
+				expand to the left. Comfortable keeps the same gap below the tabs when
+				you add the first split.
+			</p>
+			<p className="text-body">
 				In YEN 1.277 and 1.278, enable Settings &gt; General &gt; Pane Labels to
 				show a name above each split. Run{" "}
 				<code className="inline-code-brand">Rename Split Label</code> to set a
@@ -1272,12 +1275,6 @@ function CommandsSection() {
 							<td className="align-top py-2 pl-4 pr-4">Tab sidebar</td>
 							<td className="align-top py-2 pr-4 text-left">
 								<code className="inline-code-brand">Cmd + Shift + B</code>
-							</td>
-						</tr>
-						<tr className="border-b border-border-light">
-							<td className="align-top py-2 pl-4 pr-4">Git drawer</td>
-							<td className="align-top py-2 pr-4 text-left">
-								<code className="inline-code-brand">Cmd + Shift + G</code>
 							</td>
 						</tr>
 						<tr className="border-b border-border-light">

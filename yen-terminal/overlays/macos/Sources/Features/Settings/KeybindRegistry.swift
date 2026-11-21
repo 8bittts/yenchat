@@ -409,13 +409,6 @@ enum KeybindRegistry {
         // -- Custom (YEN-specific) --
         entries.append(keybind("toggle_quick_terminal", "Quick Terminal", .custom, ctrl: true, key: "backquote", isGlobal: true))
         entries.append(keybind(
-            "yen_toggle_git_drawer", "Toggle Git Drawer", .custom,
-            cmd: true, shift: true, key: "g",
-            editable: false,
-            lockDescription: fixedShortcutLock,
-            isReservedFixed: true
-        ))
-        entries.append(keybind(
             "yen_show_settings", "Settings", .custom,
             cmd: true, key: "comma",
             editable: false,

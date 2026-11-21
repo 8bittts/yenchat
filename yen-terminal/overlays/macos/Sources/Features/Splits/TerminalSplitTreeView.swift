@@ -126,6 +126,7 @@ enum SplitFocusClickHitTesting {
 }
 
 struct TerminalSplitTreeView: View {
+    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
     let tree: SplitTree<YEN.SurfaceView>
     let action: (TerminalSplitOperation) -> Void
 
@@ -142,6 +143,7 @@ struct TerminalSplitTreeView: View {
             // the tree structure of splits it could result in bad behaviors.
             // See: https://github.com/yen-org/yen/issues/7546
             .id(node.structuralIdentity)
+            .padding(paneSettings.paneStyle == .comfortable ? YENDesignTokens.paneInset : 0)
         }
     }
 }
@@ -185,7 +187,6 @@ private struct TerminalSplitSubtreeView: View {
                     yen.splitEqualize(surface: surface)
                 }
             )
-            .padding(isRoot && paneSettings.paneStyle == .comfortable ? 4 : 0)
         }
     }
 }
@@ -219,8 +220,8 @@ private struct TerminalSplitLeaf: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let framed = isSplit && splitPaneLabelSettings.paneStyle == .comfortable
-            let inset: CGFloat = framed ? 4 : 0
+            let framed = splitPaneLabelSettings.paneStyle == .comfortable
+            let inset: CGFloat = framed ? YENDesignTokens.paneInset : 0
             let shape = RoundedRectangle(cornerRadius: framed ? YENDesignTokens.terminalFacingCornerRadius : 0, style: .continuous)
             let showSplitLabel = SplitPaneLabelRules.isVisible(
                 enabled: splitPaneLabelSettings.isEnabled,
@@ -395,20 +396,20 @@ private struct SplitPaneLabelView: View {
                 HStack(spacing: SettingsSpacing.iconTextSpacing) {
                     PaneActivityIcon(activity: activity)
                     Text(title)
-                        .font(.caption.weight(.semibold))
+                        .font(YENDesignTokens.paneTitle)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .layoutPriority(1)
                     if let directory, directory != title {
                         Text(directory)
-                            .font(.caption)
+                            .font(YENDesignTokens.secondaryLabel)
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .opacity(0.68)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, 12)
+                .padding(.leading, YENDesignTokens.contentInset)
                 .padding(.vertical, SettingsSpacing.controlSpacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())

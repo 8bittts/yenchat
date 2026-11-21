@@ -26,3 +26,8 @@ settings-studio	ghostty/macos/Tests/Settings/SettingsSidebarNavigationTests.swif
 settings-studio	ghostty/macos/Sources/Features/Settings/SettingsConfigurationTransfer.swift
 settings-studio	ghostty/macos/Tests/Settings/SettingsLocalSpeechControlsTests.swift
 settings-studio	ghostty/macos/Tests/Settings/SettingsConfigurationImportValidationTests.swift
+git-drawer	ghostty/macos/Sources/Features/GitDrawer/GitDrawerView.swift
+git-drawer	ghostty/macos/Sources/Features/GitDrawer/GitDrawerController.swift
+git-drawer	ghostty/macos/Sources/Features/GitDrawer/GitDrawerRepositoryWatcher.swift
+git-drawer	ghostty/macos/Tests/GitDrawer/GitDrawerControllerTests.swift
+git-drawer	ghostty/macos/Tests/App/GitDrawerRoutingTests.swift

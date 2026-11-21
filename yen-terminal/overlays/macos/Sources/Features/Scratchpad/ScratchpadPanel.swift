@@ -1,33 +1,25 @@
 #if os(macOS)
 import Cocoa
 
-/// Panel for the right-side scratchpad. It rests flush inside the terminal window's
-/// right edge and never moves; its `EdgeRevealView` content slides out from behind
-/// that edge. canBecomeKey/canBecomeMain are true so text input works without extra
-/// focus hacks.
 final class ScratchpadPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: ScratchpadController.panelWidth, height: 480),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 360),
+            styleMask: [.titled, .closable, .resizable, .utilityWindow, .nonactivatingPanel],
             backing: .buffered,
             defer: true
         )
 
         identifier = .init(rawValue: "com.yenchat.yen.scratchpad")
         setAccessibilitySubrole(.floatingWindow)
-        // Disable AppKit's default window show/hide so only SlidingUtilityPanel owns motion.
-        animationBehavior = .none
+        title = "Scratchpad"
         isReleasedWhenClosed = false
-        isOpaque = false
-        backgroundColor = .clear
-        // The content slides inside a fixed frame; a window shadow is computed once and
-        // would outline the full panel before the content arrives. The terminal window
-        // supplies the depth, as it does for the Git drawer.
-        hasShadow = false
+        hasShadow = true
+        backgroundColor = .textBackgroundColor
+        standardWindowButton(.zoomButton)?.isHidden = true
         level = .floating
         isMovableByWindowBackground = false
         hidesOnDeactivate = true

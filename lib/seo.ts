@@ -20,7 +20,7 @@ export const PUBLIC_PAGE_SEO = {
 	docs: {
 		title: "YEN Docs - Terminal Features, IDE Workflows, and CLI",
 		description:
-			"Set up YEN for macOS: terminal shortcuts, speech-to-text, themes, native WebKit browser preview, Git drawer, and CLI workflows with their requirements.",
+			"Set up YEN for macOS: terminal shortcuts, speech-to-text, themes, native WebKit browser preview, and CLI workflows with their requirements.",
 		url: `${SITE_URL}/docs`,
 		imageAlt: "YEN Documentation",
 	},

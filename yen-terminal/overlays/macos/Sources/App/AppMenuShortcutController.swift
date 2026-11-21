@@ -51,7 +51,6 @@ final class AppMenuShortcutController {
         let resetFontSize: NSMenuItem?
         let changeTitle: NSMenuItem?
         let changeTabTitle: NSMenuItem?
-        let gitDrawer: NSMenuItem?
         let quickTerminal: NSMenuItem?
         let toggleVisibility: NSMenuItem?
         let floatOnTop: NSMenuItem?
@@ -113,7 +112,6 @@ final class AppMenuShortcutController {
         syncMenuShortcut(config, action: "reset_font_size", menuItem: menuItems.resetFontSize)
         syncMenuShortcut(config, action: "prompt_surface_title", menuItem: menuItems.changeTitle)
         syncMenuShortcut(config, action: "prompt_tab_title", menuItem: menuItems.changeTabTitle)
-        syncFixedRegistryShortcut(action: "yen_toggle_git_drawer", menuItem: menuItems.gitDrawer)
         syncMenuShortcut(config, action: "toggle_quick_terminal", menuItem: menuItems.quickTerminal)
         syncMenuShortcut(config, action: "toggle_visibility", menuItem: menuItems.toggleVisibility)
         syncMenuShortcut(config, action: "toggle_window_float_on_top", menuItem: menuItems.floatOnTop)

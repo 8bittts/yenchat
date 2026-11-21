@@ -3396,51 +3396,6 @@ ${oldBlock}
 		expect(controllerOverlaySources[1]).toContain(
 			"SlidingUtilityPanel.currentAnimationDuration()",
 		);
-		expect(controllerOverlaySources[2]).toContain(
-			"SlidingUtilityPanel.currentAnimationDuration()",
-		);
-		const gitDrawerControllerSource = readFileSync(
-			join(
-				repoRoot,
-				"yen-terminal/overlays/macos/Sources/Features/GitDrawer/GitDrawerController.swift",
-			),
-			"utf8",
-		);
-		expect(gitDrawerControllerSource).toContain(
-			"SlidingUtilityPanel.currentAnimationDuration()",
-		);
-		// Every tray surface enters and exits through the shared edge reveal.
-		expect(controllerOverlaySources[0]).toContain(
-			"clip.slide(.entering, duration: animationDuration, layoutRoot: self)",
-		);
-		expect(controllerOverlaySources[0]).toContain(
-			"clip.slide(.exiting, duration: animationDuration, layoutRoot: self",
-		);
-		expect(controllerOverlaySources[0]).toContain(
-			"EdgeRevealView(edge: .bottom)",
-		);
-		// No surface animates its own panel frame any more.
-		expect(trayControllersJoined).not.toContain("panel.animator()");
-		expect(trayControllersJoined).not.toContain("prepareForSlideIn");
-		// Git Drawer must always park then run the shared enter envelope — including
-		// Reduce Motion (duration 0). No second instant-present path.
-		expect(controllerOverlaySources[0]).not.toContain(
-			"let animating = animationDuration > 0",
-		);
-		expect(controllerOverlaySources[0]).not.toMatch(
-			/animating\s*\?\s*-height\s*:\s*0/,
-		);
-		// Park behind the edge at alpha 0 before the enter slide (vendor setInitial).
-		expect(controllerOverlaySources[0]).toMatch(
-			/clip\.park\(layoutRoot: self\)[\s\S]*?clip\.slide\(\.entering/,
-		);
-		// Exit teardown must be synchronous in the completion (no Task hop).
-		expect(controllerOverlaySources[0]).toMatch(
-			/completion:\s*\{\s*\[weak self\] in\s*guard let self/,
-		);
-		expect(controllerOverlaySources[0]).toContain("self.teardownGitDrawer()");
-		// Tab Sidebar reveals from the window's left edge, Scratchpad from its right:
-		// rest frame, park, order front, then slide (vendor setInitial -> setFinal).
 		expect(controllerOverlaySources[1]).toContain(
 			"EdgeRevealView(edge: .leading)",
 		);
@@ -3450,64 +3405,18 @@ ${oldBlock}
 		expect(controllerOverlaySources[1]).toContain(
 			"reveal.slide(\n            .exiting",
 		);
-		expect(controllerOverlaySources[2]).toContain(
-			"EdgeRevealView(edge: .trailing)",
-		);
-		expect(controllerOverlaySources[2]).toMatch(
-			/positionPanel\(panel, relativeTo: terminalWindow\)\s*reveal\.park\(\)\s*panel\.orderFront\(nil\)\s*reveal\.slide\(\s*\.entering/,
-		);
-		expect(controllerOverlaySources[2]).toContain(
-			"reveal.slide(\n            .exiting",
-		);
-		// Scratchpad + Tab Sidebar must complete exit orderOut synchronously (vendor QT
-		// pattern) and focus Scratchpad only after the enter envelope completes.
 		expect(controllerOverlaySources[1]).not.toMatch(
 			/completion:\s*\{\s*\[weak self\] in\s*Task\s*\{\s*@MainActor/,
-		);
-		expect(controllerOverlaySources[2]).not.toMatch(
-			/completion:\s*\{\s*\[weak self\] in\s*Task\s*\{\s*@MainActor/,
-		);
-		// Scratchpad must not schedule focus on the next runloop before enter completes.
-		expect(controllerOverlaySources[2]).not.toMatch(
-			/DispatchQueue\.main\.async\s*\{\s*\[weak self\] in\s*self\?\.focusTextEditor\(\)/,
-		);
-		// registerTextView runs from makeNSView inside the first forced layout; focusing
-		// there re-enters that layout and AttributeGraph aborts the app.
-		expect(controllerOverlaySources[2]).toMatch(
-			/func registerTextView\(_ textView: NSTextView\) \{\s*self\.textView = textView\s*\}/,
-		);
-		// Enter completion owns focus (visible guard + focusTextEditor).
-		expect(controllerOverlaySources[2]).toMatch(
-			/\.entering[\s\S]*?completion:\s*\{\s*\[weak self\] in\s*guard let self, self\.visible else \{ return \}\s*self\.focusTextEditor\(\)/,
-		);
-		// Exit completion owns orderOut synchronously.
-		expect(controllerOverlaySources[2]).toMatch(
-			/\.exiting[\s\S]*?completion:\s*\{\s*\[weak self\] in\s*guard let self else \{ return \}\s*guard !self\.visible else \{ return \}\s*panel\.orderOut\(nil\)/,
 		);
 		expect(controllerOverlaySources[1]).toMatch(
 			/\.exiting[\s\S]*?completion:\s*\{\s*\[weak self\] in\s*guard let self else \{ return \}\s*guard self\.visible == false else \{ return \}\s*self\.panel\?\.orderOut\(nil\)/,
 		);
-		// Both panels rest flush inside the window through the shared placement.
-		const scratchpadAnchoringSource = readFileSync(
-			join(
-				repoRoot,
-				"yen-terminal/overlays/macos/Sources/Features/Scratchpad/ScratchpadAnchoring.swift",
-			),
-			"utf8",
-		);
-		expect(scratchpadAnchoringSource).toContain(
-			"EdgeRevealPanelGeometry.place(",
-		);
 		expect(controllerOverlaySources[1]).toContain(
 			"EdgeRevealPanelGeometry.place(",
 		);
-
 		// A window shadow is computed once and would outline the full panel before
 		// the sliding content arrives, so the fixed-frame panels carry none.
-		for (const relativePath of [
-			"Features/Scratchpad/ScratchpadPanel.swift",
-			"Features/TabSidebar/TabSidebarPanel.swift",
-		]) {
+		for (const relativePath of ["Features/TabSidebar/TabSidebarPanel.swift"]) {
 			const panelSource = readFileSync(
 				join(repoRoot, "yen-terminal/overlays/macos/Sources", relativePath),
 				"utf8",
@@ -3516,7 +3425,6 @@ ${oldBlock}
 		}
 
 		const floatingPanelSources = [
-			"Features/Scratchpad/ScratchpadPanel.swift",
 			"Features/TabSidebar/TabSidebarPanel.swift",
 			"Features/QuickTerminal/QuickTerminalWindow.swift",
 		].map((relativePath) =>
@@ -3670,7 +3578,9 @@ ${oldBlock}
 						throw new Error("Invalid retired-file fixture row");
 					return { group, path };
 				});
-			expect(rows.length).toBe(28);
+			expect(rows.map((row) => row.path)).toContain(
+				"ghostty/macos/Sources/Features/GitDrawer/GitDrawerView.swift",
+			);
 			const calledGroups = overlayPhaseNames.flatMap((name) =>
 				[
 					...phaseSource(name).matchAll(

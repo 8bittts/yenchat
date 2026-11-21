@@ -63,9 +63,6 @@ extension TerminalCommandPaletteView {
             ) {
                 launchFileBrowser()
             },
-            Self.gitDrawerActionDescriptor {
-                AppDelegate.shared?.toggleGitDrawer(NSApp as Any)
-            },
             Self.browserActionDescriptor {
                 BrowserCommandService.shared.openDefault(presentation: .window)
             },

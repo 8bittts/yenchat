@@ -632,7 +632,9 @@
 			"@$PATCHES_DIR/performable-clipboard-selector.old",
 			"--new-block",
 			"@$PATCHES_DIR/performable-clipboard-selector.new",
-			"--old-absent-ok"
+			"--old-absent-ok",
+			"--already-valid-pattern",
+			"            guard menuAction != nil, let bindingFlags,"
 		]
 	},
 	"performable-clipboard-selector-fixed-shortcut-upgrade": {
@@ -651,7 +653,9 @@
 			"--old-block",
 			"@$PATCHES_DIR/performable-clipboard-selector-pre-fixed-git-drawer.old",
 			"--new-block",
-			"@$PATCHES_DIR/performable-clipboard-selector.new"
+			"@$PATCHES_DIR/performable-clipboard-selector.new",
+			"--already-valid-pattern",
+			"            guard menuAction != nil, let bindingFlags,"
 		]
 	},
 	"performable-clipboard-shortcut-routing": {
@@ -980,7 +984,9 @@
 			"--extra-replace",
 			"clipView.leftAnchor.constraint(equalTo: container.leftAnchor, constant: leftPadding):::WorkspaceTabStrip.start(clipView, at: container.leftAnchor, inset: leftPadding)",
 			"--marker-all",
-			"WorkspaceTabStrip.start(clipView, at: container.leftAnchor, inset: leftPadding)"
+			"WorkspaceTabStrip.start(clipView, at: container.leftAnchor, inset: leftPadding)",
+			"--already-valid-pattern",
+			"WorkspaceTabStrip.end(clipView, at: container.rightAnchor)"
 		]
 	},
 	"workspace-tabs-ventura": {
@@ -1007,7 +1013,9 @@
 			"--extra-replace",
 			"accessoryClipView.leftAnchor.constraint(equalTo: windowButtonsBackdrop.rightAnchor):::WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)",
 			"--marker-all",
-			"WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)"
+			"WorkspaceTabStrip.start(accessoryClipView, at: windowButtonsBackdrop.rightAnchor)",
+			"--already-valid-pattern",
+			"WorkspaceTabStrip.end(accessoryClipView, at: toolbarView.rightAnchor)"
 		]
 	},
 	"pane-header-focus": {
@@ -1110,6 +1118,55 @@
 			"clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: WorkspaceTabStrip.topInset)",
 			"--new-block",
 			"tabBarView.centerYAnchor.constraint(equalTo: container.centerYAnchor)"
+		]
+	},
+	"workspace-tabs-tahoe-trailing": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"right-align tahoe workspace tabs",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"WorkspaceTabStrip.end(clipView, at: container.rightAnchor)",
+			"--old-block",
+			"clipView.rightAnchor.constraint(lessThanOrEqualTo: container.rightAnchor)",
+			"--new-block",
+			"WorkspaceTabStrip.end(clipView, at: container.rightAnchor)"
+		]
+	},
+	"workspace-tabs-ventura-trailing": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsVenturaTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"right-align ventura workspace tabs",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"WorkspaceTabStrip.end(accessoryClipView, at: toolbarView.rightAnchor)",
+			"--old-block",
+			"accessoryClipView.rightAnchor.constraint(lessThanOrEqualTo: toolbarView.rightAnchor)",
+			"--new-block",
+			"WorkspaceTabStrip.end(accessoryClipView, at: toolbarView.rightAnchor)"
+		]
+	},
+	"performable-clipboard-selector-retire-drawer": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"release the retired Git drawer shortcut",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"            guard menuAction != nil, let bindingFlags,",
+			"--old-block",
+			"        static func fixedYENMenuShortcutSelector(_ menuAction: Selector?) -> Bool {\n            menuAction == #selector(AppDelegate.toggleGitDrawer(_:))\n        }\n\n        static func shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--new-block",
+			"        static func shouldPerformYENMenuShortcutBeforeTerminalEncoding(",
+			"--extra-replace",
+			"            guard menuAction != nil,\n                  keySequenceIsEmpty,:::            guard menuAction != nil, let bindingFlags,\n                  keySequenceIsEmpty,",
+			"--extra-replace",
+			"            if fixedYENMenuShortcutSelector(menuAction) {\n                return true\n            }\n\n            guard let bindingFlags else { return false }\n            return bindingFlags:::            return bindingFlags"
 		]
 	}
 }

@@ -40,11 +40,6 @@ struct ScratchpadControllerTests {
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "replacement")
     }
 
-    @Test func animationDurationHonorsReduceMotion() {
-        #expect(ScratchpadController.animationDuration(reduceMotion: false) == 0.2)
-        #expect(ScratchpadController.animationDuration(reduceMotion: true) == 0)
-    }
-
     @Test func shouldHandleCommandKeyWhenPanelHasTextViewResponder() {
         let shouldHandle = ScratchpadController.shouldHandleCommandKey(
             panelFirstResponderIsTextView: true,
@@ -110,57 +105,18 @@ struct ScratchpadControllerTests {
         #expect(!shouldClose)
     }
 
-    @Test func restFrameSitsFlushInsideTheWindowRightEdge() {
-        // Always inside the content area, whatever room the screen has beside it.
-        let frame = EdgeRevealPanelGeometry.restFrame(
-            contentFrame: NSRect(x: 100, y: 80, width: 500, height: 392),
-            edge: .trailing,
-            width: 360
-        )
-
-        #expect(frame == NSRect(x: 240, y: 80, width: 360, height: 392))
+    @Test func floatingPanelCentersAndFitsTheAvailableWindow() {
+        let bounds = CGRect(x: 30, y: 60, width: 900, height: 600)
+        let center = CGPoint(x: 0.5, y: 0.5)
+        let frame = ScratchpadController.panelFrame(in: bounds, preferred: nil, center: center)
+        #expect(abs(frame.midX - bounds.midX) <= 1)
+        #expect(abs(frame.midY - bounds.midY) <= 1)
+        let custom = CGSize(width: 450, height: 290)
+        #expect(ScratchpadController.panelFrame(in: bounds, preferred: custom, center: center).size == custom)
+        let tiny = CGRect(x: 0, y: 0, width: 180, height: 140)
+        #expect(tiny.contains(ScratchpadController.panelFrame(in: tiny, preferred: custom, center: center)))
     }
 
-    @Test func restFrameRoundsOnlyTheOuterCornersItSharesWithTheWindow() {
-        let window = NSRect(x: 100, y: 80, width: 500, height: 420)
-        // Below a 28pt titlebar the panel shares only the window's bottom-right corner.
-        let belowTitlebar = NSRect(x: 240, y: 80, width: 360, height: 392)
-        #expect(EdgeRevealPanelGeometry.sharedWindowCorners(
-            panelFrame: belowTitlebar,
-            windowFrame: window,
-            edge: .trailing
-        ) == [.layerMaxXMinYCorner])
-        // With no titlebar it also shares the top-right corner.
-        let fullHeight = NSRect(x: 240, y: 80, width: 360, height: 420)
-        #expect(EdgeRevealPanelGeometry.sharedWindowCorners(
-            panelFrame: fullHeight,
-            windowFrame: window,
-            edge: .trailing
-        ) == [.layerMaxXMinYCorner, .layerMaxXMaxYCorner])
-    }
-
-    @Test func revealParksContentOneFullWidthPastTheRightEdge() {
-        let reveal = EdgeRevealView(edge: .trailing)
-        reveal.frame = NSRect(x: 0, y: 0, width: 360, height: 400)
-        let content = NSView()
-        reveal.embed(content, extent: 360)
-
-        reveal.park()
-        #expect(reveal.slideOffset == 360)
-        #expect(reveal.alphaValue == 0)
-        #expect(content.frame.minX == 360)
-        #expect(!reveal.isRevealed)
-
-        reveal.showAtRest()
-        #expect(reveal.slideOffset == 0)
-        #expect(reveal.alphaValue == 1)
-        #expect(content.frame == NSRect(x: 0, y: 0, width: 360, height: 400))
-        #expect(reveal.isRevealed)
-    }
-
-    // First Cmd+Shift+H: `park()` forces the first SwiftUI layout while `visible` is
-    // already true, and `makeNSView` registers the editor. Focusing there ordered the
-    // panel front inside the layout pass and AttributeGraph aborted the app.
     @Test func firstLayoutRegistersEditorWithoutChangingFocus() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -174,9 +130,8 @@ struct ScratchpadControllerTests {
         defer { controller.visible = false }
         let panel = controller.ensurePanel()
         defer { panel.orderOut(nil) }
-        panel.setFrame(NSRect(x: 0, y: 0, width: ScratchpadController.panelWidth, height: 480), display: false)
-        let reveal = try #require(controller.revealView)
-        reveal.park()
+        panel.setFrame(NSRect(x: 0, y: 0, width: 520, height: 480), display: false)
+        panel.contentView?.layoutSubtreeIfNeeded()
 
         let textView = try #require(controller.textView)
         #expect(!panel.isVisible)

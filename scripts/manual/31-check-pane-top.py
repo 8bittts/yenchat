@@ -11,10 +11,12 @@ from PIL import Image
 def outline_top(path):
     with Image.open(path) as image:
         pixels = image.convert("RGB")
-        x = 3 * pixels.width // 4
+        # Sample the full stroke so a tab label or icon cannot count as an outline.
+        samples = range(pixels.width * 2 // 3, pixels.width * 9 // 10, 8)
         for y in range(2, pixels.height // 3):
-            color = pixels.getpixel((x, y))
-            if min(color) > 96 and min(pixels.getpixel((x, y - 1))) < 96:
+            if all(max(a - b for a, b in zip(pixels.getpixel((x, y)),
+                                             pixels.getpixel((x, y - 1)))) > 96
+                   for x in samples):
                 return (pixels.size, y)
     raise ValueError(f"No contrasting top outline in {path}")
 

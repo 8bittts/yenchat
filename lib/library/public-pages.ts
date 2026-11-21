@@ -99,7 +99,7 @@ const sharedYenProofPoints = [
 	},
 	{
 		label: "Local workflow surfaces",
-		text: "YEN ships local file browsing, native WebKit preview, a read-only Git drawer, and terminal-first IDE commands.",
+		text: "YEN ships local file browsing, native WebKit preview, a scratchpad, and terminal-first IDE commands.",
 		source: yenDocsSource,
 	},
 	{
@@ -187,7 +187,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Warp",
 		title: "Warp Alternative for Terminal-First Workflows",
 		description:
-			"Compare Warp's agentic terminal model with YEN's local macOS terminal workflows, native browser preview, Git drawer, and dictation.",
+			"Compare Warp's agentic terminal model with YEN's local macOS terminal workflows, native browser preview, scratchpad, and dictation.",
 		summary:
 			"Warp is a serious agentic development environment. YEN is for developers who want the terminal to stay local, native, and centered on shipped macOS workflows.",
 		audience:
@@ -226,7 +226,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Wave Terminal",
 		title: "Wave Terminal Alternative for Local Workflows",
 		description:
-			"Compare Wave Terminal's graphical terminal workspace with YEN's macOS terminal, WebKit preview, Git drawer, and dictation.",
+			"Compare Wave Terminal's graphical terminal workspace with YEN's macOS terminal, WebKit preview, scratchpad, and dictation.",
 		summary:
 			"Wave Terminal blends terminal sessions with graphical workspace surfaces. YEN is for macOS developers who want a native terminal with local workflow tools close to the shell.",
 		audience:
@@ -266,7 +266,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Ghostty",
 		title: "Ghostty Alternative for macOS Terminal Workflows",
 		description:
-			"Compare Ghostty's native GPU terminal focus with YEN's macOS terminal, browser preview, Git drawer, dictation, and IDE commands.",
+			"Compare Ghostty's native GPU terminal focus with YEN's macOS terminal, browser preview, scratchpad, dictation, and IDE commands.",
 		summary:
 			"Ghostty is a strong choice for a native, GPU-accelerated terminal. YEN adds opinionated macOS workflow surfaces around that same daily-terminal need.",
 		audience:
@@ -282,7 +282,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Git context",
-				text: "YEN includes a read-only local Git drawer for branch status, grouped file changes, raw diffs, and a bundled lazygit handoff.",
+				text: "YEN includes bundled lazygit for branch status, file changes, and diffs.",
 				source: yenDocsSource,
 			},
 			{
@@ -302,7 +302,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "iTerm2",
 		title: "iTerm2 Alternative for Modern macOS Terminals",
 		description:
-			"Compare iTerm2's mature macOS terminal features with YEN's native browser preview, Git drawer, dictation, and IDE workflows.",
+			"Compare iTerm2's mature macOS terminal features with YEN's native browser preview, scratchpad, dictation, and IDE workflows.",
 		summary:
 			"iTerm2 is the mature macOS terminal many developers know. YEN is narrower, newer, and focused on local workflow shortcuts around a GPU terminal.",
 		audience:
@@ -341,7 +341,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "WezTerm",
 		title: "WezTerm Alternative for Local Terminal Workflows",
 		description:
-			"Compare WezTerm's cross-platform multiplexing with YEN's macOS-focused terminal, command palette, browser preview, and Git drawer.",
+			"Compare WezTerm's cross-platform multiplexing with YEN's macOS-focused terminal, command palette, browser preview, and scratchpad.",
 		summary:
 			"WezTerm is powerful when cross-platform multiplexing and configuration are central. YEN optimizes for a macOS-first local workflow surface.",
 		audience:
@@ -365,7 +365,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Review flow",
-				text: "YEN keeps a read-only Git drawer and desktop PR review workspace close to the terminal without replacing Git itself.",
+				text: "YEN keeps local Git tools and a desktop PR review workspace close to the terminal without replacing Git itself.",
 				source: yenDocsSource,
 			},
 		],
@@ -419,7 +419,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Alacritty",
 		title: "Alacritty Alternative for macOS Developers",
 		description:
-			"Compare Alacritty's OpenGL terminal approach with YEN's macOS terminal, command palette, file browser, dictation, and Git drawer.",
+			"Compare Alacritty's OpenGL terminal approach with YEN's macOS terminal, command palette, file browser, dictation, and scratchpad.",
 		summary:
 			"Alacritty stays intentionally lean. YEN is for developers who still want speed, but also want opinionated local tools built into the app.",
 		audience:
@@ -458,7 +458,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Tabby",
 		title: "Tabby Alternative for Local Terminal Workflows",
 		description:
-			"Compare Tabby's terminal, SSH, serial, and plugin surface with YEN's macOS terminal, browser preview, Git drawer, and local tools.",
+			"Compare Tabby's terminal, SSH, serial, and plugin surface with YEN's macOS terminal, browser preview, scratchpad, and local tools.",
 		summary:
 			"Tabby is a configurable terminal, SSH, and serial client. YEN focuses on a macOS-native terminal with local browser, Git, file, dictation, and IDE command workflows.",
 		audience:
@@ -534,7 +534,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Zed",
 		title: "Zed Alternative for Terminal-First Developers",
 		description:
-			"Compare Zed's collaborative AI editor model with YEN's terminal-first macOS workflows, local IDE commands, browser preview, and Git drawer.",
+			"Compare Zed's collaborative AI editor model with YEN's terminal-first macOS workflows, local IDE commands, browser preview, and scratchpad.",
 		summary:
 			"Zed is a fast collaborative editor built around coding with humans and AI. YEN is a terminal-first macOS workspace for developers who want shell workflows to stay primary.",
 		audience:
@@ -556,7 +556,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Review context",
-				text: "YEN's read-only Git drawer and PR evidence surfaces are designed around local artifacts and explicit handoffs.",
+				text: "YEN's PR review tools are designed around local artifacts and explicit handoffs.",
 				source: yenDocsSource,
 			},
 		],
@@ -598,7 +598,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Native macOS surfaces",
-				text: "YEN's Settings panel, browser preview, dictation, and Git drawer are built as native app workflows around the shell.",
+				text: "YEN's Settings panel, browser preview, dictation, and scratchpad are built as native app workflows around the shell.",
 				source: yenDocsSource,
 			},
 		],
@@ -613,7 +613,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "JetBrains AI",
 		title: "JetBrains AI Alternative for Terminal Workflows",
 		description:
-			"Compare JetBrains AI's IDE assistant workflows with YEN's terminal-first macOS commands, WebKit preview, Git drawer, and local tools.",
+			"Compare JetBrains AI's IDE assistant workflows with YEN's terminal-first macOS commands, WebKit preview, scratchpad, and local tools.",
 		summary:
 			"JetBrains AI brings assistant workflows into JetBrains IDEs. YEN is for developers who want the terminal to remain the primary workspace while local IDE-style commands sit nearby.",
 		audience:
@@ -682,7 +682,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Local review",
-				text: "YEN includes a read-only local Git drawer for branch status, grouped file changes, raw diffs, and a bundled lazygit handoff.",
+				text: "YEN includes bundled lazygit for branch status, file changes, and diffs.",
 				source: yenDocsSource,
 			},
 			{
@@ -702,7 +702,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "Claude Code",
 		title: "Claude Code Alternative for Terminal Workflows",
 		description:
-			"Compare Claude Code's terminal agent workflow with YEN's macOS terminal, local IDE commands, browser preview, and Git drawer.",
+			"Compare Claude Code's terminal agent workflow with YEN's macOS terminal, local IDE commands, browser preview, and scratchpad.",
 		summary:
 			"Claude Code is a terminal-based coding agent. YEN is a macOS terminal workspace that keeps local shell, browser, Git, dictation, and IDE command surfaces close together.",
 		audience:
@@ -748,7 +748,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 		competitorName: "OpenAI Codex CLI",
 		title: "Codex CLI Alternative for Terminal Workflows",
 		description:
-			"Compare OpenAI Codex CLI's local coding-agent workflow with YEN's macOS terminal, local commands, browser preview, and Git drawer.",
+			"Compare OpenAI Codex CLI's local coding-agent workflow with YEN's macOS terminal, local commands, browser preview, and scratchpad.",
 		summary:
 			"OpenAI Codex CLI is a local terminal coding agent. YEN is a macOS terminal workspace for developers who want shell, native browser, Git, dictation, and local IDE command loops.",
 		audience:
@@ -776,7 +776,7 @@ export const PUBLIC_LIBRARY_PAGES = [
 			},
 			{
 				label: "Review workflow",
-				text: "YEN's read-only Git drawer and PR evidence surfaces are designed around local artifacts and explicit handoffs.",
+				text: "YEN's PR review tools are designed around local artifacts and explicit handoffs.",
 				source: yenDocsSource,
 			},
 		],
@@ -854,28 +854,28 @@ export const PUBLIC_LIBRARY_PAGES = [
 	}),
 	createUseCasePage({
 		slug: "terminal-git-diff-drawer",
-		title: "Terminal Git Diff Drawer for Local Repos",
+		title: "Terminal Git Diffs for Local Repos",
 		description:
-			"Use YEN when you want a read-only native Git drawer with branch status, grouped changes, raw diffs, and lazygit handoff.",
-		h1: "Terminal Git diff drawer for local repositories",
+			"Inspect local changes with Git or open the bundled lazygit interface in your terminal.",
+		h1: "Review local Git changes in the terminal",
 		summary:
-			"YEN's Git drawer is a bottom overlay for checking local repository state without turning the terminal into a full Git client.",
+			"Open yengit in a repository to inspect its status, changes, and diffs.",
 		audience:
 			"Use this page if you want quick repository awareness while keeping commits and advanced operations in your normal Git tools.",
 		decisionPoints: [
 			{
-				label: "Read-only by design",
-				text: "The local Git drawer is documented as read-only and shows branch/upstream state, grouped changes, stash file lists, and raw diffs.",
+				label: "Inspect a diff",
+				text: "Use git diff for unstaged changes and git diff --cached for staged changes.",
 				source: yenDocsSource,
 			},
 			{
 				label: "Shortcut",
-				text: "Cmd + Shift + G toggles the drawer from the focused terminal context.",
+				text: "Run yengit from the directory you want to inspect.",
 				source: yenDocsSource,
 			},
 			{
 				label: "Tool handoff",
-				text: "YEN includes a bundled lazygit handoff for users who want a full terminal Git TUI after reviewing the drawer.",
+				text: "Use the command palette to open PR Review or Merge Conflict.",
 				source: yenDocsSource,
 			},
 		],

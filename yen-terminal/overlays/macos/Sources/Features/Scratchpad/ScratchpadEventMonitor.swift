@@ -10,13 +10,13 @@ extension ScratchpadController {
             guard let self else { return event }
             guard self.visible, let panel = self.panel, panel.isVisible else { return event }
 
-            if Self.shouldCloseForMouseDown(
+            if event.window !== panel, Self.shouldCloseForMouseDown(
                 eventType: event.type,
                 panelFrame: panel.frame,
                 screenPoint: NSEvent.mouseLocation
             ) {
-                self.animateOut(restoringFocus: false)
-                return nil
+                self.dismiss(restoringFocus: false)
+                return event
             }
 
             guard event.type == .keyDown else { return event }
@@ -25,8 +25,8 @@ extension ScratchpadController {
                 return nil
             }
 
-            if event.keyCode == 0x35 { // Escape
-                self.animateOut()
+            if event.keyCode == 0x35, self.textView?.hasMarkedText() != true { // Escape
+                self.dismiss()
                 return nil
             }
             return event

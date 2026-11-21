@@ -160,8 +160,11 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
         focusedSurface ?? lastFocusedSurface.value
     }
 
+    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
+
     private var showsBorderOnSplitLeaf: Bool {
         guard shouldShowFocusedSplitBorder, activeOrLastFocusedSurface != nil else { return false }
+        if paneSettings.paneStyle == .comfortable { return true }
         if case .split = viewModel.surfaceTree.zoomed ?? viewModel.surfaceTree.root { return true }
         return false
     }

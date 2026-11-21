@@ -42,6 +42,7 @@ verify_overlay_patch_targets "$REPO_ROOT/scripts/lib/overlay-patch-targets.txt"
 # Remove retired chat observer sources explicitly so stale files do not linger
 # in ghostty/macos between builds.
 remove_overlay_retired_files chat
+remove_overlay_retired_files git-drawer
 
 # Keep the App Intents permission helper byte-aligned with the overlay source.
 # This file now carries the test-only prompt planning seams that native

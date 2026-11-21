@@ -122,7 +122,6 @@ class AppDelegate: NSObject,
     @IBOutlet private var menuChangeTitle: NSMenuItem?
     @IBOutlet private var menuChangeTabTitle: NSMenuItem?
     @IBOutlet private var menuReadonly: NSMenuItem?
-    @IBOutlet private var menuGitDrawer: NSMenuItem?
     @IBOutlet private var menuQuickTerminal: NSMenuItem?
     @IBOutlet private var menuTerminalInspector: NSMenuItem?
     @IBOutlet private var menuCommandPalette: NSMenuItem?
@@ -795,7 +794,6 @@ class AppDelegate: NSObject,
         self.menuQuickTerminal?.setImageIfDesired(systemSymbolName: "apple.terminal")
         self.menuChangeTabTitle?.setImageIfDesired(systemSymbolName: "pencil.line")
         self.menuChangeTitle?.setImageIfDesired(systemSymbolName: "rectangle.and.pencil.and.ellipsis")
-        self.menuGitDrawer?.setImageIfDesired(systemSymbolName: "point.3.connected.trianglepath.dotted")
         self.menuTerminalInspector?.setImageIfDesired(systemSymbolName: "scope")
         self.menuReadonly?.setImageIfDesired(systemSymbolName: "eye.fill")
         self.menuToggleFullScreen?.setImageIfDesired(systemSymbolName: "square.arrowtriangle.4.outward")
@@ -881,7 +879,6 @@ class AppDelegate: NSObject,
             resetFontSize: menuResetFontSize,
             changeTitle: menuChangeTitle,
             changeTabTitle: menuChangeTabTitle,
-            gitDrawer: menuGitDrawer,
             quickTerminal: menuQuickTerminal,
             toggleVisibility: menuToggleVisibility,
             floatOnTop: menuFloatOnTop,
@@ -1517,57 +1514,6 @@ class AppDelegate: NSObject,
            let window = controller.window as? QuickTerminalWindow {
             window.applyTerminalFacingCorners(for: derivedConfig.quickTerminalPosition)
         }
-    }
-
-    @MainActor
-    @IBAction func toggleGitDrawer(_ sender: Any) {
-        _ = toggleGitDrawer(for: NSApp.keyWindow)
-    }
-
-    @MainActor
-    @discardableResult
-    func toggleGitDrawer(for window: NSWindow?) -> Bool {
-        guard let window,
-              Self.canShowGitDrawer(
-                  windowControllerIsTerminal: window.windowController is BaseTerminalController,
-                  isQuickTerminal: window is QuickTerminalWindow,
-                  isFullscreen: window.yenIsEffectivelyFullscreen,
-                  isMiniaturized: window.isMiniaturized
-              ),
-              let controller = window.windowController as? BaseTerminalController,
-              let container = controller.terminalViewContainer else {
-            return false
-        }
-
-        let drawerController: GitDrawerController
-        if let existing = container.gitDrawerController {
-            drawerController = existing
-        } else {
-            drawerController = GitDrawerController(
-                container: container,
-                focusedDirectory: { [weak controller] in
-                    TabSidebarController.trustedWorkingDirectory(for: controller?.focusedSurface)
-                },
-                terminalController: controller
-            )
-            container.gitDrawerController = drawerController
-        }
-
-        drawerController.toggle()
-        return true
-    }
-
-    nonisolated static func canShowGitDrawer(
-        windowControllerIsTerminal: Bool,
-        isQuickTerminal: Bool,
-        isFullscreen: Bool,
-        isMiniaturized: Bool
-    ) -> Bool {
-        TerminalAuxiliaryAnchorPolicy.canAnchor(
-            windowControllerIsTerminal: windowControllerIsTerminal,
-            isQuickTerminal: isQuickTerminal, isFullscreen: isFullscreen,
-            isMiniaturized: isMiniaturized, isVisible: true
-        )
     }
 
     /// Toggles visibility of all Ghosty Terminal windows. When hidden, activates YEN as the frontmost application

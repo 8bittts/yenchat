@@ -71,9 +71,13 @@ final class WorkspaceTabStrip {
     }
 
     static func start(_ view: NSView, at anchor: NSLayoutXAxisAnchor, inset: CGFloat = 0) -> NSLayoutConstraint {
-        let start = view.leftAnchor.constraint(equalTo: anchor, constant: inset)
+        let start = view.leftAnchor.constraint(greaterThanOrEqualTo: anchor, constant: inset)
         start.priority = .defaultHigh
         return start
+    }
+
+    static func end(_ view: NSView, at anchor: NSLayoutXAxisAnchor) -> NSLayoutConstraint {
+        view.rightAnchor.constraint(equalTo: anchor, constant: -YENDesignTokens.toolbarInset)
     }
 
     func place(after controls: NSView?) {

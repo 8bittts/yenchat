@@ -496,8 +496,7 @@ struct GitDrawerSnapshotParserTests {
         #expect(snapshot.selectedDiff == "@@ -1 +1 @@\n-old\n+new")
         #expect(snapshot.generation == 7)
 
-        let presentation = GitDrawerPresentationState(snapshot: snapshot)
-        #expect(presentation.header.title == "subdir // feature/git-drawer")
+
     }
 
     @Test func selectedDiffUsesPlainRawGitDiffCommandOnly() async throws {

@@ -17,7 +17,8 @@ Overlay-owned utility windows (Settings, About, Onboarding, PR Review, Merge Con
 Intentional deltas, not templates for new windows:
 
 - Standard terminal windows default to native titlebar tabs on macOS 14 and later.
-  Horizontal tabs prefer 240 points each and compress at the window edge, where AppKit manages overflow.
+  Horizontal tabs align to the right and expand to the left.
+  They prefer 240 points each and compress at the window edge, where AppKit manages overflow.
   Pane icons lead the title when AppKit exposes its title stack and yield space to the title in narrow tabs.
   Shortcuts and zoom controls sit at the trailing edge.
   macOS 13 keeps the transparent titlebar default for native tab restoration.
@@ -121,7 +122,6 @@ Correctness is proven by `SettingsWindowLifecycleTests`, `OnboardingWindowLifecy
 Tried and reverted, do not retry without new evidence:
 
 - Deferring the launch theme-catalog build needs a new single-theme resolution path that exactly reproduces name normalization and curated-versus-user precedence, or a Match Theme border flips color after the first frame. Measured cost was about 3.5 ms.
-- Debouncing Git drawer selection left the diff, accessibility label and Copy Diff on the previous file under the new highlight.
 
 ### Settings hitch benchmark
 
@@ -205,7 +205,7 @@ Routing:
 
 ## Workspace Panels
 
-The four sliding panels share the motion contract in `_docs/01-architecture.md` → Native Patterns.
+Quick Terminal and the transient Tab Sidebar share the motion contract in `_docs/01-architecture.md` → Native Patterns.
 
 **Tab Sidebar** (`Cmd + Shift + B`).
 Observation, docked presentation, Git context caching, build status, and shared row data each have a separate source file.
@@ -216,7 +216,7 @@ Surface publishers coalesce on the main run loop, and observer callbacks render 
 Sidebar Git reads use `GitDrawerShellClient` with optional locks disabled, a two-second timeout, and forced termination after a 200 ms grace period.
 Sidebar status reads branch metadata through `GitStatusPorcelainV2`; detached names use the shared `GitBranchResolver` helper.
 Split-pane labels resolve a branch only when the worktree folder cannot supply an informative name.
-By default a transient panel slides in over the terminal from the window's left edge, as the Scratchpad does from the right; an opt-in persistent mode docks a fixed-width rail inside standard terminal windows and stays hidden in minimized windows and Quick Terminal.
+By default a transient panel slides in over the terminal from the window's left edge; an opt-in persistent mode docks a fixed-width rail inside standard terminal windows and stays hidden in minimized windows and Quick Terminal.
 Native fullscreen has leading controls to toggle the rail for the current tab group and leave fullscreen.
 The fullscreen rail uses the available window width and does not write the windowed visibility preference.
 - Both hosts come from `TabSidebarHostingViewFactory`, which sets `sizingOptions = []`; default content sizing shrinks or centers a short rail.
@@ -230,26 +230,11 @@ The fullscreen rail uses the available window width and does not write the windo
 
 **Scratchpad** (`Cmd + Shift + J`).
 One app-global buffer, persisted locally, seeded with helper text on first run.
-The editor gains focus only after the enter animation completes; a click outside dismisses it.
+The panel opens centered in the terminal content area and sizes to fit the window.
+Drag its title bar to move it or drag an edge to resize it.
+The next open restores the chosen size within the available space.
+Escape, the close button, and a click outside dismiss it.
 Highlight-to-copy writes plain text, and selected-text dragging is disabled so a highlight never becomes a drag or rich payload.
-
-**Local Git Drawer** (`Cmd + Shift + G`).
-A read-only bottom overlay owned by `TerminalViewContainer`, so its controller deallocates with the window and its `deinit` cancels the refresh task, the fallback timer, the observers and the key monitor.
-- It resolves the focused split's effective working directory and shows `cwd // branch`, upstream and ahead/behind, grouped changes, stashes and a raw unified diff without moving or resizing terminal panes.
-- While open, it observes shell, agent-report, and focus changes independently of sidebar visibility.
-- Filesystem events cover the worktree and linked Git metadata directories, with burst coalescing and a 60-second safety timer.
-- If event watching is unavailable, the timer falls back to 15 seconds; unobservable windows defer refresh until visible again.
-- Read-only probes disable optional index writes, and event filtering ignores index lock files and the app's own index changes.
-- The drawer and sidebar share porcelain v2 status parsing for branch metadata and file state; detached heads retain Git’s configured abbreviation.
-- Selecting a file reuses the current list snapshot and runs only its stage-aware diff; retargeting clears that snapshot.
-- Background refreshes keep the current presentation without a spinner and replace it only when visible values change; manual refresh still shows loading.
-- Diffs are stage-aware: `--cached` for staged-only rows, `--no-index` against `/dev/null` for untracked rows (its non-zero exit is allowed through `IDEBlockingProcessRunner.allowedExitCodes`), the worktree diff otherwise.
-- Subprocess output drains asynchronously until both streams close and the child exits; byte limits bound captured output without stopping pipe drainage.
-- Stash file lists use `git stash show --include-untracked --name-status -z` for the first 20 stashes and label the rest.
-- An unborn repository lists its files; a bare repository is detected before `rev-parse --show-toplevel`.
-- No repo, bare repo, missing Git, timeout, command failure, refused mutation and unknown failure each get their own notice, separate from the clean state.
-- The fixed shortcut dispatches before terminal key encoding unless a key sequence or key table is active.
-- Copy, open and reveal actions live in context menus; `lazygit` is the handoff for anything that writes.
 
 **Split layouts** (`Cmd + Option + 1-0`, File menu, palette).
 Ten presets, all through `SettingsController.applyLayout`, which delegates targeting, confirmation, tree replacement, and zoom remapping to `SettingsLayoutApplier`.
@@ -261,7 +246,7 @@ Shortcuts need exact Cmd + Option and a foreground terminal window; new panes in
 Settings → General → Panes offers two styles that update open splits immediately.
 Comfortable is the default and gives each pane a rounded border and a gutter.
 Compact places panes edge to edge with a draggable divider.
-Single and zoomed panes use the entire terminal area in both styles.
+Comfortable keeps the same inset around single, split, and zoomed panes.
 
 Each split header shows an activity icon, title and working directory above the terminal.
 It uses the pane background and balances the space above and below the icon and title.
@@ -269,7 +254,7 @@ Click the header to focus the pane, drag it to a highlighted edge to move it, or
 The existing Pane Labels preference controls headers and defaults to on.
 Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.
 When visible, the pane icons follow layout order and show a count for panes beyond the first three.
-On supported macOS versions, horizontal tabs center vertically in the same toolbar as the window controls.
+On supported macOS versions, horizontal tabs center vertically in the toolbar and grow left from its right edge.
 After a tab moves to another window, switching between the remaining tabs keeps the strip width stable.
 The icon uses the local foreground executable and falls back to a recognized terminal title or a terminal symbol.
 "Rename Split Label" sets a label that survives layout rewrites, undo, restore and relaunch (a `UUID -> label` sidecar in terminal and Quick Terminal restore state).
@@ -285,7 +270,7 @@ One loop checks the watched directories every five seconds and stops when the la
 **Agent worktrees.** A coding agent works in a worktree while its pane's shell stays in the checkout, and agents emit no OSC 7, so `pwd`, the agent's own cwd and its session file all keep the launch directory.
 The agent reports its directory with `yen pane cwd`, which posts `com.yenchat.yen.agentWorkingDirectory` with the pane's `YEN_SURFACE_ID`.
 `AgentWorkingDirectoryReceiver` binds the report to the pane's foreground process group; `effectiveWorkingDirectory` honors it only while that group stays in front, and the next shell OSC 7 clears it.
-Split labels, the tab sidebar and the Git drawer read `effectiveWorkingDirectory`; new splits, the palette and the engine keep the shell's `pwd`.
+Split labels and the tab sidebar read `effectiveWorkingDirectory`; new splits, the palette and the engine keep the shell's `pwd`.
 Claude Code reports through a user-level `CwdChanged` hook running `"$YEN_BIN_DIR/yen" pane cwd --hook` when `TERM_PROGRAM` is `yen` (`yen pane --help` has the guarded command); a hook's `terminalSequence` cannot carry OSC 7.
 Codex hooks expose only the session `cwd`, so Codex agents do not report a worktree directory.
 
@@ -300,7 +285,7 @@ Below the switch, `PersistentSessionsStatusRow` shows how many session sockets e
 The General pane owns the 3-second refresh on the switch itself, because a `.task` on a row hidden at zero never starts and the count would never appear.
 `yen sessions` lists, attaches and ends sessions (`_docs/12-commands.md`); the contract is `_docs/01-architecture.md` → Persistent sessions.
 
-**Copy on Select.** Settings > General > Copy on Select (`both` or `false`) covers terminal surfaces, the scratchpad, and the shared diff view in the Git drawer, PR Review and Merge Conflict.
+**Copy on Select.** Settings > General > Copy on Select (`both` or `false`) covers terminal surfaces, the scratchpad, and the shared diff view in PR Review and Merge Conflict.
 Upstream defaults to a private selection clipboard; YEN patches the default to `both`.
 `NSTextView` surfaces copy through `CopyOnSelectClipboard` from `textViewDidChangeSelection`, writing plain text, and an empty selection never clobbers the clipboard.
 Never drive this from a global `.leftMouseUp` monitor (text views and SwiftUI selection gestures hide the mouse-up) or from `NSTextView.copy(_:)` (rich payloads).

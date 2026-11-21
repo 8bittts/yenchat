@@ -173,7 +173,6 @@ case "$MODE" in
                 -only-testing:YENTests/PullRequestReviewModelTests
                 -only-testing:YENTests/IDEEditorNavigatorTests
                 -only-testing:YENTests/GitDrawerPresentationTests
-                -only-testing:YENTests/GitDrawerControllerTests
                 -only-testing:YENTests/SplitPaneLabelRulesTests
                 -only-testing:YENTests/SplitPaneWorktreeLabelRulesTests
                 -only-testing:YENTests/SplitPaneWorktreeLabelStoreTests
@@ -215,7 +214,6 @@ case "$MODE" in
                 -only-testing:YENTests/GitDrawerDiffAttributedStringTests
                 -only-testing:YENTests/GitDrawerDiffCopyOnSelectIntegrationTests
                 -only-testing:YENTests/GitDrawerDiffFocusProbeTests
-                -only-testing:YENTests/GitDrawerRoutingTests
                 -only-testing:YENTests/GitDrawerSnapshotParserTests
                 -only-testing:YENTests/KeyRecorderBehaviorTests
                 -only-testing:YENTests/LayoutPresetTests

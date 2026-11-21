@@ -24,6 +24,8 @@ apply_overlay_patch undo-timeout-default-preservation
 apply_overlay_patch workspace-titlebar-default
 apply_overlay_patch workspace-tabs-tahoe
 apply_overlay_patch workspace-tabs-ventura
+apply_overlay_patch workspace-tabs-tahoe-trailing
+apply_overlay_patch workspace-tabs-ventura-trailing
 apply_overlay_patch workspace-tab-height
 apply_overlay_patch workspace-tab-centering
 apply_overlay_patch workspace-tab-accessory
@@ -465,6 +467,7 @@ apply_overlay_patch opinionated-clipboard-image-temp-file-permissions
 apply_overlay_patch performable-clipboard-selector-helper
 
 apply_overlay_patch performable-clipboard-selector-fixed-shortcut-upgrade
+apply_overlay_patch performable-clipboard-selector-retire-drawer
 
 apply_overlay_patch performable-clipboard-shortcut-routing
 

@@ -108,26 +108,6 @@ struct AppMenuShortcutControllerTests {
         #expect(controller.matchedYENMenuItem(for: makeKeyEvent(charactersIgnoringModifiers: "g", flags: [.command, .shift])) == nil)
     }
 
-    @Test func gitDrawerUsesCmdShiftGAfterFindPreviousRehome() throws {
-        let gitDrawer = NSMenuItem(title: "Toggle Git Drawer", action: #selector(AppDelegate.toggleGitDrawer(_:)), keyEquivalent: "")
-        let viewMenu = NSMenu(title: "View")
-        viewMenu.autoenablesItems = false
-        gitDrawer.isEnabled = true
-        viewMenu.addItem(gitDrawer)
-
-        let config = try TemporaryConfig("keybind=super+shift+g=yen_toggle_git_drawer")
-        let controller = AppMenuShortcutController()
-
-        controller.sync(
-            config: config,
-            menuItems: .testItems(gitDrawer: gitDrawer)
-        )
-
-        #expect(gitDrawer.keyEquivalent == "g")
-        #expect(gitDrawer.keyEquivalentModifierMask == [.command, .shift])
-        #expect(controller.matchedYENMenuItem(for: makeKeyEvent(charactersIgnoringModifiers: "g", flags: [.command, .shift])) === gitDrawer)
-    }
-
     private func makeKeyEvent(
         charactersIgnoringModifiers: String,
         flags: NSEvent.ModifierFlags
@@ -152,7 +132,6 @@ private extension AppMenuShortcutController.MenuItems {
         selectSplitLeft: NSMenuItem? = nil,
         increaseFontSize: NSMenuItem? = nil,
         findPrevious: NSMenuItem? = nil,
-        gitDrawer: NSMenuItem? = nil,
         settings: NSMenuItem? = nil
     ) -> Self {
         Self(
@@ -199,7 +178,6 @@ private extension AppMenuShortcutController.MenuItems {
             resetFontSize: nil,
             changeTitle: nil,
             changeTabTitle: nil,
-            gitDrawer: gitDrawer,
             quickTerminal: nil,
             toggleVisibility: nil,
             floatOnTop: nil,

@@ -130,6 +130,7 @@ Manual utilities, outside the release and vendor gates:
 | `manual/28-run-file-browser-preview-benchmark.sh`                              | File-browser preview benchmark                                   |
 | `manual/29-run-settings-hitch-benchmark.sh`                                    | Settings hitch benchmark (`_docs/13-desktop-features.md`)        |
 | `manual/30-check-outline-corners.py`                                           | Check both lower outline arcs in a shadowless window capture     |
+| `manual/31-check-pane-top.py`                                                  | Compare the top outline in single-pane and split-pane captures   |
 
 ## Shared Library (`scripts/lib/`)
 

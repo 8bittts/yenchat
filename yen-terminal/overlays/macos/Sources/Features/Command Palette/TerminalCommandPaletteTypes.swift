@@ -259,12 +259,6 @@ extension TerminalCommandPaletteView {
         browserSplitActionDescriptor(launcher: launcher)
     }
 
-    static func gitDrawerActionDescriptorForTesting(
-        launcher: @escaping () -> Void = {}
-    ) -> PaletteActionDescriptor {
-        gitDrawerActionDescriptor(launcher: launcher)
-    }
-
     static func shouldSuppressSurfaceRefocusOnDismiss(for optionID: String) -> Bool {
         let actionID = canonicalActionID(for: optionID)
         switch actionID {
@@ -349,33 +343,6 @@ extension TerminalCommandPaletteView {
                 "localhost",
                 "loopback",
                 "dev server",
-            ],
-            execute: launcher
-        )
-    }
-
-    static func gitDrawerActionDescriptor(
-        launcher: @escaping () -> Void
-    ) -> PaletteActionDescriptor {
-        PaletteActionDescriptor(
-            id: "terminal:git-drawer",
-            title: "Git Drawer",
-            subtitle: nil,
-            description: "Toggle the read-only local Git drawer",
-            symbols: ["⌘", "⇧", "G"],
-            leadingIcon: "point.3.connected.trianglepath.dotted",
-            leadingColor: nil,
-            badge: nil,
-            emphasis: false,
-            sortKey: nil,
-            searchTags: [
-                "git",
-                "drawer",
-                "diff",
-                "changes",
-                "status",
-                "local changes",
-                "source control",
             ],
             execute: launcher
         )

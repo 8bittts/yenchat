@@ -74,11 +74,10 @@ struct TabSidebarView<Model: TabSidebarDataSource>: View {
 	@ObservedObject var model: Model
 	let style: TabSidebarStyle
 
-	// Standardized terminal-facing corner radius, shared with the Scratchpad,
-	// Git Drawer, and Quick Terminal (10pt continuous).
+	// Match the terminal-facing edge of a Comfortable pane.
 	private var cornerRadius: CGFloat { YENDesignTokens.terminalFacingCornerRadius }
 
-	private var bodyPadding: CGFloat { 10 }
+	private var bodyPadding: CGFloat { YENDesignTokens.contentInset }
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 0) {
@@ -134,7 +133,7 @@ private struct SidebarHeaderView: View {
 	var body: some View {
 		HStack(alignment: .center, spacing: 10) {
 			Text("Tabs")
-				.settingsScaledSystemFont(size: 13, weight: .semibold)
+				.font(.body.weight(.semibold))
 			Text("\(tabCount)")
 				.settingsScaledSystemFont(size: 11, weight: .medium)
 				.foregroundColor(.secondary)
@@ -190,16 +189,16 @@ private struct SidebarFooterView: View {
 	let newTab: () -> Void
 
 	var body: some View {
-		HStack(spacing: 8) {
+		HStack(spacing: SettingsSpacing.controlSpacing) {
 			Button(action: newTab) {
-				HStack(spacing: 6) {
+				HStack(spacing: SettingsSpacing.iconTextSpacing) {
 					Image(systemName: "plus")
 						.settingsScaledSystemFont(size: 11, weight: .semibold)
 					Text("New Tab")
 						.settingsScaledSystemFont(size: 12, weight: .medium)
 				}
 				.foregroundColor(.secondary)
-				.padding(.horizontal, 12)
+				.padding(.horizontal, YENDesignTokens.contentInset)
 				.padding(.vertical, 8)
 				.background(Color.primary.opacity(0.05))
 				.clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -491,7 +490,7 @@ private struct TabSidebarRow: View {
 				Button {
 					changeTabColor(to: color)
 				} label: {
-					HStack(spacing: 8) {
+					HStack(spacing: SettingsSpacing.controlSpacing) {
 						TabSidebarColorSwatch(color: color)
 						Text(color.localizedName)
 						if color == tab.color {

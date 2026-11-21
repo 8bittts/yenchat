@@ -28,7 +28,7 @@ extension ScratchpadController {
     /// it stalls the main thread on `createDirectory` plus an atomic write — and
     /// `persistenceQueue` is `.utility`, so a main-thread `sync` is also a priority
     /// inversion. The close path pays that cost on every app switch away from YEN,
-    /// because `applicationDidResignActive` calls `animateOut`.
+    /// because `applicationDidResignActive` calls `dismiss`.
     ///
     /// The queue is serial, so the async write still lands in order.
     func flushPendingSave(blocking: Bool = false) {

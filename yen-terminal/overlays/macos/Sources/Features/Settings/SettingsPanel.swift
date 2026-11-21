@@ -14,7 +14,7 @@ enum SettingsSpacing {
     /// its name, status and button on one line.
     static let inspectorWidth: CGFloat = 380
     /// Gap between the window edge and a floating glass panel.
-    static let floatingInset: CGFloat = 12
+    static let floatingInset = YENDesignTokens.contentInset
     /// Gap between the theme dock and the inspector.
     static let floatingGap: CGFloat = 12
     /// Padding inside the theme dock.
@@ -26,7 +26,7 @@ enum SettingsSpacing {
     static let contentInset: CGFloat = 20
     static let headerTop: CGFloat = 16
     /// Between the pane switcher and the pane title.
-    static let headerSpacing: CGFloat = 12
+    static let headerSpacing = YENDesignTokens.contentInset
     /// Between the pane title, or a control below it, and the form.
     static let headerBottom: CGFloat = 4
     /// The grouped form's top margin, trimmed so the first section sits close
@@ -73,7 +73,7 @@ enum SettingsTypography {
     /// The theme dock header.
     static let dockTitle: Font = .callout
     /// The preview caption and the notes under a shortcut row.
-    static let caption: Font = .caption
+    static let caption = YENDesignTokens.secondaryLabel
 }
 
 enum SettingsCornerRadius {

@@ -141,7 +141,7 @@ struct TerminalChromeAppearanceTests {
         let buttonsStart = buttons.leftAnchor.constraint(equalTo: titlebar.leftAnchor)
         NSLayoutConstraint.activate([
             WorkspaceTabStrip.start(tabs, at: titlebar.leftAnchor, inset: 70),
-            tabs.rightAnchor.constraint(lessThanOrEqualTo: titlebar.rightAnchor),
+            WorkspaceTabStrip.end(tabs, at: titlebar.rightAnchor),
             buttons.widthAnchor.constraint(equalToConstant: 62),
             buttonsStart,
         ])
@@ -152,7 +152,7 @@ struct TerminalChromeAppearanceTests {
             buttonsStart.constant = inset
             titlebar.layoutSubtreeIfNeeded()
             #expect(tabs.frame.minX >= buttons.frame.maxX)
-            if inset == 0 { #expect(tabs.frame.minX == 70) }
+            #expect(tabs.frame.maxX == titlebar.bounds.maxX - YENDesignTokens.toolbarInset)
         }
     }
 
