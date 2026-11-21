@@ -14,9 +14,13 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
 		"summary": "Drag a split header to put your editor beside your shell. Its tab shows which tools are inside before you switch. On macOS 14 and later, the tabs sit beside the window controls. Move a tab to its own window and the remaining tabs keep their width. In fullscreen, the upper-left controls open the sidebar or return you to a window.\n\nLeave a dev server running and quit YEN. When you reopen it, the server still has its port and the pane brings back its screen and scrollback. After a crash, YEN can reopen up to eight detached shells, including shells from an older version. Close a pane to end its session. Run yen sessions to see what is running on your Mac, or use End All Sessions in Settings to stop them together.\n\nIf you use Retina and non-Retina displays together, fallback characters keep the right glyphs after your Mac wakes. The diff viewer keeps syntax highlighting in deleted files and shows when a submodule contains uncommitted changes.",
-		"builds": 6,
-		"latestVersion": "1.279",
+		"builds": 7,
+		"latestVersion": "1.280",
 		"versions": [
+			{
+				"version": "1.280",
+				"shippedOn": "2026-11-20"
+			},
 			{
 				"version": "1.279",
 				"shippedOn": "2026-11-20"

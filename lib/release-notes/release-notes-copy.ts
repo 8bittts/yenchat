@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.280":
+		"Open About YEN to see the rounded monitor icon. Its green phosphor slowly brightens and fades while the window is active. With Reduce Motion on, the glow stays steady.",
 	"1.279":
 		"Drag a split header to move a pane, or click its pencil to rename it. Tabs show icons for the first three panes and a count for the rest. Moving a tab to a new window keeps the remaining tab widths stable as you switch. If a session cannot stop, YEN keeps the records it needs to reconnect. YEN also releases old configuration data when a window’s appearance changes.",
 	"1.278":

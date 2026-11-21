@@ -1,8 +1,8 @@
 {
-  "version": "1.279",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.279/yen-1279.dmg",
-  "sha256": "7e6ee311758795f4768561962c1473ef0c08fbd1a3bbcf5aa98b63d1fdef6b8f",
-  "notes": "Draggable split headers and stable tab widths",
+  "version": "1.280",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.280/yen-1280.dmg",
+  "sha256": "58d1167b9f2050600191b1cad193f12a7a92c29229a72bcfa1e5572f6c968b04",
+  "notes": "Phosphor glow in About YEN",
   "minOS": "13.0",
   "releaseDate": ""
 }
