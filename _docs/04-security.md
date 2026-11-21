@@ -101,6 +101,7 @@ Every anchor fails closed on drift; retire a patch with the checklist in `.agent
 | Undo-timeout default | `Ghostty.Config.swift` `undoTimeout` | LOW | Retire if the Swift bridge honors the missing-key fallback |
 | Tab title restore invalidation | `titleOverride` didSet in `BaseTerminalController.swift` | MEDIUM | Retire if upstream dirties restorable state on rename |
 | Resign-key focus deferral | `BaseTerminalController.windowDidResignKey(_:)` | MEDIUM | Defers `yen_surface_set_focus` to avoid re-entering the focus lock |
+| Horizontal titlebar tabs | Native tab accessory in `TerminalWindow.swift` and track geometry in `TitlebarTabsTahoeTerminalWindow.swift` | MEDIUM | On an AppKit update, verify selection, close and drag after resizing; the standard accessory hosts icons when the native title stack is unavailable |
 | Native fullscreen transition guard | `Fullscreen.swift`, `TerminalController`, `BaseTerminalController` delegates | MEDIUM | Also refuses `resizeWindow` while `window.yenIsEffectivelyFullscreen`; `NativeFullscreenTransitionTests` |
 | MenuShortcutKey test access | `modifiersRawValue` in `Ghostty.MenuShortcutManager.swift` | LOW | Test-only; retire when upstream widens access |
 | Tiered CLI action policy | `src/cli/yen.zig` policy block + `src/cli/help.zig` filter | MEDIUM | Fails closed on block-shape drift |
