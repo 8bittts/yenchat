@@ -269,6 +269,7 @@ Click the header to focus the pane, drag it to a highlighted edge to move it, or
 The existing Pane Labels preference controls headers and defaults to on.
 Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.
 When visible, the pane icons follow layout order and show a count for panes beyond the first three.
+On supported macOS versions, horizontal tabs center vertically in the same toolbar as the window controls.
 After a tab moves to another window, switching between the remaining tabs keeps the strip width stable.
 The icon uses the local foreground executable and falls back to a recognized terminal title or a terminal symbol.
 "Rename Split Label" sets a label that survives layout rewrites, undo, restore and relaunch (a `UUID -> label` sidecar in terminal and Quick Terminal restore state).
@@ -334,9 +335,10 @@ Failed loads remain retryable, and each window still applies the parsed config t
 
 **Chromatic window border** (Settings > Appearance > Border; scope also through the palette's `Window Border: Toggle Focused Split`, palettes through its other Window Border actions).
 Scope `Window` or `Focused Split` (falls back to the window when no split frame exists); manual or Match Theme colors.
-- Split frames convert from AppKit to SwiftUI coordinates (Y flip) and snap to the newly focused pane without implicit animation.
-- Frame observers run only for an enabled focused-split border and target its surface and window; missing targets never create global subscriptions.
-- Settings are global across a tab group, including new tabs; the inset is `width / 2`; palette, update pill and toasts stay above the border.
+- The window outline follows the native corner radius and stays inside the clipping edge.
+- In split layouts the focused outline surrounds the pane, including its header, and follows focus as panes move or resize.
+- A single or zoomed surface supplies its AppKit frame. Frame observers subscribe only to that surface and window when needed.
+- Settings apply across the tab group, including new tabs. The command palette, update pill and toasts stay above the border.
 - Hidden in fullscreen and Quick Terminal; focused styling requires `NSApp.isActive`.
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
 - Differentiate Without Color dashes the unfocused border, and the palette's Window Border actions link to the system setting.

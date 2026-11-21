@@ -1,6 +1,6 @@
 """Check a shadowless window screenshot with a solid, contrasting outline.
 
-Usage: uv run --with Pillow python scripts/manual/30-check-outline-corners.py window.png
+Usage: uv run --with "Pillow>=12.1" python scripts/manual/30-check-outline-corners.py window.png
 Use a plain theme, focus the window, and capture it with screencapture -o -l.
 """
 
@@ -26,7 +26,7 @@ def connects(corner):
         return False
     mask = Image.new("L", corner.size)
     mask.putdata([int(a >= 180 and distance((r, g, b), ink) < 45)
-                  for r, g, b, a in corner.getdata()])
+                  for r, g, b, a in corner.get_flattened_data()])
     for x in range(size // 4):
         if mask.getpixel((x, 0)) == 1:
             ImageDraw.floodfill(mask, (x, 0), 2)

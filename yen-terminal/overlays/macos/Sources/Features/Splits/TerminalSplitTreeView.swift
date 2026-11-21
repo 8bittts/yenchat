@@ -190,7 +190,24 @@ private struct TerminalSplitSubtreeView: View {
     }
 }
 
+struct FocusedPaneOutline {
+    let surfaceID: UUID
+    let overlay: WindowBorderOverlay
+}
+
+private struct FocusedPaneOutlineKey: EnvironmentKey {
+    static let defaultValue: FocusedPaneOutline? = nil
+}
+
+extension EnvironmentValues {
+    var focusedPaneOutline: FocusedPaneOutline? {
+        get { self[FocusedPaneOutlineKey.self] }
+        set { self[FocusedPaneOutlineKey.self] = newValue }
+    }
+}
+
 private struct TerminalSplitLeaf: View {
+    @Environment(\.focusedPaneOutline) private var focusedOutline
     @ObservedObject var surfaceView: YEN.SurfaceView
     let isSplit: Bool
     let action: (TerminalSplitOperation) -> Void
@@ -220,7 +237,10 @@ private struct TerminalSplitLeaf: View {
             }
             .clipShape(shape)
             .overlay {
-                if framed {
+                if let outline = focusedOutline, outline.surfaceID == surfaceView.id {
+                    outline.overlay.paneBorder(framed: framed)
+                        .allowsHitTesting(false)
+                } else if framed {
                     let background = NSColor(surfaceView.backgroundColor ?? surfaceView.derivedConfig.backgroundColor)
                     shape.strokeBorder(Color(nsColor: SplitPaneLabelRules.textColor(backgroundColor: background)).opacity(0.15))
                         .allowsHitTesting(false)

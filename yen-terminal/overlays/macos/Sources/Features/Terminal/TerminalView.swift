@@ -160,8 +160,31 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
         focusedSurface ?? lastFocusedSurface.value
     }
 
+    private var showsBorderOnSplitLeaf: Bool {
+        guard shouldShowFocusedSplitBorder, activeOrLastFocusedSurface != nil else { return false }
+        if case .split = viewModel.surfaceTree.zoomed ?? viewModel.surfaceTree.root { return true }
+        return false
+    }
+
+    private var nativeCornerRadius: CGFloat {
+        guard let window = borderWindow, window.styleMask.contains(.titled) else { return 0 }
+        return EdgeRevealPanelGeometry.windowCornerRadius(of: window)
+    }
+
+    private var borderOverlay: WindowBorderOverlay {
+        WindowBorderOverlay(
+            gradient: activeWindowBorderGradient,
+            width: settingsSnapshot.windowBorderWidth,
+            radius: settingsSnapshot.windowBorderRadius,
+            chromeMode: windowBorderChromeMode,
+            isFocused: windowIsFocused,
+            useDashedUnfocusedStyle: useDashedUnfocusedStyle,
+            minimumCornerRadius: nativeCornerRadius
+        )
+    }
+
     private var focusedSplitBorderFrame: CGRect? {
-        guard shouldShowFocusedSplitBorder else { return nil }
+        guard shouldShowFocusedSplitBorder, !showsBorderOnSplitLeaf else { return nil }
         _ = focusedSurfaceFrameTick
         guard let surface = activeOrLastFocusedSurface else { return nil }
         guard !terminalViewFrameInWindow.isEmpty else { return nil }
@@ -174,7 +197,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
     }
 
     private var shouldFallbackToWindowBorder: Bool {
-        shouldShowFocusedSplitBorder && focusedSplitBorderFrame == nil
+        shouldShowFocusedSplitBorder && !showsBorderOnSplitLeaf && focusedSplitBorderFrame == nil
     }
 
     var shouldRenderWholeWindowBackgroundImage: Bool {
@@ -209,27 +232,15 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 .ignoresSafeArea(.container, edges: shouldIgnoreTopSafeArea ? .top : [])
 
                 if shouldShowWindowScopedBorder || shouldFallbackToWindowBorder {
-                    WindowBorderOverlay(
-                        gradient: activeWindowBorderGradient,
-                        width: settingsSnapshot.windowBorderWidth,
-                        radius: settingsSnapshot.windowBorderRadius,
-                        chromeMode: windowBorderChromeMode,
-                        isFocused: windowIsFocused,
-                        useDashedUnfocusedStyle: useDashedUnfocusedStyle
-                    )
+                    borderOverlay
+                    .padding(1)
                     .allowsHitTesting(false)
                     .ignoresSafeArea(.container, edges: shouldIgnoreTopSafeArea ? .top : [])
                     .transition(.opacity)
                 }
                 if let focusedSplitBorderFrame {
-                    WindowBorderOverlay(
-                        gradient: activeWindowBorderGradient,
-                        width: settingsSnapshot.windowBorderWidth,
-                        radius: settingsSnapshot.windowBorderRadius,
-                        chromeMode: .decorationNone,
-                        isFocused: windowIsFocused,
-                        useDashedUnfocusedStyle: useDashedUnfocusedStyle
-                    )
+                    borderOverlay
+                    .padding(1)
                     .frame(width: focusedSplitBorderFrame.width, height: focusedSplitBorderFrame.height)
                     .position(x: focusedSplitBorderFrame.midX, y: focusedSplitBorderFrame.midY)
                     // Split focus changes should snap to the newly focused pane.
@@ -398,7 +409,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 if shouldShowFocusedSplitBorder { focusedSurfaceFrameTick &+= 1 }
             }
             .onReceive(TerminalFrameEvents.publisher(
-                enabled: shouldShowFocusedSplitBorder,
+                enabled: shouldShowFocusedSplitBorder && !showsBorderOnSplitLeaf,
                 surface: activeOrLastFocusedSurface,
                 window: borderWindow
             )) { focusedSurfaceFrameTick &+= 1 }
@@ -436,6 +447,9 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
             TerminalSplitTreeView(
                 tree: viewModel.surfaceTree,
                 action: { delegate?.performSplitAction($0) })
+                .environment(\.focusedPaneOutline, showsBorderOnSplitLeaf ? activeOrLastFocusedSurface.map {
+                    FocusedPaneOutline(surfaceID: $0.id, overlay: borderOverlay)
+                } : nil)
                 .environmentObject(yen)
                 .focused($focused)
                 .onAppear {
