@@ -14,9 +14,13 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
 		"summary": "Drag a split header to put your editor beside your shell. Comfortable gives each pane a rounded edge and a little space. If you want more room for terminal output, choose Compact in General settings. Turn on the Focused Pane outline to see where your next command will go, all the way around the header and bottom corners. On macOS 14 and later, tabs sit beside the window controls. On the latest macOS, the tab strip has equal space above and below. Its icons show which tools are inside and give way to the tab name when space gets tight. Moving a tab to its own window keeps the others steady. In fullscreen, the upper-left controls open the sidebar or return you to a window.\n\nLeave a dev server running and quit YEN. When you reopen it, the server still has its port, and the pane brings back its screen and scrollback. After a crash, YEN can reopen up to eight detached shells, including ones from an older version. Close a pane to end its session. Run yen sessions to see what is running on your Mac, or use End All Sessions in Settings to stop them together.\n\nOpen About YEN for a green phosphor glow that stays steady with Reduce Motion. If you use Retina and non-Retina displays together, fallback characters keep the right glyphs after your Mac wakes. In the diff viewer, deleted lines keep their syntax colors, and a submodule with uncommitted changes stands out when you review your work.",
-		"builds": 9,
-		"latestVersion": "1.282",
+		"builds": 10,
+		"latestVersion": "1.283",
 		"versions": [
+			{
+				"version": "1.283",
+				"shippedOn": "2026-11-21"
+			},
 			{
 				"version": "1.282",
 				"shippedOn": "2026-11-21"

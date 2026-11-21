@@ -1,8 +1,8 @@
 {
-  "version": "1.282",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.282/yen-1282.dmg",
-  "sha256": "6b16928b732444e3da462a92d9b45eb84afd512cda95b9555c7d4c7497912f54",
-  "notes": "Centered tabs and clearer split pane outlines",
+  "version": "1.283",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.283/yen-1283.dmg",
+  "sha256": "ffb06e9df2aa93d08f2e2fd463aae0d85fd27172735d9961cf1dc852c50de8b7",
+  "notes": "Right-aligned tabs and a floating scratchpad",
   "minOS": "13.0",
   "releaseDate": ""
 }

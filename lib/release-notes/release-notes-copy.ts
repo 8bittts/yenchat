@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.283":
+		"Horizontal tabs grow left from the right edge. Each pane keeps room for text inside its rounded outline. The scratchpad opens in the center of the window and remembers its size. The bottom Git drawer and its shortcut have been removed. Run yengit for local changes or open PR Review from the command palette. General settings also include an optional local token usage menu and experimental moving wallpapers on macOS 27 or later.",
 	"1.282":
 		"Horizontal tabs sit evenly between the top and bottom of the toolbar. Choose Comfortable for rounded splits with a gutter or Compact for a thin divider. The window outline follows both bottom corners, and the focused pane outline surrounds its header as well as the terminal.",
 	"1.281":

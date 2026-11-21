@@ -579,8 +579,8 @@ function AgentTokenUsageSection() {
 		<DocSection id="agent-token-usage" title="Agent token usage">
 			<p className="text-body">
 				This experiment shows how many tokens your local coding agents used
-				today. In source builds after 1.282, open Settings → General → Menu Bar
-				and turn on Show Token Usage. The switch is off by default.
+				today. In YEN 1.283, open Settings → General → Menu Bar and turn on Show
+				Token Usage. The switch is off by default.
 			</p>
 			<p className="text-body">
 				Click the YEN icon in the macOS menu bar for a breakdown by tool. Expand
@@ -598,7 +598,8 @@ function AgentTokenUsageSection() {
 					className="h-auto w-full max-w-xs"
 				/>
 				<figcaption className="media-caption">
-					Example counts from local test sessions.
+					The example and counting rules below apply to source builds after YEN
+					1.283.
 				</figcaption>
 			</figure>
 			<ul className="list-disc space-y-2 pl-5 text-body">
@@ -714,11 +715,11 @@ function SettingsSection() {
 			</ul>
 			<h3 className="text-heading-sm">Experimental moving wallpaper</h3>
 			<p className="text-body">
-				In builds after 1.282 on macOS 27 or later, open General, then
-				Experimental. Turn on Moving Wallpaper and click Wallpaper Controls.
-				Choose a video or GIF, paste a YouTube link, pick a video from Photos,
-				or shuffle from Photos. Use Wallpaper per Desktop to choose separate
-				assignments. The same menu controls pause, sound, and removal.
+				In YEN 1.283 on macOS 27 or later, open General, then Experimental. Turn
+				on Moving Wallpaper and click Wallpaper Controls. Choose a video or GIF,
+				paste a YouTube link, pick a video from Photos, or shuffle from Photos.
+				Use Wallpaper per Desktop to choose separate assignments. The same menu
+				controls pause, sound, and removal.
 			</p>
 			<p className="text-body">
 				Playback starts muted. YEN draws behind desktop icons and preserves your

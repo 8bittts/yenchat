@@ -42,7 +42,7 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 - 20 curated themes, previewed live in Settings.
 - Metal rendering at 60 FPS and up.
 
-### Optional desktop features in source builds after 1.282
+### Optional desktop features in YEN 1.283
 
 The [agent token usage experiment](https://yen.chat/docs#agent-token-usage) shows daily counts for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
 On macOS 27 or later, Experimental > Moving Wallpaper plays a video or GIF behind desktop icons.
