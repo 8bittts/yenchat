@@ -630,8 +630,8 @@ function SettingsSection() {
 				<li>
 					<strong>Appearance:</strong> pick one of the bundled themes from the
 					theme dock, then set the font, cursor, opacity, padding, a PNG or JPEG
-					background image, and a window border that outlines the whole window
-					or only the focused pane.
+					background image, and a border. To follow the active split, turn on
+					Border and choose Focused Pane under Outline.
 				</li>
 				<li>
 					<strong>General:</strong> open at login, copy on select, the scroll

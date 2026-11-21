@@ -40,6 +40,7 @@ Audit with `rg -n "NSTitlebarAccessory|titlebarAppearsTransparent\\s*=\\s*true|f
 **Help menu** (`MainMenu.xib`, `AppDelegate.setupMenuImages`): YEN Help (`lightbulb`, `https://yen.chat/docs`), JP the Cat (`pawprint`, `https://jpthecat.com`), Bitcoin Email (`bitcoinsign.circle`, `https://btc.email`). Order is fixed in the XIB; external links use `NSWorkspace.shared.open`.
 
 **About** (`AboutView`): bordered small buttons beside the version label open Docs (`https://yen.chat/docs`) and Bitcoin (`https://btc.email`) through SwiftUI `openURL`.
+The rounded monitor icon pulses while About is active and shows a steady glow with Reduce Motion or when the window is inactive.
 
 ## Settings
 

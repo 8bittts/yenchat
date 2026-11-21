@@ -78,10 +78,16 @@ describe("Native macOS HIG alignment guardrails", () => {
 	test("About uses Dynamic Type and a system button", () => {
 		const about = readOverlay("Sources/Features/About/AboutView.swift");
 		expect(about).toContain(".font(.title2.weight(.semibold))");
-		expect(about).toContain(".buttonStyle(.bordered)");
 		expect(about).toContain('"https://btc.email"');
-		expect(about).toContain('Button("Bitcoin")');
-		expect(about).not.toContain(".clipShape(RoundedRectangle");
+		for (const title of ["Docs", "Bitcoin"]) {
+			const modifiers = about.match(
+				new RegExp(
+					`Button\\("${title}"\\)\\s*\\{[^}]*\\}((?:\\s*\\.[^\\n]+)*)`,
+				),
+			)?.[1];
+			expect(modifiers).toContain(".buttonStyle(.bordered)");
+			expect(modifiers).not.toContain(".clipShape(");
+		}
 		expect(about).not.toContain(".font(.system(size: 24");
 	});
 
