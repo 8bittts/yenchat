@@ -132,6 +132,7 @@ Manual utilities, outside the release and vendor gates:
 | `manual/30-check-outline-corners.py`                                           | Check both lower outline arcs in a shadowless window capture     |
 | `manual/31-check-pane-top.py`                                                  | Compare the top outline in single-pane and split-pane captures   |
 | `manual/32-check-pane-clearance.py`                                            | Check terminal grid corners against a thick pane outline         |
+| `manual/33-check-native-launch-defaults.py`                                    | Verify app defaults, config reload, and child arguments on macOS |
 
 ## Shared Library (`scripts/lib/`)
 

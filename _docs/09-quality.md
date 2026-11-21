@@ -53,6 +53,9 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
   A host blocked on a checkout read indicates a missing fixture conversion; inspect its stack and source path before requesting access.
 - The test host is the Debug bundle `com.yenchat.yen.debug` and shares TCC state with a Debug app launched for E2E work. Answer its prompts before a native run, and `sample` a silent host before calling it a code hang.
 - The Debug bundle holds the upstream themes but not the custom theme files or the curated manifest, so its Themes picker is empty and `theme = YEN` reports "not found"; check chrome color there with an explicit `background`.
+- Native UI launch checks can pass app preferences as single-dash pairs such as `-com.yenchat.yen.persistentSessions NO`.
+  The engine reads terminal options, while AppKit gets the original arguments for its defaults.
+  Run `python3 scripts/manual/33-check-native-launch-defaults.py "$YEN_VERIFY_APP"` to check startup, configuration reload, and arguments passed to a child command.
 - To see what the engine resolves without launching the app, run `<YEN.app>/Contents/MacOS/yen +show-config --no-pager` with `YEN_CLI_SUPPORT_ACTIONS=1` and with `CFFIXED_USER_HOME`, `HOME` and `XDG_CONFIG_HOME` pointed at scratch directories, so the real `config.yen` is never read.
 - A Debug app launched beside the installed one shares its Scratchpad text: `ScratchpadStorage.directoryName` is the fixed `com.yenchat.yen`, not the bundle identifier, so both read and write `~/Library/Application Support/com.yenchat.yen/scratchpad.txt`. Copy that file aside before any Debug E2E run and compare it afterward: the instance loads the text at launch and rewrites the file when it quits, even if the Scratchpad never opened.
 

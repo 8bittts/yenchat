@@ -1183,5 +1183,20 @@
 			"--new-block",
 			"@$PATCHES_DIR/native-onboarding-launch.new"
 		]
+	},
+	"native-preference-launch-arguments": {
+		"target": "ghostty/macos/Sources/App/main.swift",
+		"arguments": [
+			"--label",
+			"route native preference pairs to AppKit",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"if argument.hasPrefix(\"-com.yenchat.yen.\"),",
+			"--old-block",
+			"    if argument == \"-com.yenchat.yen.hasCompletedSetup\", index + 1 < arguments.count,\n       [\"yes\", \"no\", \"true\", \"false\", \"0\", \"1\"].contains(arguments[index + 1].lowercased()) {",
+			"--new-block",
+			"    // Foundation consumes single-dash defaults and leaves the original argv available to AppKit.\n    if argument.hasPrefix(\"-com.yenchat.yen.\"), argument != \"-com.yenchat.yen.\",\n       index + 1 < arguments.count, !arguments[index + 1].hasPrefix(\"-\"),\n       !arguments[index + 1].hasPrefix(\"+\") {"
+		]
 	}
 }

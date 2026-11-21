@@ -20,6 +20,7 @@ CONFIG_SWIFT="ghostty/macos/Sources/YEN/Ghostty.Config.swift"
 # otherwise missing config values read back as `0ms` and silently disable undo.
 
 apply_overlay_patch native-onboarding-launch-argument
+apply_overlay_patch native-preference-launch-arguments
 apply_overlay_patch config-owner-teardown
 apply_overlay_patch undo-timeout-default-preservation
 apply_overlay_patch workspace-titlebar-default

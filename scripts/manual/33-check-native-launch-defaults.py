@@ -11,6 +11,7 @@ from pathlib import Path
 SETUP = "-com.yenchat.yen.hasCompletedSetup"
 SESSIONS = "-com.yenchat.yen.persistentSessions"
 TOKENS = "-com.yenchat.yen.showTokenUsage"
+CHILD_OPTION = "-com.yenchat.yen.childArgument"
 ALERT = "Configuration Errors"
 TITLE = "Native preference check"
 CONFIG = "initial-window = true\nwindow-save-state = never\nconfirm-close-surface = false\n"
@@ -36,10 +37,21 @@ def wait_for(pid, expected, has_alert):
     raise AssertionError(f"Expected {expected!r}, alert={has_alert}. Found windows: {names}")
 
 
+def check_child_arguments(received):
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if received.exists() and received.read_text().splitlines() == [CHILD_OPTION, "YES"]:
+            return
+        time.sleep(0.1)
+    raise AssertionError("The terminal command did not receive its two arguments")
+
+
 def reload_config(pid):
     result = ui(pid, '''
+        set frontmost to true
         repeat with itemRef in menu bar items of menu bar 1
             if exists menu item "Reload Configuration" of menu 1 of itemRef then
+                click itemRef
                 click menu item "Reload Configuration" of menu 1 of itemRef
                 return "reloaded"
             end if
@@ -49,21 +61,23 @@ def reload_config(pid):
 
 def check(app, preferences):
     with tempfile.TemporaryDirectory(prefix="yen-native-launch-") as scratch:
-        config = Path(scratch, "config")
+        config = Path(scratch, "Library/Application Support/com.yenchat.yen/config.yen")
+        config.parent.mkdir(parents=True)
         config.write_text(CONFIG)
         received = Path(scratch, "command-arguments")
         command = ['-e', '/bin/sh', '-c', 'printf "%s\\n" "$@" > "$0"; exec /bin/cat',
-                   str(received), TOKENS, 'YES']
+                   str(received), CHILD_OPTION, 'YES']
         process = subprocess.Popen([app, *preferences, f"--title={TITLE}", *command],
-                                   env={**os.environ, "YEN_CONFIG_PATH": str(config)})
+                                   env={**os.environ, "HOME": scratch, "CFFIXED_USER_HOME": scratch,
+                                        "XDG_CONFIG_HOME": scratch, "YEN_CONFIG_PATH": str(config)})
         try:
             wait_for(process.pid, TITLE, False)
-            assert received.read_text().splitlines() == [TOKENS, "YES"]
+            check_child_arguments(received)
             config.write_text(CONFIG + "test-invalid-native-launch-field = true\n")
             reload_config(process.pid)
             wait_for(process.pid, ALERT, True)
             config.write_text(CONFIG)
-            ui(process.pid, 'click button "Reload Configuration" of window "Configuration Errors"')
+            reload_config(process.pid)
             wait_for(process.pid, TITLE, False)
             print(f"PASS launch, valid CLI setting, child arguments, and error recovery: {preferences}")
         finally:
