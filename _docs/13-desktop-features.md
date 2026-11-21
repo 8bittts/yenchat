@@ -55,6 +55,7 @@ Every spacing and text style in the Settings views comes from `SettingsSpacing` 
 The inspector is 380 pt wide so a permission row fits its name, status and button on one line.
 `glassEffect` needs macOS 26, so `settingsGlassPanel()` falls back to `.regularMaterial` with a hairline on older systems.
 The preview cursor blinks through a `TimelineView` that stops under Reduce Motion, and its border uses the runtime `WindowBorderRenderingPolicy.strokeModel`, so weight and corner match a terminal window.
+The preview border sits `SettingsSpacing.previewBorderInset` inside the window edge, applied as padding after the stroke rather than as a larger shape inset, which would also shrink the corner radius; at the window edge the Settings window's own rounded corners clipped the outline.
 The preview's ANSI accents come from `palette = 1` through `6` in the theme file, parsed once per path by `SettingsStudioPalette`.
 There is no search, no import or export, no per-pane reset and no footer: the whole settings set fits in five short panes, so nothing needs to be hunted for.
 `SettingsWindow.toolbar` forces `nil`, because a toolbar would add a strip above the preview.

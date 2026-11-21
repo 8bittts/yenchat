@@ -252,6 +252,7 @@ struct SettingsStudioPreview: View {
                         ),
                         lineWidth: stroke.lineWidth
                     )
+                    .padding(SettingsSpacing.previewBorderInset)
                     .allowsHitTesting(false)
             }
         }
