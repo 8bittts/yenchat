@@ -152,7 +152,7 @@ struct TerminalChromeAppearanceTests {
             buttonsStart.constant = inset
             titlebar.layoutSubtreeIfNeeded()
             #expect(tabs.frame.minX >= buttons.frame.maxX)
-            #expect(tabs.frame.maxX == titlebar.bounds.maxX - YENDesignTokens.toolbarInset)
+            #expect(tabs.frame.maxX == titlebar.bounds.maxX)
         }
     }
 

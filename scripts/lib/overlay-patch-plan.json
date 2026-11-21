@@ -1168,5 +1168,20 @@
 			"--extra-replace",
 			"            if fixedYENMenuShortcutSelector(menuAction) {\n                return true\n            }\n\n            guard let bindingFlags else { return false }\n            return bindingFlags:::            return bindingFlags"
 		]
+	},
+	"native-onboarding-launch-argument": {
+		"target": "ghostty/macos/Sources/App/main.swift",
+		"arguments": [
+			"--label",
+			"separate native onboarding preference from engine arguments",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"if yen_init(UInt(engineCount), engineArgv) != YEN_SUCCESS {",
+			"--old-block",
+			"if yen_init(UInt(CommandLine.argc), CommandLine.unsafeArgv) != YEN_SUCCESS {",
+			"--new-block",
+			"@$PATCHES_DIR/native-onboarding-launch.new"
+		]
 	}
 }

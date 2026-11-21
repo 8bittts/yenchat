@@ -61,7 +61,7 @@ Project execution requires the relevant trust grant; read-only status commands d
 - Cmd + Shift + P, then Browser Split — Open native browser beside the active terminal window; also findable by terminal browser and split searches
 - Cmd + Shift + S — Screenshot (saves window to file and copies to clipboard)
 - Cmd + Shift + B — Toggle tab sidebar (floating or docked when windowed, temporary rail in native fullscreen). The upper-left fullscreen buttons toggle the rail and exit fullscreen
-- Cmd + Shift + J — Toggle scratchpad (centered, movable notes panel with a remembered size in the source build after 1.282)
+- Cmd + Shift + J — Toggle scratchpad (centered, movable notes panel with a remembered size in YEN 1.283)
 - Cmd + Option + 1-0 — Split layout presets (Single Pane, Three Columns, Right Stack, Bottom Stack, Quad, Eastward 1-3, Eastward 2-1, Eastward 2-3, Center Stage, Three Column Bottom)
 - Ctrl + ` — Toggle Quick Terminal (global hotkey dropdown)
 - Cmd + Enter — Toggle fullscreen
@@ -90,7 +90,7 @@ Press Cmd + , to open Settings. The window is a live terminal preview that shows
 - Settings > Appearance: theme (a dock with every bundled theme as a swatch), font family and size, cursor style (block, bar, underline) and blink, background opacity, padding, a PNG or JPEG background image, and the window border
 - Window border: on/off, Theme or Accent color, Window or Focused Pane outline, and Thin/Regular/Thick weight, shown live in the preview; outline scope and focused/unfocused palettes also from the command palette Window Border actions; Differentiate Without Color dashes the unfocused border; the border hides in fullscreen and Quick Terminal
 - Horizontal tabs: pane icons appear before the title when space permits. Narrow tabs hide the icons to keep the name readable.
-- In source builds after 1.282, horizontal tabs expand left from the right window edge. Comfortable keeps the top inset when a pane splits.
+- In YEN 1.283, horizontal tabs expand left from the right window edge. Comfortable keeps the top inset when a pane splits.
 - In YEN 1.282, Settings > General > Panes offers Comfortable (rounded borders and gutters, the default) or Compact (edge-to-edge splits with a thin divider). Pane Labels works with either style. The Focused Pane border includes its header.
 - Settings > General: open at login, copy on select, keep sessions running, scroll bar, tab sidebar (Off, Floating, or Docked; Cmd + Shift + B), pane labels (off by default in 1.277 and 1.278, with optional worktree naming; 1.279 enables draggable split headers by default and shows activity icons in headers and tabs), scratchpad toggle (Cmd + Shift + J), link handling, and Reset All Settings
 - Settings > Notifications: command-finish alerts (Never, when the pane is unfocused, or always; minimum runtime; bell and/or notification), one system alert sound each for General and Build notifications, and sound/banner behavior while YEN is active
@@ -149,7 +149,7 @@ Hold Option + Space, speak, release. Your words appear at the cursor.
 - OpenAI Codex CLI alternative: https://yen.chat/alternatives/codex-cli
 - macOS terminal with speech-to-text: https://yen.chat/use-cases/macos-terminal-with-speech-to-text
 - Terminal with native browser preview: https://yen.chat/use-cases/terminal-with-native-browser-preview
-- Terminal Git diff drawer: https://yen.chat/use-cases/terminal-git-diff-drawer
+- YEN 1.283 removed the bottom Git drawer. Run yengit for local Git changes or open PR Review from the command palette: https://yen.chat/use-cases/terminal-git-diff-drawer
 - Terminal IDE local workflows: https://yen.chat/use-cases/terminal-ide-local-workflows
 - Privacy-focused terminal workflows: https://yen.chat/use-cases/privacy-focused-ai-terminal
 - Fast GPU terminal for macOS: https://yen.chat/use-cases/fast-gpu-terminal-for-macos

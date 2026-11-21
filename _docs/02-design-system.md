@@ -23,7 +23,9 @@ Themes and the generated catalog, the public web design system, and the hero typ
 Theme files hold literal colors because they are portable content; app chrome uses semantic tokens.
 Tab sidebar rows use a neutral selection fill and the terminal-facing corner radius.
 In the sidebar, an uncolored tab shows a terminal glyph and a colored tab shows its swatch.
-Native chrome uses shared 4-point pane, 8-point toolbar, and 12-point content insets.
+Pane gutters use a 4-point inset on each side of a divider.
+AppKit supplies the tab accessory’s trailing margin.
+Headers and panel contents use a 12-point inset.
 Split headers use the system caption for the pane title and directory, with semibold weight for the title.
 The native tab and split header share the same activity icon.
 Never turn palette values into design tokens, and never edit generated upstream theme sources.

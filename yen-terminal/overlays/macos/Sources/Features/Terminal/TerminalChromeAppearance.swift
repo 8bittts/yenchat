@@ -77,7 +77,8 @@ final class WorkspaceTabStrip {
     }
 
     static func end(_ view: NSView, at anchor: NSLayoutXAxisAnchor) -> NSLayoutConstraint {
-        view.rightAnchor.constraint(equalTo: anchor, constant: -YENDesignTokens.toolbarInset)
+        // AppKit already insets the visible new-tab button inside this accessory.
+        view.rightAnchor.constraint(equalTo: anchor)
     }
 
     func place(after controls: NSView?) {

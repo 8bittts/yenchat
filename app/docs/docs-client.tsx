@@ -102,7 +102,7 @@ function TerminalIDESection() {
 			<ul className="list-disc list-outside pl-5 space-y-3 text-body mb-6">
 				<li>
 					<strong>Scratchpad:</strong> one locally saved notes buffer shared
-					across windows. In source builds after 1.282 it opens centered. Drag
+					across windows. The panel opens in the center of the terminal. Drag
 					its title bar to move it or an edge to resize it. YEN remembers the
 					size. It supports copy, paste, and copy-on-select when enabled.
 				</li>
@@ -132,9 +132,9 @@ function TerminalIDESection() {
 				Local Git changes
 			</h3>
 			<p className="text-body">
-				Use <code className="inline-code-brand">yengit</code> for Git
-				operations, or the command palette for PR review and merge-conflict
-				workspaces.
+				YEN 1.283 removed the bottom Git drawer and its shortcut. Run{" "}
+				<code className="inline-code-brand">yengit</code> for Git operations, or
+				the command palette for PR review and merge-conflict workspaces.
 			</p>
 		</DocSection>
 	);
@@ -721,9 +721,8 @@ function SplitPaneLabelsSection() {
 				the active pane and its header.
 			</p>
 			<p className="text-body">
-				In source builds after 1.282, horizontal tabs line up on the right and
-				expand to the left. Comfortable keeps the same gap below the tabs when
-				you add the first split.
+				Horizontal tabs line up on the right and expand to the left. Comfortable
+				keeps the same gap below the tabs when you add the first split.
 			</p>
 			<p className="text-body">
 				In YEN 1.277 and 1.278, enable Settings &gt; General &gt; Pane Labels to

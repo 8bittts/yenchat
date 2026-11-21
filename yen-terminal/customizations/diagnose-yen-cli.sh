@@ -80,7 +80,8 @@ fi
 echo ""
 
 echo "[3/6] Checking LaunchServices entries..."
-ls_entries=$(/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump 2>/dev/null | grep -i "yen.app" | wc -l | tr -d ' ')
+ls_entries=$(/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump Bundle 2>/dev/null |
+    awk 'tolower($0) ~ /^path:[[:space:]].*\/yen\.app[[:space:]]+\(0x/ { count++ } END { print count + 0 }')
 if [[ "$ls_entries" -gt 0 ]]; then
     echo "  ⚠ Found $ls_entries YEN.app entries in LaunchServices"
     echo "  → Run: ./customizations/clear-app-cache.sh if app registration looks stale"

@@ -19,6 +19,7 @@ CONFIG_SWIFT="ghostty/macos/Sources/YEN/Ghostty.Config.swift"
 # The Swift bridge must keep Ghostty's 5s default when `undo-timeout` is unset;
 # otherwise missing config values read back as `0ms` and silently disable undo.
 
+apply_overlay_patch native-onboarding-launch-argument
 apply_overlay_patch config-owner-teardown
 apply_overlay_patch undo-timeout-default-preservation
 apply_overlay_patch workspace-titlebar-default

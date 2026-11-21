@@ -246,7 +246,9 @@ Shortcuts need exact Cmd + Option and a foreground terminal window; new panes in
 Settings → General → Panes offers two styles that update open splits immediately.
 Comfortable is the default and gives each pane a rounded border and a gutter.
 Compact places panes edge to edge with a draggable divider.
-Comfortable keeps the same inset around single, split, and zoomed panes.
+The top row shares one edge below the toolbar in single, split, and zoomed layouts.
+Each outlined pane reserves space for its stroke and corner curve around the terminal grid and header.
+Changing focus keeps the terminal grid size stable.
 
 Each split header shows an activity icon, title and working directory above the terminal.
 It uses the pane background and balances the space above and below the icon and title.

@@ -1,4 +1,5 @@
 # Required post-branding patch targets, relative to yen-terminal.
+ghostty/macos/Sources/App/main.swift
 ghostty/macos/Sources/Features/QuickTerminal/QuickTerminalController.swift
 ghostty/macos/Sources/YEN/Ghostty.Config.swift
 ghostty/macos/Sources/YEN/Ghostty.App.swift

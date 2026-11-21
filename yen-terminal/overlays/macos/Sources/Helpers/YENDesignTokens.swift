@@ -6,7 +6,6 @@ import SwiftUI
 /// surfaces silently drift apart).
 enum YENDesignTokens {
     static let paneInset: CGFloat = 4
-    static let toolbarInset: CGFloat = 8
 
     static let contentInset: CGFloat = 12
     static let secondaryLabel: Font = .caption

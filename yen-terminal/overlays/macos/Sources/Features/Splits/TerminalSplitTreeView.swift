@@ -128,6 +128,7 @@ enum SplitFocusClickHitTesting {
 struct TerminalSplitTreeView: View {
     @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
     let tree: SplitTree<YEN.SurfaceView>
+    let alignsWithTabBar: Bool
     let action: (TerminalSplitOperation) -> Void
 
     var body: some View {
@@ -137,13 +138,14 @@ struct TerminalSplitTreeView: View {
                 // A zoomed node becomes the rendered root, so its leaf should not
                 // be treated as a split pane for label visibility.
                 isRoot: true,
+                meetsTopEdge: alignsWithTabBar,
                 action: action)
             // This is necessary because we can't rely on SwiftUI's implicit
             // structural identity to detect changes to this view. Due to
             // the tree structure of splits it could result in bad behaviors.
             // See: https://github.com/yen-org/yen/issues/7546
             .id(node.structuralIdentity)
-            .padding(paneSettings.paneStyle == .comfortable ? YENDesignTokens.paneInset : 0)
+            .padding(alignsWithTabBar ? [.horizontal, .bottom] : .all, paneSettings.paneStyle == .comfortable ? YENDesignTokens.paneInset : 0)
         }
     }
 }
@@ -154,12 +156,13 @@ private struct TerminalSplitSubtreeView: View {
     @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
     let node: SplitTree<YEN.SurfaceView>.Node
     var isRoot: Bool = false
+    var meetsTopEdge = true
     let action: (TerminalSplitOperation) -> Void
 
     var body: some View {
         switch node {
         case .leaf(let leafView):
-            TerminalSplitLeaf(surfaceView: leafView, isSplit: !isRoot, action: action)
+            TerminalSplitLeaf(surfaceView: leafView, isSplit: !isRoot, meetsTopEdge: meetsTopEdge, action: action)
 
         case .split(let split):
             let splitViewDirection: SplitViewDirection = switch split.direction {
@@ -177,10 +180,10 @@ private struct TerminalSplitSubtreeView: View {
                 dividerColor: paneSettings.paneStyle == .compact ? yen.config.splitDividerColor : .clear,
                 resizeIncrements: .init(width: 1, height: 1),
                 left: {
-                    TerminalSplitSubtreeView(node: split.left, action: action)
+                    TerminalSplitSubtreeView(node: split.left, meetsTopEdge: meetsTopEdge, action: action)
                 },
                 right: {
-                    TerminalSplitSubtreeView(node: split.right, action: action)
+                    TerminalSplitSubtreeView(node: split.right, meetsTopEdge: meetsTopEdge && split.direction == .horizontal, action: action)
                 },
                 onEqualize: {
                     guard let surface = node.leftmostLeaf().surface else { return }
@@ -211,6 +214,7 @@ private struct TerminalSplitLeaf: View {
     @Environment(\.focusedPaneOutline) private var focusedOutline
     @ObservedObject var surfaceView: YEN.SurfaceView
     let isSplit: Bool
+    let meetsTopEdge: Bool
     let action: (TerminalSplitOperation) -> Void
 
     @ObservedObject private var splitPaneLabelSettings = SplitPaneLabelSettings.shared
@@ -223,10 +227,12 @@ private struct TerminalSplitLeaf: View {
             let framed = splitPaneLabelSettings.paneStyle == .comfortable
             let inset: CGFloat = framed ? YENDesignTokens.paneInset : 0
             let shape = RoundedRectangle(cornerRadius: framed ? YENDesignTokens.terminalFacingCornerRadius : 0, style: .continuous)
+            let topInset = meetsTopEdge ? 0 : inset
+            let clearance = focusedOutline?.overlay.contentInset(framed: framed) ?? (framed ? inset : 0)
             let showSplitLabel = SplitPaneLabelRules.isVisible(
                 enabled: splitPaneLabelSettings.isEnabled,
                 isSplit: isSplit,
-                availableSize: CGSize(width: geometry.size.width - 2 * inset, height: geometry.size.height - 2 * inset)
+                availableSize: CGSize(width: geometry.size.width - 2 * (inset + clearance), height: geometry.size.height - inset - topInset - 2 * clearance)
             )
 
             VStack(spacing: 0) {
@@ -236,6 +242,7 @@ private struct TerminalSplitLeaf: View {
                 YEN.InspectableSurface(surfaceView: surfaceView, isSplit: isSplit)
                     .environment(\.paneHeaderVisible, showSplitLabel)
             }
+            .padding(clearance)
             .clipShape(shape)
             .overlay {
                 if let outline = focusedOutline, outline.surfaceID == surfaceView.id {
@@ -247,7 +254,8 @@ private struct TerminalSplitLeaf: View {
                         .allowsHitTesting(false)
                 }
             }
-            .padding(inset)
+            .padding([.horizontal, .bottom], inset)
+            .padding(.top, topInset)
             .background {
                 // If we're dragging ourself, we hide the entire drop zone. This makes
                 // it so that a released drop animates back to its source properly

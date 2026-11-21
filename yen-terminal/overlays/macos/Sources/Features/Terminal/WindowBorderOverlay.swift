@@ -34,6 +34,13 @@ struct WindowBorderOverlay: View {
         )
     }
 
+    func contentInset(framed: Bool) -> CGFloat {
+        let corner = framed ? YENDesignTokens.terminalFacingCornerRadius : max(minimumCornerRadius, strokeModel.cornerRadius)
+        let stroke = strokeModel.lineWidth
+        // Leave a clear pixel band inside the curve, even with zero terminal grid padding.
+        return ceil(stroke + max(0, corner - stroke) / 2) + 2
+    }
+
     func paneBorder(framed: Bool) -> some View {
         var border = self
         if framed {

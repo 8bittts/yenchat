@@ -160,13 +160,10 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
         focusedSurface ?? lastFocusedSurface.value
     }
 
-    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
-
     private var showsBorderOnSplitLeaf: Bool {
-        guard shouldShowFocusedSplitBorder, activeOrLastFocusedSurface != nil else { return false }
-        if paneSettings.paneStyle == .comfortable { return true }
-        if case .split = viewModel.surfaceTree.zoomed ?? viewModel.surfaceTree.root { return true }
-        return false
+        guard shouldShowFocusedSplitBorder, let surface = activeOrLastFocusedSurface else { return false }
+        let visibleRoot = viewModel.surfaceTree.zoomed ?? viewModel.surfaceTree.root
+        return visibleRoot?.find(id: surface.id) != nil
     }
 
     private var nativeCornerRadius: CGFloat {
@@ -231,6 +228,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 }
 
                 terminalWithOptionalBrowserSplit
+                    .padding(shouldShowWindowScopedBorder || shouldFallbackToWindowBorder ? borderOverlay.contentInset(framed: false) + 1 : 0)
                 // Ignore safe area to extend up in to the titlebar region if we have the "hidden" titlebar style
                 .ignoresSafeArea(.container, edges: shouldIgnoreTopSafeArea ? .top : [])
 
@@ -421,11 +419,6 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
 
     @ViewBuilder
     private var terminalWithOptionalBrowserSplit: some View {
-        // The Browser Split is a standard HSplitView divider (like Xcode's
-        // navigator), not one of the four slide-over surfaces, so it toggles
-        // instantly by design. Per _docs/01-architecture.md → "Native-First
-        // Interaction Parity", the .easeIn/0.2s slide vocabulary governs only the
-        // Quick Terminal / Git Drawer / Tab Sidebar / Scratchpad, not split panes.
         if browserSplit.isVisible(in: borderWindow) {
             HSplitView {
                 terminalContent
@@ -449,6 +442,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
 
             TerminalSplitTreeView(
                 tree: viewModel.surfaceTree,
+                alignsWithTabBar: yen.config.macosTitlebarStyle == .tabs && !windowIsFullscreen,
                 action: { delegate?.performSplitAction($0) })
                 .environment(\.focusedPaneOutline, showsBorderOnSplitLeaf ? activeOrLastFocusedSurface.map {
                     FocusedPaneOutline(surfaceID: $0.id, overlay: borderOverlay)
