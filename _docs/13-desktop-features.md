@@ -260,6 +260,7 @@ Click the header to focus the pane, drag it to a highlighted edge to move it, or
 The existing Pane Labels preference controls headers and defaults to on.
 Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.
 Native tabs show the first three pane icons in layout order and count additional panes.
+After a tab moves to another window, switching between the remaining tabs keeps the strip width stable.
 The icon uses the local foreground executable and falls back to a recognized terminal title or a terminal symbol.
 "Rename Split Label" sets a label that survives layout rewrites, undo, restore and relaunch (a `UUID -> label` sidecar in terminal and Quick Terminal restore state).
 Without a custom label, the header prefers the worktree name (if enabled), recognized agent name, surface title, working directory name, then "Terminal".

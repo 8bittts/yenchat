@@ -729,12 +729,12 @@ function SplitPaneLabelsSection() {
 				automatic naming and survives session restore.
 			</p>
 			<p className="text-body">
-				In builds from the latest source, split headers are on by default. Click
-				the icon, name, or empty header space to focus a pane. Drag it to a
-				highlighted edge to move it, or click the pencil to rename it. Each tab
-				shows icons for up to three panes and a count for additional panes.
-				Icons follow the foreground tool or terminal title. Headers hide in
-				small or zoomed panes.
+				Starting in YEN 1.279, split headers are on by default. Click the icon,
+				name, or empty header space to focus a pane. Drag it to a highlighted
+				edge to move it, or click the pencil to rename it. Each tab shows icons
+				for up to three panes and a count for additional panes. Icons follow the
+				foreground tool or terminal title. Headers hide in small or zoomed
+				panes.
 			</p>
 			<figure>
 				<Image
@@ -746,7 +746,7 @@ function SplitPaneLabelsSection() {
 					className="w-full h-auto"
 				/>
 				<figcaption className="media-caption">
-					Split headers and tab icons in a source build.
+					Each tab shows the icons of the panes it contains.
 				</figcaption>
 			</figure>
 		</DocSection>
