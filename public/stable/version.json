@@ -1,8 +1,8 @@
 {
-  "version": "1.281",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.281/yen-1281.dmg",
-  "sha256": "fac135e3439716cbd2680d102f5534fe5ab3030a68f3f1ae01417e9b0dc89e8f",
-  "notes": "Roomier horizontal tabs with clearer pane icons",
+  "version": "1.282",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.282/yen-1282.dmg",
+  "sha256": "6b16928b732444e3da462a92d9b45eb84afd512cda95b9555c7d4c7497912f54",
+  "notes": "Centered tabs and clearer split pane outlines",
   "minOS": "13.0",
   "releaseDate": ""
 }
