@@ -134,6 +134,35 @@ struct TokenUsageIndexTests {
         #expect(observed)
     }
 
+    @Test func openCodeUsesSessionCountersOnlyWhenMessageHistoryHasNoUsage() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let root = TokenTool.openCode.root(home: home)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        let db = try SQLiteDatabase(path: root.appendingPathComponent("opencode.db").path)
+        let now = Date()
+        let today = Int(now.timeIntervalSince1970 * 1000)
+        let yesterday = Int(Calendar.current.startOfDay(for: now).timeIntervalSince1970 * 1000) - 1
+        try db.execute("""
+            CREATE TABLE message(id TEXT,session_id TEXT,data TEXT);
+            CREATE TABLE session(time_created INTEGER,tokens_input INTEGER,tokens_output INTEGER,
+                tokens_reasoning INTEGER,tokens_cache_read INTEGER,tokens_cache_write INTEGER);
+            INSERT INTO session VALUES(\(today),100,25,3,10,4);
+            """)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        func count() throws -> Int? { try index.read(now: now, tools: [.openCode])[.openCode] }
+        #expect(try count() == 142)
+        try db.execute("""
+            INSERT INTO message VALUES('old','s','{"role":"assistant","time":{"created":\(yesterday)},"tokens":{"input":8}}');
+            """)
+        #expect(try count() == 0)
+        try db.execute("""
+            INSERT INTO message VALUES('new','s','{"role":"assistant","time":{"created":\(today)},"tokens":{"output":5}}');
+            """)
+        #expect(try count() == 5)
+    }
+
     @Test func openCodeMigrationCountsARecordOnceAcrossGateways() throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
