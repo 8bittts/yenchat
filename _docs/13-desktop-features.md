@@ -17,7 +17,9 @@ Overlay-owned utility windows (Settings, About, Onboarding, PR Review, Merge Con
 Intentional deltas, not templates for new windows:
 
 - Standard terminal windows default to native titlebar tabs on macOS 14 and later.
-  The tab strip grows with the group until it reaches the window edge.
+  Horizontal tabs prefer 240 points each and compress at the window edge, where AppKit manages overflow.
+  Pane icons lead the title when AppKit exposes its title stack and yield space to the title in narrow tabs.
+  Shortcuts and zoom controls sit at the trailing edge.
   macOS 13 keeps the transparent titlebar default for native tab restoration.
   An explicit `macos-titlebar-style` overrides either default.
 - Quick Terminal is a non-activating `NSPanel` with its own space and fullscreen policy.

@@ -48,6 +48,10 @@ final class TerminalChromeAppearance: ObservableObject {
 /// a preferred width, while its required trailing edge keeps narrow windows usable.
 @MainActor
 final class WorkspaceTabStrip {
+    static let trackHeight: CGFloat = 34
+    static let topInset: CGFloat = 5
+    private static let preferredTabWidth: CGFloat = 240
+
     private weak var host: NSView?
     private weak var group: NSWindowTabGroup?
     private var preferredWidth: NSLayoutConstraint?
@@ -112,7 +116,7 @@ final class WorkspaceTabStrip {
 
     private static func width(for group: NSWindowTabGroup?) -> CGFloat {
         // Leave room for AppKit's new-tab control after the last tab.
-        CGFloat(max(1, group?.windows.count ?? 1)) * 188 + 36
+        CGFloat(max(1, group?.windows.count ?? 1)) * preferredTabWidth + 36
     }
 }
 

@@ -66,6 +66,50 @@ struct TerminalChromeAppearanceTests {
         #expect(secondHost.frame.width == twoTabWidth)
     }
 
+    @available(macOS 27, *)
+    @Test func horizontalTabKeepsItsPaneIconBeforeItsTitleWhenSelectionChanges() async throws {
+        let groupID = UUID().uuidString
+        let nib = try #require(NSNib(nibNamed: "TerminalTabsTitlebarTahoe", bundle: Bundle(for: TerminalWindow.self)))
+        let windows = try ["Atlas", "Studio"].map { title in
+            let owner = NSWindowController(window: nil)
+            var objects: NSArray?
+            try #require(nib.instantiate(withOwner: owner, topLevelObjects: &objects))
+            let window = try #require(owner.window as? TitlebarTabsTahoeTerminalWindow)
+            window.isReleasedWhenClosed = false
+            window.tabbingIdentifier = groupID
+            window.title = title
+            return window
+        }
+        defer { windows.forEach { $0.close() } }
+        let icons = try windows.map { window in
+            let accessory = try #require(window.tab.accessoryView as? WorkspaceTabAccessory)
+            let host = PaneTabIconAccessory(rootView: PaneTabIcons(surfaces: []))
+            host.widthAnchor.constraint(equalToConstant: 20).isActive = true
+            host.heightAnchor.constraint(equalToConstant: 18).isActive = true
+            accessory.install(host, for: window)
+            return host
+        }
+        windows[0].addTabbedWindow(windows[1], ordered: .above)
+        let group = try #require(windows[0].tabGroup)
+        for selected in windows {
+            group.selectedWindow = selected
+            selected.makeKeyAndOrderFront(nil)
+            selected.setupTabBar()
+            await Task.yield()
+            let root = try #require(selected.contentView?.superview)
+            root.layoutSubtreeIfNeeded()
+            let labels = root.descendants(withClassName: "NSTextField").compactMap { $0 as? NSTextField }
+            for (index, window) in windows.enumerated() {
+                let icon = icons[index]
+                let title = try #require(labels.first { $0.stringValue == window.title && $0.firstSuperview(withClassName: "NSTabButton") != nil })
+                #expect(icon.window === title.window)
+                let iconFrame = icon.convert(icon.bounds, to: root)
+                let titleFrame = title.convert(title.bounds, to: root)
+                #expect(iconFrame.maxX < titleFrame.minX, "Icon \(iconFrame), title \(titleFrame), hidden \(icon.isHidden), tab \(window.title)")
+            }
+        }
+    }
+
     @Test func tabStripDoesNotSetTheMinimumWindowWidth() {
         let titlebar = NSView()
         let host = NSView()

@@ -128,7 +128,7 @@ struct PaneTabIcons: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            HStack(spacing: -5) {
+            HStack(spacing: -11) {
                 ForEach(Array(surfaces.enumerated()), id: \.element.id) { index, surface in
                     PaneActivityReader(surface: surface) { PaneActivityIcon(activity: $0) }
                         .zIndex(Double(surfaces.count - index))
@@ -150,9 +150,9 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabIcons> {
     private var observation: AnyCancellable?
 
     static func install(for controller: TerminalController, in window: NSWindow) {
-        guard let stack = window.tab.accessoryView as? NSStackView else { return }
+        guard let stack = window.tab.accessoryView as? WorkspaceTabAccessory else { return }
         let host = PaneTabIconAccessory(rootView: PaneTabIcons(surfaces: []))
-        stack.insertArrangedSubview(host, at: 0)
+        stack.install(host, for: window)
         host.observation = controller.$surfaceTree.map { PaneTabIcons(surfaces: $0.root?.leaves() ?? []) }
             .removeDuplicates { $0.showsSamePanes(as: $1) }
             .sink { [weak host] in host?.rootView = $0 }

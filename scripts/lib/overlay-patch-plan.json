@@ -1056,5 +1056,43 @@
 			"--new-block",
 			"@$PATCHES_DIR/pane-tab-icons.new"
 		]
+	},
+	"workspace-tab-accessory": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"workspace tab accessory",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"let stackView = WorkspaceTabAccessory()",
+			"--old-block",
+			"let stackView = NSStackView()",
+			"--new-block",
+			"let stackView = WorkspaceTabAccessory()"
+		]
+	},
+	"workspace-tab-height": {
+		"target": "ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift",
+		"arguments": [
+			"--label",
+			"workspace tab height",
+			"--mode",
+			"exact",
+			"--marker-all",
+			"tabBarView.frame.size.height = max(newTabButton.frame.width, WorkspaceTabStrip.trackHeight)",
+			"--old-block",
+			"tabBarView.frame.size.height = newTabButton.frame.width",
+			"--new-block",
+			"tabBarView.frame.size.height = max(newTabButton.frame.width, WorkspaceTabStrip.trackHeight)",
+			"--extra-replace",
+			"case .visible: 70:::case .visible: 80",
+			"--marker-all",
+			"case .visible: 80",
+			"--extra-replace",
+			"clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: 2):::clipView.topAnchor.constraint(equalTo: container.topAnchor, constant: WorkspaceTabStrip.topInset)",
+			"--marker-all",
+			"constant: WorkspaceTabStrip.topInset"
+		]
 	}
 }
