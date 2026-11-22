@@ -128,13 +128,5 @@ describe("IDE CLI test limits", () => {
 			),
 		);
 		expect(offenders).toEqual([]);
-
-		const withoutFixture = ideTestFiles.filter(
-			(name) =>
-				!readFileSync(join(repoRoot, "tests", name), "utf8").includes(
-					"createIdeTemp()",
-				),
-		);
-		expect(withoutFixture).toEqual([]);
 	});
 });

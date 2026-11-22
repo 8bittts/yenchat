@@ -44,6 +44,8 @@ Use `.integration.ts` only for process-spawning IDE coverage that is too slow or
 `yen ide` tests create temps through `tests/fixtures/ide-temp.ts` (`createIdeTemp()`), never `mkdtempSync(join(tmpdir(), ...))`.
 The harness deletes those directories after each test and tears down any process whose argv contains the path.
 `tests/146-ide-temp-harness.test.ts` fails the suite if an ide test file goes back to raw `mkdtemp`.
+The same call sets the time limits for the file: a 30-second default for each test and each cleanup hook, because Bun's 5-second default fails healthy CLI tests on a loaded machine.
+A test that chains many CLI calls or waits on a daemon passes `IDE_CLI_SLOW_TEST_TIMEOUT_MS` as its `timeout`, never a number; `tests/170-cli-test-limits.test.ts` proves the limits and refuses a numeric one.
 
 A test process never holds a live provider credential.
 `bun test` skips `.env.local` but inherits the shell, and the operator shell exports `RESEND_API_KEY`; `tests/01-preload.ts` strips every credential-shaped variable before any file loads, and `tests/160-credential-strip.test.ts` asserts that strip.

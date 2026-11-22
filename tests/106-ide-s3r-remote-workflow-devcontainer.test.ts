@@ -11,7 +11,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -23,7 +26,7 @@ const test = (
 	name: string,
 	fn: () => void,
 	options: { timeout?: number } = {},
-) => bunTest(name, fn, { timeout: 30_000, ...options });
+) => bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS, ...options });
 
 function runYen(
 	args: string[],
@@ -224,7 +227,9 @@ const remoteDevcontainerLifecycleTestName =
 	"remote devcontainer up/shell/down verify runtime state and preserve tracked state on transport failure";
 
 function remoteDevcontainerLifecycleTest(fn: () => void) {
-	test(remoteDevcontainerLifecycleTestName, fn, { timeout: 30_000 });
+	test(remoteDevcontainerLifecycleTestName, fn, {
+		timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+	});
 }
 
 describe("IDE remote workflow/devcontainer execution parity", () => {

@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -589,7 +592,7 @@ describe("IDE S3C interactive LSP surfaces", () => {
 				runYen(["ide", "lsp", "stop", "--project", project], env).status,
 			).toBe(0);
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -672,6 +675,6 @@ describe("IDE S3C interactive LSP surfaces", () => {
 				runYen(["ide", "lsp", "stop", "--project", project], env).status,
 			).toBe(0);
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

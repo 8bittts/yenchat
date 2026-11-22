@@ -8,7 +8,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -290,7 +293,7 @@ describe("IDE S3S local build + CI watch baseline", () => {
 			expect(timeline).toContain("\tverify\t");
 			expect(timeline).toContain("watchIteration=2");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -370,7 +373,7 @@ describe("IDE S3S local build + CI watch baseline", () => {
 			expect(timeline).toContain("\tworkflow-watch\t");
 			expect(timeline).toContain("reason=missing");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -429,6 +432,6 @@ describe("IDE S3S local build + CI watch baseline", () => {
 			expect(timeline).toContain("\tpending\t");
 			expect(timeline).toContain("\tpassing\t");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

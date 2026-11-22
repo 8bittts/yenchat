@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -210,79 +213,89 @@ echo "go version go1.24.0 darwin/arm64"
 		expect(payload.project.types).toEqual(["zig"]);
 	});
 
-	test("doctor exposes verify security readiness in text and json output", () => {
-		const stateDir = ideTemp("yen-ide-doctor-security-state-");
-		const project = ideTemp("yen-ide-doctor-security-project-");
-		const canonicalProject = realpathSync(project);
-		const verifyDir = join(stateDir, "verify");
-		mkdirSync(verifyDir, { recursive: true });
-		writeFileSync(join(project, "Makefile"), "all:\n\t@echo ok\n", "utf8");
+	test(
+		"doctor exposes verify security readiness in text and json output",
+		() => {
+			const stateDir = ideTemp("yen-ide-doctor-security-state-");
+			const project = ideTemp("yen-ide-doctor-security-project-");
+			const canonicalProject = realpathSync(project);
+			const verifyDir = join(stateDir, "verify");
+			mkdirSync(verifyDir, { recursive: true });
+			writeFileSync(join(project, "Makefile"), "all:\n\t@echo ok\n", "utf8");
 
-		const summaryPath = join(verifyDir, "verify-20260320T000000Z-security.tsv");
-		const detailsPath = join(verifyDir, "verify-20260320T000000Z-security.log");
-		const semanticPath = join(
-			verifyDir,
-			"verify-20260320T000000Z-security.semantic.tsv",
-		);
-		writeFileSync(
-			summaryPath,
-			`${[
-				"2026-03-20T00:00:00Z\tgitleaks\t0\t12\tstable\t0\tgitleaks detect --no-banner --redact --source .\tpass\tsecurity",
-				"2026-03-20T00:00:01Z\tosv-scanner\t1\t44\tstable\t0\tosv-scanner --format json --lockfile='/tmp/repo/bun.lock'\twarn\tsecurity",
-			].join("\n")}\n`,
-			"utf8",
-		);
-		writeFileSync(
-			detailsPath,
-			[
-				"=== gitleaks ===",
-				"category: security",
-				"result: pass",
-				"command: gitleaks detect --no-banner --redact --source .",
-				"status: 0",
-				"--- output ---",
-				"",
-				"=== osv-scanner ===",
-				"category: security",
-				"result: warn",
-				"command: osv-scanner --format json --lockfile='/tmp/repo/bun.lock'",
-				"status: 1",
-				"--- output ---",
-				'{"results":[{"source":{"path":"/tmp/repo/bun.lock","type":"lockfile"},"packages":[{"package":{"name":"fixture","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-1234"]}],"vulnerabilities":[{"id":"GHSA-1234"}]}]}]}',
-				"",
-			].join("\n"),
-			"utf8",
-		);
-		writeFileSync(semanticPath, "", "utf8");
-		writeFileSync(
-			join(stateDir, "timeline.log"),
-			[
-				`2026-03-20T00:00:02Z\tverify\t${canonicalProject}\tfailures=0;warns=1\tsummary=${summaryPath};semantic=${semanticPath}`,
-				"",
-			].join("\n"),
-			"utf8",
-		);
+			const summaryPath = join(
+				verifyDir,
+				"verify-20260320T000000Z-security.tsv",
+			);
+			const detailsPath = join(
+				verifyDir,
+				"verify-20260320T000000Z-security.log",
+			);
+			const semanticPath = join(
+				verifyDir,
+				"verify-20260320T000000Z-security.semantic.tsv",
+			);
+			writeFileSync(
+				summaryPath,
+				`${[
+					"2026-03-20T00:00:00Z\tgitleaks\t0\t12\tstable\t0\tgitleaks detect --no-banner --redact --source .\tpass\tsecurity",
+					"2026-03-20T00:00:01Z\tosv-scanner\t1\t44\tstable\t0\tosv-scanner --format json --lockfile='/tmp/repo/bun.lock'\twarn\tsecurity",
+				].join("\n")}\n`,
+				"utf8",
+			);
+			writeFileSync(
+				detailsPath,
+				[
+					"=== gitleaks ===",
+					"category: security",
+					"result: pass",
+					"command: gitleaks detect --no-banner --redact --source .",
+					"status: 0",
+					"--- output ---",
+					"",
+					"=== osv-scanner ===",
+					"category: security",
+					"result: warn",
+					"command: osv-scanner --format json --lockfile='/tmp/repo/bun.lock'",
+					"status: 1",
+					"--- output ---",
+					'{"results":[{"source":{"path":"/tmp/repo/bun.lock","type":"lockfile"},"packages":[{"package":{"name":"fixture","version":"1.0.0","ecosystem":"npm"},"groups":[{"ids":["GHSA-1234"]}],"vulnerabilities":[{"id":"GHSA-1234"}]}]}]}',
+					"",
+				].join("\n"),
+				"utf8",
+			);
+			writeFileSync(semanticPath, "", "utf8");
+			writeFileSync(
+				join(stateDir, "timeline.log"),
+				[
+					`2026-03-20T00:00:02Z\tverify\t${canonicalProject}\tfailures=0;warns=1\tsummary=${summaryPath};semantic=${semanticPath}`,
+					"",
+				].join("\n"),
+				"utf8",
+			);
 
-		const json = runYen(
-			["ide", "doctor", "--format", "json"],
-			{ YEN_IDE_STATE_DIR: stateDir },
-			project,
-		);
-		expect(json.status).toBe(0);
-		const payload = JSON.parse(json.stdout ?? "{}");
-		expect(payload.verify.readiness.status).toBe("warning");
-		expect(payload.verify.security.status).toBe("warning");
-		expect(payload.verify.security.stepCount).toBe(2);
-		expect(payload.verify.security.warningSteps).toBe(1);
-		expect(payload.verify.detailsReport).toBe(detailsPath);
+			const json = runYen(
+				["ide", "doctor", "--format", "json"],
+				{ YEN_IDE_STATE_DIR: stateDir },
+				project,
+			);
+			expect(json.status).toBe(0);
+			const payload = JSON.parse(json.stdout ?? "{}");
+			expect(payload.verify.readiness.status).toBe("warning");
+			expect(payload.verify.security.status).toBe("warning");
+			expect(payload.verify.security.stepCount).toBe(2);
+			expect(payload.verify.security.warningSteps).toBe(1);
+			expect(payload.verify.detailsReport).toBe(detailsPath);
 
-		const text = runYen(
-			["ide", "doctor"],
-			{ YEN_IDE_STATE_DIR: stateDir },
-			project,
-		);
-		expect(text.status).toBe(0);
-		expect(text.stdout).toContain("Security:");
-		expect(text.stdout).toContain("warning (steps=2 blockers=0 warnings=1)");
-	}, 20_000);
+			const text = runYen(
+				["ide", "doctor"],
+				{ YEN_IDE_STATE_DIR: stateDir },
+				project,
+			);
+			expect(text.status).toBe(0);
+			expect(text.stdout).toContain("Security:");
+			expect(text.stdout).toContain("warning (steps=2 blockers=0 warnings=1)");
+		},
+		IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+	);
 });

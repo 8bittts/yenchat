@@ -83,18 +83,11 @@ Owner doc: `_docs/04-security.md`.
 
 - [ ] Ship the MIT notices for Ghostty and the bundled tools inside `YEN.app`, because MIT requires the notice in every copy; reconcile it with the fingerprint gates, which reject the upstream name in the bundle.
 
-### IDE CLI tests time out on a loaded machine
+### A lint test times out on a loaded machine
 
-`tests/84-ide-s3c-lsp-foundation.test.ts` and `tests/88-ide-s3d-devcontainer-vscode-ast.test.ts` each failed once in a full `bun test` run while the load average was 10 to 14, and each passes alone.
-In 84 a `runYen` call returned `status: null` at the 5-second test limit; in 88 the `ide-temp` cleanup hook timed out after the test took 28 seconds.
-`tests/100-ide-s3n-benchmark-harness.test.ts` failed the same way at load 14 ("benchmark status reports missing evidence on a fresh state dir": a hook timed out after 7.5 seconds) and passes alone.
-`tests/75-ide-s2-controls.test.ts` failed the same way at load 9 ("merge-readiness reports a no-PR snapshot without inventing a second trust surface": a hook timed out after 8.8 seconds) and passes alone.
-`tests/133-ide-lazy-router.test.ts` failed the same way at load 8 ("replay loads a sufficient module set": a hook timed out after 6.9 seconds) and passes alone.
-`tests/95-ide-s3i-trust-center.test.ts` failed the same way ("trust status keeps expired share inspection read-only": `runYen` returned `status: null` with SIGTERM at the 5-second default); it now carries the 15-second limit its two sibling tests already used, so the item's limit change should cover it rather than repeat it.
-`tests/103-ide-s3p-remote-state-keying.test.ts` failed the same way at load 11 ("shared state helpers keep local and remote trust/state paths distinct for the same repo root": the probe returned `status: null` at the 5-second default) and passes alone.
-`tests/125-lint-swift-view-modifiers.test.ts` is not an IDE test but failed for the same reason in that run: its second full scan of the overlay sources timed out at the 5-second default while the first passed.
+`tests/125-lint-swift-view-modifiers.test.ts` failed once in a full `bun test` run while the load average was 11: its second full scan of the overlay sources timed out at the 5-second default while the first passed.
 
-- [ ] Reproduce under generated load, then give the spawned CLI calls and the cleanup hook a limit that holds without hiding a real hang.
+- [ ] Reproduce under generated load, then give the scan a limit that holds without hiding a real hang.
 
 ---
 ## WAIT-GATED

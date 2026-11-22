@@ -3,7 +3,10 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { chmodSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -297,7 +300,7 @@ describe("IDE S4A debugger TUI parity", () => {
 					.status,
 			).toBe(0);
 		},
-		{ timeout: 15000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -365,6 +368,6 @@ describe("IDE S4A debugger TUI parity", () => {
 				)?.command,
 			).toContain("ssh://dev@example.test");
 		},
-		{ timeout: 15000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

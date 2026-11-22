@@ -2,7 +2,10 @@ import { test as bunTest, describe, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -14,7 +17,7 @@ const test = (
 	name: string,
 	fn: () => void | Promise<void>,
 	options: { timeout?: number } = {},
-) => bunTest(name, fn, { timeout: 30_000, ...options });
+) => bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS, ...options });
 
 function runYen(
 	args: string[],
@@ -376,7 +379,7 @@ describe("IDE S3E sharing control plane", () => {
 			expect(timeline).toContain("share-revoke");
 			expect(timeline).toContain("auth-failed");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -455,7 +458,7 @@ describe("IDE S3E sharing control plane", () => {
 			const timeline = readFileSync(join(stateDir, "timeline.log"), "utf8");
 			expect(timeline).toContain("share-expire");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("share degrades cleanly when no supported transport is available", () => {

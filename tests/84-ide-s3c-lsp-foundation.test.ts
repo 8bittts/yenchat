@@ -10,7 +10,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -198,7 +201,7 @@ describe("IDE S3C LSP foundation", () => {
 			expect(timeline).toContain("trusted");
 			expect(timeline).toContain("untrusted");
 		},
-		{ timeout: 20_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("lsp stop clears stale runtime artifacts without a live process", () => {

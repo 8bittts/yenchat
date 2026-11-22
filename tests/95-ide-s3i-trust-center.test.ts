@@ -11,7 +11,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { ideCommandDiagnostics } from "./fixtures/ide-result";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -214,7 +217,7 @@ describe("IDE S3I workspace trust center", () => {
 			expect(text.stdout).toContain("LAST ACTION");
 			expect(text.stdout).toContain("env-load");
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -339,7 +342,7 @@ describe("IDE S3I workspace trust center", () => {
 			expect(payload.capabilities.devcontainer.supportsReset).toBe(true);
 			expect(payload.capabilities.env.supportsReset).toBe(false);
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -397,6 +400,6 @@ describe("IDE S3I workspace trust center", () => {
 				: "";
 			expect(afterTimeline).toBe(beforeTimeline);
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

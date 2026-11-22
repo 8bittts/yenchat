@@ -9,7 +9,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -317,7 +320,7 @@ describe("IDE S3Y remote debugger parity", () => {
 			rmSync(sshBinDir, { force: true, recursive: true });
 			rmSync(project, { force: true, recursive: true });
 		},
-		{ timeout: 25000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -381,6 +384,6 @@ describe("IDE S3Y remote debugger parity", () => {
 
 			rmSync(project, { force: true, recursive: true });
 		},
-		{ timeout: 15000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

@@ -2,7 +2,10 @@ import { test as bunTest, describe, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -12,7 +15,7 @@ const test = (
 	name: string,
 	fn: () => void | Promise<void>,
 	options: { timeout?: number } = {},
-) => bunTest(name, fn, { timeout: 30_000, ...options });
+) => bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS, ...options });
 
 function delay(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -424,7 +427,7 @@ describe("IDE S3C LSP protocol plumbing", () => {
 				runYen(["ide", "lsp", "stop", "--project", project], env).status,
 			).toBe(0);
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("lsp status surfaces crash metadata and records lsp-crash after a supervised server exits", async () => {

@@ -11,7 +11,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { ideCommandDiagnostics } from "./fixtures/ide-result";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -23,7 +26,7 @@ const test = (
 	name: string,
 	fn: () => void,
 	options: { timeout?: number } = {},
-) => bunTest(name, fn, { timeout: 30_000, ...options });
+) => bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS, ...options });
 
 function runYen(args: string[], envOverrides: Record<string, string> = {}) {
 	return runYenAt(yenBinPath, args, envOverrides);
@@ -152,7 +155,7 @@ describe("IDE benchmark harness", () => {
 				]),
 			);
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -227,7 +230,7 @@ describe("IDE benchmark harness", () => {
 			expect(sloLedger).toContain("search-latency-ms");
 			expect(sloLedger).toContain("benchmark:search");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("benchmark failures do not emit fake pass samples into the non-interference ledger", () => {

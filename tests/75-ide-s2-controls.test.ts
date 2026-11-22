@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -983,7 +986,7 @@ describe("IDE S2 controls", () => {
 		},
 		// Eleven separate CLI smoke invocations take ~14s on the supported macOS
 		// runner; keep a bounded budget while avoiding load-sensitive false failures.
-		{ timeout: 25_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -1009,7 +1012,7 @@ describe("IDE S2 controls", () => {
 			expect(output).toContain('"trust": {');
 			expect(output).toContain('"gate": {');
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -1049,7 +1052,7 @@ describe("IDE S2 controls", () => {
 				]),
 			);
 		},
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -1096,7 +1099,7 @@ describe("IDE S2 controls", () => {
 			expect(textOutput).toContain("scripts/deploy.sh");
 			expect(textOutput).toContain("@release-team");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -1141,7 +1144,7 @@ describe("IDE S2 controls", () => {
 			expect(textOutput).toContain("debug: yen ide debug start 'app.js'");
 			expect(textOutput).toContain("trust: yen ide debug trust");
 		},
-		{ timeout: 30_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("shell integrations wire ?? shortcut and auto IDE context defaults", () => {

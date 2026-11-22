@@ -2,7 +2,10 @@ import { test as bunTest, describe, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -11,7 +14,7 @@ const yenBinPath = join(repoRoot, "yen-cli/bin/yen");
 
 // These cases exercise several real CLI subprocesses per assertion.
 const test = (name: string, fn: () => void) =>
-	bunTest(name, fn, { timeout: 15_000 });
+	bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS });
 
 function runYen(
 	args: string[],

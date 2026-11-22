@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -267,7 +270,7 @@ describe("IDE S3M polyglot code-intelligence baseline", () => {
 			);
 		},
 		// Two real CLI probes can exceed the default 5s under concurrent build load.
-		{ timeout: 15_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test("lsp install status calls out toolchain-managed ownership for rust and zig", () => {

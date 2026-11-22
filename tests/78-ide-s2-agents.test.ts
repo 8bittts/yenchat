@@ -12,7 +12,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -23,7 +26,7 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 // Agent evidence cases launch multiple hermetic CLI subprocesses.
 const test = (name: string, fn: () => void) =>
-	bunTest(name, fn, { timeout: 15_000 });
+	bunTest(name, fn, { timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS });
 
 // Generate a recent date string (1 hour ago) so timeline entries stay within
 // the 72-hour staleness window regardless of when the test runs.

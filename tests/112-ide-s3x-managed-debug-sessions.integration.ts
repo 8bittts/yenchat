@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -138,7 +141,7 @@ describe("IDE S3X managed debug sessions", () => {
 				readFileSync(afterPayload.lastSession.detailsReport, "utf8"),
 			).toContain("--- stop @");
 		},
-		{ timeout: 15000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -217,6 +220,6 @@ describe("IDE S3X managed debug sessions", () => {
 					.status,
 			).toBe(0);
 		},
-		{ timeout: 15000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

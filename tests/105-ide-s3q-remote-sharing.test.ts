@@ -9,7 +9,10 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -230,7 +233,7 @@ describe("IDE remote share/session baseline", () => {
 
 			rmSync(binDir, { force: true, recursive: true });
 		},
-		{ timeout: 45_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -295,7 +298,7 @@ describe("IDE remote share/session baseline", () => {
 			expect(resumedPayload.state).toBe("running");
 			expect(resumedPayload.metadataSource).toBe("live-target");
 		},
-		{ timeout: 45_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 
 	test(
@@ -385,6 +388,6 @@ describe("IDE remote share/session baseline", () => {
 			expect(expiredPayload.workspaceIdentity).toBe(identity);
 			expect(expiredPayload.shareToken).toBe("");
 		},
-		{ timeout: 60_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });

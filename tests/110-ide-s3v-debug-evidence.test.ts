@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createIdeTemp } from "./fixtures/ide-temp";
+import {
+	createIdeTemp,
+	IDE_CLI_SLOW_TEST_TIMEOUT_MS,
+} from "./fixtures/ide-temp";
 
 const { ideTemp } = createIdeTemp();
 
@@ -102,7 +105,7 @@ describe("IDE S3V debug evidence follow-on", () => {
 			expect(afterPayload.lastSession.reportsReady).toBe(true);
 		},
 		// Keep the debugger lifecycle separate from the three trust report reads.
-		{ timeout: 20_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 	test(
 		"trust status exposes session evidence as JSON",
@@ -126,7 +129,7 @@ describe("IDE S3V debug evidence follow-on", () => {
 				true,
 			);
 		},
-		{ timeout: 20_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 	test(
 		"trust status exposes session evidence as text",
@@ -143,7 +146,7 @@ describe("IDE S3V debug evidence follow-on", () => {
 			expect(trustText.stdout).toContain(last.summaryReport);
 			expect(trustText.stdout).toContain(last.detailsReport);
 		},
-		{ timeout: 20_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 	test(
 		"trust status exposes session evidence as env",
@@ -166,6 +169,6 @@ describe("IDE S3V debug evidence follow-on", () => {
 				"export YEN_IDE_TRUST_DEBUG_REPORTS_READY='yes'",
 			);
 		},
-		{ timeout: 20_000 },
+		{ timeout: IDE_CLI_SLOW_TEST_TIMEOUT_MS },
 	);
 });
