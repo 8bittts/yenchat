@@ -13,6 +13,12 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 `TokenUsageIndexTests` uses local provider fixtures for replay, rotation, partial writes, day rollover and OpenCode schema migration.
 The provider comparison covers streamed Claude snapshots, Codex counter resets, per-model Grok replay and legacy OpenCode log identities.
 The OpenCode database tests distinguish empty message history from a day without usage.
+The same suite covers records that cross the reader's buffer, the record limit of each tool, the record projection against whole-record parsing, and the marker search.
+`TokenPlanUsageTests` switches the menu on and off 12 times and requires each menu to be released, some while their first read runs.
+A release build is checked without focus in the verify copy: launch it in the background with a scratch home of fixture records and read the status item's accessibility text, which states the exact total and how many of the four sources were read.
+- Concurrent writes: append records the way the tool does, open, write and close for each one; the total rises in whole records and ends exact.
+- Locked stores: hold `BEGIN EXCLUSIVE` on the fixture OpenCode database, then on the copy's `today.sqlite`; the locked source drops out, the others stay, and it returns after the lock clears.
+- Day rollover: launch the copy with `TZ` set to a zone whose midnight is minutes away; at that midnight the total resets, and only records stamped in the new day count.
 Check the menu anchor before and after expanding a provider row.
 Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
