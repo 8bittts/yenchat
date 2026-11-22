@@ -763,7 +763,9 @@ function SettingsSection() {
 				Wallpaper and click Wallpaper Controls. Choose a video or GIF, paste a
 				YouTube link, pick a video from Photos, or shuffle from Photos. Use
 				Wallpaper per Desktop to choose separate assignments. The same menu
-				controls pause, sound, and removal.
+				controls pause, sound, and removal. Starting in YEN 1.285, Shuffle from
+				Photos can ask for access to your library, and a YouTube link downloads
+				at up to 1080p with its sound.
 			</p>
 			<p className="text-body">
 				Playback starts muted. YEN draws behind desktop icons and preserves your
