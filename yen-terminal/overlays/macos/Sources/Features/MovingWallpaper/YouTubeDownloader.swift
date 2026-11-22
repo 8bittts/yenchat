@@ -30,6 +30,10 @@ final class YouTubeDownloader {
     /// Identifies the subprocess run in flight. `cancel` clears it, so a run
     /// that exits without matching it was canceled.
     private var activeDownloadID: UUID?
+    /// Whether the run in flight fetches the sound and the video as two streams.
+    private var fetchesTwoStreams = false
+    /// Whether the stream downloading now is the sound.
+    private var downloadingSound = false
 
     /// Serializes downloads so concurrent per-display requests each run to
     /// completion instead of terminating one another's subprocess.
@@ -83,9 +87,9 @@ final class YouTubeDownloader {
             return .failure("That doesn't look like a YouTube URL.")
         }
 
-        let output = cacheDirectory.appending(path: "\(videoID).mp4")
-        let outputPath = output.path(percentEncoded: false)
-        if FileManager.default.fileExists(atPath: outputPath) {
+        // Named apart from the single 360p files earlier builds cached as `<id>.mp4`.
+        let output = cacheDirectory.appending(path: "\(videoID).1080p.mp4")
+        if FileManager.default.fileExists(atPath: output.path(percentEncoded: false)) {
             return .success(output)
         }
 
@@ -102,41 +106,114 @@ final class YouTubeDownloader {
         progressHandler = onProgress
         progress = 0
 
-        let result = await runYTDLP(
-            binary: ytdlp,
-            downloadID: downloadID,
-            arguments: [
-                // Select a playable MP4 in one stream on Macs without an external media toolchain.
-                "-f", "best[ext=mp4][height<=1080]/best[ext=mp4]/bestvideo[ext=mp4][height<=1080]",
-                "--ignore-config", "--no-plugin-dirs", "--no-playlist",
-                "--newline",
-                "--progress",
-                // Bound network stalls so a hung connection self-terminates instead
-                // of wedging the serial download gate indefinitely.
-                "--socket-timeout", "30",
-                "--retries", "3",
-                "-o", outputPath,
-                youtubeURL,
-            ]
-        )
+        let outcome = await fetch(videoID: videoID, youtubeURL: youtubeURL, binary: ytdlp, downloadID: downloadID, into: output)
 
         activeDownloadID = nil
         progress = nil
         progressHandler = nil
+        removeIntermediates(videoID: videoID)
+        return outcome
+    }
 
-        switch result {
+    /// YouTube serves one file with picture and sound only at 360p. Fetch the
+    /// best H.264 video up to 1080p and its sound as two streams and merge them
+    /// here. A link with no such video stream falls back to the single file.
+    private func fetch(
+        videoID: String,
+        youtubeURL: String,
+        binary: String,
+        downloadID: UUID,
+        into output: URL
+    ) async -> DownloadOutcome {
+        let streamStem = cacheDirectory.appending(path: Self.streamPrefix(videoID)).path(percentEncoded: false)
+        fetchesTwoStreams = true
+        let streams = await runYTDLP(
+            binary: binary,
+            downloadID: downloadID,
+            arguments: Self.arguments(
+                // The sound comes first: it is small, so the bar moves at once.
+                format: "bestaudio[ext=m4a],bestvideo[ext=mp4][vcodec^=avc1][height<=1080]",
+                output: streamStem + "%(format_id)s.%(ext)s",
+                youtubeURL: youtubeURL
+            )
+        )
+        fetchesTwoStreams = false
+        switch streams {
+        case .failed(let message): return .failure(message)
+        case .cancelled: return .cancelled
+        case .succeeded: break
+        }
+
+        // yt-dlp fetches whichever of the two streams exists and reports success.
+        let files = streamFiles(videoID: videoID)
+        if let video = files.first(where: { $0.pathExtension == "mp4" }) {
+            let merged = URL(filePath: streamStem + "merged.mp4")
+            let done = await YouTubeStreamMerger.merge(
+                video: video,
+                audio: files.first { $0.pathExtension == "m4a" },
+                into: merged
+            )
+            guard activeDownloadID == downloadID, !Task.isCancelled else { return .cancelled }
+            guard done, (try? FileManager.default.moveItem(at: merged, to: output)) != nil else {
+                return .failure("The download finished, but the video couldn't be prepared.")
+            }
+            return .success(output)
+        }
+
+        progress = 0
+        let single = await runYTDLP(
+            binary: binary,
+            downloadID: downloadID,
+            arguments: Self.arguments(
+                format: "best[ext=mp4][height<=1080]/best[ext=mp4]",
+                output: output.path(percentEncoded: false),
+                youtubeURL: youtubeURL
+            )
+        )
+        switch single {
+        case .failed(let message): return .failure(message)
+        case .cancelled: return .cancelled
         case .succeeded:
-            guard FileManager.default.fileExists(atPath: outputPath) else {
+            guard FileManager.default.fileExists(atPath: output.path(percentEncoded: false)) else {
                 return .failure("The download finished, but the video file is missing.")
             }
             return .success(output)
-        case .failed(let message):
-            removeIntermediates(videoID: videoID)
-            return .failure(message)
-        case .cancelled:
-            removeIntermediates(videoID: videoID)
-            return .cancelled
         }
+    }
+
+    private nonisolated static func arguments(format: String, output: String, youtubeURL: String) -> [String] {
+        [
+            "-f", format,
+            "--ignore-config", "--no-plugin-dirs", "--no-playlist",
+            // Leave each file as downloaded, whether or not ffmpeg is installed.
+            "--fixup", "never",
+            "--newline",
+            "--progress",
+            // Bound network stalls so a hung connection self-terminates instead
+            // of wedging the serial download gate indefinitely.
+            "--socket-timeout", "30",
+            "--retries", "3",
+            "-o", output,
+            youtubeURL,
+        ]
+    }
+
+    private nonisolated static func streamPrefix(_ videoID: String) -> String {
+        "\(videoID).stream."
+    }
+
+    private func streamFiles(videoID: String) -> [URL] {
+        let entries = (try? FileManager.default.contentsOfDirectory(
+            at: cacheDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        )) ?? []
+        return entries.filter { $0.lastPathComponent.hasPrefix(Self.streamPrefix(videoID)) }
+    }
+
+    /// The sound stream gets the first 5% of the bar and the video the rest; a
+    /// single file uses the whole bar.
+    nonisolated static func overallProgress(_ fraction: Double, sound: Bool, twoStreams: Bool) -> Double {
+        guard twoStreams else { return fraction }
+        return sound ? fraction * 0.05 : 0.05 + fraction * 0.95
     }
 
     /// Apple: exclude files the app can download again, such as videos kept for
@@ -153,18 +230,16 @@ final class YouTubeDownloader {
         }
     }
 
-    /// Remove every cache file yt-dlp may have written for this video — the merged
-    /// output, its `.part`, the per-format `<id>.f*.mp4/.m4a` streams (and their
-    /// `.part`s), and the `.ytdl` state file — so a canceled or failed run doesn't
-    /// orphan intermediates. Scoped to names beginning with "<videoID>." so it never
-    /// touches another video's cached file.
+    /// Remove what a run leaves beside its finished movie: the two stream
+    /// files, the merge in progress, and yt-dlp's `.part` and `.ytdl` files.
+    /// A movie cached earlier for the same video is never touched.
     private func removeIntermediates(videoID: String) {
         let fileManager = FileManager.default
         guard let entries = try? fileManager.contentsOfDirectory(
             at: cacheDirectory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
         ) else { return }
-        let prefix = "\(videoID)."
-        for entry in entries where entry.lastPathComponent.hasPrefix(prefix) {
+        let prefixes = [Self.streamPrefix(videoID), "\(videoID).1080p.mp4."]
+        for entry in entries where prefixes.contains(where: entry.lastPathComponent.hasPrefix) {
             try? fileManager.removeItem(at: entry)
         }
     }
@@ -185,7 +260,8 @@ final class YouTubeDownloader {
         var launchError: String?
     }
 
-    /// The inherited environment with the common ffmpeg locations on `PATH`.
+    /// The inherited environment with the Homebrew locations on `PATH`, where
+    /// yt-dlp looks for a JavaScript runtime.
     private static var processEnvironment: [String: String] {
         var environment = ProcessInfo.processInfo.environment
         let inherited = (environment["PATH"] ?? "/usr/bin:/bin").split(separator: ":").map(String.init)
@@ -207,6 +283,14 @@ final class YouTubeDownloader {
               let percent = Double(output[percentRange])
         else { return nil }
         return percent / 100
+    }
+
+    /// Whether the last file yt-dlp started in this output is the sound stream,
+    /// or nil when it started none.
+    nonisolated static func startsSoundStream(in output: String) -> Bool? {
+        guard let marker = output.range(of: "[download] Destination:", options: .backwards) else { return nil }
+        let line = output[marker.upperBound...].prefix { !$0.isNewline }
+        return line.trimmingCharacters(in: .whitespaces).hasSuffix(".m4a")
     }
 
     /// The text after yt-dlp's last "ERROR:" marker, or a generic message.
@@ -309,11 +393,18 @@ final class YouTubeDownloader {
                     handle.readabilityHandler = nil
                     return
                 }
-                guard let fraction = Self.progressFraction(in: String(decoding: chunk, as: UTF8.self))
-                else { return }
+                let text = String(decoding: chunk, as: UTF8.self)
+                let startsSound = Self.startsSoundStream(in: text)
+                let fraction = Self.progressFraction(in: text)
+                guard startsSound != nil || fraction != nil else { return }
                 Task { @MainActor [weak self] in
                     guard let self, self.activeDownloadID == downloadID else { return }
-                    self.progress = fraction
+                    if let startsSound { self.downloadingSound = startsSound }
+                    if let fraction {
+                        self.progress = Self.overallProgress(
+                            fraction, sound: self.downloadingSound, twoStreams: self.fetchesTwoStreams
+                        )
+                    }
                 }
             }
         }

@@ -165,4 +165,20 @@ struct YouTubeDownloaderTests {
         let requests = try String(contentsOf: calls, encoding: .utf8).split(separator: "\n")
         #expect(requests.count == 1)
     }
+
+    /// The bar must only move forward across the two streams: the sound fills
+    /// its first 5% and the video the rest.
+    @Test func theProgressBarCoversBothStreamsInOrder() {
+        let soundEnd = YouTubeDownloader.overallProgress(1, sound: true, twoStreams: true)
+        let videoStart = YouTubeDownloader.overallProgress(0, sound: false, twoStreams: true)
+        #expect(YouTubeDownloader.overallProgress(0, sound: true, twoStreams: true) == 0)
+        #expect(soundEnd == videoStart)
+        #expect(YouTubeDownloader.overallProgress(1, sound: false, twoStreams: true) == 1)
+        #expect(YouTubeDownloader.overallProgress(0.4, sound: false, twoStreams: false) == 0.4)
+
+        let log = "[download] Destination: /cache/aqz-KE-bpKQ.stream.140.m4a\n[download]  12.0% of 9.80MiB"
+        #expect(YouTubeDownloader.startsSoundStream(in: log) == true)
+        #expect(YouTubeDownloader.startsSoundStream(in: "[download] Destination: /cache/aqz-KE-bpKQ.stream.299.mp4\n") == false)
+        #expect(YouTubeDownloader.startsSoundStream(in: "[download]  50.0% of 9.80MiB") == nil)
+    }
 }
