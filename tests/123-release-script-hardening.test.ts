@@ -402,6 +402,29 @@ exit "$ISSUES"
 		expect(ghosttyScript).not.toContain("local existing_cmd");
 	});
 
+	test("each Sparkle item offers only patches that produce its build", () => {
+		const xml = readFileSync(
+			join(repoRoot, "public/stable/appcast.xml"),
+			"utf8",
+		);
+		const items = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/g));
+		expect(items.length).toBeGreaterThan(0);
+		for (const [, item] of items) {
+			const target = item?.match(
+				/<sparkle:version>(\d+)<\/sparkle:version>/,
+			)?.[1];
+			expect(target).toBeTruthy();
+			const patches = Array.from(
+				(item ?? "").matchAll(
+					/<enclosure\b[^>]*sparkle:deltaFrom="(\d+)"[^>]*\/>/g,
+				),
+			);
+			const sources = patches.map(([, from]) => from);
+			expect(new Set(sources).size).toBe(sources.length);
+			for (const [enclosure, from] of patches)
+				expect(enclosure).toContain(`/YEN${target}-${from}.delta"`);
+		}
+	});
 	test("appcast deltas are a sibling of the enclosure, never nested inside it", () => {
 		const appcastScript = readFileSync(generateAppcastPath, "utf8");
 
