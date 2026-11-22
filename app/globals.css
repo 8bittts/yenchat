@@ -1402,12 +1402,10 @@ details[open] .ph-disclosure:after {
 		padding-block: 10px;
 		font-size: 9px;
 	}
-	/* Wrap whole labels to a second row instead of splitting "Split panes". */
 	.ph-chapters .ph-wrap {
-		flex-wrap: wrap;
 		column-gap: 20px;
-		row-gap: 0;
 	}
+	/* Labels never break inside, so "Split panes" stays one line. */
 	.ph-chapters a {
 		white-space: nowrap;
 	}
@@ -1474,6 +1472,16 @@ details[open] .ph-disclosure:after {
 	.ph-splits-compact {
 		padding: 1px;
 		gap: 1px;
+	}
+}
+
+/* Phones: the five labels do not fit one row, so they sit in aligned
+   columns, three then two. Fits a 320px phone. */
+@media (max-width: 520px) {
+	.ph-chapters .ph-wrap {
+		display: grid;
+		grid-template-columns: repeat(3, max-content);
+		row-gap: 0;
 	}
 }
 @media (prefers-reduced-motion: no-preference) {
