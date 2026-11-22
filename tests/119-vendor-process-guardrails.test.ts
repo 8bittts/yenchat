@@ -1421,6 +1421,81 @@ describe("eval-phase.sh fails closed", () => {
 		).toBe(1);
 		expect(script.match(/CHECK_ID_PATTERN='\^DP-/g)?.length).toBe(1);
 	});
+
+	// The heartbeat must report on a long check without delaying a short one.
+	// These two run with the script's own default interval, which the `run`
+	// helper above turns off; that is how a 20-second wait on every check went
+	// unseen. Measured on 75 release runs: a check whose command is a single
+	// `test` took a median of 20 s, the heartbeat interval exactly.
+	function runTimed(script: string, args: string[], heartbeat?: string) {
+		const env: Record<string, string | undefined> = { ...process.env };
+		delete env.YEN_SKILL_EVAL_HEARTBEAT_SECONDS;
+		if (heartbeat !== undefined) {
+			env.YEN_SKILL_EVAL_HEARTBEAT_SECONDS = heartbeat;
+		}
+		const started = performance.now();
+		const result = spawnSync("bash", [script, ...args], {
+			encoding: "utf8",
+			env,
+		});
+		return { result, elapsedMs: performance.now() - started };
+	}
+
+	test("a check that ends at once does not wait out the heartbeat interval", () => {
+		const { root, script } = sandbox();
+		try {
+			const { result, elapsedMs } = runTimed(script, [
+				"check",
+				"yen-vendor",
+				"VC-01",
+				"instant",
+				"true",
+			]);
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("[PASS] VC-01");
+			// The default interval is 20 s. A check that returns in milliseconds
+			// must not cost a quarter of that.
+			expect(elapsedMs).toBeLessThan(5_000);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}, 40_000);
+
+	test("a long check still prints a heartbeat and ends with its command", () => {
+		const { root, script } = sandbox();
+		try {
+			const { result, elapsedMs } = runTimed(
+				script,
+				["check", "yen-vendor", "VC-01", "slow", "sleep 2.5"],
+				"1",
+			);
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("[RUNNING] VC-01: slow");
+			expect(result.stdout).toContain("[PASS] VC-01");
+			// Ends within a second of the command, not at the next interval.
+			expect(elapsedMs).toBeGreaterThanOrEqual(2_500);
+			expect(elapsedMs).toBeLessThan(4_500);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}, 40_000);
+
+	test("a failing check keeps its exit code under the default heartbeat", () => {
+		const { root, script } = sandbox();
+		try {
+			const { result } = runTimed(script, [
+				"check",
+				"yen-vendor",
+				"VC-01",
+				"fails",
+				"exit 7",
+			]);
+			expect(result.status).toBe(7);
+			expect(result.stdout).toContain("[FAIL] VC-01");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	}, 40_000);
 });
 
 // ---------------------------------------------------------------------------
