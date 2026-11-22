@@ -1355,6 +1355,128 @@ ${patchBlock}`;
 		});
 	});
 
+	test("copy-on-select true compatibility patch maps macOS to both, is idempotent, and fails closed on drift", () => {
+		// Upstream's handler and its two tests, as the vendor tree holds them
+		// before this patch runs.
+		const upstreamHandler = [
+			'    if (std.mem.eql(u8, value orelse "", "true")) {',
+			'        self.@"copy-on-select" = switch (builtin.target.os.tag) {',
+			"            .linux, .freebsd, .macos => .primary,",
+			"            else => .clipboard,",
+			"        };",
+			"        return true;",
+			"    }",
+		].join("\n");
+		const upstreamCompatTest = [
+			'test "compatibility: copy-on-select true and false" {',
+			"        try testing.expectEqual(",
+			"            @as(CopyOnSelect, switch (builtin.target.os.tag) {",
+			"                .linux, .freebsd, .macos => .primary,",
+			"                else => .clipboard,",
+			"            }),",
+			'            cfg.@"copy-on-select",',
+			"        );",
+			"}",
+		].join("\n");
+		const upstreamDefaultTest = [
+			'test "copy-on-select default uses the selection clipboard on Linux and macOS" {',
+			"    const testing = std.testing;",
+			"    const alloc = testing.allocator;",
+			"",
+			"    var cfg = try Config.default(alloc);",
+			"    defer cfg.deinit();",
+			"",
+			"    try testing.expectEqual(",
+			"        @as(CopyOnSelect, switch (builtin.target.os.tag) {",
+			"            .linux, .macos => .primary,",
+			"            else => .none,",
+			"        }),",
+			'        cfg.@"copy-on-select",',
+			"    );",
+			"}",
+		].join("\n");
+		const upstream = [
+			upstreamHandler,
+			upstreamCompatTest,
+			upstreamDefaultTest,
+			"",
+		].join("\n\n");
+		const applyScript = (fixtureRoot: string) =>
+			`set -euo pipefail\ncd "${fixtureRoot}"\nPATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}\nPATCHES_DIR="${patchesDir}"\n${patchCommands(["copy-on-select-true-compat-patch"])}`;
+
+		withTempDir((fixtureRoot) => {
+			const configPath = join(fixtureRoot, "ghostty/src/config/Config.zig");
+			mkdirSync(join(fixtureRoot, "ghostty/src/config"), { recursive: true });
+			writeFileSync(configPath, upstream, "utf8");
+
+			const firstRun = run("bash", ["-lc", applyScript(fixtureRoot)]);
+			expect(output(firstRun)).toContain(
+				"Applied copy-on-select true compatibility patch",
+			);
+			expect(firstRun.status).toBe(0);
+
+			const patched = readFileSync(configPath, "utf8");
+			// No arm sends macOS to the private selection pasteboard alone.
+			expect(patched).not.toContain(".macos => .primary");
+			expect(patched).not.toContain(".linux, .freebsd, .macos");
+			expect(patched).not.toContain(".linux, .macos");
+			// The handler and both upstream tests agree on `both`.
+			expect(patched.split(".macos => .both,").length - 1).toBe(3);
+			// Linux and FreeBSD keep upstream's selection-clipboard mapping.
+			expect(patched.split(".linux, .freebsd => .primary,").length - 1).toBe(2);
+			expect(patched).toContain("            else => .clipboard,");
+
+			const secondRun = run("bash", ["-lc", applyScript(fixtureRoot)]);
+			expect(secondRun.status).toBe(0);
+			expect(output(secondRun)).toContain("already applied (idempotent skip)");
+			expect(readFileSync(configPath, "utf8")).toBe(patched);
+
+			writeFileSync(
+				configPath,
+				upstream.replace(
+					".linux, .freebsd, .macos => .primary,\n            else => .clipboard,\n        };",
+					".linux, .freebsd, .macos, .netbsd => .primary,\n            else => .clipboard,\n        };",
+				),
+				"utf8",
+			);
+			const driftRun = run("bash", ["-lc", applyScript(fixtureRoot)]);
+			expect(driftRun.status).toBe(1);
+			expect(output(driftRun)).toContain("patch anchor not found");
+		});
+	});
+
+	test("copy-on-select true compatibility patch and its gates remain wired", () => {
+		const patchesPhase = readFileSync(
+			join(repoRoot, "scripts/lib/overlay-phases/07-patches.sh"),
+			"utf8",
+		);
+		expect(patchesPhase).toContain(
+			"apply_overlay_patch copy-on-select-true-compat-patch",
+		);
+		expect(patchPlan["copy-on-select-true-compat-patch"]?.target).toBe(
+			"ghostty/src/config/Config.zig",
+		);
+
+		const brandingGate = readFileSync(
+			join(repoRoot, "scripts/04-verify-branding.sh"),
+			"utf8",
+		);
+		expect(brandingGate).toContain(
+			"copy-on-select = true not patched to both on macOS",
+		);
+
+		const shippingGate = readFileSync(
+			join(repoRoot, "scripts/05-detect-failures.sh"),
+			"utf8",
+		);
+		expect(shippingGate).toContain(
+			'source "$REPO_ROOT/scripts/lib/copy-on-select-compat.sh"',
+		);
+		expect(shippingGate).toContain(
+			'copy_on_select_compat_check "$MAIN_BINARY"',
+		);
+	});
+
 	test("performable clipboard shortcut patches remain wired and idempotent", () => {
 		expect(
 			hasPatchArgument("--label", "Performable clipboard selector helper"),

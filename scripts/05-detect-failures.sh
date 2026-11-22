@@ -17,6 +17,7 @@ source "$REPO_ROOT/scripts/lib/required-app-bins.sh"
 source "$REPO_ROOT/scripts/lib/signing-constants.sh"
 source "$REPO_ROOT/scripts/lib/signature-utils.sh"
 source "$REPO_ROOT/scripts/lib/release-constants.sh"
+source "$REPO_ROOT/scripts/lib/copy-on-select-compat.sh"
 ## privileged-surface-utils.sh — no longer needed here (promoted to 03-verify-components.sh)
 
 FAILED=0
@@ -552,6 +553,11 @@ else
                 fail "+boo block message missing expected internal-only guidance"
         fi
         rm -f "$POLICY_OUTPUT"
+
+        # A config line `copy-on-select = true` must still reach the system
+        # clipboard: the engine resolves it to `both`, the macOS default.
+        COPY_ON_SELECT_ISSUE="$(copy_on_select_compat_check "$MAIN_BINARY")" || \
+            fail "${COPY_ON_SELECT_ISSUE:-copy-on-select compatibility check failed}"
     fi
 
     # CLI bundled
