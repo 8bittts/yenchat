@@ -3825,7 +3825,7 @@ plist_upsert "${plistPath}" "TestString" "string" "${escaped}"
 			writeFileSync(
 				projectPath,
 				[
-					'INFOPLIST_KEY_NSCameraUsageDescription = "A program running within YEN would like to use the camera.";',
+					'INFOPLIST_KEY_NSLocalNetworkUsageDescription = "A program running within YEN would like to access the local network.";',
 					'INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "A program running within YEN would like to access your Photo Library.";',
 					"",
 				].join("\n"),
@@ -3842,7 +3842,7 @@ plist_set_usage_description ${shellQuote(plistPath)} ${shellQuote(projectPath)} 
 				expect(res.status, output(res)).toBe(0);
 				expect(res.stdout.trim()).toBe("YEN uses Photos.");
 				expect(readFileSync(projectPath, "utf8")).toBe(
-					'INFOPLIST_KEY_NSCameraUsageDescription = "A program running within YEN would like to use the camera.";\n',
+					'INFOPLIST_KEY_NSLocalNetworkUsageDescription = "A program running within YEN would like to access the local network.";\n',
 				);
 			}
 		});

@@ -1,12 +1,14 @@
 import AppKit
+import CoreVideo
 import ImageIO
+import IOSurface
 
 /// AppKit view that renders animated GIF frames into a `CALayer`.
 ///
-/// Frames are decoded on a background task and only presented on the main
-/// thread. `CGAnimateImageAtURLWithBlock` decodes on the main queue, which in a
-/// terminal is the thread that handles typing: a 1080p GIF held it for about
-/// 18 ms per frame.
+/// Frames are decoded into IOSurfaces on a background task, so presenting one
+/// on the main thread only hands Core Animation a surface. In a terminal the
+/// main thread handles typing, and `CGAnimateImageAtURLWithBlock` decodes
+/// there: a 1080p GIF held it for 11 to 13 ms per frame.
 @MainActor
 final class GIFWallpaperView: NSView, WallpaperContentView {
     private var imageLayer: CALayer?
@@ -83,17 +85,19 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
                 return
             }
             let frameCount = CGImageSourceGetCount(source)
-            // Decode here, not lazily when Core Animation first draws the frame.
-            let decodeNow = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
             let clock = ContinuousClock()
             var nextFrame = clock.now
             var index = 0
             while !Task.isCancelled {
-                guard let image = CGImageSourceCreateImageAtIndex(source, index, decodeNow) else {
+                // ImageIO's decode buffers are autoreleased; free them per frame.
+                let surface = autoreleasepool {
+                    CGImageSourceCreateImageAtIndex(source, index, nil).flatMap(Self.surface(drawing:))
+                }
+                guard let surface else {
                     await self?.fail(url)
                     return
                 }
-                guard await self?.present(image) == true, !firstFrameOnly, frameCount > 1 else { return }
+                guard await self?.present(surface) == true, !firstFrameOnly, frameCount > 1 else { return }
                 // Time frames from a running deadline so decode time does not
                 // slow the animation; start over after falling behind.
                 nextFrame = max(nextFrame + .seconds(Self.frameDelay(of: source, at: index)), clock.now)
@@ -101,6 +105,36 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
                 index = (index + 1) % frameCount
             }
         }
+    }
+
+    /// The frame drawn into a new IOSurface. An ImageIO image decodes lazily,
+    /// when Core Animation commits it on the main thread, and a bitmap image is
+    /// still copied and color-matched there; a surface is neither.
+    private nonisolated static func surface(drawing frame: CGImage) -> IOSurface? {
+        let space = frame.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpaceCreateDeviceRGB()
+        guard let surface = IOSurface(properties: [
+            .width: frame.width,
+            .height: frame.height,
+            .bytesPerElement: 4,
+            .pixelFormat: kCVPixelFormatType_32BGRA,
+        ]) else { return nil }
+        surface.lock(options: [], seed: nil)
+        defer { surface.unlock(options: [], seed: nil) }
+        guard let context = CGContext(
+            data: surface.baseAddress,
+            width: frame.width,
+            height: frame.height,
+            bitsPerComponent: 8,
+            bytesPerRow: surface.bytesPerRow,
+            space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return nil }
+        context.setBlendMode(.copy)
+        context.draw(frame, in: CGRect(x: 0, y: 0, width: frame.width, height: frame.height))
+        if let tag = space.copyPropertyList() {
+            surface.setAttachment(tag, forKey: kIOSurfaceColorSpace as String)
+        }
+        return surface
     }
 
     /// The frame's delay in seconds. Like browsers, a delay too short to be
@@ -115,12 +149,12 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
 
     /// Show a decoded frame. Returns false once this animation was canceled,
     /// so a frame decoded for an old GIF never replaces the new one.
-    private func present(_ image: CGImage) -> Bool {
+    private func present(_ surface: IOSurface) -> Bool {
         guard !Task.isCancelled else { return false }
         // No implicit CALayer fade between frames (it looks like tearing).
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        imageLayer?.contents = image
+        imageLayer?.contents = surface
         CATransaction.commit()
         return true
     }

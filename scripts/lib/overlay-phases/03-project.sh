@@ -67,8 +67,10 @@ if [ -f "$INFO_PLIST" ]; then
     # engine build input (48-vendor-zmx.sh), so the grant lives here.
     plist_grant_entitlement "macos" "com.apple.security.personal-information.photos-library"
 
-    # Remove camera usage description (Hands-Free Pointer removed; no YEN code uses camera)
+    # Remove camera usage description (Hands-Free Pointer removed; no YEN code uses camera).
+    # The project build setting would put it back in the built app.
     plist_delete "$INFO_PLIST" "NSCameraUsageDescription"
+    sed -i '' -e '/INFOPLIST_KEY_NSCameraUsageDescription = /d' "$PBXPROJ_FILE"
 
     # Remove screen capture usage description: own-window screenshot capture does not request
     # system-wide screen recording permission, so this key only broadens prompt surface.
