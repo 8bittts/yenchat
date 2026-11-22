@@ -120,10 +120,12 @@ struct WallpaperState: Equatable {
     }
 
     /// Drop assignments for displays not in `connectedDisplayIDs` and pin the
-    /// shared value (if any) to every connected display.
+    /// shared value (if any) to every connected display. With no display
+    /// connected the state is left alone, so the wallpaper is still there for
+    /// the next display.
     @discardableResult
     mutating func reconcileAllDesktops(connectedDisplayIDs: [CGDirectDisplayID]) -> Bool {
-        guard let shared = canonicalEntry else { return false }
+        guard let shared = canonicalEntry, !connectedDisplayIDs.isEmpty else { return false }
         let expected = Set(connectedDisplayIDs.map(DesktopKey.init(displayID:)))
         var changed = false
 

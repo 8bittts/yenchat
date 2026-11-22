@@ -396,8 +396,17 @@ final class WallpaperManager {
         }
         scheduleRestoreRedownloads(persisted.needsRedownload)
 
+        // The displays can change while the app is not running, and no screen
+        // notification reports that.
+        reconcileAllDesktopsIfNeeded()
         if !state.isEmpty {
             rebuildAllWindows()
+        }
+    }
+
+    private func reconcileAllDesktopsIfNeeded() {
+        if mode == .allDesktops, state.reconcileAllDesktops(connectedDisplayIDs: connectedDisplayIDs) {
+            saveState()
         }
     }
 
@@ -507,9 +516,7 @@ final class WallpaperManager {
 
     private func handleScreenChange() {
         refreshManagedDisplaySpaces()
-        if mode == .allDesktops, state.reconcileAllDesktops(connectedDisplayIDs: connectedDisplayIDs) {
-            saveState()
-        }
+        reconcileAllDesktopsIfNeeded()
         rebuildAllWindows()
     }
 
