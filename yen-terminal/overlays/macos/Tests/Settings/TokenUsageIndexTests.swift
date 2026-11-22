@@ -3,6 +3,28 @@ import Testing
 @testable import YEN
 
 struct TokenUsageIndexTests {
+    @Test func largeCompactionBetweenCodexCountsKeepsProviderAvailable() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let root = TokenTool.codex.root(home: home)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        let now = Date()
+        let stamp = now.ISO8601Format()
+        func row(_ input: Int) -> String {
+            """
+            {"timestamp":"\(stamp)","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\(input)}}}}
+            """
+        }
+        let compacted = """
+            {"timestamp":"\(stamp)","type":"compacted","payload":{"message":"\(String(repeating: "x", count: 9 * 1024 * 1024))"}}
+            """
+        let file = root.appendingPathComponent("rollout-large.jsonl")
+        try Data(([row(15), compacted, row(28)].joined(separator: "\n") + "\n").utf8).write(to: file)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 28)
+    }
+
     @Test func resumedSessionsMatchReferenceProviderTotals() throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
