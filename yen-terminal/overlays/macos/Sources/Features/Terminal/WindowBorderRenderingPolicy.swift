@@ -9,6 +9,14 @@ enum WindowBorderChromeMode: String, CaseIterable {
     case decorationNone
 }
 
+/// Where a window-scoped outline is drawn.
+enum WindowOutlinePlacement: Equatable {
+    /// Along the window's clipping edge, with the native corner radius and padded content.
+    case windowEdge
+    /// Along the outer edge of the framed pane grid, where a focused pane outline sits.
+    case paneGrid
+}
+
 struct WindowBorderStrokeModel {
     let lineWidth: CGFloat
     let inset: CGFloat
@@ -45,6 +53,10 @@ enum WindowBorderRenderingPolicy {
         guard !isPanelWindow else { return false }
         guard !isQuickTerminalWindow else { return false }
         return true
+    }
+
+    static func windowOutlinePlacement(panesAreFramed: Bool, browserSplitVisible: Bool) -> WindowOutlinePlacement {
+        .windowEdge
     }
 
     static func shouldHandleWindowNotification(

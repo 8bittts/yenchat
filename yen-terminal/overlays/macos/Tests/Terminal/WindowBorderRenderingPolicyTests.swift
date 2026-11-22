@@ -333,6 +333,27 @@ struct WindowBorderRenderingPolicyTests {
         #expect(resolvedFrames[0] == resolvedFrames[4])
     }
 
+    @Test func windowOutlineTracesFramedPanesLikeTheFocusedPaneOutline() {
+        // Framed panes already sit inside the window's corners, so the window
+        // outline shares their frame and curve and adds no padding of its own.
+        #expect(WindowBorderRenderingPolicy.windowOutlinePlacement(
+            panesAreFramed: true,
+            browserSplitVisible: false
+        ) == .paneGrid)
+    }
+
+    @Test func windowOutlineStaysAtTheWindowEdgeWithoutAFramedPaneGrid() {
+        // Edge-to-edge panes and the browser split reach the window's clipping edge.
+        #expect(WindowBorderRenderingPolicy.windowOutlinePlacement(
+            panesAreFramed: false,
+            browserSplitVisible: false
+        ) == .windowEdge)
+        #expect(WindowBorderRenderingPolicy.windowOutlinePlacement(
+            panesAreFramed: true,
+            browserSplitVisible: true
+        ) == .windowEdge)
+    }
+
     @Test func effectiveCornerRadiusUsesInsetAndChromeModeOffsets() {
         let lineWidth: CGFloat = WindowBorderRenderingPolicy.lineWidth(for: 2.0)
         let inset = WindowBorderRenderingPolicy.inset(forLineWidth: lineWidth)
