@@ -100,6 +100,9 @@ final class YouTubeDownloader {
 
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         excludeCacheFromBackup()
+        // A quit or crash mid-run leaves stream files behind; they must not be
+        // taken for this run's.
+        removeIntermediates(videoID: videoID)
 
         let downloadID = UUID()
         activeDownloadID = downloadID
