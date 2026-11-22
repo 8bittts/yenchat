@@ -427,4 +427,5 @@ Discovery follows the Hosts store rule in [01-architecture.md](01-architecture.m
 
 **Remote pane labels.** A remote pane always shows its host.
 The tab and window title lead with it (`<Mac> · <title>`, or the host alone while the remote shell sets no title), also over a typed tab title, through the engine's `computeTitle` (patch `remote-pane-tab-title` calls `RemotePanes.tabTitle`), so the tab bar and the tab sidebar carry it.
+The label is added, never substituted, except for an empty title or the engine's `YEN` placeholder, which show the host alone. The bell mark stays outermost (`🔔 <Mac> · <title>`), because `computeTitle` adds it after the host, so a ringing remote tab reads like any ringing tab.
 The split header shows the SSH activity icon and the host in place of the local working directory, and skips worktree naming; a `Focus:` row leads with the host like the tab and shows no local directory.

@@ -148,6 +148,17 @@ struct RemotePanesTests {
         #expect(RemotePanes.tabTitle("Build Logs", host: "Studio") == "Studio · Build Logs")
     }
 
+    @Test func aLocalPaneTitleIsByteIdentical() throws {
+        let local = try makeController(with: nil)
+        let surface = try #require(local.surfaceTree.first)
+        #expect(surface.remotePaneIdentity == nil)
+        let titles = ["", " ", "YEN", "~/src", "  padded  ", "Studio · vim", "🔔 bell", "tab\twith\ncontrols", "e\u{301}"]
+        for title in titles {
+            #expect(RemotePanes.tabTitle(title, for: surface).utf8.elementsEqual(title.utf8))
+            #expect(RemotePanes.tabTitle(title, for: nil).utf8.elementsEqual(title.utf8))
+        }
+    }
+
     @Test func splitHeadersNameTheHostInsteadOfTheLocalDirectory() {
         #expect(SplitPaneLabelRules.secondaryText(remoteHost: "Studio", workingDirectory: "/Users/dev/local") == "Studio")
         #expect(SplitPaneLabelRules.secondaryText(remoteHost: nil, workingDirectory: nil) == nil)
