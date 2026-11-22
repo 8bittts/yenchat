@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const repoRoot = process.cwd();
@@ -12,6 +12,21 @@ function readOverlay(relativePath: string): string {
 }
 
 describe("Native macOS HIG alignment guardrails", () => {
+	test("Moving Wallpaper copy names YEN, not the standalone MovingPaper app", () => {
+		const folder = "Sources/Features/MovingWallpaper";
+		const files = readdirSync(
+			join(repoRoot, "yen-terminal/overlays/macos", folder),
+		).filter((name) => name.endsWith(".swift"));
+		expect(files.length).toBeGreaterThan(0);
+		for (const name of files) {
+			const literals =
+				readOverlay(`${folder}/${name}`).match(
+					/"[^"\n]*MovingPaper[^"\n]*"/g,
+				) ?? [];
+			expect(literals, name).toEqual([]);
+		}
+	});
+
 	test("Settings section headers are not forced uppercase", () => {
 		for (const name of [
 			"SettingsPanel.swift",

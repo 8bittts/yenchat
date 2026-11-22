@@ -648,6 +648,81 @@ describe("apply-overlays shell guardrails", () => {
 		});
 	});
 
+	test("project configuration lets the Info.plist own the privacy prompts YEN writes", () => {
+		withTempDir((root) => {
+			const project = join(root, "macos/YEN.xcodeproj/project.pbxproj");
+			mkdirSync(dirname(project), { recursive: true });
+			// A build setting overrides the same key in YEN-Info.plist, so the
+			// built app would show upstream's generic prompt text.
+			writeFileSync(
+				project,
+				[
+					'INFOPLIST_KEY_NSCameraUsageDescription = "A program running within YEN would like to use the camera.";',
+					'INFOPLIST_KEY_NSMicrophoneUsageDescription = "A program running within YEN would like to use your microphone.";',
+					'INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "A program running within YEN would like to access your Photo Library.";',
+					'INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "A program running within YEN would like to use speech recognition.";',
+					"",
+				].join("\n"),
+			);
+			const result = runBrandingHelper(root, "configure_overlay_project");
+			expect(result.status, output(result)).toBe(0);
+			expect(readFileSync(project, "utf8")).toBe(
+				'INFOPLIST_KEY_NSCameraUsageDescription = "A program running within YEN would like to use the camera.";\n',
+			);
+		});
+	});
+
+	test("entitlement cleanup keeps the entitlements YEN features need", () => {
+		withTempDir((root) => {
+			const entitlements = join(root, "macos/YEN.entitlements");
+			mkdirSync(dirname(entitlements), { recursive: true });
+			const key = (name: string) =>
+				`<key>com.apple.security.${name}</key><true/>`;
+			writeFileSync(
+				entitlements,
+				`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+${[
+	"automation.apple-events",
+	"device.camera",
+	"personal-information.addressbook",
+	"personal-information.calendars",
+	"personal-information.location",
+	"personal-information.photos-library",
+]
+	.map(key)
+	.join("\n")}
+</dict></plist>
+`,
+			);
+			for (let pass = 0; pass < 2; pass++) {
+				const result = runBrandingHelper(
+					root,
+					"configure_overlay_entitlements macos",
+				);
+				expect(result.status, output(result)).toBe(0);
+				const json = run("plutil", [
+					"-convert",
+					"json",
+					"-o",
+					"-",
+					entitlements,
+				]);
+				expect(json.status, output(json)).toBe(0);
+				// Dictation needs the microphone and speech recognition, and Shuffle
+				// from Photos needs the Photos library: the hardened runtime denies
+				// each one without its entitlement and shows no prompt.
+				expect(JSON.parse(json.stdout)).toEqual({
+					"com.apple.security.automation.apple-events": true,
+					"com.apple.security.device.audio-input": true,
+					"com.apple.security.personal-information.photos-library": true,
+					"com.apple.security.personal-information.speech-recognition": true,
+				});
+			}
+		});
+	});
+
 	test("CLI help loop patch removes legacy compatibility loop anchors", () => {
 		const patchBlock = patchCommands(["cli-help-tiered-action-filtering"]);
 		const loopOld = readFileSync(

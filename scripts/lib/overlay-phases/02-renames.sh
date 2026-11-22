@@ -91,34 +91,7 @@ if [ -d "macos" ]; then
     [ -f "Ghostty.entitlements" ] && mv Ghostty.entitlements YEN.entitlements && FILES_RENAMED=$((FILES_RENAMED + 1))
     [ -f "GhosttyDebug.entitlements" ] && mv GhosttyDebug.entitlements YENDebug.entitlements && FILES_RENAMED=$((FILES_RENAMED + 1))
 
-    # Remove unused entitlements (addressbook, calendars, location, photos)
-    # These have no code using them and pose App Review risk
-    # Clean all three profiles: Release, Debug, and ReleaseLocal
-    for ent_file in YEN.entitlements YENDebug.entitlements YENReleaseLocal.entitlements; do
-        if [ -f "$ent_file" ]; then
-            python3 -c "
-import sys, plistlib
-ent_file = sys.argv[1]
-try:
-    with open(ent_file, 'rb') as f:
-        d = plistlib.load(f)
-except Exception as e:
-    print(f'  ERROR: Failed to parse {ent_file}: {e}')
-    sys.exit(1)
-for k in ['com.apple.security.personal-information.addressbook',
-           'com.apple.security.personal-information.calendars',
-           'com.apple.security.personal-information.location',
-           'com.apple.security.personal-information.photos-library',
-           'com.apple.security.device.camera']:
-    d.pop(k, None)
-# Dictation requires both microphone and speech-recognition privacy grants.
-d['com.apple.security.device.audio-input'] = True
-d['com.apple.security.personal-information.speech-recognition'] = True
-with open(ent_file, 'wb') as f:
-    plistlib.dump(d, f)
-" "$ent_file" || { echo "  ERROR: Entitlements cleanup failed for $ent_file"; exit 1; }
-        fi
-    done
+    configure_overlay_entitlements .
     [ -f "Ghostty-Info.plist" ] && mv Ghostty-Info.plist YEN-Info.plist && FILES_RENAMED=$((FILES_RENAMED + 1))
     [ -f "Ghostty.sdef" ] && mv Ghostty.sdef YEN.sdef && FILES_RENAMED=$((FILES_RENAMED + 1))
     # Upstream removed the Ghostty.xctestplan pbxproj reference at 25cd206e
