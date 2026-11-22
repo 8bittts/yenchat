@@ -130,6 +130,7 @@ Manual utilities, outside the release and vendor gates:
 | `manual/31-check-pane-top.py`                                                  | Compare the top outline in single-pane and split-pane captures   |
 | `manual/32-check-pane-clearance.py`                                            | Check terminal grid corners against a thick pane outline         |
 | `manual/33-check-native-launch-defaults.py`                                    | Verify app defaults, config reload, and child arguments on macOS |
+| `manual/34-measure-key-latency.swift`                                          | Key-to-frame latency of a running copy (`_docs/09-quality.md`)   |
 
 ## Shared Library (`scripts/lib/`)
 

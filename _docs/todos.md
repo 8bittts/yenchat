@@ -51,14 +51,12 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Document and release remote attach and window changes when their phases are complete.
 
-### Token usage in the macOS menu bar
-
-- [ ] Measure input-to-draw latency with the token menu on against the same release build with it off.
-  It needs an attended run that injects keys into a focused pane and captures the screen; memory, CPU time, wakeups and main-thread time are measured (`_docs/01-architecture.md` → Optional desktop integrations).
-
 ### Experimental moving wallpaper
 
-- [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
+- [ ] Verify multi-display Spaces and power-state changes before desktop release.
+  The Mac used so far has one display and one Space.
+  Low Power Mode did not engage in three attempts from System Settings: `pmset` kept `powermode 0` on AC power and the system power preferences were not written, so the pause on Low Power was never exercised.
+  Force it with `sudo pmset -a powermode 1` (`lowpowermode 1` on a Mac without High Power Mode), then confirm the wallpaper freezes and resumes after `powermode 0`.
 
 ---
 ## WAIT-GATED
