@@ -160,6 +160,10 @@ describe("yen sessions", () => {
 			expect(zmxRun(["run", "scratch", "-d", "sleep", "120"]).status).toBe(0);
 			// The record points at the build to use; here the vendored binary itself.
 			writeFileSync(join(socketDir, `${paneID}.zmx`), `${zmx}\n`);
+			writeFileSync(
+				join(socketDir, `${paneID}.owner`),
+				"com.yenchat.yen\n/Applications/YEN.app\n4001\n",
+			);
 			await Bun.sleep(500);
 
 			const listed = sessions([]);
@@ -178,6 +182,7 @@ describe("yen sessions", () => {
 			expect(ended.status, ended.stderr).toBe(0);
 			expect(ended.stdout).toContain(`Ended session ${paneID}`);
 			expect(existsSync(join(socketDir, `${paneID}.zmx`))).toBe(false);
+			expect(existsSync(join(socketDir, `${paneID}.owner`))).toBe(false);
 			expect(sessions([]).stdout.trim()).toBe("No persistent sessions.");
 
 			const missing = sessions(["attach", paneID]);

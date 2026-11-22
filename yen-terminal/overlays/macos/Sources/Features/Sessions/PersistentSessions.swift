@@ -19,6 +19,11 @@ import Foundation
 /// closed pane alive long after that, so `SurfaceView.deinit` is only the fast
 /// path (`paneDidClose`). Both are ignored after `applicationWillTerminate`, and
 /// a crash runs neither.
+///
+/// Ownership: `prepare` records the copy of the app that shows a pane in
+/// `<UUID>.owner`. The reaper reopens a detached session in a window only for
+/// the copy that was showing it, so a session another copy started stays
+/// detached.
 enum PersistentSessions {
     static let enabledDefaultsKey = "com.yenchat.yen.persistentSessions"
     static let environmentKey = "YEN_PERSISTENT_SESSION"
@@ -153,11 +158,92 @@ enum PersistentSessions {
         (socketDirectory as NSString).appendingPathComponent(sessionName(for: paneID))
     }
 
-    /// The copy of the app that last showed a pane's session.
+    // MARK: - Ownership
+
+    static let ownerRecordSuffix = ".owner"
+
+    /// The copy of the app that last showed a pane's session: its identifier,
+    /// where its bundle is, and the process that attached the pane.
     struct Owner: Equatable {
         let bundleIdentifier: String
         let bundlePath: String
         let processID: Int32
+
+        /// This process, or nil when it has no bundle identifier.
+        static var current: Owner? {
+            Bundle.main.bundleIdentifier.map {
+                Owner(
+                    bundleIdentifier: $0,
+                    bundlePath: Bundle.main.bundleURL.resolvingSymlinksInPath().path,
+                    processID: ProcessInfo.processInfo.processIdentifier
+                )
+            }
+        }
+
+        init(bundleIdentifier: String, bundlePath: String, processID: Int32) {
+            self.bundleIdentifier = bundleIdentifier
+            self.bundlePath = bundlePath
+            self.processID = processID
+        }
+
+        /// Three lines: the bundle identifier, the bundle path, the process identifier.
+        init?(record: String) {
+            let lines = record.split(separator: "\n", omittingEmptySubsequences: true)
+            guard lines.count == 3, let processID = Int32(lines[2]), processID > 0 else { return nil }
+            self.init(bundleIdentifier: String(lines[0]), bundlePath: String(lines[1]), processID: processID)
+        }
+
+        var record: String {
+            "\(bundleIdentifier)\n\(bundlePath)\n\(processID)\n"
+        }
+
+        /// The same installed copy: an update keeps both, a local build or a
+        /// test copy differs in at least one.
+        func isSameCopy(as other: Owner) -> Bool {
+            bundleIdentifier == other.bundleIdentifier && bundlePath == other.bundlePath
+        }
+    }
+
+    nonisolated static func ownerRecordPath(for paneID: UUID, socketDirectory: String) -> String {
+        socketPath(for: paneID, socketDirectory: socketDirectory) + ownerRecordSuffix
+    }
+
+    /// Record this process as the one showing a pane's session.
+    nonisolated static func claim(_ paneID: UUID, socketDirectory: String, owner: Owner? = .current) {
+        guard let owner else { return }
+        // zmx creates the directory only when the pane's shell starts.
+        try? FileManager.default.createDirectory(
+            atPath: socketDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try? owner.record.write(
+            toFile: ownerRecordPath(for: paneID, socketDirectory: socketDirectory),
+            atomically: true,
+            encoding: .utf8
+        )
+    }
+
+    /// The owner recorded for each pane session, by session name.
+    nonisolated static func owners(socketDirectory: String = socketDirectory()) -> [String: Owner] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: socketDirectory)) ?? []
+        var owners: [String: Owner] = [:]
+        for file in names where file.hasSuffix(ownerRecordSuffix) {
+            let name = String(file.dropLast(ownerRecordSuffix.count))
+            let path = (socketDirectory as NSString).appendingPathComponent(file)
+            guard UUID(uuidString: name) != nil,
+                  let record = try? String(contentsOfFile: path, encoding: .utf8),
+                  let owner = Owner(record: record) else { continue }
+            owners[name] = owner
+        }
+        return owners
+    }
+
+    /// True while the recorded owner is a running instance of that app. A
+    /// process identifier reused by another program is not the owner.
+    nonisolated static func ownerIsRunning(_ owner: Owner) -> Bool {
+        guard kill(owner.processID, 0) == 0 else { return false }
+        return NSRunningApplication(processIdentifier: owner.processID)?.bundleIdentifier == owner.bundleIdentifier
     }
 
     /// Mark a new or restored pane to run inside its own session.
@@ -171,7 +257,8 @@ enum PersistentSessions {
         enabled: Bool = isEnabled,
         zmxAvailable: Bool = zmxPath() != nil,
         socketDirectory: String = socketDirectory(),
-        resolveBinary: (UUID, String) -> String? = { sessionBinary(for: $0, socketDirectory: $1) }
+        resolveBinary: (UUID, String) -> String? = { sessionBinary(for: $0, socketDirectory: $1) },
+        recordOwner: (UUID, String) -> Void = { claim($0, socketDirectory: $1) }
     ) {
         config.environmentVariables.removeValue(forKey: environmentKey)
         config.environmentVariables.removeValue(forKey: binaryEnvironmentKey)
@@ -190,6 +277,7 @@ enum PersistentSessions {
         if let binary = resolveBinary(paneID, socketDirectory) {
             config.environmentVariables[binaryEnvironmentKey] = binary
         }
+        recordOwner(paneID, socketDirectory)
     }
 
     /// True when the pane runs inside a live session, which survives a quit.

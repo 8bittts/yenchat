@@ -5,17 +5,22 @@ import Foundation
 /// -> Persistent sessions).
 ///
 /// An orphan is a session named by a pane UUID, with no attached client, that
-/// no terminal window holds. On the first sweep after launch, orphans are
-/// reopened in windows (`adoptionCandidates`), so a crash or lost restore state
-/// does not strand them; only the ones that stay orphaned are ended later. It appears when restore state is lost, the
-/// preference is turned off before a relaunch, or the app crashes between a
-/// close and its delayed kill. A detached session may still be running work the
-/// user cares about, so an orphan is ended only after it has been seen orphaned
-/// continuously for `orphanGrace`. Sightings persist across launches but reset
-/// when the previous sweep is older than `observationGap` intervals, because a
-/// session detached while YEN was quit was never observed. Only an app with the
-/// preference on sweeps, so a Debug build or test host sharing the socket
-/// directory never ends the release app's sessions.
+/// no terminal window holds. It appears when restore state is lost, the
+/// preference is turned off before a relaunch, the app crashes between a close
+/// and its delayed kill, or another copy of the app leaves a session behind.
+///
+/// On the first sweep after launch, the orphans this copy of the app was
+/// showing are reopened in windows (`adoptionCandidates`), so a crash or lost
+/// restore state does not strand them. An orphan another copy was showing, or
+/// one with no owner record, opens no window: it is not this app's to show.
+///
+/// A detached session may still be running work the user cares about, so an
+/// orphan is ended only after it has been seen orphaned continuously for
+/// `orphanGrace`. Sightings persist across launches but reset when the previous
+/// sweep is older than `observationGap` intervals, because a session detached
+/// while YEN was quit was never observed. Only an app with the preference on
+/// sweeps, so a Debug build or test host sharing the socket directory never
+/// ends the release app's sessions.
 enum PersistentSessionReaper {
     struct Session: Equatable {
         let name: String
@@ -79,10 +84,10 @@ enum PersistentSessionReaper {
         return (kill.sorted(), next)
     }
 
-    static let recordSuffixes = [".tty", ".zmx"]
+    static let recordSuffixes = [".tty", ".zmx", PersistentSessions.ownerRecordSuffix]
 
-    /// `.tty` and `.zmx` records whose session socket is gone: zmx deletes its
-    /// socket when a shell exits but knows nothing of YEN's records beside it.
+    /// `.tty`, `.zmx` and `.owner` records whose session socket is gone: zmx deletes
+    /// its socket when a shell exits but knows nothing of YEN's records beside it.
     nonisolated static func staleSessionRecords(in fileNames: [String]) -> [String] {
         let names = Set(fileNames)
         return fileNames.filter { file in
@@ -113,17 +118,25 @@ enum PersistentSessionReaper {
     /// Orphans to reopen in windows on the first sweep after launch. A crash or
     /// lost restore state leaves live sessions with no pane; reopening each in
     /// a window under its own UUID reattaches it instead of letting it age out.
+    /// Only the sessions an earlier run of this copy (`app`) was showing
+    /// qualify. A session another copy of the app started, or one a second
+    /// running instance still owns, is not this process's to open.
     nonisolated static func adoptionCandidates(
         sessions: [Session],
         heldPaneIDs: Set<String>,
-        owners: [String: PersistentSessions.Owner] = [:],
-        app: PersistentSessions.Owner? = nil,
-        ownerIsRunning: (PersistentSessions.Owner) -> Bool = { _ in false },
+        owners: [String: PersistentSessions.Owner],
+        app: PersistentSessions.Owner?,
+        ownerIsRunning: (PersistentSessions.Owner) -> Bool,
         limit: Int = adoptionLimit
     ) -> [UUID] {
-        Array(
+        guard let app else { return [] }
+        return Array(
             sessions
-                .filter { $0.clients == 0 && !heldPaneIDs.contains($0.name) }
+                .filter { session in
+                    guard session.clients == 0, !heldPaneIDs.contains(session.name),
+                          let owner = owners[session.name] else { return false }
+                    return owner.isSameCopy(as: app) && !ownerIsRunning(owner)
+                }
                 .compactMap { UUID(uuidString: $0.name) }
                 .sorted { $0.uuidString < $1.uuidString }
                 .prefix(limit)
@@ -164,12 +177,20 @@ enum PersistentSessionReaper {
             let helper = resources.appendingPathComponent("lib/list-pane-sessions.sh").path
             guard let listing = run("/bin/bash", [helper, directory, zmx], directory, accepting: [0, 2]) else { return }
             let sessions = parseList(listing)
+            let owners = PersistentSessions.owners(socketDirectory: directory)
             let kill: [String] = await MainActor.run {
                 guard !PersistentSessions.isTerminating else { return [] }
                 if !adoptedThisLaunch {
                     adoptedThisLaunch = true
                     let held = Set(heldPaneIDs().map(\.uuidString))
-                    for paneID in adoptionCandidates(sessions: sessions, heldPaneIDs: held) {
+                    let stranded = adoptionCandidates(
+                        sessions: sessions,
+                        heldPaneIDs: held,
+                        owners: owners,
+                        app: .current,
+                        ownerIsRunning: PersistentSessions.ownerIsRunning
+                    )
+                    for paneID in stranded {
                         reopen(paneID)
                     }
                 }

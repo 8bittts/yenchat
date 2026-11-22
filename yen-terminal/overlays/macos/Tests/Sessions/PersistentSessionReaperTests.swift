@@ -83,8 +83,12 @@ struct PersistentSessionReaperTests {
     }
 
     @Test func sessionRecordsAreStaleOnlyWhenTheirSocketIsGone() {
-        let files = [orphan, "\(orphan).tty", "\(orphan).zmx", "\(held).tty", "\(held).zmx", "bin", "logs", "notes.txt", "notes.tty", "notes.zmx"]
-        #expect(PersistentSessionReaper.staleSessionRecords(in: files) == ["\(held).tty", "\(held).zmx"])
+        let files = [
+            orphan, "\(orphan).tty", "\(orphan).zmx", "\(orphan).owner",
+            "\(held).tty", "\(held).zmx", "\(held).owner",
+            "bin", "logs", "notes.txt", "notes.tty", "notes.zmx", "notes.owner",
+        ]
+        #expect(PersistentSessionReaper.staleSessionRecords(in: files) == ["\(held).owner", "\(held).tty", "\(held).zmx"])
     }
 
     @Test func newRecoveryRecordsHaveTimeToAcquireASocket() throws {
@@ -117,11 +121,25 @@ struct PersistentSessionReaperTests {
             .init(name: attached, clients: 1),
             .init(name: "dev", clients: 0),
         ]
-        let picked = PersistentSessionReaper.adoptionCandidates(sessions: sessions, heldPaneIDs: [held])
-        #expect(picked == [UUID(uuidString: orphan)!])
+        // An earlier run of this copy of the app, now gone, was showing every session here.
+        let app = PersistentSessions.Owner(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Applications/YEN.app", processID: 5000)
+        let earlier = PersistentSessions.Owner(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Applications/YEN.app", processID: 4001)
+        func candidates(_ sessions: [PersistentSessionReaper.Session], held: Set<String>, app: PersistentSessions.Owner?) -> [UUID] {
+            PersistentSessionReaper.adoptionCandidates(
+                sessions: sessions,
+                heldPaneIDs: held,
+                owners: Dictionary(uniqueKeysWithValues: sessions.map { ($0.name, earlier) }),
+                app: app,
+                ownerIsRunning: { _ in false },
+                limit: 8
+            )
+        }
+        #expect(candidates(sessions, held: [held], app: app) == [UUID(uuidString: orphan)!])
 
         let many = (0..<12).map { _ in PersistentSessionReaper.Session(name: UUID().uuidString, clients: 0) }
-        #expect(PersistentSessionReaper.adoptionCandidates(sessions: many, heldPaneIDs: [], limit: 8).count == 8)
+        #expect(candidates(many, held: [], app: app).count == 8)
+        // A process with no bundle identifier is no copy of the app.
+        #expect(candidates(many, held: [], app: nil).isEmpty)
     }
 
     @Test func adoptionReopensOnlySessionsThisCopyOfTheAppWasShowing() {

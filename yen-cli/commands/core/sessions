@@ -147,7 +147,7 @@ case "${1:-list}" in
         require_session "$2"
         zmx="$(session_zmx "$2")" || { yen_error "zmx is not available; reinstall YEN."; exit 1; }
         if ZMX_DIR="$SESSIONS_DIR" "$zmx" kill "$2" >/dev/null 2>&1; then
-            rm -f "${SESSIONS_DIR}/${2}.tty" "${SESSIONS_DIR}/${2}.zmx"
+            rm -f "${SESSIONS_DIR}/${2}.tty" "${SESSIONS_DIR}/${2}.zmx" "${SESSIONS_DIR}/${2}.owner"
             echo "Ended session $2"
         else
             echo "yen sessions: could not end session $2" >&2

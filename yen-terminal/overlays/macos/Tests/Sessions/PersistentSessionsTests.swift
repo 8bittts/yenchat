@@ -10,21 +10,27 @@ struct PersistentSessionsTests {
     @Test func preparedPaneCarriesItsOwnSessionAndSocketDirectory() {
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables = ["TERM": "xterm-256color"]
+        var owned: [String] = []
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
+        PersistentSessions.prepare(
+            &config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory,
+            resolveBinary: { _, _ in "/z/zmx-test" }, recordOwner: { owned.append("\($0.uuidString) in \($1)") }
+        )
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == paneID.uuidString)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryEnvironmentKey] == socketDirectory)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryModeEnvironmentKey] == "0700")
         #expect(config.environmentVariables[PersistentSessions.binaryEnvironmentKey] == "/z/zmx-test")
         #expect(config.environmentVariables["TERM"] == "xterm-256color")
+        // The process that shows a pane owns its session.
+        #expect(owned == ["\(paneID.uuidString) in \(socketDirectory)"])
     }
 
     @Test func splitInheritingParentMarkerGetsItsOwnSession() {
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" }, recordOwner: { _, _ in })
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == paneID.uuidString)
     }
@@ -33,10 +39,15 @@ struct PersistentSessionsTests {
         for (enabled, zmxAvailable) in [(false, true), (true, false)] {
             var config = YEN.SurfaceConfiguration()
             config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
+            var owned = 0
 
-            PersistentSessions.prepare(&config, paneID: paneID, enabled: enabled, zmxAvailable: zmxAvailable, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
+            PersistentSessions.prepare(
+                &config, paneID: paneID, enabled: enabled, zmxAvailable: zmxAvailable, socketDirectory: socketDirectory,
+                resolveBinary: { _, _ in "/z/zmx-test" }, recordOwner: { _, _ in owned += 1 }
+            )
 
             #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
+            #expect(owned == 0)
         }
     }
 
@@ -44,18 +55,23 @@ struct PersistentSessionsTests {
         var config = YEN.SurfaceConfiguration()
         config.command = "/usr/bin/top"
         config.environmentVariables[PersistentSessions.environmentKey] = parentID.uuidString
+        var owned = 0
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
+        PersistentSessions.prepare(
+            &config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: socketDirectory,
+            resolveBinary: { _, _ in "/z/zmx-test" }, recordOwner: { _, _ in owned += 1 }
+        )
 
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
         #expect(config.environmentVariables[PersistentSessions.socketDirectoryEnvironmentKey] == nil)
+        #expect(owned == 0)
     }
 
     @Test func socketPathOverTheUnixLimitStaysEphemeral() {
         let longDirectory = "/Users/" + String(repeating: "u", count: 70) + "/.local/state/yen/zmx"
         var config = YEN.SurfaceConfiguration()
 
-        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: longDirectory, resolveBinary: { _, _ in "/z/zmx-test" })
+        PersistentSessions.prepare(&config, paneID: paneID, enabled: true, zmxAvailable: true, socketDirectory: longDirectory, resolveBinary: { _, _ in "/z/zmx-test" }, recordOwner: { _, _ in })
 
         #expect(PersistentSessions.socketPath(for: paneID, socketDirectory: longDirectory).utf8.count > PersistentSessions.maxSocketPathLength)
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
@@ -184,6 +200,43 @@ struct PersistentSessionsTests {
             socketDirectory: directory.path, resolveBinary: { _, _ in "/z/zmx-test" }
         )
         #expect(fresh.environmentVariables[PersistentSessions.environmentKey] == nil)
+    }
+
+    @Test func aPaneRecordsTheCopyOfTheAppThatShowsIt() throws {
+        // Short on purpose, like the socket directory it stands in for.
+        let directory = URL(fileURLWithPath: "/tmp/yps-\(UUID().uuidString.prefix(8))")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let installed = PersistentSessions.Owner(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Applications/YEN.app", processID: 4001)
+        let localBuild = PersistentSessions.Owner(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Users/dev/yen/zig-out/YEN.app", processID: 4002)
+
+        // The first claim creates the directory, as the first pane of a new install does.
+        PersistentSessions.claim(paneID, socketDirectory: directory.path, owner: installed)
+        PersistentSessions.claim(parentID, socketDirectory: directory.path, owner: localBuild)
+        try "not an owner record".write(to: directory.appendingPathComponent("\(UUID().uuidString).owner"), atomically: true, encoding: .utf8)
+        try installed.record.write(to: directory.appendingPathComponent("notes.owner"), atomically: true, encoding: .utf8)
+        #expect(PersistentSessions.owners(socketDirectory: directory.path) == [paneID.uuidString: installed, parentID.uuidString: localBuild])
+
+        // A pane another process restores or reopens changes hands.
+        let relaunched = PersistentSessions.Owner(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Applications/YEN.app", processID: 4003)
+        PersistentSessions.claim(paneID, socketDirectory: directory.path, owner: relaunched)
+        #expect(PersistentSessions.owners(socketDirectory: directory.path)[paneID.uuidString] == relaunched)
+
+        // An update keeps the identifier and the place; a local build shares only the identifier.
+        #expect(relaunched.isSameCopy(as: installed))
+        #expect(!localBuild.isSameCopy(as: installed))
+    }
+
+    @Test func anOwnerIsRunningOnlyWhileThatAppProcessLives() throws {
+        let current = try #require(PersistentSessions.Owner.current)
+        #expect(PersistentSessions.ownerIsRunning(current))
+        // The same process identifier under another app is not the owner.
+        #expect(!PersistentSessions.ownerIsRunning(.init(bundleIdentifier: "com.example.other", bundlePath: current.bundlePath, processID: current.processID)))
+
+        let exited = Process()
+        exited.executableURL = URL(fileURLWithPath: "/usr/bin/true")
+        try exited.run()
+        exited.waitUntilExit()
+        #expect(!PersistentSessions.ownerIsRunning(.init(bundleIdentifier: current.bundleIdentifier, bundlePath: current.bundlePath, processID: exited.processIdentifier)))
     }
 
     @Test func onlyPaneSessionSocketsCountAsSessions() {
