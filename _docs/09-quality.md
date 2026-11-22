@@ -47,7 +47,9 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
 **Capture tests never request permissions.** A prompt is modal and steals focus from every suite.
 - Engine-bound dictation tests use `.enabled(if: DictationTestPermissions.microphoneGranted)`; never `Issue.record`, which marks the test failed.
 - `YEN.xctestplan` sets `YEN_CONFIG_PATH=/tmp/YEN/testing_config.yen` with `working-directory = /tmp/YEN`, so terminal startup does not open a working directory under `~/Documents`.
-- Preferences read `UserDefaults.yen`, never `UserDefaults.standard`, so `YEN_USER_DEFAULTS_SUITE` isolates them and onboarding stays off.
+- Onboarding and the upstream window preferences read `UserDefaults.yen`, which honors `YEN_USER_DEFAULTS_SUITE` in Debug builds only, so a suite keeps onboarding off in the test host.
+  The session, tab sidebar, token and notification preferences read `UserDefaults.standard`; no suite isolates them, in any build.
+- A `quit` that another session sends by bundle identifier ends the `--fast` test host, which shares `com.yenchat.yen.debug`. The run then prints `Restarting after unexpected exit` and fails the tests that were running. The unified log of the host shows `RECEIVED:(aevt,quit)`; rerun the gate instead of debugging those tests.
 - `AppDelegate` installs the `yen web`, `yen pane` and build-notification observers only outside XCTest; tests drive those receivers directly.
 - Source-scanning suites use the prepared fixture snapshot rather than opening the Documents checkout.
   A host blocked on a checkout read indicates a missing fixture conversion; inspect its stack and source path before requesting access.
