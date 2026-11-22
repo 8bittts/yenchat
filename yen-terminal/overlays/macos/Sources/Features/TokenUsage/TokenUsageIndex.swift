@@ -93,7 +93,8 @@ struct TokenUsageIndex: Sendable {
         let scratch = fm.temporaryDirectory.appendingPathComponent("yen-token-history-" + UUID().uuidString + ".sqlite").path
         defer { for suffix in ["", "-wal", "-shm"] { try? fm.removeItem(atPath: scratch + suffix) } }
         let db = try SQLiteDatabase(path: scratch)
-        try prepareIndex(db)
+        // One pass over finished days needs no lookup by rank; only Codex corrections look rows up.
+        try prepareIndex(db, indexed: tool == .codex)
         _ = try count(tool, db: db, day: interval, changes: nil)
         let rows = try db.prepare("""
             SELECT day,SUM(n) FROM (
@@ -106,7 +107,7 @@ struct TokenUsageIndex: Sendable {
         return result
     }
 
-    private func prepareIndex(_ db: SQLiteDatabase) throws {
+    private func prepareIndex(_ db: SQLiteDatabase, indexed: Bool = true) throws {
         let version = try db.prepare("PRAGMA user_version")
         guard try version.step(), version.int(0) != 4 else { return }
         version.reset()
@@ -120,10 +121,14 @@ struct TokenUsageIndex: Sendable {
                 CREATE TABLE cursors(path TEXT PRIMARY KEY,inode INTEGER,size INTEGER,stamp REAL,offset INTEGER,state TEXT,tail TEXT,tool TEXT);
                 CREATE TABLE events(tool TEXT,path TEXT,id TEXT,n INTEGER,output INTEGER,input INTEGER,cached INTEGER,seq INTEGER,day INTEGER,
                     PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
-                CREATE INDEX best ON events(tool,id,output DESC,n DESC);
-                CREATE INDEX recent ON events(path,seq DESC);
                 PRAGMA user_version=4;
                 """)
+            if indexed {
+                try db.execute("""
+                    CREATE INDEX best ON events(tool,id,output DESC,n DESC);
+                    CREATE INDEX recent ON events(path,seq DESC);
+                    """)
+            }
         }
     }
 
@@ -252,7 +257,7 @@ struct TokenUsageIndex: Sendable {
                 DO UPDATE SET n=excluded.n,output=excluded.output,day=excluded.day WHERE (excluded.output,excluded.n)>(output,n)
                 """)
             let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
-            let end = try stream(handle, from: offset, through: size) { bytes in
+            let end = try stream(handle, from: offset, through: size, containing: tool.marker, limit: tool.recordLimit) { bytes in
                 if tool == .codex {
                     try codex.ingest(bytes, file: url.path, rollout: rollout, day: day, db: db)
                     return
@@ -281,32 +286,53 @@ struct TokenUsageIndex: Sendable {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func stream(_ handle: FileHandle, from start: Int, through size: Int, consume: (Data) throws -> Void) throws -> Int {
-        var position = start, committed = start, line = Data()
+    /// Calls `consume` with each complete line that holds `marker` and is no longer than `limit`,
+    /// and returns the offset after the last complete line. A line is copied out of the read buffer
+    /// only when it holds the marker, and a line over the limit is never held.
+    private func stream(_ handle: FileHandle, from start: Int, through size: Int, containing marker: String?, limit: Int,
+                        consume: (Data) throws -> Void) throws -> Int {
+        let needle = marker.map { Array($0.utf8) }
+        func wanted(_ bytes: UnsafeRawBufferPointer) -> Bool { needle.map { TokenRecord.contains(bytes, $0) } ?? true }
+        var position = start, committed = start
+        // The start of a line that began in an earlier chunk.
+        var carry = Data()
         var skipping = false
         while position < size {
             try Task.checkCancellation()
             try autoreleasepool {
-                guard let chunk = try handle.read(upToCount: min(65536, size - position)), !chunk.isEmpty else {
+                guard let chunk = try handle.read(upToCount: min(1 << 20, size - position)), !chunk.isEmpty else {
                     throw CocoaError(.fileReadUnknown)
                 }
-                var rest = chunk[...]
-                while let lf = rest.firstIndex(of: 10) {
-                    if !skipping { line.append(rest[..<lf]) }
-                    position += rest.distance(from: rest.startIndex, to: lf) + 1
-                    if !skipping { try autoreleasepool { try consume(line) } }
-                    skipping = false
-                    committed = position
-                    line.removeAll(keepingCapacity: false)
-                    rest = rest[rest.index(after: lf)...]
+                try chunk.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+                    guard let base = raw.baseAddress else { return }
+                    var cursor = 0
+                    while cursor < raw.count, let found = memchr(base + cursor, 10, raw.count - cursor) {
+                        let lf = base.distance(to: UnsafeRawPointer(found))
+                        let piece = UnsafeRawBufferPointer(rebasing: raw[cursor..<lf])
+                        if skipping {
+                            skipping = false
+                        } else if carry.isEmpty {
+                            if piece.count <= limit, wanted(piece) {
+                                try autoreleasepool { try consume(Data(piece)) }
+                            }
+                        } else if carry.count + piece.count <= limit {
+                            carry.append(contentsOf: piece)
+                            if carry.withUnsafeBytes(wanted) { try autoreleasepool { try consume(carry) } }
+                        }
+                        carry.removeAll(keepingCapacity: false)
+                        cursor = lf + 1
+                        committed = position + cursor
+                    }
+                    let rest = UnsafeRawBufferPointer(rebasing: raw[cursor...])
+                    guard !skipping, !rest.isEmpty else { return }
+                    if carry.count + rest.count > limit {
+                        carry.removeAll(keepingCapacity: false)
+                        skipping = true
+                    } else {
+                        carry.append(contentsOf: rest)
+                    }
                 }
-                if !skipping { line.append(rest) }
-                position += rest.count
-                if line.count > 8 * 1024 * 1024 {
-                    // Usage records are small. Compactions and image or tool payloads between them are not.
-                    line.removeAll(keepingCapacity: false)
-                    skipping = true
-                }
+                position += chunk.count
             }
         }
         return committed

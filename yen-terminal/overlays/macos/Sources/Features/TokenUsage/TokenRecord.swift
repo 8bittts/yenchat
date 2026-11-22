@@ -13,6 +13,26 @@ enum TokenTool: String, CaseIterable, Sendable {
         return home.appendingPathComponent(paths[self]!)
     }
 
+    /// Text every usage record of this tool contains. The reader parses only the lines that hold it.
+    var marker: String? {
+        switch self {
+        case .claude: return "\"usage\""
+        case .codex: return "\"token_count\""
+        case .grok: return "\"turn_completed\""
+        case .openCode: return nil
+        }
+    }
+
+    /// A line over this size is skipped without being held in memory. Usage records are small: on
+    /// 12 GB of real records the largest was 163 KB for Claude Code, whose record carries the reply,
+    /// and under 1 KB for Codex and Grok, whose compaction and image records reach many megabytes.
+    var recordLimit: Int {
+        switch self {
+        case .claude, .openCode: return 8 * 1024 * 1024
+        case .codex, .grok: return 1024 * 1024
+        }
+    }
+
     func accepts(_ url: URL) -> Bool {
         switch self {
         case .claude: return url.pathExtension == "jsonl"
@@ -35,8 +55,15 @@ struct TokenRecord {
     static func localDay(_ stamp: Date) -> Int { Int(Calendar.current.startOfDay(for: stamp).timeIntervalSince1970) }
 
     static func object(_ bytes: Data, containing field: String) -> Object? {
-        guard bytes.range(of: Data(field.utf8)) != nil else { return nil }
+        guard bytes.withUnsafeBytes({ contains($0, Array(field.utf8)) }) else { return nil }
         return try? JSONSerialization.jsonObject(with: bytes) as? Object
+    }
+
+    /// A libc search: `Data.range(of:)` and `Data.firstIndex(of:)` cost several times more per byte,
+    /// and the reader runs one of them over every byte of every record file.
+    static func contains(_ bytes: UnsafeRawBufferPointer, _ needle: [UInt8]) -> Bool {
+        guard let base = bytes.baseAddress, !needle.isEmpty else { return needle.isEmpty }
+        return memmem(base, bytes.count, needle, needle.count) != nil
     }
 
     static func number(_ raw: Any?) -> Int {
@@ -66,8 +93,20 @@ struct TokenRecord {
         }
     }
 
+    /// The members the Claude counter reads; the reply's content is not among them.
+    static let claudeMembers = [["type"], ["isApiErrorMessage"], ["requestId"], ["timestamp"],
+                                ["message", "model"], ["message", "id"], ["message", "usage"]]
+
+    /// A usage record reduced to `claudeMembers`. A record the projection cannot walk is parsed whole.
+    static func claudeObject(_ bytes: Data) -> Object? {
+        guard let members = bytes.withUnsafeBytes({ TokenRecordProjection.project($0, keeping: claudeMembers) }) else {
+            return try? JSONSerialization.jsonObject(with: bytes) as? Object
+        }
+        return try? JSONSerialization.jsonObject(with: members) as? Object
+    }
+
     private static func claude(_ bytes: Data, day: DateInterval) -> Self? {
-        guard let data = object(bytes, containing: "\"usage\""), data["type"] as? String == "assistant",
+        guard let data = claudeObject(bytes), data["type"] as? String == "assistant",
               data["isApiErrorMessage"] as? Bool != true, let msg = data["message"] as? Object,
               text(msg["model"]) != nil, let usage = msg["usage"] as? Object, !usage.isEmpty,
               let id = text(msg["id"]), let request = text(data["requestId"]),

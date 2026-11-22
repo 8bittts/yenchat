@@ -130,7 +130,9 @@ Native test rules (TCC, real config, green-but-empty runs): `_docs/09-quality.md
 The token status item owns a cancelable utility worker and filesystem notifications for local Claude Code, Codex, Grok Build and OpenCode records.
 Counts belong to the recording tool and use the local calendar day.
 JSONL cursors and event contributions commit together in a YEN-owned SQLite cache.
-The reader skips a record over 8 MB, because usage records are small and image, tool and compaction payloads are not.
+The reader parses only the lines that carry a tool's usage marker (`TokenTool.marker`).
+A Claude Code record carries the whole reply beside its usage, so `TokenRecordProjection` copies the members the counter reads out of the record and only those are parsed; a record it cannot walk is parsed whole.
+The reader skips a record over 8 MB for Claude Code and over 1 MB for Codex and Grok without holding it in memory (`TokenTool.recordLimit`), because usage records are small and image, tool and compaction payloads are not.
 A provider directory can be a symbolic link.
 OpenCode reads its database in read-only mode and prefers the current copy of a message during schema migration.
 OpenCode uses cumulative session counters only when the store has no dated assistant usage across its history.
@@ -141,6 +143,8 @@ Grok uses completed turns, and OpenCode includes all gateways in its store.
 The analytics view reads the 89 finished days before today once, into a scratch index in the temporary folder, and keeps each day’s total per provider in `history.sqlite` beside the day cache.
 A finished day is never read again, so its total survives the removal of its source records.
 Only a gap in the saved days starts a new read, from the first missing day.
+That first read runs on one core: on 12 GB of records with a warm file cache it takes about 10 seconds and peaks near 70 MB, and later reads take under 0.1 seconds.
+The scratch index has no secondary index except for Codex, whose corrections look rows up.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.

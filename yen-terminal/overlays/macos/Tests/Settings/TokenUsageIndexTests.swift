@@ -46,6 +46,130 @@ struct TokenUsageIndexTests {
         #expect(try index.read(now: now, tools: [.grok])[.grok] == 14)
     }
 
+    @Test func recordsThatCrossReadBuffersAreEachCountedOnce() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let file = TokenTool.claude.root(home: home).appendingPathComponent("project/session.jsonl")
+        try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let now = Date()
+        let stamp = now.ISO8601Format()
+        // 40 replies of about 300 KB end at many offsets inside the reader's buffer, and a line
+        // without usage sits between each pair.
+        let reply = String(repeating: "word \\\" } ] ", count: 25_000)
+        var rows: [String] = []
+        for turn in 1...40 {
+            rows.append("""
+                {"type":"assistant","timestamp":"\(stamp)","requestId":"r\(turn)","message":{"id":"m\(turn)","model":"claude-sonnet","content":[{"type":"text","text":"\(reply)"}],"usage":{"input_tokens":\(turn),"output_tokens":1}}}
+                """)
+            rows.append(#"{"type":"user","message":{"content":"\#(String(repeating: "y", count: turn * 4_099))"}}"#)
+        }
+        try Data((rows.joined(separator: "\n") + "\n").utf8).write(to: file)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        #expect(try index.read(now: now, tools: [.claude])[.claude] == (1...40).reduce(0, +) + 40)
+    }
+
+    @Test func recordLimitFollowsTheTool() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let now = Date()
+        let stamp = now.ISO8601Format()
+        let twoMegabytes = String(repeating: "x", count: 2 * 1024 * 1024)
+        #expect(TokenTool.grok.recordLimit < twoMegabytes.utf8.count)
+        #expect(TokenTool.claude.recordLimit > twoMegabytes.utf8.count)
+
+        // Grok's usage records are under 1 KB, so a 2 MB line is never one and is not counted.
+        let grok = TokenTool.grok.root(home: home).appendingPathComponent("project/session/updates.jsonl")
+        try fm.createDirectory(at: grok.deletingLastPathComponent(), withIntermediateDirectories: true)
+        func turn(_ id: String, _ input: Int, padding: String = "") -> String {
+            """
+            {"_meta":{"agentTimestampMs":\(Int(now.timeIntervalSince1970 * 1000)),"eventId":"\(id)"},"padding":"\(padding)","params":{"update":{"sessionUpdate":"turn_completed","usage":{"modelUsage":{"one":{"inputTokens":\(input),"outputTokens":1}}}}}}
+            """
+        }
+        try Data(([turn("a", 5), turn("large", 100, padding: twoMegabytes), turn("b", 7)].joined(separator: "\n") + "\n").utf8)
+            .write(to: grok)
+
+        // A Claude Code record carries the reply, so the same size is still a usage record.
+        let claude = TokenTool.claude.root(home: home).appendingPathComponent("project/session.jsonl")
+        try fm.createDirectory(at: claude.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("""
+            {"type":"assistant","timestamp":"\(stamp)","requestId":"r","message":{"id":"m","model":"claude-sonnet","content":[{"type":"text","text":"\(twoMegabytes)"}],"usage":{"input_tokens":30,"output_tokens":3}}}
+
+            """.utf8).write(to: claude)
+
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        let counts = try index.read(now: now, tools: [.grok, .claude])
+        #expect(counts[.grok] == 14)
+        #expect(counts[.claude] == 33)
+    }
+
+    @Test func projectionKeepsExactlyTheRequestedMembers() throws {
+        // Skipped values hold every character that could end a value early, and one key is spelled
+        // with an escape: keys are compared as written, so it is not matched.
+        let record = #"""
+             { "skipped" : {"text":"} ] \" , {","list":[1,[2,{"a":"]"}]]}, "kept\u0041" : 1,
+              "title":"quote \" slash \\","number":-1.5e3,"flag":true,"nothing":null ,
+              "message":{"content":[{"text":"\"usage\":{\"input_tokens\":9}"}],"id":"m\\",
+                         "usage":{"input_tokens":3,"cache_creation":{"ephemeral_1h_input_tokens":2}}},
+              "list":[{"usage":1}], "empty":{} }
+            """#
+        let paths = [["title"], ["number"], ["flag"], ["nothing"], ["message", "id"], ["message", "usage"],
+                     ["list"], ["empty", "inside"], ["absent"], ["keptA"]]
+        let projected = try #require(Data(record.utf8).withUnsafeBytes { TokenRecordProjection.project($0, keeping: paths) })
+        let whole = try #require(try JSONSerialization.jsonObject(with: Data(record.utf8)) as? NSDictionary)
+        let message = try #require(whole["message"] as? NSDictionary)
+        let expected: NSDictionary = [
+            "title": try #require(whole["title"]), "number": try #require(whole["number"]),
+            "flag": try #require(whole["flag"]), "nothing": NSNull(),
+            "message": ["id": try #require(message["id"]), "usage": try #require(message["usage"])] as NSDictionary,
+            "list": try #require(whole["list"]), "empty": NSDictionary(),
+        ]
+        #expect(try JSONSerialization.jsonObject(with: projected) as? NSDictionary == expected)
+        // The reply's content never enters the projection.
+        #expect(!String(decoding: projected, as: UTF8.self).contains("content"))
+    }
+
+    @Test func projectionRefusesARecordItCannotWalk() {
+        func project(_ text: String) -> Data? {
+            Data(text.utf8).withUnsafeBytes { TokenRecordProjection.project($0, keeping: [["a"]]) }
+        }
+        #expect(project(#"{"a":1}"#) != nil)
+        for broken in [#"[{"a":1}]"#, #"{"a":1"#, #"{"a":"unfinished}"#, #"{"a":{"b":[1,2}"#, #"{"a":1} trailing"#,
+                       #"{"a" 1}"#, #"{a:1}"#, "", "   "] {
+            #expect(project(broken) == nil, "\(broken)")
+        }
+    }
+
+    @Test func claudeRecordsCountTheSameWhateverSurroundsTheirUsage() throws {
+        let stamp = Date().ISO8601Format()
+        let day = try #require(Calendar.current.dateInterval(of: .day, for: Date()))
+        func count(_ line: String) -> Int? { TokenRecord.decode(Data(line.utf8), tool: .claude, day: day).first?.count }
+        let usage = #""usage":{"input_tokens":4,"cache_read_input_tokens":2,"cache_creation":{"ephemeral_5m_input_tokens":1,"ephemeral_1h_input_tokens":1},"output_tokens":3}"#
+        let plain = #"{"type":"assistant","timestamp":"\#(stamp)","requestId":"r","message":{"id":"m","model":"claude-sonnet",\#(usage)}}"#
+        #expect(count(plain) == 11)
+        // Members in another order, spaces between tokens, and a reply that quotes a usage object.
+        let reordered = #"{ "message" : {\#(usage), "content":[{"type":"text","text":"\"usage\":{\"input_tokens\":900} }]"}], "model":"claude-sonnet", "id":"m"} , "requestId":"r", "timestamp":"\#(stamp)", "type":"assistant" }"#
+        #expect(count(reordered) == 11)
+        // A user record that quotes usage, an API error and a record without a request are not counted.
+        #expect(count(#"{"type":"user","timestamp":"\#(stamp)","requestId":"r","message":{"id":"m","model":"x",\#(usage)}}"#) == nil)
+        #expect(count(#"{"type":"assistant","isApiErrorMessage":true,"timestamp":"\#(stamp)","requestId":"r","message":{"id":"m","model":"x",\#(usage)}}"#) == nil)
+        #expect(count(#"{"type":"assistant","timestamp":"\#(stamp)","message":{"id":"m","model":"x",\#(usage)}}"#) == nil)
+        // A record cut short is not a record.
+        #expect(count(String(plain.dropLast(2))) == nil)
+    }
+
+    @Test func markerSearchFindsTextAnywhereInARecord() {
+        func contains(_ text: String, _ needle: String) -> Bool {
+            Data(text.utf8).withUnsafeBytes { TokenRecord.contains($0, Array(needle.utf8)) }
+        }
+        #expect(contains(#""usage" at the start"#, #""usage""#))
+        #expect(contains(#"at the end "usage""#, #""usage""#))
+        #expect(contains(String(repeating: "\"usag", count: 500) + "\"usage\"" + "tail", #""usage""#))
+        #expect(!contains(#""usag" "usage "usag\e""#, #""usage""#))
+        #expect(!contains("", #""usage""#))
+    }
+
     @Test func codexLimitsSurviveADayWithoutCodexActivity() throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
