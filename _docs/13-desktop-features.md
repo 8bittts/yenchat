@@ -91,6 +91,7 @@ Preferences outside `config.yen` live in `UserDefaults` under `com.yenchat.yen.*
 **Applying changes.** Config-backed edits write in real time (debounced) and call `yen.reloadConfig()` in process; theme, workspace and notification choices apply immediately.
 Theme previews read the existing file first: a missing file is empty, but an unreadable file fails with a status error instead of being overwritten.
 State changed while the window is hidden persists immediately, and reopening or deep-linking flushes pending debounced edits before rehydration.
+A config reload that arrives while an edit is still debounced writes that edit first and then re-reads the file, so the edit survives and an outside change to any other line is kept.
 `SettingsController.init()` hydrates config-backed state at launch because `ScratchpadView`, `GitDrawerDiffTextView` and `TerminalPresentationSettings` read it.
 [CRITICAL] That launch `loadConfig()` stays inside `suppressRealTimeConfigSync`; with no window, each differing key would otherwise trigger a synchronous parse-merge-write of `config.yen` on the main thread.
 Cursor style and blink apply live but show only when the terminal is focused; `background-opacity` needs an app restart; `Cmd + Option + 1-0` is ignored while Settings is key.

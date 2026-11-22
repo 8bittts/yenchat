@@ -62,13 +62,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
 
-### An external config reload can discard a pending Settings edit
-
-`handleExternalConfigReload` re-reads managed state from disk while a real-time config sync is still inside its 180 ms debounce, so the debounced write then persists the re-read values and the edit is lost.
-The theme path is fixed (`ThemePreviewCoordinator.restorePendingSelection`); the real-time path is not.
-
-- [ ] Flush the pending real-time config sync before the re-read, with a visible-window regression test.
-
 ### Third-party notices in the app bundle
 
 Owner doc: `_docs/04-security.md`.
