@@ -123,9 +123,9 @@ final class TokenPlanConnection: ObservableObject {
 
     /// Reset All Settings removes the saved key and the menu's display choices.
     @discardableResult
-    static func reset(defaults: UserDefaults = .standard) -> Bool {
+    static func reset(defaults: UserDefaults = .standard, removeKey: () -> Bool = TokenPlanKey.remove) -> Bool {
         for key in [enabledKey, TokenMenuDisplay.key, TokenMenuDisplay.columnsKey] { defaults.removeObject(forKey: key) }
-        return TokenPlanKey.remove()
+        return removeKey()
     }
 
     func connect(_ key: String) {

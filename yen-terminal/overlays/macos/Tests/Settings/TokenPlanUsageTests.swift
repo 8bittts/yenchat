@@ -94,7 +94,11 @@ struct TokenPlanUsageTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         let keys = ["com.yenchat.yen.tokenUsage.cursorPlan", "com.yenchat.yen.tokenUsage.display", "com.yenchat.yen.tokenUsage.twoColumns"]
         for key in keys { defaults.set(true, forKey: key) }
-        #expect(TokenPlanConnection.reset(defaults: defaults))
+        // The default remover deletes the test host’s own Keychain item, so the test supplies one.
+        var removals = 0
+        #expect(TokenPlanConnection.reset(defaults: defaults, removeKey: { removals += 1; return true }))
+        #expect(removals == 1)
         #expect(keys.allSatisfy { defaults.object(forKey: $0) == nil })
+        #expect(!TokenPlanConnection.reset(defaults: defaults, removeKey: { false }))
     }
 }
