@@ -53,7 +53,8 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 ### Token usage in the macOS menu bar
 
-- [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
+- [ ] Measure input-to-draw latency with the token menu on against the same release build with it off.
+  It needs an attended run that injects keys into a focused pane and captures the screen; memory, CPU time, wakeups and main-thread time are measured (`_docs/01-architecture.md` → Optional desktop integrations).
 
 ### Experimental moving wallpaper
 
