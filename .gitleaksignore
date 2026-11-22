@@ -3,6 +3,7 @@
 df5403584e2056bb13ddebf8aa3a903dd30a4df7:tests/78-ide-s2-agents.test.ts:generic-api-key:2275
 
 # Vendor release asset SHA-256 digests
+3d600e2cad70b3f2b511e960b00ffbb3a6d3caa7:yen-terminal/.fd-baseline:generic-api-key:8
 df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fastfetch-baseline:generic-api-key:10
 df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fastfetch-baseline:generic-api-key:11
 df5403584e2056bb13ddebf8aa3a903dd30a4df7:yen-terminal/.fzf-baseline:generic-api-key:10
