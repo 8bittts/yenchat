@@ -1248,8 +1248,9 @@ function AutomationSection() {
 			</p>
 
 			<p className="text-body mb-4">
-				<code className="inline-code-brand">send key</code> does not derive text
-				from your active keyboard layout. Use{" "}
+				<code className="inline-code-brand">send key</code> translates each key
+				once through your active keyboard layout, and a dead key does not
+				combine with the next key. Use{" "}
 				<code className="inline-code-brand">input text</code> to send literal
 				text.
 			</p>

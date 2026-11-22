@@ -82,10 +82,16 @@ Owner doc: `_docs/04-security.md`.
 
 - [ ] Ship the MIT notices for Ghostty and the bundled tools inside `YEN.app`, because MIT requires the notice in every copy; reconcile it with the fingerprint gates, which reject the upstream name in the bundle.
 
+### IDE CLI tests time out on a loaded machine
+
+`tests/84-ide-s3c-lsp-foundation.test.ts` and `tests/88-ide-s3d-devcontainer-vscode-ast.test.ts` each failed once in a full `bun test` run while the load average was 10 to 14, and each passes alone.
+In 84 a `runYen` call returned `status: null` at the 5-second test limit; in 88 the `ide-temp` cleanup hook timed out after the test took 28 seconds.
+
+- [ ] Reproduce under generated load, then give the spawned CLI calls and the cleanup hook a limit that holds without hiding a real hang.
+
 ---
 ## WAIT-GATED
 
 Do not start these until the trigger fires.
 
 - **Ghostty forge migration.** Destination/timeline still TBD (https://mitchellh.com/writing/ghostty-leaving-github). When announced, recover the one-shot plan from the private pre-open-source history (then-named `docs/00-todos.md`) and re-validate against the actual forge. Plumbing already lives in `scripts/lib/upstream.sh`. The `/update-yen` vendor phase stops working when upstream leaves GitHub, so this is maintenance work.
-- **Scripted `send key` warnings.** Upstream does not derive `send key` text from the active keyboard layout and marks it with six `Issue.record(severity: .warning)` calls in `ScriptKeyEventCommandTests`, the whole 6-warning baseline of a clean native run. When a vendor bump makes the warnings disappear, update the baseline in `_docs/09-quality.md` → Native Test Suite.

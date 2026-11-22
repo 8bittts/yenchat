@@ -134,7 +134,7 @@ Supported surface, which is also the vendor compatibility boundary: `windows`, `
 Any process allowed to send Apple Events to YEN can use all of it, including input injection; `macos-applescript = false` disables it.
 `perform action` accepts only the App Intents allowlist and fails closed otherwise; layout presets, scratchpad, tab sidebar and PR review are not exposed, so recipes compose windows, tabs, splits and `surface configuration` instead of cloning `LayoutTemplate`.
 YEN ships no first-party wrappers.
-`send key` does not derive text from the keyboard layout (upstream limitation; `_docs/09-quality.md` → Native Test Suite, known-warning baseline).
+`send key` translates each key once through the current keyboard layout, and a dead key does not compose with the next key.
 Target the app by absolute bundle path; `new window` and `new tab` need raw event forms because the parser rejects the natural ones:
 
 ```applescript

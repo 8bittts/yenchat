@@ -80,8 +80,7 @@ If `build-for-testing` reports missing branded files such as `YEN.Error.swift`, 
 It stays in the mirror because removing upstream code would need pbxproj surgery on every fetch; `apply-overlays.sh` disables it in `YEN.xctestplan`, renames the folder, and renames seven harness-measuring cases to `yenDisabled_*`.
 Run it by hand only with `TEST_RUNNER_IDE_DISABLED_OS_ACTIVITY_DT_MODE=1`; without it the suite self-skips with `Executed 0 tests`.
 
-**Known-warning baseline: 6.** All six are upstream `ScriptKeyEventCommandTests` `Issue.record(..., severity: .warning)` markers for `send key` ignoring keyboard layout.
-A change in that count is a signal.
+**Known-warning baseline: 0.** A clean native run records no test warning, so any warning is a signal.
 Build warnings outside `appintentsmetadataprocessor` extraction, the `YENKit` umbrella header, the arm64 `ext.o` ImGui symbols, and upstream's `@Test` macro warning on the non-Sendable `Any?` parameter in `ScriptKeyEventCommandTests` require investigation.
 At the macOS 27 deployment target, Xcode also reports deprecations in SwiftUI views and audio capture APIs.
 See [11-speech-to-text.md](11-speech-to-text.md) for the audio tap contract.
@@ -112,7 +111,7 @@ Check every changed public page at about 390x844 for the last-section-to-footer 
 - Noindex: `/api/*`, `/download`, `/stable/*`, `/cookies`, and 404, with route-level `X-Robots-Tag` where it applies.
 - `robots.txt` comes only from `app/robots.ts`: it disallows `/api` and `/stable`, leaves `/download` and `/cookies` crawlable so crawlers see the header or redirect, and allows the major search and AI crawlers.
 - `app/manifest.ts` is the only manifest; a static `public/manifest.webmanifest` collides with the route and returns 500 in development.
-- `app/sitemap.ts` is deterministic: exact membership, apex host, unique URLs, a fixed release `lastModified`, and no deploy-time `new Date()`; `tests/121-seo-guardrails.test.ts` guards it.
+- `app/sitemap.ts` is deterministic: exact membership, apex host, unique URLs, no `lastModified`, and no deploy-time `new Date()`; `tests/121-seo-guardrails.test.ts` guards it.
 - Each HTML page has one stable server-rendered `h1`; animated text never replaces it. Titles and descriptions stay unique and within the lengths `tests/121` enforces.
 - `og-image.png` is opaque RGB (`magick og-image.png -alpha off og-image.png`), and its declared size matches the file.
 - No `SoftwareApplication` JSON-LD without real review data.
