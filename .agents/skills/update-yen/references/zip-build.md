@@ -89,7 +89,7 @@ The build script prints 9 numbered steps, `[1/9]` to `[9/9]`:
 4. Verify prerequisites and auto-sync version mirrors if mismatched.
 5. Apply overlays.
 6. Resolve Swift packages with visible errors on failure.
-7. Build `YEN.app` with universal xcframework output and post-build diagnostic log gates.
+7. Build `YEN.app` with an arm64-only engine library (`-Dxcframework-target=native`) and post-build diagnostic log gates.
 8. Verify built-app vendor inventory and run branding verification (`04-verify-branding.sh`, 2 declared units; reports `guarded subjects` present/total).
 9. Package full releases: sign, notarize, create DMG, upload DMG/checksum to the version's GitHub Release, and generate checksum/appcast/version signature — appcast generation also computes Sparkle binary-delta patches against up to 5 prior versions when reachable (non-fatal, falls back to full-DMG-only), uploading any resulting `.delta` files. Every GitHub Release keeps its DMG, so older releases stay available as delta sources and nothing is pruned.
 

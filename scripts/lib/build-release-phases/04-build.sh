@@ -238,8 +238,12 @@ run_zig_build_with_retry() {
         log_file=$(mktemp)
         echo "  Zig build attempt $attempt/$max_attempts..."
 
+        # `native` builds the engine library for this Mac's architecture only.
+        # YEN requires macOS 27, which runs only on Apple silicon, and the app
+        # links only arm64; the universal target also compiled an x86_64 copy
+        # of the engine that nothing linked.
         set +e
-        zig build -Doptimize=ReleaseFast -Dstrip=true -Dxcframework-target=universal -Dversion-string="$VERSION_SEMVER" > "$log_file" 2>&1 &
+        zig build -Doptimize=ReleaseFast -Dstrip=true -Dxcframework-target=native -Dversion-string="$VERSION_SEMVER" > "$log_file" 2>&1 &
         zig_pid=$!
         show_progress "$zig_pid"
         wait "$zig_pid"

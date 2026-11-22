@@ -103,6 +103,7 @@ The patch phases call named operations in their required order, and `overlay-pat
 ## Build Ownership and Toolchain Guardrails
 
 - `build-release.sh` owns `YENKit.xcframework` recreation and every Zig/Xcode workaround. Never substitute raw `zig build`, and never read a missing xcframework as a test regression.
+- The build passes `-Dxcframework-target=native`, so `YENKit.xcframework` holds one arm64 engine library. The universal target compiles a second, x86_64 copy that the arm64-only app never links; `tests/123-release-script-hardening.test.ts` fails if it returns.
 - `03-verify-components.sh` skips its `xcodebuild` slice when the xcframework is incomplete, or when `YEN_COMPONENT_XCODE_REGRESSION_MODE=auto` finds no native macOS change since the latest `[deploy]` release; `always` forces it and `off` skips it.
 - The component gate declares 17 pre-build units in `scripts/lib/units/03-verify-components.units` and ends in `RECEIPT gate=03-verify-components ... result=PASS`, after one `RAN|` or `SKIP|` line per unit. The native slice reports `RAN|xcode-regression|suites=<n> executed=<N>` from `xcodebuild`'s own output.
 - Before every `zig build`, a three-valued SDK link probe (`pass`, `fail`, `inconclusive`) decides the synthetic-sysroot workaround; `pass` overrides the SDK `targets:` heuristic, and only `undefined symbol` output is `fail`. The probe imports no `std`, so it cannot fail at compile time and be misread as a linker failure (`tests/138-zig-sdk-probe.test.ts`). Bypass: `YEN_SKIP_ZIG_SDK_WORKAROUND=1`.
