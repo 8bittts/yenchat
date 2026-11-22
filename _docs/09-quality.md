@@ -15,6 +15,8 @@ The provider comparison covers streamed Claude snapshots, Codex counter resets, 
 The OpenCode database tests distinguish empty message history from a day without usage.
 Check the menu anchor before and after expanding a provider row.
 Its filesystem test observes and counts a change through a symbolic link.
+The history test checks each finished day against its fixture and reads again after the source is gone.
+A Debug build beside a scratch home exposes the panel and the Settings switch to Accessibility, so a helper can press them by description without activating the app.
 For native acceptance, check that an appended record changes the menu without opening it.
 Verify that disabling Moving Wallpaper removes its desktop panel and restores the system wallpaper.
 

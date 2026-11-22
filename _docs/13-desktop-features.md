@@ -128,9 +128,14 @@ Tried and reverted, do not retry without new evidence:
 General → Menu Bar → Show Token Usage enables the experimental agent token counter.
 Click its YEN status item to open the local day’s overview beneath the icon on the same display.
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
-Each provider shows its exact daily count, share of counted tokens and official usage link.
+Each provider shows its exact daily count and share of counted tokens.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
 A plan reading stays until its reset time.
+A provider name or a pool label opens the dashboard that owns its numbers, and the pointer tints it; the panel has no separate link row.
+Plan labels start at the provider name’s left edge.
+The chart button turns the card over to the analytics view, which keeps the overview’s size.
+That view shows token totals for the last 7, 30 and 90 days for each provider and for all providers, today included, above a daily chart of the 90 days.
+It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.

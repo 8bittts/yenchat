@@ -39,14 +39,15 @@ export function LegalPrivacyContent() {
 					<p className="text-body-sm text-text-muted mb-4">
 						If you enable Show Token Usage, YEN reads local tool records and
 						keeps a daily index of counts, record identifiers, source paths and
-						read positions in its cache. Conversation text stays out of the
-						index. Claude, Codex, and Grok Build plan readings come from local
-						tool records. YEN can also read the plan cache of an opted-in
-						JPtheCat installation. If you separately connect a personal Cursor
-						API key, YEN uses Cursor’s service at api2.cursor.sh to read your
-						Cursor and Grok Bot plan usage. Only the credential goes to Cursor.
-						The key stays in your Mac’s Keychain until you disconnect or reset
-						all settings. YEN’s servers receive no usage data.
+						read positions in its cache. Its analytics view also keeps each
+						tool’s token total for each of the last 90 days. Conversation text
+						stays out of both. Claude, Codex, and Grok Build plan readings come
+						from local tool records. YEN can also read the plan cache of an
+						opted-in JPtheCat installation. If you separately connect a personal
+						Cursor API key, YEN uses Cursor’s service at api2.cursor.sh to read
+						your Cursor and Grok Bot plan usage. Only the credential goes to
+						Cursor. The key stays in your Mac’s Keychain until you disconnect or
+						reset all settings. YEN’s servers receive no usage data.
 					</p>
 				</div>
 

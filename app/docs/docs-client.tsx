@@ -609,18 +609,24 @@ function AgentTokenUsageSection() {
 				The switch is off by default.
 			</p>
 			<p className="text-body">
-				Click the YEN icon to see each tool’s exact daily count and share.
-				Provider links open the official dashboards. Use the column button to
-				change the layout. Click the footer display button to cycle through
-				total tokens, the top provider, rotating plan limits, and the icon
-				alone.
+				Click the YEN icon to see each tool’s exact daily count and share. Click
+				a provider name or a plan label to open its official dashboard. Use the
+				column button to change the layout. Click the footer display button to
+				cycle through total tokens, the top provider, rotating plan limits, and
+				the icon alone.
+			</p>
+			<p className="text-body">
+				The chart button turns the panel over to show token totals for the last
+				7, 30, and 90 days for each tool, with a daily chart. The first read of
+				90 days can take half a minute. YEN keeps each finished day’s total on
+				your Mac.
 			</p>
 			<figure>
 				<Image
 					src="/doc-images/agent-token-usage.png"
 					alt="Example token menu with 10,000 daily tokens, inline provider counts and separate Grok, Cursor and Grok Bot plan bars."
 					width={730}
-					height={1072}
+					height={920}
 					sizes="(max-width: 360px) 100vw, 320px"
 					className="h-auto w-full max-w-xs"
 				/>

@@ -214,7 +214,7 @@ export function HomeClient({ version }: { version: string }) {
 						<Image
 							src="/doc-images/agent-token-usage.png"
 							width={730}
-							height={1072}
+							height={920}
 							sizes="(max-width: 700px) 70vw, 320px"
 							alt="YEN’s token menu with daily counts and plan usage bars shown together"
 						/>

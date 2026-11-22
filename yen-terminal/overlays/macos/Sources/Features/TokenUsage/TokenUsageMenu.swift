@@ -13,6 +13,8 @@ final class TokenUsageMenu: NSObject {
     private var watcher: TokenSourceWatcher?
     private var changes: [TokenTool: Set<URL>] = [:]
     private var worker: Task<TokenMenuReading, Never>?
+    private var historian: Task<[TokenTool: [Int]]?, Never>?
+    private var wantsHistory = false
     private var pending = Set<TokenTool>()
     private var delay: Task<Void, Never>?
     private var rotation: Task<Void, Never>?
@@ -59,6 +61,7 @@ final class TokenUsageMenu: NSObject {
         watcher?.stop()
         watcher = nil
         worker?.cancel()
+        historian?.cancel()
         connection.stop()
         rotation?.cancel()
         delay?.cancel()
@@ -84,7 +87,8 @@ final class TokenUsageMenu: NSObject {
         panel = window
         let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, connection: connection, mark: button.image,
             heightLimit: (button.window?.screen?.visibleFrame.height ?? 700) - 24,
-            cycle: { [weak self] in self?.cycleDisplay() }, refresh: { [weak self] in self?.refreshAll() })
+            cycle: { [weak self] in self?.cycleDisplay() }, refresh: { [weak self] in self?.refreshAll() },
+            loadHistory: { [weak self] in self?.loadHistory() })
             .fixedSize().background(GeometryReader { geometry in
                 Color.clear.preference(key: TokenPanelSize.self, value: geometry.size)
             }).onPreferenceChange(TokenPanelSize.self) { [weak self, weak window] size in
@@ -144,8 +148,11 @@ final class TokenUsageMenu: NSObject {
         if day != displayedDay {
             displayedDay = day
             snapshot.counts = nil
+            snapshot.history = nil
             updateTitle()
         }
+        // A source that was unreadable gets another try; finished days are never read again.
+        if wantsHistory, snapshot.history?.count != TokenTool.allCases.count { loadHistory() }
         changes.removeAll()
         pending.formUnion(TokenTool.allCases)
         start()
@@ -195,6 +202,21 @@ final class TokenUsageMenu: NSObject {
                 self.updateTitle()
             }
             if !self.pending.isEmpty && self.delay == nil { self.schedule([]) }
+        }
+    }
+
+    /// The analytics view asks for the finished days once; the first read can take half a minute.
+    private func loadHistory() {
+        wantsHistory = true
+        guard active, historian == nil else { return }
+        let day = displayedDay
+        let task = Task.detached(priority: .utility) { [index] in try? index.history() }
+        historian = task
+        Task { [weak self] in
+            let result = await task.value
+            guard let self, self.active else { return }
+            self.historian = nil
+            if day == self.displayedDay { self.snapshot.history = result ?? [:] } else { self.loadHistory() }
         }
     }
 
@@ -304,6 +326,8 @@ final class TokenMenuSnapshot: ObservableObject {
     }
 
     @Published var counts: TokenUsageIndex.Counts?
+    /// Tokens for each finished day, oldest first; nil until the analytics view asks for them.
+    @Published var history: [TokenTool: [Int]]?
     @Published var plans: [TokenTool: [TokenPlanMeter]] = [:]
     @Published var display = TokenMenuDisplay(rawValue: UserDefaults.standard.string(forKey: TokenMenuDisplay.key) ?? "") ?? .total
 }
