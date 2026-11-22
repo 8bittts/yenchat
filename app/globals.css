@@ -24,6 +24,9 @@
 
 @layer base {
 	:root {
+		/* Site chrome: the header, footer and homepage are always this dark. */
+		--ph-night: #0a110e;
+
 		/* Phosphor paper and ink */
 		--background: 87 26% 93%;
 		--foreground: 136 25% 12%;
@@ -106,8 +109,16 @@
 	 * dynamic-viewport unit `dvh` tracks the actual visible viewport. Keep all
 	 * full-height shells on `dvh`, not `vh`. PageShell owns the shared layout.
 	 */
+	/*
+	 * The root paints the safe areas, the strip behind a collapsed mobile
+	 * toolbar, and overscroll past the footer. Keep it the dark chrome color in
+	 * every theme so phones never show a light band above the header or below
+	 * the footer. Safari tints its bottom toolbar from the body background, so
+	 * body carries the same color. PageShell paints the theme background.
+	 */
 	html {
 		@apply scroll-smooth;
+		background-color: var(--ph-night);
 		min-height: 100%;
 		overflow-x: hidden;
 		scroll-padding-top: var(--header-height);
@@ -120,7 +131,7 @@
 	}
 
 	body {
-		background-color: hsl(var(--background));
+		background-color: var(--ph-night);
 		color: hsl(var(--foreground));
 		font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 		@apply antialiased;
@@ -613,7 +624,6 @@
 /* Phosphor homepage. The terminal and CRT keep their native dark surround.
    Reading surfaces follow the visitor’s site theme. */
 .ph-site {
-	--ph-night: #0a110e;
 	--ph-green: #a2ffad;
 	--ph-text: #ebf3ec;
 	--ph-muted: #b4c5b9;

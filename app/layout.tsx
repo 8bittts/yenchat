@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { DEVELOPMENT_CSP_NONCE } from "@/lib/csp/development";
 import {
 	ORGANIZATION_STRUCTURED_DATA_SCRIPT,
-	THEME_COLOR_BOOTSTRAP_SCRIPT,
 	WEBSITE_STRUCTURED_DATA_SCRIPT,
 } from "@/lib/csp/inline-scripts";
 import {
@@ -99,20 +98,10 @@ export default function RootLayout({
 				<meta charSet="utf-8" />
 				{/* apple-mobile-web-app-* is emitted by metadata.appleWebApp; the
 				    obsolete X-UA-Compatible (IE-only) meta was removed. */}
-				{/* Background color from constants (matches --background ≈ #f5f5f0) */}
-				<meta name="theme-color" content={COLORS.background} />
-				<meta name="msapplication-TileColor" content={COLORS.background} />
-				{/* Pre-paint theme-color sync: next-themes sets the html class before
-				    paint but not the theme-color meta, so dark-mode users otherwise
-				    saw a light browser-chrome flash. ThemeMetaSync keeps it live after. */}
-				{/* react-doctor-disable-next-line react/no-danger */}
-				<script
-					nonce={developmentNonce}
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: THEME_COLOR_BOOTSTRAP_SCRIPT,
-					}}
-				/>
+				{/* The header and footer are dark in every theme, so the browser
+				    chrome stays dark too. */}
+				<meta name="theme-color" content={COLORS.chrome} />
+				<meta name="msapplication-TileColor" content={COLORS.chrome} />
 				<link rel="manifest" href="/manifest.webmanifest" />
 				<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 				<link rel="author" href="/llms.txt" />

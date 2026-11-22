@@ -1,7 +1,3 @@
-import { COLORS } from "@/app/constants";
-
-export const THEME_COLOR_BOOTSTRAP_SCRIPT = `(function(){try{var d=localStorage.getItem('theme')==='dark';var c=d?'${COLORS.backgroundDark}':'${COLORS.background}';var m=document.querySelectorAll('meta[name="theme-color"],meta[name="msapplication-TileColor"]');for(var i=0;i<m.length;i++){m[i].content=c;}}catch(e){}})();`;
-
 export const ORGANIZATION_STRUCTURED_DATA_SCRIPT = JSON.stringify({
 	"@context": "https://schema.org",
 	"@type": "Organization",

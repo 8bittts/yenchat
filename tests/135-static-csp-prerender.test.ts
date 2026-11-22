@@ -17,7 +17,6 @@ import {
 } from "../lib/csp/generated-inline-script-hashes";
 import {
 	ORGANIZATION_STRUCTURED_DATA_SCRIPT,
-	THEME_COLOR_BOOTSTRAP_SCRIPT,
 	WEBSITE_STRUCTURED_DATA_SCRIPT,
 } from "../lib/csp/inline-scripts";
 import { buildCSP } from "../proxy";
@@ -243,7 +242,6 @@ describe("static CSP prerender build", () => {
 
 	test("dynamic fallback includes every shared root script and error shell", () => {
 		for (const script of [
-			THEME_COLOR_BOOTSTRAP_SCRIPT,
 			ORGANIZATION_STRUCTURED_DATA_SCRIPT,
 			WEBSITE_STRUCTURED_DATA_SCRIPT,
 		]) {

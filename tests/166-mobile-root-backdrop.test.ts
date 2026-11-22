@@ -43,11 +43,13 @@ describe("mobile root backdrop", () => {
 		expect(footerColor).toMatch(/^#[0-9a-f]{6}$/);
 	});
 
-	test("html paints the footer color in every theme", () => {
-		const htmlBackground = declaration(ruleBody("\thtml"), "background-color");
-		expect(htmlBackground, "html background-color").toBeDefined();
-		expect(resolveColor(htmlBackground ?? "")).toBe(footerColor);
-		expect(css).not.toMatch(/\.dark\s+html\s*\{[^}]*background/);
+	test("html and body paint the footer color in every theme", () => {
+		for (const selector of ["\thtml", "\tbody"]) {
+			const background = declaration(ruleBody(selector), "background-color");
+			expect(background, `${selector.trim()} background-color`).toBeDefined();
+			expect(resolveColor(background ?? "")).toBe(footerColor);
+		}
+		expect(css).not.toMatch(/\.dark\s+(?:html|body)\s*\{[^}]*background/);
 	});
 
 	test("browser chrome theme-color matches the dark header", () => {

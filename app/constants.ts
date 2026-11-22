@@ -2,6 +2,7 @@
 // CSS variables are not supported. Keep in sync with globals.css.
 export const COLORS = {
 	background: "#eef2e9",
-	backgroundDark: "#101b14",
+	// --ph-night: the always-dark header and footer, used for theme-color.
+	chrome: "#0a110e",
 	brand: "#a2ffad",
 } as const;

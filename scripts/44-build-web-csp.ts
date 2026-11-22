@@ -12,7 +12,6 @@ import { join, relative, sep } from "node:path";
 import blogSlugs from "@/content/blog/slugs.json";
 import {
 	ORGANIZATION_STRUCTURED_DATA_SCRIPT,
-	THEME_COLOR_BOOTSTRAP_SCRIPT,
 	WEBSITE_STRUCTURED_DATA_SCRIPT,
 } from "@/lib/csp/inline-scripts";
 import { buildCSP } from "@/lib/csp/policy";
@@ -296,7 +295,6 @@ function assertDynamicRootScripts(
 	scripts: InlineScriptElement[],
 ): void {
 	const required = [
-		THEME_COLOR_BOOTSTRAP_SCRIPT,
 		ORGANIZATION_STRUCTURED_DATA_SCRIPT,
 		WEBSITE_STRUCTURED_DATA_SCRIPT,
 	].map(hashInlineScript);
@@ -460,7 +458,6 @@ function assertBlogCoverage(
 		expected.map((path) => routes[path] ?? []),
 	).sort();
 	const required = [
-		THEME_COLOR_BOOTSTRAP_SCRIPT,
 		ORGANIZATION_STRUCTURED_DATA_SCRIPT,
 		WEBSITE_STRUCTURED_DATA_SCRIPT,
 	].map(hashInlineScript);
