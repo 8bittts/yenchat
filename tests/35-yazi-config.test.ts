@@ -172,6 +172,31 @@ ${body}
 `;
 }
 
+// Yazi 26.9's `fs.cha` takes a Url and raises on a string or a Path. A
+// permissive stub hid three plugins that passed the wrong type, and every
+// PDF, video and archive preview showed a Lua error. `statOf` is the Lua
+// expression the stub returns.
+function strictFsChaStub(statOf: string) {
+	return `
+local YaziUrl = {}
+YaziUrl.__index = YaziUrl
+YaziUrl.__tostring = function(self)
+  return self.raw
+end
+Url = function(raw)
+  return setmetatable({ raw = tostring(raw) }, YaziUrl)
+end
+fs = {
+  cha = function(target)
+    if getmetatable(target) ~= YaziUrl then
+      error("bad argument #1: expected userdata of type 'UrlBuf', got " .. type(target))
+    end
+    return ${statOf}
+  end,
+}
+`;
+}
+
 function codeGuardLuaHarness(body: string) {
 	return `
 local function read_all(path)
@@ -202,11 +227,7 @@ ui = {
     }
   end,
 }
-fs = {
-  cha = function(_)
-    return { len = 0, mtime = 1, mode = 33188 }
-  end,
-}
+${strictFsChaStub("{ len = 0, mtime = 1, mode = 33188 }")}
 cx = {
   active = {
     preview = { skip = 0 },
@@ -238,11 +259,7 @@ source = source:gsub(
 current_stat = { len = 1, mtime = 2, mode = 33188 }
 output_calls = 0
 
-fs = {
-  cha = function(_)
-    return current_stat
-  end,
-}
+${strictFsChaStub("current_stat")}
 
 Command = setmetatable({ PIPED = "piped" }, {
   __call = function(_, _)
@@ -289,11 +306,7 @@ source = source:gsub(
 current_stat = { len = 1, mtime = 2, mode = 33188 }
 output_calls = 0
 
-fs = {
-  cha = function(_)
-    return current_stat
-  end,
-}
+${strictFsChaStub("current_stat")}
 
 Command = setmetatable({ PIPED = "piped" }, {
   __call = function(_, _)
@@ -400,6 +413,27 @@ describe("Yazi edit/reveal wiring", () => {
 			expect(config).toContain(`run = "${plugin}"`);
 		}
 	});
+
+	yaziTest(
+		"routes .svgz to the SVG previewer ahead of the archive rule",
+		() => {
+			// A .svgz file has the mime type application/gzip, and Yazi runs the
+			// first matching rule, so the SVG rule must come before the archive
+			// rule that matches gzip.
+			const config = readFileSync(yaziConfigPath, "utf8");
+			const previewers = config.slice(
+				config.indexOf("prepend_previewers"),
+				config.indexOf("prepend_preloaders"),
+			);
+			const svgz = previewers.indexOf('{ url = "*.svgz", run = "svg-native" }');
+			const gzipArchive = previewers.search(
+				/\{ mime = "application\/\{[^}]*\bgzip\b[^}]*\}", run = "archive-native" \}/,
+			);
+			expect(svgz).toBeGreaterThanOrEqual(0);
+			expect(gzipArchive).toBeGreaterThanOrEqual(0);
+			expect(svgz).toBeLessThan(gzipArchive);
+		},
+	);
 
 	yaziTest("wires view opener for Enter = read-only system pager", () => {
 		const config = readFileSync(yaziConfigPath, "utf8");
@@ -749,11 +783,7 @@ describe("Yazi plugin hardening", () => {
 		"reuses archive listings until the archive file stamp changes",
 		() => {
 			const result = runLuaScript(`
-fs = {
-  cha = function(_)
-    return current_stat
-  end
-}
+${strictFsChaStub("current_stat")}
 current_stat = { len = 1, mtime = 2, mode = 33188 }
 local plugin = dofile(${JSON.stringify(yaziArchiveNativePluginPath)})
 local calls = 0
@@ -1096,11 +1126,7 @@ end
 local source = string.rep("x", 2048) .. "\\n"
 local emitted = nil
 
-fs = {
-  cha = function(_)
-    return { len = 2 * 1024 * 1024, mtime = 7, mode = 33188 }
-  end,
-}
+${strictFsChaStub("{ len = 2 * 1024 * 1024, mtime = 7, mode = 33188 }")}
 io = {
   open = function(_, _)
     local cursor = 0
@@ -1231,11 +1257,7 @@ end
 local source = string.rep("x", 2048) .. "\\n"
 local open_count = 0
 
-fs = {
-  cha = function(_)
-    return { len = 2 * 1024 * 1024, mtime = 7, mode = 33188 }
-  end,
-}
+${strictFsChaStub("{ len = 2 * 1024 * 1024, mtime = 7, mode = 33188 }")}
 io = {
   open = function(_, _)
     open_count = open_count + 1
