@@ -10,7 +10,7 @@ final class DesktopExtras: ObservableObject {
     @Published private(set) var showsWallpaper = false
     @Published private(set) var wallpaperSuspended = false
     private var menu: TokenUsageMenu?
-    private var wallpaper: AnyObject?
+    private var wallpaper: WallpaperControls?
     private let workspace = NSWorkspace.shared
 
     func restore() {
@@ -26,7 +26,7 @@ final class DesktopExtras: ObservableObject {
     }
 
     func setWallpaper(_ enabled: Bool) {
-        guard #available(macOS 27, *), showsWallpaper != enabled else { return }
+        guard showsWallpaper != enabled else { return }
         showsWallpaper = enabled
         UserDefaults.standard.set(enabled, forKey: Self.wallpaperKey)
         if enabled {
@@ -41,29 +41,27 @@ final class DesktopExtras: ObservableObject {
 
     @objc private func appChanged(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-              app.bundleIdentifier == "com.8bittts.movingpaper", #available(macOS 27, *) else { return }
+              app.bundleIdentifier == "com.8bittts.movingpaper" else { return }
         reconcileWallpaper()
     }
 
-    @available(macOS 27, *)
     private func reconcileWallpaper() {
         guard showsWallpaper else { return }
         wallpaperSuspended = NSRunningApplication.runningApplications(withBundleIdentifier: "com.8bittts.movingpaper")
             .contains { !$0.isTerminated }
         if wallpaperSuspended {
-            (wallpaper as? WallpaperControls)?.stop()
+            wallpaper?.stop()
             wallpaper = nil
         } else if wallpaper == nil {
             wallpaper = WallpaperControls()
         }
     }
 
-    @available(macOS 27, *)
-    func openWallpaper(_ button: NSButton) { (wallpaper as? WallpaperControls)?.open(from: button) }
+    func openWallpaper(_ button: NSButton) { wallpaper?.open(from: button) }
 
     private func stopWallpaper() {
         workspace.notificationCenter.removeObserver(self)
-        if #available(macOS 27, *) { (wallpaper as? WallpaperControls)?.stop() }
+        wallpaper?.stop()
         wallpaper = nil
         wallpaperSuspended = false
     }
@@ -85,7 +83,6 @@ struct TokenUsagePreference: View {
     }
 }
 
-@available(macOS 27, *)
 struct MovingWallpaperPreference: View {
     @ObservedObject private var extras = DesktopExtras.shared
     var body: some View {

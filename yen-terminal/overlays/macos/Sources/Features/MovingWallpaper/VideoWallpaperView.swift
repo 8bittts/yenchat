@@ -6,15 +6,14 @@ import Combine
 /// looping video wallpapers via `AVQueuePlayer` + `AVPlayerLooper`. Supports
 /// `.mov`, `.mp4`, `.m4v` including HEVC with alpha.
 @MainActor
-@available(macOS 27.0, *)
 final class VideoWallpaperView: NSView, WallpaperContentView {
     private var player: AVQueuePlayer?
     private var looper: AVPlayerLooper?
     private var statusObserver: AnyCancellable?
     private var looperObserver: AnyCancellable?
     private var endObserver: NSObjectProtocol?
-    /// The asset load in flight. Internal so tests can await it.
-    private(set) var loadTask: Task<Void, Never>?
+    /// The asset load in flight.
+    private var loadTask: Task<Void, Never>?
     private var pendingResumeTime: CMTime?
     var onFailure: ((URL, String) -> Void)?
 
@@ -35,11 +34,6 @@ final class VideoWallpaperView: NSView, WallpaperContentView {
     var playbackTime: CMTime? {
         guard let time = player?.currentTime(), time.isValid, time.seconds > 0 else { return nil }
         return time
-    }
-
-    /// Whether the live player is advancing or about to. Internal for tests.
-    var isPlaying: Bool {
-        player.map { $0.timeControlStatus != .paused } ?? false
     }
 
     override init(frame: NSRect) {

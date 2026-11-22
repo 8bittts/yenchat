@@ -8,7 +8,6 @@ import Foundation
 /// `run` returns `nil` (it never entered the critical section), so cancellation
 /// can never deadlock the queue.
 @MainActor
-@available(macOS 27.0, *)
 final class AsyncSerialGate {
     private var locked = false
     private var waiters: [(id: UUID, continuation: CheckedContinuation<Bool, Never>)] = []

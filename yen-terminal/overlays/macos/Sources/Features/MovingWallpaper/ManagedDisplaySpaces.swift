@@ -1,15 +1,12 @@
 import AppKit
 
 @_silgen_name("CGSMainConnectionID")
-@available(macOS 27.0, *)
 private func CGSMainConnectionID() -> CGSConnectionID
 
 @_silgen_name("CGSCopyManagedDisplaySpaces")
-@available(macOS 27.0, *)
 private func CGSCopyManagedDisplaySpaces(_: CGSConnectionID) -> Unmanaged<CFArray>?
 
 /// Snapshot of the current active and known Spaces for each connected display.
-@available(macOS 27.0, *)
 struct ManagedDisplaySpacesSnapshot: Equatable {
     let activeSpaceByDisplayID: [CGDirectDisplayID: UInt64]
     let knownSpacesByDisplayID: [CGDirectDisplayID: Set<UInt64>]

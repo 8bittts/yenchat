@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 
-@available(macOS 27.0, *)
 struct WallpaperRedownloadRequest: Equatable {
     let key: DesktopKey
     let youtubeURL: String
@@ -16,7 +15,6 @@ struct WallpaperRedownloadRequest: Equatable {
 /// finds a user's file after it is moved or renamed. Keys must stay stable unless
 /// `currentSchemaVersion` bumps. `displayID` is still written, so an older build
 /// can read a v2 record.
-@available(macOS 27.0, *)
 struct WallpaperPersistedRecord: Equatable {
     var displayID: CGDirectDisplayID
     var spaceID: UInt64
@@ -73,7 +71,6 @@ struct WallpaperPersistedRecord: Equatable {
     }
 }
 
-@available(macOS 27.0, *)
 struct WallpaperPersistedState: Equatable {
     var mode: WallpaperMode
     var isMuted: Bool
@@ -88,7 +85,6 @@ struct WallpaperPersistedState: Equatable {
     )
 }
 
-@available(macOS 27.0, *)
 struct WallpaperPersistenceStore {
     private enum Defaults {
         static let desktopFiles = "com.yenchat.yen.movingWallpaper.desktopFiles"

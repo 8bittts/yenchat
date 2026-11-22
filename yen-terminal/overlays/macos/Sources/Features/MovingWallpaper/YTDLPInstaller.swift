@@ -2,7 +2,6 @@ import CryptoKit
 import Foundation
 
 /// Pins, verifies, and installs the yt-dlp binary used by `YouTubeDownloader`.
-@available(macOS 27.0, *)
 enum YTDLPInstaller {
     /// Pinned yt-dlp release. Bump both fields together — the SHA-256 is checked
     /// against the downloaded binary before it's installed and made executable.
@@ -28,7 +27,6 @@ enum YTDLPInstaller {
     }
 
     static func ensureYTDLP() async -> String? {
-
         let installURL = MovingWallpaperPaths.ytdlpBinary
         let installedPath = installURL.path(percentEncoded: false)
 
@@ -64,8 +62,8 @@ enum YTDLPInstaller {
                 WallpaperLog.youtube.error("yt-dlp SHA-256 mismatch for pinned version \(pinnedVersion, privacy: .public); refusing to install")
                 return nil
             }
-            // Atomic write: a crash/disk-full mid-write can't leave a truncated,
-            // permanently-poisoned binary that the existence-only path check trusts.
+            // Stage, then rename: a crash or a full disk mid-write can't leave a
+            // truncated binary at the install path.
             let staged = dir.appendingPathComponent(UUID().uuidString)
             defer { try? FileManager.default.removeItem(at: staged) }
             try FileManager.default.copyItem(at: temp, to: staged)

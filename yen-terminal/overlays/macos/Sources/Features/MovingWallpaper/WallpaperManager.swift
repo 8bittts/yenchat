@@ -3,7 +3,6 @@ import AppKit
 /// Central coordinator: manages per-screen wallpaper windows, file selection,
 /// playback state, sound, space tracking, and power-aware pause/resume.
 @MainActor
-@available(macOS 27.0, *)
 final class WallpaperManager {
 
     // MARK: - State
@@ -102,7 +101,7 @@ final class WallpaperManager {
 
     // MARK: - Menu
 
-    /// Snapshot the status menu needs without exposing the downloader.
+    /// Snapshot the controls menu needs without exposing the downloader.
     func menuInput() -> MenuModelInput {
         MenuModelInput(
             downloadProgress: youtubeDownloader.progress,
@@ -111,8 +110,6 @@ final class WallpaperManager {
             isPaused: isPaused,
             hasAnyWallpaper: !state.isEmpty,
             sharedFileName: mode == .allDesktops ? state.sharedLocalURL?.lastPathComponent : nil,
-
-
             displays: NSScreen.screens.compactMap { screen in
                 screen.displayID.map { displayID in
                     DisplayMenuInput(
@@ -246,8 +243,6 @@ final class WallpaperManager {
         let originSpaceID = displayID.map { currentSpaceID(for: $0) }
         requestCoordinator.start(for: target) { [weak self] token in
             guard let self else { return }
-            // Foreground for the Photos authorization prompt; held until this
-            // request ends, whether it finishes, fails or is superseded.
             loadingOverlay.show(message: "Shuffling…", on: screen(for: displayID))
             let outcome = await PhotosService.shuffle()
             guard requestCoordinator.isCurrent(token, for: target) else { return }

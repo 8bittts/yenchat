@@ -6,7 +6,6 @@ import CoreMedia
 /// plan keyed by `CGDirectDisplayID` and reads back current playback positions
 /// keyed the same way, then translates to its own state keys.
 @MainActor
-@available(macOS 27.0, *)
 final class WallpaperWindowRouter {
 
     struct Plan: Equatable {

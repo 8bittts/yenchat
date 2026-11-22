@@ -1,8 +1,7 @@
 import Foundation
 
-/// Centralized filesystem locations for MovingPaper's caches and tools.
+/// Filesystem locations for the Moving Wallpaper caches and tools.
 /// All paths live under `~/Library/Application Support/<rootName>/`.
-@available(macOS 27.0, *)
 enum MovingWallpaperPaths {
     private static let rootName = (Bundle.main.bundleIdentifier ?? "com.yenchat.yen") + "/MovingWallpaper"
 

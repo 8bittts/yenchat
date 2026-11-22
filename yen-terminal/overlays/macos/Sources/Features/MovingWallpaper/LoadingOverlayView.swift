@@ -10,7 +10,6 @@ import SwiftUI
 /// the standard `ProgressView` follow Dynamic Type sizes, light and dark
 /// appearance, Increase Contrast, Reduce Transparency and Reduce Motion with no
 /// code of our own.
-@available(macOS 27.0, *)
 struct LoadingOverlayView: View {
     let message: String
     let progress: Double?
@@ -38,7 +37,6 @@ struct LoadingOverlayView: View {
 // MARK: - Panel Controller
 
 @MainActor
-@available(macOS 27.0, *)
 final class LoadingOverlayController {
     private var panel: NSPanel?
     private var hostingView: NSHostingView<LoadingOverlayView>?
@@ -134,8 +132,7 @@ final class LoadingOverlayController {
         announce(message)
     }
 
-    /// Post a VoiceOver announcement for the transient overlay status. Best-effort
-    /// for an accessory app, but never worse than the current silence.
+    /// Post a VoiceOver announcement for the transient overlay status.
     private func announce(_ message: String) {
         NSAccessibility.post(
             element: NSApp as Any,

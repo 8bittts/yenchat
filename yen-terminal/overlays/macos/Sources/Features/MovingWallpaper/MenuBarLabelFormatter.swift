@@ -1,6 +1,5 @@
 import Foundation
 
-@available(macOS 27.0, *)
 enum MenuBarLabelFormatter {
     static let maxVisibleCharacters = 30
     private static let ellipsis = "…"

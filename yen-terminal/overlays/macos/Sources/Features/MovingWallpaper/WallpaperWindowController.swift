@@ -13,7 +13,6 @@ protocol WallpaperContentView: NSView {
 /// Manages a single WallpaperPanel for one screen.
 /// Hosts an AppKit content view (video or GIF) directly — no SwiftUI bridge.
 @MainActor
-@available(macOS 27.0, *)
 final class WallpaperWindowController {
     private let panel: WallpaperPanel
     private(set) var currentURL: URL?

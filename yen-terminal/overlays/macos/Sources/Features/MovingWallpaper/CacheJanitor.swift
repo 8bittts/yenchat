@@ -10,7 +10,6 @@ import Foundation
 /// The YouTube cache is safe to evict — if a wallpaper still references the
 /// file, persistence queues a redownload from the saved youtubeOrigin on
 /// next launch.
-@available(macOS 27.0, *)
 enum CacheJanitor {
 
     /// 2 GiB. Roughly 4–8 typical 1080p YouTube downloads.

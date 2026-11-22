@@ -668,9 +668,7 @@ struct SettingsGeneralPane: View {
                 )
             }
 
-            if #available(macOS 27, *) {
-                Section("Experimental") { MovingWallpaperPreference() }
-            }
+            Section("Experimental") { MovingWallpaperPreference() }
 
             Section {
                 LabeledContent("Reset All Settings") {

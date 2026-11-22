@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 
-@available(macOS 27.0, *)
 enum WallpaperAssignmentTarget: Hashable {
     /// Every display at once.
     case allDesktops
@@ -12,7 +11,6 @@ enum WallpaperAssignmentTarget: Hashable {
 }
 
 @MainActor
-@available(macOS 27.0, *)
 final class WallpaperRequestCoordinator {
     private var activeTokens: [WallpaperAssignmentTarget: UUID] = [:]
     private var activeTasks: [WallpaperAssignmentTarget: Task<Void, Never>] = [:]

@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 /// Uses Apple's PHPickerViewController to let users select a video from their Photos library.
 /// No authorization required — PHPicker runs out-of-process with full Photos access.
 @MainActor
-@available(macOS 27.0, *)
 final class PhotosPickerController: NSObject {
 
     private var panel: NSPanel?
@@ -61,7 +60,6 @@ final class PhotosPickerController: NSObject {
 
 // MARK: - NSWindowDelegate
 
-@available(macOS 27.0, *)
 extension PhotosPickerController: NSWindowDelegate {
     /// The user closed the panel without picking.
     nonisolated func windowWillClose(_ notification: Notification) {
@@ -73,7 +71,6 @@ extension PhotosPickerController: NSWindowDelegate {
 
 // MARK: - PHPickerViewControllerDelegate
 
-@available(macOS 27.0, *)
 extension PhotosPickerController: PHPickerViewControllerDelegate {
     nonisolated func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         guard let result = results.first,

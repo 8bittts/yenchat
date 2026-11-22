@@ -1,7 +1,6 @@
 import AppKit
 
 @MainActor
-@available(macOS 27.0, *)
 final class WallpaperControls: NSObject {
     private let wallpaperManager = WallpaperManager()
     private var picker: PhotosPickerController?
@@ -69,10 +68,9 @@ final class WallpaperControls: NSObject {
         let item = NSMenuItem(
             title: command.title,
             action: selector(for: command.id),
-            keyEquivalent: command.keyEquivalent
+            keyEquivalent: ""
         )
         item.target = self
-        item.isEnabled = command.enabled
         item.state = command.checked ? .on : .off
         if let displayID = command.displayID {
             item.tag = Int(displayID)
@@ -175,7 +173,7 @@ final class WallpaperControls: NSObject {
         presentPhotosPicker(for: optionalDisplayID(sender))
     }
 
-    /// Foreground the app, run the Photos picker, and assign the pick (nil display = all).
+    /// Run the Photos picker and assign the pick (nil display = all).
     /// One picker at a time: a second request while one is open does nothing.
     private func presentPhotosPicker(for displayID: CGDirectDisplayID?) {
         guard picker == nil, active else { return }
@@ -193,5 +191,4 @@ final class WallpaperControls: NSObject {
     @objc private func shufflePhotos(_ sender: NSMenuItem) {
         wallpaperManager.shuffleFromPhotos(for: optionalDisplayID(sender))
     }
-
 }

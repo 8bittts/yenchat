@@ -4,7 +4,6 @@ import Foundation
 /// the "should pause" verdict flips. The first call fires synchronously from
 /// `start()` so callers can establish initial state without duplicating logic.
 @MainActor
-@available(macOS 27.0, *)
 final class PowerStateMonitor {
     private var observers: [NSObjectProtocol] = []
     private var lastVerdict = false

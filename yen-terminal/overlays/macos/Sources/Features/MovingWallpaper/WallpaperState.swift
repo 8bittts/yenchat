@@ -4,7 +4,6 @@ import Foundation
 
 /// A single per-desktop wallpaper assignment. The optional `youtubeOrigin` is
 /// retained so persistence can re-download a missing local file on next launch.
-@available(macOS 27.0, *)
 struct WallpaperEntry: Equatable {
     var localURL: URL
     var youtubeOrigin: String?
@@ -13,7 +12,6 @@ struct WallpaperEntry: Equatable {
 /// All in-memory wallpaper state. Replaces the previous parallel dictionaries
 /// (`desktopFiles`, `youtubeURLs`, `playbackPositions`, `knownSpaces`) so that
 /// every mutation touches one canonical store.
-@available(macOS 27.0, *)
 struct WallpaperState: Equatable {
     var entries: [DesktopKey: WallpaperEntry] = [:]
     var playbackPositions: [DesktopKey: CMTime] = [:]

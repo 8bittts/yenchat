@@ -3,14 +3,12 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// How wallpapers are assigned.
-@available(macOS 27.0, *)
 enum WallpaperMode: String {
     case allDesktops
     case perDesktop
 }
 
 /// Composite key for per-desktop wallpaper assignments.
-@available(macOS 27.0, *)
 struct DesktopKey: Hashable {
     let displayID: CGDirectDisplayID
     let spaceID: UInt64
@@ -31,7 +29,6 @@ struct DesktopKey: Hashable {
     }
 }
 
-@available(macOS 27.0, *)
 enum WallpaperFileType {
     case gif
     case video

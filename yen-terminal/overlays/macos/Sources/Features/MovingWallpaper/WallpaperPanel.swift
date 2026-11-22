@@ -2,7 +2,6 @@ import AppKit
 
 /// Borderless panel that sits at the desktop level, behind icons but above the wallpaper.
 /// Invisible to mouse events so Finder desktop icons remain fully interactive.
-@available(macOS 27.0, *)
 final class WallpaperPanel: NSPanel {
     init(screen: NSScreen) {
         super.init(

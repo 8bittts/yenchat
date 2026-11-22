@@ -1,6 +1,5 @@
 import AppKit
 
-@available(macOS 27.0, *)
 @MainActor
 enum WallpaperPresentation {
     static func withForegroundActivation<T>(_ operation: () throws -> T) rethrows -> T {

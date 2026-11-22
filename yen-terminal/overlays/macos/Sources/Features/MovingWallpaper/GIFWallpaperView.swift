@@ -5,16 +5,15 @@ import ImageIO
 /// `CGAnimateImageAtURLWithBlock`. The system handles frame timing from the
 /// GIF's delay metadata automatically.
 @MainActor
-@available(macOS 27.0, *)
 final class GIFWallpaperView: NSView, WallpaperContentView {
     private var imageLayer: CALayer?
     /// The GIF currently loaded, so a resume can restart it.
-    private(set) var currentURL: URL?
+    private var currentURL: URL?
     var onFailure: ((URL, String) -> Void)?
 
     /// Identifies the live animation. ImageIO has no cancel call, so a frame
-    /// callback that carries a stale value stops its own loop. Internal for tests.
-    private(set) var animationGeneration = 0
+    /// callback that carries a stale value stops its own loop.
+    private var animationGeneration = 0
 
     var isPlaybackPaused = false {
         didSet {
@@ -117,8 +116,6 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
         imageLayer?.contents = image
         CATransaction.commit()
     }
-
-    var hasVisibleContents: Bool { imageLayer?.contents != nil }
 
     override func removeFromSuperview() {
         animationGeneration += 1

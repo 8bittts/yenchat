@@ -1,7 +1,6 @@
 import Foundation
 
 /// Extracts video IDs from YouTube URL strings.
-@available(macOS 27.0, *)
 enum YouTubeURLParser {
 
     private static let allowedHosts = Set(["youtube.com", "www.youtube.com", "m.youtube.com"])

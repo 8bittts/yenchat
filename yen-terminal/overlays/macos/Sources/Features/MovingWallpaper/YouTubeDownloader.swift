@@ -3,7 +3,6 @@ import os
 
 /// Downloads YouTube videos into the local cache with the pinned yt-dlp binary.
 @MainActor
-@available(macOS 27.0, *)
 final class YouTubeDownloader {
 
     /// Result of a single `download` call.

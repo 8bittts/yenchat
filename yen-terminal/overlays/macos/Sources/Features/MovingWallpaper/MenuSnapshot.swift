@@ -1,9 +1,8 @@
 import CoreGraphics
 import Foundation
 
-/// Inputs the status menu needs from live wallpaper and updater state.
-/// Built by `WallpaperManager`; rendered by `StatusBarController`.
-@available(macOS 27.0, *)
+/// Inputs the wallpaper controls menu needs from live wallpaper state.
+/// Built by `WallpaperManager`; rendered by `WallpaperControls`.
 struct MenuModelInput: Equatable {
     var downloadProgress: Double?
     var mode: WallpaperMode
@@ -14,20 +13,17 @@ struct MenuModelInput: Equatable {
     var displays: [DisplayMenuInput]
 }
 
-@available(macOS 27.0, *)
 struct DisplayMenuInput: Equatable {
     var id: CGDirectDisplayID
     var name: String
     var spaces: [SpaceMenuInput]
 }
 
-@available(macOS 27.0, *)
 struct SpaceMenuInput: Equatable {
     var fileName: String?
     var isCurrent: Bool
 }
 
-@available(macOS 27.0, *)
 enum MenuCommandID: Equatable {
     case cancelDownload
     case chooseFile
@@ -41,19 +37,15 @@ enum MenuCommandID: Equatable {
     case togglePerDesktop
 }
 
-@available(macOS 27.0, *)
 struct MenuCommand: Equatable {
     var title: String
     var id: MenuCommandID
-    var enabled: Bool = true
     var checked: Bool = false
     var displayID: CGDirectDisplayID? = nil
-    var keyEquivalent: String = ""
     /// SF Symbol shown beside the title. Every command in a group has one or none does.
     var symbolName: String? = nil
 }
 
-@available(macOS 27.0, *)
 enum MenuRow: Equatable {
     case disabled(String)
     case separator
@@ -63,7 +55,6 @@ enum MenuRow: Equatable {
 }
 
 /// Native menu rows for the wallpaper controls in General settings.
-@available(macOS 27.0, *)
 enum MenuSnapshot {
     static func rows(from input: MenuModelInput) -> [MenuRow] {
         var rows: [MenuRow] = []
@@ -169,7 +160,7 @@ enum MenuSnapshot {
         return rows
     }
 
-    /// Playback and app toggles. Mode is one checkmark item rather than a
+    /// Playback toggles. Mode is one checkmark item rather than a
     /// two-item submenu: All Desktops is simply Per Desktop turned off.
     private static func toggleRows(from input: MenuModelInput) -> [MenuRow] {
         var rows: [MenuRow] = []
@@ -190,5 +181,4 @@ enum MenuSnapshot {
         )))
         return rows
     }
-
 }
