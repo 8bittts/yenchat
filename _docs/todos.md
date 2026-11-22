@@ -62,14 +62,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
 
-### Hand-written `copy-on-select = true` no longer reaches the system clipboard
-
-Upstream `f08437b79` maps `true` to `primary` on macOS instead of `clipboard`, so a config line `copy-on-select = true` copies only to the private selection pasteboard and Cmd+V no longer receives the selection.
-`parsedCopyOnSelect` in `SettingsController.swift` still shows that line as on; Settings itself writes `both` or `false`, so only hand-edited configs are affected.
-Upstream also added the Config.zig test `copy-on-select default uses the selection clipboard on Linux and macOS`, which fails against YEN's `.both` default; no YEN gate runs it.
-
-- [ ] Decide whether YEN treats `true` as `both` on macOS (patch or Settings migration), then add a test for the chosen behavior.
-
 ### An external config reload can discard a pending Settings edit
 
 `handleExternalConfigReload` re-reads managed state from disk while a real-time config sync is still inside its 180 ms debounce, so the debounced write then persists the re-read values and the edit is lost.

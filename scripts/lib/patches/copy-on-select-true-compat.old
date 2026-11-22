@@ -1,0 +1,4 @@
+        self.@"copy-on-select" = switch (builtin.target.os.tag) {
+            .linux, .freebsd, .macos => .primary,
+            else => .clipboard,
+        };

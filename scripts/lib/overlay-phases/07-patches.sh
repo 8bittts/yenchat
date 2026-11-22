@@ -203,6 +203,15 @@ apply_overlay_patch copy-on-select-default-patch
 
 echo "  copy-on-select patched to .both on macOS"
 
+# The legacy value `true` follows the same rule. Upstream resolves it to
+# "primary" on macOS, so a hand-written or older `copy-on-select = true` would
+# copy only to the private pasteboard and Cmd+V would miss the selection.
+# The patch also aligns the option's documentation and upstream's two tests.
+
+apply_overlay_patch copy-on-select-true-compat-patch
+
+echo "  copy-on-select = true patched to .both on macOS"
+
 # ============================================================================
 # Remap write_screen_file Defaults to Avoid Scratchpad Collision
 # ============================================================================

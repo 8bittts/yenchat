@@ -1,0 +1,7 @@
+        self.@"copy-on-select" = switch (builtin.target.os.tag) {
+            .linux, .freebsd => .primary,
+            // YEN: `true` keeps reaching the system clipboard on macOS, where
+            // the default is `both` and `primary` is a private pasteboard.
+            .macos => .both,
+            else => .clipboard,
+        };

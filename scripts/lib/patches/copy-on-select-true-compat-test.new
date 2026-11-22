@@ -1,0 +1,5 @@
+            @as(CopyOnSelect, switch (builtin.target.os.tag) {
+                .linux, .freebsd => .primary,
+                .macos => .both,
+                else => .clipboard,
+            }),

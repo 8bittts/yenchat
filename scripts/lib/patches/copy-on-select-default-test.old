@@ -1,0 +1,12 @@
+test "copy-on-select default uses the selection clipboard on Linux and macOS" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+
+    var cfg = try Config.default(alloc);
+    defer cfg.deinit();
+
+    try testing.expectEqual(
+        @as(CopyOnSelect, switch (builtin.target.os.tag) {
+            .linux, .macos => .primary,
+            else => .none,
+        }),

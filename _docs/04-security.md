@@ -71,7 +71,7 @@ Per-bump assessments live in the vendor commit messages, not here.
 | Key | YEN value | Upstream | Status |
 |-----|-----------|----------|--------|
 | `window-save-state` | `always` | `default` | [SAFE] Idempotent patch |
-| `copy-on-select` (macOS) | `both`; Settings can write `false` | `primary` | [SAFE] |
+| `copy-on-select` (macOS) | `both`; Settings can write `false`; the legacy value `true` also resolves to `both` | `primary`, and `true` resolves to `primary` | [SAFE] `05-detect-failures.sh` asks the built binary what `true` resolves to |
 | `scrollbar` (macOS) | `system`; Settings can write `never` | `system` | [SAFE] Visibility policy only, never a scroller-style control |
 | `notify-on-command-finish` | `never`; Settings can write `unfocused` or `always` | `never` | [WATCH] `.claude/hooks/notify-complete.sh` self-suppresses only on `always` above threshold, so `unfocused` needs physical smoke for build-like workflows |
 | Quick Terminal keybind | `Ctrl + Backtick` (global) | none | [WATCH] Conflicts if upstream adds a default `toggle_quick_terminal` bind |

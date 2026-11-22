@@ -471,6 +471,13 @@ if subject_present f "ghostty/src/config/Config.zig"; then
     else
         add_issue "copy-on-select default not patched to both on macOS"
     fi
+    # The legacy value `true` must resolve to both as well, not to the private
+    # selection pasteboard alone.
+    if grep -A8 'value orelse "", "true"' ghostty/src/config/Config.zig | grep -q '.macos => .both'; then
+        : # patched correctly
+    else
+        add_issue "copy-on-select = true not patched to both on macOS"
+    fi
 fi
 
 # Check 31: Shift+Enter keybind injected (sends \r in all modes via Config.zig)

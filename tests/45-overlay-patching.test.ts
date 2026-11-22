@@ -1395,7 +1395,13 @@ ${patchBlock}`;
 			"    );",
 			"}",
 		].join("\n");
+		const upstreamDoc = [
+			"/// For backward compatibility and convenience, a value of `true` is the same",
+			"/// as `primary` on Linux, FreeBSD, and macOS and `clipboard` elsewhere, and",
+			"/// `false` is an alias for `none`.",
+		].join("\n");
 		const upstream = [
+			upstreamDoc,
 			upstreamHandler,
 			upstreamCompatTest,
 			upstreamDefaultTest,
@@ -1425,6 +1431,9 @@ ${patchBlock}`;
 			// Linux and FreeBSD keep upstream's selection-clipboard mapping.
 			expect(patched.split(".linux, .freebsd => .primary,").length - 1).toBe(2);
 			expect(patched).toContain("            else => .clipboard,");
+			// The option's documentation states the macOS value.
+			expect(patched).toContain("`both` on macOS");
+			expect(patched).not.toContain("FreeBSD, and macOS");
 
 			const secondRun = run("bash", ["-lc", applyScript(fixtureRoot)]);
 			expect(secondRun.status).toBe(0);

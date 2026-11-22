@@ -329,6 +329,7 @@ The General pane owns the 3-second refresh on the switch itself, because a `.tas
 
 **Copy on Select.** Settings > General > Copy on Select (`both` or `false`) covers terminal surfaces, the scratchpad, and the shared diff view in PR Review and Merge Conflict.
 Upstream defaults to a private selection clipboard; YEN patches the default to `both`.
+A config line `copy-on-select = true` resolves to `both` as well, so a hand-written or older config still reaches the system clipboard; upstream resolves it to the private selection pasteboard alone.
 `NSTextView` surfaces copy through `CopyOnSelectClipboard` from `textViewDidChangeSelection`, writing plain text, and an empty selection never clobbers the clipboard.
 Never drive this from a global `.leftMouseUp` monitor (text views and SwiftUI selection gestures hide the mouse-up) or from `NSTextView.copy(_:)` (rich payloads).
 Hold Shift to select inside TUIs that capture the mouse.

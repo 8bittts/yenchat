@@ -264,6 +264,29 @@
 			".macos => .both"
 		]
 	},
+	"copy-on-select-true-compat-patch": {
+		"target": "ghostty/src/config/Config.zig",
+		"arguments": [
+			"--label",
+			"copy-on-select true compatibility patch",
+			"--mode",
+			"exact",
+			"--marker",
+			"// YEN: `true` keeps reaching the system clipboard on macOS",
+			"--old-block",
+			"@$PATCHES_DIR/copy-on-select-true-compat.old",
+			"--new-block",
+			"@$PATCHES_DIR/copy-on-select-true-compat.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/copy-on-select-true-doc.old:::@$PATCHES_DIR/copy-on-select-true-doc.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/copy-on-select-true-compat-test.old:::@$PATCHES_DIR/copy-on-select-true-compat-test.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/copy-on-select-default-test.old:::@$PATCHES_DIR/copy-on-select-default-test.new",
+			"--post-verify",
+			".linux, .freebsd => .primary,"
+		]
+	},
 	"write-screen-file-copy-remap": {
 		"target": "ghostty/src/config/Config.zig",
 		"arguments": [
