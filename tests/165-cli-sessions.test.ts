@@ -133,6 +133,35 @@ describe("yen sessions", () => {
 	);
 
 	test.skipIf(!vendored)(
+		"prints a versioned tab-separated listing with --porcelain",
+		async () => {
+			expect(sessions(["list", "--porcelain"]).stdout).toBe(
+				"yen-sessions\t1\n",
+			);
+			expect(zmxRun(["run", paneID, "-d", "sleep", "120"]).status).toBe(0);
+			try {
+				await Bun.sleep(300);
+				const result = sessions(["list", "--porcelain"]);
+				expect(result.status, result.stderr).toBe(0);
+				const [header, ...rows] = result.stdout.trimEnd().split("\n");
+				expect(header).toBe("yen-sessions\t1");
+				expect(rows).toHaveLength(1);
+				const [id, state, started, directory, ...rest] = (rows[0] ?? "").split(
+					"\t",
+				);
+				expect([id, state, rest]).toEqual([paneID, "detached", []]);
+				expect(started).toMatch(/^\d+$/);
+				expect(Math.abs(Number(started) - Date.now() / 1000)).toBeLessThan(120);
+				// An absolute path, never the ~ the table shows.
+				expect(directory).toStartWith("/");
+			} finally {
+				zmxRun(["kill", paneID]);
+			}
+		},
+		30_000,
+	);
+
+	test.skipIf(!vendored)(
 		"removes a refused socket after its owning client confirms it is stale",
 		() => {
 			const socket = join(socketDir, "11111111-2222-3333-4444-555555555555");

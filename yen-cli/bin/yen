@@ -137,7 +137,7 @@ Core:
   agents  Adapter board + workspace templates (list/open/timeline/note/export/templates; timeline supports --tail/--event/--source/--kind)
   web  Native browser commands (open/back/forward/reload/close/status; open supports --split, stateful supports targets)
   pane  Report an agent's working directory for this pane (cwd <dir>/--hook/--clear)
-  sessions  Persistent pane sessions (list/attach/kill)
+  sessions  Persistent pane sessions (list/attach/kill; list and attach take --host for another Mac)
 
 Apps:
   browse (files, fm)  File browser

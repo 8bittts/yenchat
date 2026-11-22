@@ -131,6 +131,7 @@ Manual utilities, outside the release and vendor gates:
 | `manual/32-check-pane-clearance.py`                                            | Check terminal grid corners against a thick pane outline         |
 | `manual/33-check-native-launch-defaults.py`                                    | Verify app defaults, config reload, and child arguments on macOS |
 | `manual/34-measure-key-latency.swift`                                          | Key-to-frame latency of a running copy (`_docs/09-quality.md`)   |
+| `manual/35-verify-remote-attach-loopback.sh`                                   | Remote attach against a loopback sshd (`_docs/09-quality.md`)    |
 
 ## Shared Library (`scripts/lib/`)
 

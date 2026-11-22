@@ -101,6 +101,19 @@ Build warnings outside `appintentsmetadataprocessor` extraction, the `YENKit` um
 At the macOS 27 deployment target, Xcode also reports deprecations in SwiftUI views and audio capture APIs.
 See [11-speech-to-text.md](11-speech-to-text.md) for the audio tap contract.
 
+## Loopback SSH Peer
+
+`scripts/manual/35-verify-remote-attach-loopback.sh [--old-cli <yen>]` stands in for a second Mac when testing remote attach (`01-architecture.md` → Remote attach).
+It needs no Tailscale, no `sudo` and no change to `~/.ssh` or the system sshd.
+- An unprivileged `/usr/sbin/sshd -f <config>` listens on 127.0.0.1 at a random high port with a temporary host key, `UsePAM no`, `StrictModes no` and a temporary `authorized_keys`. Its `environment="HOME=..."` option, allowed by `PermitUserEnvironment yes`, gives the login a throwaway home, because sshd otherwise uses the real one.
+- The throwaway home holds `Applications/YEN.app/Contents/Resources/bin/yen`, a wrapper that execs this checkout's CLI; a symlink would make the CLI look for its resources beside the link. `YEN_REMOTE_APP` points the remote command at it, because `/Applications/YEN.app` on the test Mac is the real install.
+- `YEN_SSH_BIN` is a wrapper that adds `-F <config>`, one config per failure class: empty known hosts, a changed host key, an unauthorized key, and a closed port.
+- The session is created with the vendored zmx under `/tmp/yrl.*`, so socket paths stay under 103 bytes, and every `ZMX_*` variable is dropped first.
+- `35-remote-attach-probe.py` attaches in a pty, then cuts the link twice: it kills the sshd connection child, and it stops the grandchild that carries the traffic so only the 30-second keepalive notices. Each pass requires the ticks the session prints to keep counting after the reattach.
+- The script kills only the sshd it started and the session it created, and removes its directory on exit.
+
+The script is not a gate: it proves the transport against real OpenSSH on this macOS, not on a tailnet.
+
 ## Web Quality Baselines
 
 These apply to the homepage, Terms, and the separate blog.

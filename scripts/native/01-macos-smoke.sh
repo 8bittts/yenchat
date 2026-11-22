@@ -245,6 +245,8 @@ case "$MODE" in
                 -only-testing:YENTests/SettingsWindowLifecycleTests
                 -only-testing:YENTests/PersistentSessionReaperTests
                 -only-testing:YENTests/PersistentSessionsTests
+                -only-testing:YENTests/RemoteSessionsTests
+                -only-testing:YENTests/TailscaleDiscoveryTests
                 -only-testing:YENTests/ShellTests
                 -only-testing:YENTests/SplitTreeTests
                 -only-testing:YENTests/SurfaceRouteEnvironmentTests
