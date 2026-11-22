@@ -42,7 +42,13 @@ struct ScreenshotNotificationStatusTests {
         window.orderFront(nil)
         defer { window.close() }
 
-        let image = try #require(await AppDelegate.captureCurrentProcessImage(of: window))
+        // The window server lists a new window a moment after it is ordered in; a loaded machine widens that gap.
+        var captured: CGImage?
+        for _ in 0..<40 where captured == nil {
+            captured = await AppDelegate.captureCurrentProcessImage(of: window)
+            if captured == nil { try await Task.sleep(for: .milliseconds(50)) }
+        }
+        let image = try #require(captured)
         #expect(image.width == Int(window.frame.width * window.backingScaleFactor))
         #expect(image.height == Int(window.frame.height * window.backingScaleFactor))
         let bitmap = NSBitmapImageRep(cgImage: image)
