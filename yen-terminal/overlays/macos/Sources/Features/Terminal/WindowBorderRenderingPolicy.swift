@@ -55,8 +55,11 @@ enum WindowBorderRenderingPolicy {
         return true
     }
 
+    /// Framed panes already sit inside the window's corners, so the window outline
+    /// shares their frame. Edge-to-edge panes and the browser split reach the
+    /// clipping edge, where only the native corner radius stays visible.
     static func windowOutlinePlacement(panesAreFramed: Bool, browserSplitVisible: Bool) -> WindowOutlinePlacement {
-        .windowEdge
+        panesAreFramed && !browserSplitVisible ? .paneGrid : .windowEdge
     }
 
     static func shouldHandleWindowNotification(

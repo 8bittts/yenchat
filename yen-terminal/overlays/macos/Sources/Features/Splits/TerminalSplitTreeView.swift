@@ -126,6 +126,7 @@ enum SplitFocusClickHitTesting {
 }
 
 struct TerminalSplitTreeView: View {
+    @Environment(\.paneOutline) private var paneOutline
     @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
     let tree: SplitTree<YEN.SurfaceView>
     let alignsWithTabBar: Bool
@@ -133,6 +134,7 @@ struct TerminalSplitTreeView: View {
 
     var body: some View {
         if let node = tree.zoomed ?? tree.root {
+            let inset: CGFloat = paneSettings.paneStyle == .comfortable ? YENDesignTokens.paneInset : 0
             TerminalSplitSubtreeView(
                 node: node,
                 // A zoomed node becomes the rendered root, so its leaf should not
@@ -145,7 +147,16 @@ struct TerminalSplitTreeView: View {
             // the tree structure of splits it could result in bad behaviors.
             // See: https://github.com/yen-org/yen/issues/7546
             .id(node.structuralIdentity)
-            .padding(alignsWithTabBar ? [.horizontal, .bottom] : .all, paneSettings.paneStyle == .comfortable ? YENDesignTokens.paneInset : 0)
+            .overlay {
+                if let paneOutline, paneOutline.target == .grid {
+                    // Every leaf insets its frame by the same amount, so this is their union.
+                    paneOutline.overlay.paneBorder(framed: true)
+                        .padding([.horizontal, .bottom], inset)
+                        .padding(.top, alignsWithTabBar ? 0 : inset)
+                        .allowsHitTesting(false)
+                }
+            }
+            .padding(alignsWithTabBar ? [.horizontal, .bottom] : .all, inset)
         }
     }
 }
@@ -194,24 +205,32 @@ private struct TerminalSplitSubtreeView: View {
     }
 }
 
-struct FocusedPaneOutline {
-    let surfaceID: UUID
+/// The chromatic outline the split tree draws, and the frame it follows.
+struct PaneOutline {
+    enum Target: Equatable {
+        /// The focused pane's frame.
+        case pane(UUID)
+        /// The outer edge of the framed pane grid.
+        case grid
+    }
+
+    let target: Target
     let overlay: WindowBorderOverlay
 }
 
-private struct FocusedPaneOutlineKey: EnvironmentKey {
-    static let defaultValue: FocusedPaneOutline? = nil
+private struct PaneOutlineKey: EnvironmentKey {
+    static let defaultValue: PaneOutline? = nil
 }
 
 extension EnvironmentValues {
-    var focusedPaneOutline: FocusedPaneOutline? {
-        get { self[FocusedPaneOutlineKey.self] }
-        set { self[FocusedPaneOutlineKey.self] = newValue }
+    var paneOutline: PaneOutline? {
+        get { self[PaneOutlineKey.self] }
+        set { self[PaneOutlineKey.self] = newValue }
     }
 }
 
 private struct TerminalSplitLeaf: View {
-    @Environment(\.focusedPaneOutline) private var focusedOutline
+    @Environment(\.paneOutline) private var paneOutline
     @ObservedObject var surfaceView: YEN.SurfaceView
     let isSplit: Bool
     let meetsTopEdge: Bool
@@ -228,7 +247,8 @@ private struct TerminalSplitLeaf: View {
             let inset: CGFloat = framed ? YENDesignTokens.paneInset : 0
             let shape = RoundedRectangle(cornerRadius: framed ? YENDesignTokens.terminalFacingCornerRadius : 0, style: .continuous)
             let topInset = meetsTopEdge ? 0 : inset
-            let clearance = focusedOutline?.overlay.contentInset(framed: framed) ?? (framed ? inset : 0)
+            // Every pane keeps the same clearance, so the grid holds its size as the outline moves.
+            let clearance = paneOutline?.overlay.contentInset(framed: framed) ?? (framed ? inset : 0)
             let showSplitLabel = SplitPaneLabelRules.isVisible(
                 enabled: splitPaneLabelSettings.isEnabled,
                 isSplit: isSplit,
@@ -245,8 +265,8 @@ private struct TerminalSplitLeaf: View {
             .padding(clearance)
             .clipShape(shape)
             .overlay {
-                if let outline = focusedOutline, outline.surfaceID == surfaceView.id {
-                    outline.overlay.paneBorder(framed: framed)
+                if let paneOutline, paneOutline.target == .pane(surfaceView.id) {
+                    paneOutline.overlay.paneBorder(framed: framed)
                         .allowsHitTesting(false)
                 } else if framed {
                     let background = NSColor(surfaceView.backgroundColor ?? surfaceView.derivedConfig.backgroundColor)

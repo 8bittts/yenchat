@@ -160,6 +160,8 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
         focusedSurface ?? lastFocusedSurface.value
     }
 
+    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
+
     private var showsBorderOnSplitLeaf: Bool {
         guard shouldShowFocusedSplitBorder, let surface = activeOrLastFocusedSurface else { return false }
         let visibleRoot = viewModel.surfaceTree.zoomed ?? viewModel.surfaceTree.root
@@ -200,6 +202,24 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
         shouldShowFocusedSplitBorder && !showsBorderOnSplitLeaf && focusedSplitBorderFrame == nil
     }
 
+    private var windowOutlinePlacement: WindowOutlinePlacement? {
+        guard shouldShowWindowScopedBorder || shouldFallbackToWindowBorder else { return nil }
+        return WindowBorderRenderingPolicy.windowOutlinePlacement(
+            panesAreFramed: paneSettings.paneStyle == .comfortable,
+            browserSplitVisible: browserSplit.isVisible(in: borderWindow)
+        )
+    }
+
+    private var paneOutline: PaneOutline? {
+        if showsBorderOnSplitLeaf, let surface = activeOrLastFocusedSurface {
+            return PaneOutline(target: .pane(surface.id), overlay: borderOverlay)
+        }
+        if windowOutlinePlacement == .paneGrid {
+            return PaneOutline(target: .grid, overlay: borderOverlay)
+        }
+        return nil
+    }
+
     var shouldRenderWholeWindowBackgroundImage: Bool {
         settingsSnapshot.wholeWindowBackgroundImageEnabled
     }
@@ -228,20 +248,20 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 }
 
                 terminalWithOptionalBrowserSplit
-                    .padding(shouldShowWindowScopedBorder || shouldFallbackToWindowBorder ? borderOverlay.contentInset(framed: false) + 1 : 0)
+                    .padding(windowOutlinePlacement == .windowEdge ? borderOverlay.contentInset(framed: false) : 0)
                 // Ignore safe area to extend up in to the titlebar region if we have the "hidden" titlebar style
                 .ignoresSafeArea(.container, edges: shouldIgnoreTopSafeArea ? .top : [])
 
-                if shouldShowWindowScopedBorder || shouldFallbackToWindowBorder {
+                if windowOutlinePlacement == .windowEdge {
                     borderOverlay
-                    .padding(1)
+                    .paneBorder(framed: false)
                     .allowsHitTesting(false)
                     .ignoresSafeArea(.container, edges: shouldIgnoreTopSafeArea ? .top : [])
                     .transition(.opacity)
                 }
                 if let focusedSplitBorderFrame {
                     borderOverlay
-                    .padding(1)
+                    .paneBorder(framed: false)
                     .frame(width: focusedSplitBorderFrame.width, height: focusedSplitBorderFrame.height)
                     .position(x: focusedSplitBorderFrame.midX, y: focusedSplitBorderFrame.midY)
                     // Split focus changes should snap to the newly focused pane.
@@ -444,9 +464,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 tree: viewModel.surfaceTree,
                 alignsWithTabBar: yen.config.macosTitlebarStyle == .tabs && !windowIsFullscreen,
                 action: { delegate?.performSplitAction($0) })
-                .environment(\.focusedPaneOutline, showsBorderOnSplitLeaf ? activeOrLastFocusedSurface.map {
-                    FocusedPaneOutline(surfaceID: $0.id, overlay: borderOverlay)
-                } : nil)
+                .environment(\.paneOutline, paneOutline)
                 .environmentObject(yen)
                 .focused($focused)
                 .onAppear {

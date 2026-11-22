@@ -34,11 +34,17 @@ struct WindowBorderOverlay: View {
         )
     }
 
+    /// A framed outline owns its frame. An unframed one meets the window's
+    /// clipping edge and stays a point inside it.
+    private func edgeGap(framed: Bool) -> CGFloat {
+        framed ? 0 : 1
+    }
+
     func contentInset(framed: Bool) -> CGFloat {
         let corner = framed ? YENDesignTokens.terminalFacingCornerRadius : max(minimumCornerRadius, strokeModel.cornerRadius)
         let stroke = strokeModel.lineWidth
         // Leave a clear pixel band inside the curve, even with zero terminal grid padding.
-        return ceil(stroke + max(0, corner - stroke) / 2) + 2
+        return edgeGap(framed: framed) + ceil(stroke + max(0, corner - stroke) / 2) + 2
     }
 
     func paneBorder(framed: Bool) -> some View {
@@ -48,7 +54,7 @@ struct WindowBorderOverlay: View {
             border.chromeMode = .decorationNone
             border.minimumCornerRadius = YENDesignTokens.terminalFacingCornerRadius
         }
-        return border.padding(framed ? 0 : 1)
+        return border.padding(edgeGap(framed: framed))
     }
 
     var body: some View {

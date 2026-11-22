@@ -274,6 +274,7 @@ Comfortable is the default and gives each pane a rounded border and a gutter.
 Compact places panes edge to edge with a draggable divider.
 The top row shares one edge below the toolbar in single, split, and zoomed layouts.
 Each outlined pane reserves space for its stroke and corner curve around the terminal grid and header.
+A window outline around framed panes reserves the same space in every pane.
 Changing focus keeps the terminal grid size stable.
 
 Each split header shows an activity icon, title and working directory above the terminal.
@@ -348,7 +349,8 @@ Failed loads remain retryable, and each window still applies the parsed config t
 
 **Chromatic window border** (Settings > Appearance > Border; scope also through the palette's `Window Border: Toggle Focused Split`, palettes through its other Window Border actions).
 Scope `Window` or `Focused Split` (falls back to the window when no split frame exists); manual or Match Theme colors.
-- The window outline follows the native corner radius and stays inside the clipping edge.
+- In the Comfortable pane style both scopes share one frame: the window outline follows the outer edge of the pane frames with the pane corner radius and adds no padding, so the terminal grid does not move when the scope changes.
+- In the Compact pane style, or while the browser split is open, the window outline follows the native corner radius inside the clipping edge and pads the content clear of it; `WindowBorderRenderingPolicy.windowOutlinePlacement` owns the choice.
 - In split layouts the focused outline surrounds the pane, including its header, and follows focus as panes move or resize.
 - A single or zoomed surface supplies its AppKit frame. Frame observers subscribe only to that surface and window when needed.
 - Settings apply across the tab group, including new tabs. The command palette, update pill and toasts stay above the border.
