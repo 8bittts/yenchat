@@ -15,18 +15,22 @@ enum RemoteHostsPaletteAction: Equatable {
     case showHosts
 }
 
-/// When the palette query asks for Hosts: some word of the query (letters and
-/// digits only) is at least three characters long and starts one of `tags`.
-/// "hos", "Hosts: mini", "ssh" and "tail" match; "localhost", "sshd" and
-/// "remove" do not. Discovery runs only while this holds.
+/// When the palette query asks for Hosts. A word of the query (letters and
+/// digits only) either starts "hosts" with at least three characters ("hos",
+/// "host", "hosts") or is exactly "remote", "ssh" or "tailscale". Prefixes of
+/// those three never match, so typing "remove" or "tail" on the way to another
+/// command starts nothing. Discovery runs only while this holds.
 enum RemoteHostsIntent {
     static let tags = ["hosts", "remote", "ssh", "tailscale"]
-    static let minimumWordLength = 3
+    static let prefixTag = "hosts"
+    static let minimumPrefixLength = 3
 
     static func matches(_ query: String) -> Bool {
         query.lowercased()
             .split { !($0.isLetter || $0.isNumber) }
-            .contains { word in word.count >= minimumWordLength && tags.contains { $0.hasPrefix(word) } }
+            .contains { word in
+                (word.count >= minimumPrefixLength && prefixTag.hasPrefix(word)) || tags.contains(String(word))
+            }
     }
 }
 
