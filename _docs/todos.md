@@ -51,16 +51,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Document and release remote attach and window changes when their phases are complete.
 
-### A copy of YEN launched from a persistent pane starts no sessions
-
-`open` passes the calling shell's environment to the app, so a YEN launched from a shell inside a session inherits `ZMX_SESSION`.
-zmx then refuses every `attach` as nested, and a pane with Keep Sessions Running on exits at once with `cannot connect to session`.
-This reaches a user who attaches a session from another terminal with `yen sessions attach` and starts YEN from there.
-The fix is one line in `yen-terminal/overlays/src/termio/yen_session.zig`: `prepare` removes an inherited `ZMX_SESSION` from the pane environment before it builds the command, with a Zig test beside the existing ones.
-The change edits a Zig overlay, which changes the engine input id that `scripts/48-vendor-zmx.sh` records, so it must land together with a zmx rebuild.
-
-- [ ] Land the engine fix through the `/update-yen` vendor phase, which rebuilds zmx and records the new `build_input_id`, then remove the `env -u ZMX_SESSION` workaround from `_docs/05-infrastructure.md`.
-
 ### Token usage in the macOS menu bar
 
 - [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
