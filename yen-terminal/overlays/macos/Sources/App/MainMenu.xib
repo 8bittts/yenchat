@@ -29,7 +29,6 @@
                 <outlet property="menuFloatOnTop" destination="uRj-7z-1Nh" id="94n-o9-Jol"/>
                 <outlet property="menuIncreaseFontSize" destination="CIH-ey-Z6x" id="hkc-9C-80E"/>
                 <outlet property="menuBitcoinEmail" destination="YEN-BtcEmail-001" id="YEN-BtcEmail-Out"/>
-                <outlet property="menuJPTheCat" destination="YEN-JPCat-001" id="YEN-JPCat-Out"/>
                 <outlet property="menuYENHelp" destination="FKE-Sm-Kum" id="YEN-YENHelp-Out"/>
                 <outlet property="menuMoveSplitDividerDown" destination="Zj7-2W-fdF" id="997-LL-nlN"/>
                 <outlet property="menuMoveSplitDividerLeft" destination="wSR-ny-j1a" id="HCZ-CI-2ob"/>
@@ -548,12 +547,6 @@
                             <menuItem title="YEN Help" keyEquivalent="?" id="FKE-Sm-Kum">
                                 <connections>
                                     <action selector="showHelp:" target="bbz-4X-AYv" id="tiy-ow-xSw"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="JP the Cat" id="YEN-JPCat-001">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="openJPTheCat:" target="bbz-4X-AYv" id="YEN-JPCat-Act"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="Bitcoin Email" id="YEN-BtcEmail-001">

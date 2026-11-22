@@ -65,7 +65,6 @@ class AppDelegate: NSObject,
     /// Various menu items so that we can programmatically sync the keyboard shortcut with the YEN config
     @IBOutlet private var menuAbout: NSMenuItem?
     @IBOutlet private var menuBitcoinEmail: NSMenuItem?
-    @IBOutlet private var menuJPTheCat: NSMenuItem?
     @IBOutlet private var menuYENHelp: NSMenuItem?
     @IBOutlet private var menuServices: NSMenu?
     @IBOutlet private var menuCheckForUpdates: NSMenuItem?
@@ -765,7 +764,6 @@ class AppDelegate: NSObject,
         // modify this stuff as code.
         self.menuAbout?.setImageIfDesired(systemSymbolName: "info.circle")
         self.menuYENHelp?.setImageIfDesired(systemSymbolName: "lightbulb")
-        self.menuJPTheCat?.setImageIfDesired(systemSymbolName: "pawprint")
         self.menuBitcoinEmail?.setImageIfDesired(systemSymbolName: "bitcoinsign.circle")
         self.menuCheckForUpdates?.setImageIfDesired(systemSymbolName: "square.and.arrow.down")
         self.menuSettings?.setImageIfDesired(systemSymbolName: "gearshape")
@@ -1495,11 +1493,6 @@ class AppDelegate: NSObject,
 
     @IBAction func showHelp(_ sender: Any) {
         guard let url = URL(string: "https://yen.chat/#guide") else { return }
-        NSWorkspace.shared.open(url)
-    }
-
-    @IBAction func openJPTheCat(_ sender: Any?) {
-        guard let url = URL(string: "https://jpthecat.com") else { return }
         NSWorkspace.shared.open(url)
     }
 
