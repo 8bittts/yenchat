@@ -89,10 +89,9 @@ struct TokenUsageIndex: Sendable {
         if tool == .openCode, fm.fileExists(atPath: store.path) {
             return try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: store.path)).daily(in: interval)
         }
-        let scratch = directory.appendingPathComponent("history-scan.sqlite").path
-        let discard = { for suffix in ["", "-wal", "-shm"] { try? fm.removeItem(atPath: scratch + suffix) } }
-        discard()
-        defer { discard() }
+        // The temporary folder is reclaimed by the system, so a quit in the middle of a read leaves nothing behind for good.
+        let scratch = fm.temporaryDirectory.appendingPathComponent("yen-token-history-" + UUID().uuidString + ".sqlite").path
+        defer { for suffix in ["", "-wal", "-shm"] { try? fm.removeItem(atPath: scratch + suffix) } }
         let db = try SQLiteDatabase(path: scratch)
         try prepareIndex(db)
         _ = try count(tool, db: db, day: interval, changes: nil)

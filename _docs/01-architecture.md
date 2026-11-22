@@ -138,7 +138,7 @@ Each legacy session belongs to its creation day.
 The index ranks duplicate snapshots by output and then total tokens.
 Codex corrections reconcile input, cached input and output independently within a rollout.
 Grok uses completed turns, and OpenCode includes all gateways in its store.
-The analytics view reads the 89 finished days before today once, into a scratch index, and keeps each day’s total per provider in `history.sqlite` beside the day cache.
+The analytics view reads the 89 finished days before today once, into a scratch index in the temporary folder, and keeps each day’s total per provider in `history.sqlite` beside the day cache.
 A finished day is never read again, so its total survives the removal of its source records.
 Only a gap in the saved days starts a new read, from the first missing day.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
