@@ -143,10 +143,15 @@ struct TokenPlanUsageTests {
         }
         // The panel draws on the window background: white in light themes, near black in dark ones.
         for (dark, background) in [(false, [1.0, 1.0, 1.0]), (true, [0.157, 0.157, 0.157])] {
-            for tone in TokenBarTone.neutrals(dark: dark) {
+            func contrast(_ tone: [Double]) -> Double {
                 let pair = [luminance(tone), luminance(background)].sorted()
-                #expect((pair[1] + 0.05) / (pair[0] + 0.05) >= 3, "tone \(tone) on a \(dark ? "dark" : "light") panel")
+                return (pair[1] + 0.05) / (pair[0] + 0.05)
             }
+            for tone in TokenBarTone.neutrals(dark: dark) {
+                #expect(contrast(tone) >= 3, "tone \(tone) on a \(dark ? "dark" : "light") panel")
+            }
+            // A hovered label is small text, so it needs the body-text ratio.
+            #expect(contrast(TokenBarTone.link(dark: dark)) >= 4.5, "link tone on a \(dark ? "dark" : "light") panel")
         }
     }
 

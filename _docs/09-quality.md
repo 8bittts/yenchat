@@ -17,6 +17,9 @@ Check the menu anchor before and after expanding a provider row.
 Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
 A Debug build beside a scratch home exposes the panel and the Settings switch to Accessibility, so a helper can press them by description without activating the app.
+An Accessibility press does not exercise hit testing: after a change to the card flip, click the analytics view’s return button with a real pointer event, because a face left at a half turn takes no clicks.
+Capture a frame during the turn without the window shadow and confirm that no opaque pixel touches its top row.
+The contrast test holds `TokenBarTone.link` at 4.5:1 on both panels; confirm a hovered label in a light and a dark capture as well.
 For native acceptance, check that an appended record changes the menu without opening it.
 `WallpaperToggleTests` drives the Moving Wallpaper switch with its own preferences and fails when a panel outlives the switch.
 For native acceptance, click the switch in a verify copy and count that process's windows one level above `CGWindowLevelForKey(.desktopWindow)`: one per display when on, none when off.

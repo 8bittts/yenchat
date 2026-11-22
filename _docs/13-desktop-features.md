@@ -134,8 +134,11 @@ Each provider shows its exact daily count and share of counted tokens.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
 A plan reading stays until its reset time.
 A provider name or a pool label opens the dashboard that owns its numbers, and the pointer tints it; the panel has no separate link row.
+The tint is brand orange, darkened on a light theme so small text keeps 4.5:1 (`TokenBarTone.link`); the system accent is not used, because it changes with the user’s choice and falls below that ratio on a white panel.
 Plan labels start at the provider name’s left edge.
 The chart button turns the card over to the analytics view, which keeps the overview’s size.
+The card rests unrotated on either face and shrinks during the turn by the share that perspective enlarges it, so its window never clips it.
+When the overview is too short for the chart, the analytics view shows the totals alone.
 That view shows token totals for the last 7, 30 and 90 days for each provider and for all providers, today included, above a daily chart of the 90 days.
 It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.

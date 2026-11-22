@@ -8,6 +8,10 @@ enum TokenBarTone {
         dark ? [[0.78, 0.73, 0.65], [0.66, 0.70, 0.76], [0.54, 0.62, 0.57]]
              : [[0.60, 0.52, 0.40], [0.42, 0.48, 0.58], [0.33, 0.45, 0.38]]
     }
+
+    /// Hover color for a label that opens a dashboard: brand orange, darkened on a light panel
+    /// so small text keeps 4.5:1. The system accent does not, and it changes with the user's choice.
+    static func link(dark: Bool) -> [Double] { dark ? [1.0, 81.0 / 255.0, 0.0] : [0.70, 0.16, 0.0] }
 }
 
 struct TokenUsageOverview: View {
@@ -324,13 +328,15 @@ private struct TokenLinkLabel: View {
     let site: String
     let address: String
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var scheme
     @State private var hovering = false
 
     var body: some View {
-        Button {
+        let tone = TokenBarTone.link(dark: scheme == .dark)
+        return Button {
             if let url = URL(string: address) { openURL(url) }
         } label: {
-            Text(title).foregroundStyle(hovering ? AnyShapeStyle(.tint) : AnyShapeStyle(.foreground))
+            Text(title).foregroundStyle(hovering ? AnyShapeStyle(Color(red: tone[0], green: tone[1], blue: tone[2])) : AnyShapeStyle(.foreground))
         }.buttonStyle(.plain).onHover { hovering = $0 }.pointerStyle(.link)
             .help("Open " + site + " in your browser").accessibilityAddTraits(.isLink)
     }
@@ -344,13 +350,16 @@ private struct TokenCardFlip<Back: View>: ViewModifier, Animatable {
         get { progress }
         set { progress = newValue }
     }
+    private static var perspective: Double { 0.3 }
 
     func body(content: Content) -> some View {
         content.opacity(progress < 0.5 ? 1 : 0)
             .overlay { back.opacity(progress < 0.5 ? 0 : 1) }
             // The second half turns in from the far side, so the card rests unrotated and
             // its controls take clicks; a face left at a half turn receives none.
-            .rotation3DEffect(.degrees((progress < 0.5 ? progress : progress - 1) * 180), axis: (x: 0, y: 1, z: 0), perspective: 0.3)
-            .scaleEffect(1 - 0.08 * sin(progress * .pi))
+            .rotation3DEffect(.degrees((progress < 0.5 ? progress : progress - 1) * 180), axis: (x: 0, y: 1, z: 0), perspective: Self.perspective)
+            // Perspective enlarges the near edge by up to 1 / (1 - perspective / 2); shrinking by the
+            // same share keeps the turning card inside its window, which would clip it.
+            .scaleEffect(1 - Self.perspective / 2 * sin(progress * .pi))
     }
 }
