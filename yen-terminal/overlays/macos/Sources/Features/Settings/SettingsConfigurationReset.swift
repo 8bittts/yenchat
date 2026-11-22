@@ -120,6 +120,7 @@ enum SettingsConfigurationReset {
         defaults.set(normalizedState.effects.sparkEnabled, forKey: WindowBorderPreferences.sparkPreferenceKey)
         defaults.set(normalizedState.effects.auraEnabled, forKey: WindowBorderPreferences.auraPreferenceKey)
         defaults.set(normalizedState.effects.auraColorHex, forKey: WindowBorderPreferences.auraColorPreferenceKey)
+        defaults.set(normalizedState.effects.auraPulse.rawValue, forKey: WindowBorderPreferences.auraPulsePreferenceKey)
     }
 
     static func resetNotificationPreferencesToDefaults() {

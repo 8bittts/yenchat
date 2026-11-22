@@ -209,4 +209,8 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
         controller.windowBorderAuraColorHex = WindowBorderPreferences.auraColorHex(from: value)
     }
 
+    func setWindowBorderAuraPulse(_ value: WindowBorderAuraPulse) {
+        controller.windowBorderAuraPulse = value
+    }
+
 }

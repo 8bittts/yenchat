@@ -729,9 +729,9 @@ function SettingsSection() {
 					<strong>Appearance:</strong> pick one of the bundled themes from the
 					theme dock, then set the font, cursor, opacity, padding, a PNG or JPEG
 					background image, and a border. To follow the active split, turn on
-					Border and choose Focused Pane under Outline. In YEN 1.285, Spark
-					sends a light around the focused outline, and Aura adds a soft glow
-					that pulses in a color you pick.
+					Border and choose Focused Pane under Outline. Starting in YEN 1.285,
+					Spark sends a light around the focused outline, and Aura adds a soft
+					glow that pulses in a color and at a speed you pick.
 				</li>
 				<li>
 					<strong>General:</strong> open at login, copy on select, the scroll

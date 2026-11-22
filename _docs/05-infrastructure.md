@@ -209,6 +209,7 @@ bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh -
 Always use it; never build the copy by hand in a `mktemp` folder, re-sign it ad hoc, or invent another name or identifier.
 macOS keys an Accessibility or Automation grant to the code requirement, so an ad-hoc copy asked the operator for access on every build, and a deleted temp copy left System Settings with no row to toggle.
 The fixed identifier and Team ID let one grant cover every later copy; the script refuses while a copy is running.
+The refusal keys on the identifier, not the folder, so another session's running copy blocks a new copy even with `YEN_VERIFY_DIR` set; wait for it to quit, and never quit a copy this session did not start.
 When two sessions verify at once, give each its own folder with `YEN_VERIFY_DIR`: the grant follows the identifier and Team ID, not the path, while one shared path lets a later build replace an earlier session's copy in the middle of its test.
 The renamed executable clears the running-instance guard honestly, because the guard keys on the target's executable name.
 Identify the scripted window by its scratch-directory tab titles and confirm it with `lsappinfo`.
@@ -239,6 +240,9 @@ open -n -a "$HOME/.local/state/yen/verify/YENVerify.app" --env YEN_CONFIG_PATH="
 - When another session may run a copy with the same identifier, address the instance by process identifier, for example `osascript -l JavaScript -e 'Application(<pid>).quit()'`. `tell application id` can reach the other session's instance.
 - A status-item panel can be checked without taking focus: launch with `open -g`, press the menu bar item through the Accessibility API (`AXExtrasMenuBar`, `AXPress`), and capture the panel by window id with `screencapture -x -o -l <id>`.
 - Prove the engine applied the scratch config with a visible canary before judging a config-driven behavior. `working-directory`, `window-theme` and `window-padding-x` from a scratch file have shown no effect in the copy's terminals while Settings read and wrote the same file.
+- The Settings preview always draws the focused outline, so a border effect can be checked in a background copy; a terminal window shows Spark and Aura only while the app is active and its window is key.
+- `tell application "<path>" to new window` sometimes activates the copy and sometimes does not. Put `command = /bin/sleep 3600` in the scratch config so stray keystrokes run nothing, send an explicit `activate` when a check needs focus, capture at once, and return focus to the app that had it.
+- `System Events` can resize the Settings window in the background (`set size of window 1`), which shows the rows below the fold without a scroll.
 - The Settings accessibility tree is empty to `System Events`, so drive it from screenshots. Claude Code's computer-use tools accept the copy by bundle identifier and refuse a click that would land on another app's window.
 - Quit the copy through AppleScript by its path (`tell application "$APP" to quit`), never with a signal sent by name. Every session's copy shares the bundle identifier, so `tell application id` also reaches a copy another session is running; a copy here received a quit its own session never sent.
 

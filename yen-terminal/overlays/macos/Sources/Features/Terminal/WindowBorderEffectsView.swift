@@ -34,14 +34,47 @@ struct WindowBorderSparkView: NSViewRepresentable {
 struct WindowBorderAuraView: NSViewRepresentable {
     let geometry: WindowBorderEffectGeometry
     let color: NSColor
-    let pulses: Bool
+    /// The speed of the pulse, or nil to hold the glow still.
+    let pulse: WindowBorderAuraPulse?
 
     func makeNSView(context: Context) -> WindowBorderAuraLayerView {
         WindowBorderAuraLayerView()
     }
 
     func updateNSView(_ view: WindowBorderAuraLayerView, context: Context) {
-        view.configure(geometry: geometry, color: color, pulses: pulses)
+        view.configure(geometry: geometry, color: color, pulse: pulse)
+    }
+}
+
+/// Publishes Low Power Mode, so decorative motion can stop while it is on.
+@MainActor
+final class LowPowerModeMonitor: ObservableObject {
+    static let shared = LowPowerModeMonitor()
+
+    @Published private(set) var isLowPowerModeEnabled: Bool
+
+    private let readState: () -> Bool
+
+    init(
+        readState: @escaping () -> Bool = { ProcessInfo.processInfo.isLowPowerModeEnabled },
+        center: NotificationCenter = .default
+    ) {
+        self.readState = readState
+        isLowPowerModeEnabled = readState()
+        // The observer holds the monitor weakly and lives as long as the center.
+        _ = center.addObserver(
+            forName: .NSProcessInfoPowerStateDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let enabled = self.readState()
+                if enabled != self.isLowPowerModeEnabled {
+                    self.isLowPowerModeEnabled = enabled
+                }
+            }
+        }
     }
 }
 
@@ -86,6 +119,14 @@ class WindowBorderEffectLayerView: NSView {
     /// Bring the layers in line with the current bounds and configuration.
     func refresh() {}
 
+    /// A color as eight-bit sRGB, so two colors that draw alike compare equal
+    /// whatever color space each one came in.
+    static func colorKey(_ color: NSColor) -> [Int] {
+        guard let rgb = color.usingColorSpace(.sRGB) else { return [] }
+        return [rgb.redComponent, rgb.greenComponent, rgb.blueComponent, rgb.alphaComponent]
+            .map { Int(($0 * 255).rounded()) }
+    }
+
     static func withoutImplicitAnimations(_ changes: () -> Void) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -98,7 +139,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
     private struct Signature: Equatable {
         let size: CGSize
         let geometry: WindowBorderEffectGeometry
-        let color: NSColor
+        let color: [Int]
     }
 
     private static let travelKey = "yen.windowBorder.spark.travel"
@@ -135,14 +176,18 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
 
     var segmentCountForTesting: Int { trail.instanceCount }
     var segmentSizeForTesting: CGSize { segment.bounds.size }
+    /// How many times the travel animation was built. An update that changes
+    /// nothing must not build it again.
+    private(set) var travelBuildCount = 0
 
     override func refresh() {
         guard let geometry, window != nil, bounds.width > 1, bounds.height > 1 else {
             stop()
             return
         }
-        let signature = Signature(size: bounds.size, geometry: geometry, color: color)
+        let signature = Signature(size: bounds.size, geometry: geometry, color: Self.colorKey(color))
         if signature == applied, isTraveling { return }
+        travelBuildCount += 1
 
         let path = clockwisePath(for: geometry)
         let metrics = WindowBorderRenderingPolicy.pathMetrics(of: path)
@@ -175,6 +220,8 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
 
             // Square ends: two segments cover every point of the tail, so it fades without bands.
             segment.bounds = CGRect(x: 0, y: 0, width: model.segmentLength, height: geometry.lineWidth)
+            // Segments turn with the outline at a corner.
+            segment.allowsEdgeAntialiasing = true
             segment.backgroundColor = color.cgColor
 
             headGlow.bounds = CGRect(x: 0, y: 0, width: model.headGlowDiameter, height: model.headGlowDiameter)
@@ -233,7 +280,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
 final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
     private struct Signature: Equatable {
         let geometry: WindowBorderEffectGeometry
-        let color: NSColor
+        let color: [Int]
         let scale: CGFloat
     }
 
@@ -242,8 +289,9 @@ final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
     private let glow = CALayer()
     private var geometry: WindowBorderEffectGeometry?
     private var color = NSColor.white
-    private var pulses = false
+    private var pulse: WindowBorderAuraPulse?
     private var applied: Signature?
+    private var appliedPulse: WindowBorderAuraPulse?
     private var glowMargin: CGFloat = 0
 
     override init(frame frameRect: NSRect) {
@@ -252,10 +300,10 @@ final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
         layer?.addSublayer(glow)
     }
 
-    func configure(geometry: WindowBorderEffectGeometry, color: NSColor, pulses: Bool) {
+    func configure(geometry: WindowBorderEffectGeometry, color: NSColor, pulse: WindowBorderAuraPulse?) {
         self.geometry = geometry
         self.color = color
-        self.pulses = pulses
+        self.pulse = pulse
         refresh()
     }
 
@@ -263,15 +311,27 @@ final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
         glow.animation(forKey: Self.pulseKey) != nil
     }
 
+    /// Seconds from dim to bright in the running pulse, or nil when the glow is still.
+    var pulseHalfPeriod: Double? {
+        glow.animation(forKey: Self.pulseKey)?.duration
+    }
+
     var hasGlowForTesting: Bool { glow.contents != nil }
+    /// How many times the glow image was drawn. Only a new shape, color or
+    /// display scale draws it again.
+    private(set) var glowDrawCount = 0
 
     override func refresh() {
         guard let geometry, let window, bounds.width > 1, bounds.height > 1 else {
-            glow.removeAnimation(forKey: Self.pulseKey)
+            stopPulse()
             return
         }
-        let model = WindowBorderRenderingPolicy.auraModel(lineWidth: geometry.lineWidth)
-        let signature = Signature(geometry: geometry, color: color, scale: window.backingScaleFactor)
+        let model = WindowBorderRenderingPolicy.auraModel(lineWidth: geometry.lineWidth, pulse: pulse ?? .medium)
+        let signature = Signature(
+            geometry: geometry,
+            color: Self.colorKey(color),
+            scale: window.backingScaleFactor
+        )
 
         Self.withoutImplicitAnimations {
             if signature != applied {
@@ -283,26 +343,33 @@ final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
             glow.opacity = model.restingOpacity
         }
 
-        guard pulses else {
-            glow.removeAnimation(forKey: Self.pulseKey)
+        guard let pulse else {
+            stopPulse()
             return
         }
-        guard !isPulsing else { return }
-        let pulse = CABasicAnimation(keyPath: "opacity")
-        pulse.fromValue = model.pulseLowOpacity
-        pulse.toValue = model.pulseHighOpacity
-        pulse.duration = model.pulseHalfPeriod
-        pulse.autoreverses = true
-        pulse.repeatCount = .infinity
-        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        pulse.isRemovedOnCompletion = false
-        pulse.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
-        glow.add(pulse, forKey: Self.pulseKey)
+        if isPulsing, appliedPulse == pulse { return }
+        appliedPulse = pulse
+        let animation = CABasicAnimation(keyPath: "opacity")
+        animation.fromValue = model.pulseLowOpacity
+        animation.toValue = model.pulseHighOpacity
+        animation.duration = model.pulseHalfPeriod
+        animation.autoreverses = true
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animation.isRemovedOnCompletion = false
+        animation.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+        glow.add(animation, forKey: Self.pulseKey)
+    }
+
+    private func stopPulse() {
+        appliedPulse = nil
+        glow.removeAnimation(forKey: Self.pulseKey)
     }
 
     /// Draw the glow once for a small outline, and let the layer stretch the
     /// straight runs between its corners.
     private func applyGlowImage(signature: Signature, model: WindowBorderAuraModel) {
+        glowDrawCount += 1
         let geometry = signature.geometry
         let margin = ceil(model.blurRadius * 2)
         // A continuous corner runs about 1.53 radii along each edge.
@@ -327,7 +394,7 @@ final class WindowBorderAuraLayerView: WindowBorderEffectLayerView {
         context.scaleBy(x: scale, y: scale)
         context.translateBy(x: margin, y: margin)
         let path = geometry.path(in: CGRect(x: 0, y: 0, width: tile, height: tile))
-        let stroke = signature.color.usingColorSpace(.sRGB) ?? signature.color
+        let stroke = color.usingColorSpace(.sRGB) ?? color
         context.setLineWidth(geometry.lineWidth)
         context.setStrokeColor(stroke.cgColor)
         // Shadow blur is in pixels, not points. Two wide soft passes and a tight

@@ -154,6 +154,11 @@ export function HomeClient({ version }: { version: string }) {
 							Select a pane in the preview. Watch the outline follow your focus.
 							Switch to Compact to trade the gutter for a thin divider.
 						</p>
+						<p className="ph-instruction">
+							Starting in YEN 1.285, Spark sends a light around the focused
+							outline and Aura gives it a soft glow that pulses in a color you
+							pick. Turn each one off and on in the preview.
+						</p>
 					</div>
 					<SplitDemo />
 				</div>

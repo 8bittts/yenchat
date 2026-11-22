@@ -88,9 +88,33 @@ const panes = [
 	},
 ] as const;
 
+// Strokes that share one head. Each is shorter and brighter than the last,
+// so together they draw a tail that fades.
+const sparkStrokes = [
+	"ph-spark-glow",
+	"ph-spark-tail-1",
+	"ph-spark-tail-2",
+	"ph-spark-tail-3",
+	"ph-spark-tail-4",
+	"ph-spark-head",
+] as const;
+
+/** The light that travels around the focused pane: a glowing head and a fading tail. */
+function Spark() {
+	return (
+		<svg className="ph-spark" aria-hidden="true" focusable="false">
+			{sparkStrokes.map((stroke) => (
+				<rect key={stroke} className={stroke} pathLength={100} />
+			))}
+		</svg>
+	);
+}
+
 export function SplitDemo() {
 	const [focus, setFocus] = useState<0 | 1>(0);
 	const [compact, setCompact] = useState(false);
+	const [spark, setSpark] = useState(true);
+	const [aura, setAura] = useState(true);
 	const pane = panes[focus];
 	return (
 		<div className="ph-demo">
@@ -112,25 +136,50 @@ export function SplitDemo() {
 			</div>
 			<div className={`ph-splits ${compact ? "ph-splits-compact" : ""}`}>
 				{panes.map((p, i) => (
+					<div
+						key={p.name}
+						className={`ph-pane-slot ${focus === i && aura ? "ph-aura" : ""}`}
+					>
+						<button
+							type="button"
+							aria-label={`Focus ${p.name} pane`}
+							className="ph-pane"
+							aria-pressed={focus === i}
+							onClick={() => setFocus(i === 0 ? 0 : 1)}
+						>
+							<span className="ph-pane-title">
+								<strong>{p.name}</strong>
+								<span>{focus === i ? "Focused" : "Idle"}</span>
+							</span>
+							<span className="ph-pane-code">
+								<small>{p.path}</small>
+								<span>$ {p.command}</span>
+								<span>{p.output}</span>
+							</span>
+						</button>
+						{focus === i && spark ? <Spark /> : null}
+					</div>
+				))}
+			</div>
+			<div className="ph-demo-bar ph-effects-bar">
+				<span>Outline effects · YEN 1.285</span>
+				<fieldset className="ph-segment">
+					<legend className="sr-only">Outline effects</legend>
 					<button
 						type="button"
-						key={p.name}
-						aria-label={`Focus ${p.name} pane`}
-						className="ph-pane"
-						aria-pressed={focus === i}
-						onClick={() => setFocus(i === 0 ? 0 : 1)}
+						aria-pressed={spark}
+						onClick={() => setSpark(!spark)}
 					>
-						<span className="ph-pane-title">
-							<strong>{p.name}</strong>
-							<span>{focus === i ? "Focused" : "Idle"}</span>
-						</span>
-						<span className="ph-pane-code">
-							<small>{p.path}</small>
-							<span>$ {p.command}</span>
-							<span>{p.output}</span>
-						</span>
+						Spark
 					</button>
-				))}
+					<button
+						type="button"
+						aria-pressed={aura}
+						onClick={() => setAura(!aura)}
+					>
+						Aura
+					</button>
+				</fieldset>
 			</div>
 			<div className="ph-drawer" role="status">
 				<span>Keyboard focus</span>

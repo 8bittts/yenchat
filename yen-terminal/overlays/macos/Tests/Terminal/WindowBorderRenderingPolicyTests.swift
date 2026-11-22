@@ -437,29 +437,70 @@ struct WindowBorderRenderingPolicyTests {
 
     @Test func effectsMarkOnlyTheFocusedOutline() {
         #expect(
-            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, reduceMotion: false)
+            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, motionLimit: .none)
                 == WindowBorderEffectPlan(showsSpark: true, showsAura: true, auraPulses: true)
         )
         #expect(
-            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: false, reduceMotion: false)
+            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: false, motionLimit: .none)
                 == WindowBorderEffectPlan(showsSpark: false, showsAura: false, auraPulses: false)
         )
         #expect(
-            WindowBorderRenderingPolicy.effectPlan(effects: .none, isFocused: true, reduceMotion: false)
+            WindowBorderRenderingPolicy.effectPlan(effects: .none, isFocused: true, motionLimit: .none)
                 == WindowBorderEffectPlan(showsSpark: false, showsAura: false, auraPulses: false)
         )
         let sparkOnly = WindowBorderEffects(sparkEnabled: true, auraEnabled: false, auraColorHex: "#22C55E")
         #expect(
-            WindowBorderRenderingPolicy.effectPlan(effects: sparkOnly, isFocused: true, reduceMotion: false)
+            WindowBorderRenderingPolicy.effectPlan(effects: sparkOnly, isFocused: true, motionLimit: .none)
                 == WindowBorderEffectPlan(showsSpark: true, showsAura: false, auraPulses: false)
         )
     }
 
-    @Test func reduceMotionHidesTheSparkAndHoldsTheAuraStill() {
-        #expect(
-            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, reduceMotion: true)
-                == WindowBorderEffectPlan(showsSpark: false, showsAura: true, auraPulses: false)
-        )
+    @Test func aMotionLimitHidesTheSparkAndHoldsTheAuraStill() {
+        for limit in [WindowBorderMotionLimit.reduceMotion, .lowPowerMode] {
+            #expect(
+                WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, motionLimit: limit)
+                    == WindowBorderEffectPlan(showsSpark: false, showsAura: true, auraPulses: false)
+            )
+        }
+    }
+
+    @Test func reduceMotionAndLowPowerModeEachLimitMotion() {
+        #expect(WindowBorderRenderingPolicy.motionLimit(reduceMotion: false, lowPowerMode: false) == .none)
+        #expect(WindowBorderRenderingPolicy.motionLimit(reduceMotion: true, lowPowerMode: false) == .reduceMotion)
+        #expect(WindowBorderRenderingPolicy.motionLimit(reduceMotion: false, lowPowerMode: true) == .lowPowerMode)
+        // The accessibility setting is the one the hint names when both are on.
+        #expect(WindowBorderRenderingPolicy.motionLimit(reduceMotion: true, lowPowerMode: true) == .reduceMotion)
+    }
+
+    @MainActor
+    @Test func lowPowerMonitorFollowsThePowerStateNotification() {
+        let center = NotificationCenter()
+        var lowPower = false
+        let monitor = LowPowerModeMonitor(readState: { lowPower }, center: center)
+        #expect(!monitor.isLowPowerModeEnabled)
+
+        lowPower = true
+        center.post(name: .NSProcessInfoPowerStateDidChange, object: nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        #expect(monitor.isLowPowerModeEnabled)
+
+        lowPower = false
+        center.post(name: .NSProcessInfoPowerStateDidChange, object: nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        #expect(!monitor.isLowPowerModeEnabled)
+    }
+
+    @Test func auraPulseSpeedsRunFromSlowToFast() {
+        let slow = WindowBorderRenderingPolicy.auraModel(lineWidth: 2, pulse: .slow)
+        let medium = WindowBorderRenderingPolicy.auraModel(lineWidth: 2, pulse: .medium)
+        let fast = WindowBorderRenderingPolicy.auraModel(lineWidth: 2, pulse: .fast)
+        #expect(slow.pulseHalfPeriod > medium.pulseHalfPeriod)
+        #expect(medium.pulseHalfPeriod > fast.pulseHalfPeriod)
+        // Even the fast pulse stays under one flash a second.
+        #expect(fast.pulseHalfPeriod * 2 >= 1)
+        // Speed changes the timing only, never how bright the glow gets.
+        #expect(slow.pulseHighOpacity == fast.pulseHighOpacity)
+        #expect(slow.pulseLowOpacity == fast.pulseLowOpacity)
     }
 
     @Test func sparkKeepsOneSpeedBetweenItsLapLimits() throws {
@@ -549,7 +590,64 @@ struct WindowBorderRenderingPolicyTests {
     }
 
     @MainActor
-    @Test func auraGlowsWhenHeldAndPulsesOnlyWhenAsked() {
+    @Test func sparkStandsOutFromItsStrokeOnDarkAndLightBackdrops() {
+        func luminance(_ color: NSColor) -> Double {
+            WindowBorderGradientResolver.contrastRatioForTesting(of: color, against: .black) * 0.05 - 0.05
+        }
+        let sunrise = WindowBorderGradient(
+            startColor: WindowBorderPalette.sunrise.startColor,
+            endColor: WindowBorderPalette.sunrise.endColor
+        )
+        let stroke = NSColor(sunrise.startColor).blended(withFraction: 0.5, of: NSColor(sunrise.endColor)) ?? .orange
+
+        // A light on a dark backdrop, ink on a light one.
+        let onDark = WindowBorderOverlay.sparkColor(for: sunrise, backdropIsLight: false)
+        let onLight = WindowBorderOverlay.sparkColor(for: sunrise, backdropIsLight: true)
+        #expect(luminance(onDark) > luminance(stroke))
+        #expect(luminance(onLight) < luminance(stroke))
+
+        // Whatever the backdrop, the spark never vanishes into its stroke.
+        let pale = WindowBorderGradient(startColor: .white, endColor: Color(white: 0.96))
+        let ink = WindowBorderGradient(startColor: .black, endColor: Color(white: 0.06))
+        for gradient in [sunrise, pale, ink] {
+            let middle = NSColor(gradient.startColor).blended(withFraction: 0.5, of: NSColor(gradient.endColor)) ?? .gray
+            for backdropIsLight in [false, true] {
+                let spark = WindowBorderOverlay.sparkColor(for: gradient, backdropIsLight: backdropIsLight)
+                #expect(
+                    WindowBorderGradientResolver.contrastRatioForTesting(of: spark, against: middle)
+                        >= WindowBorderOverlay.minimumSparkContrastRatio
+                )
+            }
+        }
+    }
+
+    @MainActor
+    @Test func sparkIsNotRebuiltWhenAnUpdateChangesNothing() {
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let view = WindowBorderSparkLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        window.contentView?.addSubview(view)
+        let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
+
+        view.configure(geometry: geometry, color: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
+        #expect(view.travelBuildCount == 1)
+
+        // SwiftUI hands over a new color object on every update, sometimes in
+        // another color space. The same color must not restart the spark.
+        view.configure(geometry: geometry, color: NSColor(white: 1, alpha: 1))
+        view.configure(geometry: geometry, color: .white)
+        view.layout()
+        #expect(view.travelBuildCount == 1)
+
+        view.configure(geometry: geometry, color: .systemOrange)
+        #expect(view.travelBuildCount == 2)
+        #expect(view.isTraveling)
+    }
+
+    @MainActor
+    @Test func auraGlowsWhenHeldAndPulsesAtTheChosenSpeed() {
         let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -558,16 +656,90 @@ struct WindowBorderRenderingPolicyTests {
         window.contentView?.addSubview(view)
         let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
 
-        view.configure(geometry: geometry, color: .systemGreen, pulses: false)
+        view.configure(geometry: geometry, color: .systemGreen, pulse: nil)
         #expect(view.hasGlowForTesting)
         #expect(!view.isPulsing)
 
-        view.configure(geometry: geometry, color: .systemGreen, pulses: true)
-        #expect(view.isPulsing)
+        view.configure(geometry: geometry, color: .systemGreen, pulse: .slow)
+        #expect(view.pulseHalfPeriod == WindowBorderAuraPulse.slow.halfPeriod)
 
-        view.configure(geometry: geometry, color: .systemGreen, pulses: false)
+        // A new speed takes effect at once, without another glow image.
+        view.configure(geometry: geometry, color: .systemGreen, pulse: .fast)
+        #expect(view.pulseHalfPeriod == WindowBorderAuraPulse.fast.halfPeriod)
+        #expect(view.glowDrawCount == 1)
+
+        view.configure(geometry: geometry, color: .systemGreen, pulse: nil)
         #expect(view.hasGlowForTesting)
         #expect(!view.isPulsing)
+    }
+
+    @MainActor
+    @Test func auraResizesWithoutDrawingItsGlowAgain() {
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let view = WindowBorderAuraLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        window.contentView?.addSubview(view)
+        let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
+        view.configure(geometry: geometry, color: .systemGreen, pulse: .medium)
+
+        for width in stride(from: 420, through: 900, by: 60) {
+            view.frame = NSRect(x: 0, y: 0, width: width, height: 300)
+            view.layout()
+        }
+        #expect(view.glowDrawCount == 1)
+
+        view.configure(geometry: geometry, color: .systemBlue, pulse: .medium)
+        #expect(view.glowDrawCount == 2)
+    }
+
+    /// A stand-in for the terminal surface under the outline.
+    private final class ClickTargetView: NSView {}
+
+    private struct ClickTarget: NSViewRepresentable {
+        func makeNSView(context: Context) -> ClickTargetView { ClickTargetView() }
+        func updateNSView(_ view: ClickTargetView, context: Context) {}
+    }
+
+    @MainActor
+    @Test func clicksPassThroughAnOutlineWithBothEffectsToTheTerminalBelow() throws {
+        let overlay = WindowBorderOverlay(
+            gradient: WindowBorderGradient(startColor: .orange, endColor: .yellow),
+            width: 4,
+            radius: 10,
+            chromeMode: .native,
+            isFocused: true,
+            useDashedUnfocusedStyle: false,
+            effects: bothEffects
+        )
+        let content = ZStack {
+            ClickTarget()
+            overlay.paneBorder(framed: false).allowsHitTesting(false)
+        }
+        .frame(width: 400, height: 300)
+        .transaction { $0.disablesAnimations = true }
+        let hosting = NSHostingView(rootView: content)
+        hosting.frame = NSRect(x: 0, y: 0, width: 400, height: 300)
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = hosting
+        hosting.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        func descendants(of view: NSView) -> [NSView] {
+            view.subviews.flatMap { [$0] + descendants(of: $0) }
+        }
+        // The aura is mounted, so the hit tests below go through a real effect layer.
+        #expect(descendants(of: hosting).contains { $0 is WindowBorderAuraLayerView })
+
+        // The middle of the pane, a point on the stroke, and a point in the glow.
+        for point in [NSPoint(x: 200, y: 150), NSPoint(x: 3, y: 150), NSPoint(x: 10, y: 150), NSPoint(x: 200, y: 3)] {
+            let hit = try #require(hosting.hitTest(point))
+            #expect(hit is ClickTargetView, "a click at \(point) landed on \(type(of: hit))")
+        }
     }
 
     @MainActor

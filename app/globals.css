@@ -1101,6 +1101,75 @@
 	outline: 2px solid var(--ph-green);
 	outline-offset: -2px;
 }
+/* A slot holds one pane and the effects drawn over its outline. */
+.ph-pane-slot {
+	position: relative;
+	display: grid;
+	min-width: 0;
+}
+.ph-pane-slot.ph-aura::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 7px;
+	box-shadow:
+		0 0 14px #a2ffad70,
+		inset 0 0 14px #a2ffad70;
+	pointer-events: none;
+}
+/* The spark runs on the outline itself: a two-pixel stroke inside the pane
+   edge. Its strokes share one head, so the tail fades and a wider stroke
+   glows around the head. Reduced motion leaves it hidden, as the app does. */
+.ph-spark {
+	display: none;
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	pointer-events: none;
+}
+.ph-spark rect {
+	x: 1px;
+	y: 1px;
+	width: calc(100% - 2px);
+	height: calc(100% - 2px);
+	rx: 6px;
+	fill: none;
+	stroke: white;
+	stroke-width: 2px;
+	stroke-dasharray: var(--ph-spark-length) 100px;
+	stroke-dashoffset: var(--ph-spark-length);
+}
+.ph-spark-glow {
+	--ph-spark-length: 0.01px;
+	stroke-width: 8px;
+	stroke-linecap: round;
+	stroke-opacity: 0.4;
+}
+.ph-spark-tail-1 {
+	--ph-spark-length: 12px;
+	stroke-opacity: 0.15;
+}
+.ph-spark-tail-2 {
+	--ph-spark-length: 9px;
+	stroke-opacity: 0.2;
+}
+.ph-spark-tail-3 {
+	--ph-spark-length: 6px;
+	stroke-opacity: 0.25;
+}
+.ph-spark-tail-4 {
+	--ph-spark-length: 3.5px;
+	stroke-opacity: 0.35;
+}
+.ph-spark-head {
+	--ph-spark-length: 1.5px;
+}
+.ph-effects-bar {
+	border-top: 1px solid var(--ph-line);
+	border-bottom: 0;
+}
 .ph-splits .ph-pane:focus-visible {
 	outline: 3px dashed white;
 	outline-offset: -4px;
@@ -1140,8 +1209,12 @@
 	gap: 1px;
 	padding: 1px;
 }
-.ph-splits-compact .ph-pane {
+.ph-splits-compact .ph-pane,
+.ph-splits-compact .ph-pane-slot.ph-aura::after {
 	border-radius: 0;
+}
+.ph-splits-compact .ph-spark rect {
+	rx: 0;
 }
 .ph-drawer {
 	display: grid;
@@ -1491,9 +1564,31 @@ details[open] .ph-disclosure:after {
 	.ph-pane {
 		transition: outline-color 0.16s ease;
 	}
+	.ph-pane-slot.ph-aura::after {
+		animation: ph-aura 1.8s ease-in-out infinite alternate;
+	}
+	.ph-spark {
+		display: block;
+	}
+	.ph-spark rect {
+		animation: ph-spark 3s linear infinite;
+	}
 	.ph-download,
 	.ph-primary {
 		transition: background-color 0.16s ease;
+	}
+}
+@keyframes ph-aura {
+	from {
+		opacity: 0.5;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes ph-spark {
+	to {
+		stroke-dashoffset: calc(var(--ph-spark-length) - 100px);
 	}
 }
 @keyframes ph-warmup {

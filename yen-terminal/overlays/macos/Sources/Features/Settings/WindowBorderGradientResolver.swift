@@ -149,7 +149,7 @@ enum WindowBorderGradientResolver {
         NSColor(color).usingColorSpace(.extendedSRGB)
     }
 
-    private static func contrastRatio(of foreground: NSColor, against background: NSColor) -> Double {
+    static func contrastRatio(of foreground: NSColor, against background: NSColor) -> Double {
         let compositedForeground = composited(color: foreground, over: background)
         let opaqueBackground = composited(color: background, over: .black)
         let foregroundLuminance = relativeLuminance(of: compositedForeground)

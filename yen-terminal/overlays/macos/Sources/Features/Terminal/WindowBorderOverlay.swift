@@ -17,6 +17,9 @@ struct WindowBorderOverlay: View {
     var effects: WindowBorderEffects = .none
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // The window appearance follows the terminal background.
+    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject var powerState = LowPowerModeMonitor.shared
 
     private var strokeModel: WindowBorderStrokeModel {
         WindowBorderRenderingPolicy.strokeModel(
@@ -60,12 +63,23 @@ struct WindowBorderOverlay: View {
         return border.padding(edgeGap(framed: framed))
     }
 
-    /// The spark is the outline's own color, lifted most of the way to white.
-    static func sparkColor(for gradient: WindowBorderGradient) -> NSColor {
+    /// The spark must stand out from the stroke it runs on.
+    static let minimumSparkContrastRatio = 1.6
+
+    /// The spark is the outline's own color, lifted most of the way to white
+    /// on a dark backdrop. On a light backdrop a pale spark reads as a gap in
+    /// the outline, so it is deepened toward black instead. Either way, the
+    /// other choice wins when the preferred one would vanish into the stroke.
+    static func sparkColor(for gradient: WindowBorderGradient, backdropIsLight: Bool) -> NSColor {
         let start = NSColor(gradient.startColor).usingColorSpace(.sRGB) ?? .white
         let end = NSColor(gradient.endColor).usingColorSpace(.sRGB) ?? .white
-        let middle = start.blended(withFraction: 0.5, of: end) ?? start
-        return (middle.blended(withFraction: 0.8, of: .white) ?? .white).withAlphaComponent(1)
+        let middle = (start.blended(withFraction: 0.5, of: end) ?? start).withAlphaComponent(1)
+        let lifted = middle.blended(withFraction: 0.8, of: .white) ?? .white
+        let deepened = middle.blended(withFraction: 0.65, of: .black) ?? .black
+        let preferred = backdropIsLight ? deepened : lifted
+        let fallback = backdropIsLight ? lifted : deepened
+        let contrast = WindowBorderGradientResolver.contrastRatio(of: preferred, against: middle)
+        return contrast >= minimumSparkContrastRatio ? preferred : fallback
     }
 
     var body: some View {
@@ -74,7 +88,10 @@ struct WindowBorderOverlay: View {
         let plan = WindowBorderRenderingPolicy.effectPlan(
             effects: effects,
             isFocused: isFocused,
-            reduceMotion: reduceMotion
+            motionLimit: WindowBorderRenderingPolicy.motionLimit(
+                reduceMotion: reduceMotion,
+                lowPowerMode: powerState.isLowPowerModeEnabled
+            )
         )
         let geometry = WindowBorderEffectGeometry(
             cornerRadius: cornerRadius,
@@ -96,13 +113,16 @@ struct WindowBorderOverlay: View {
                     WindowBorderAuraView(
                         geometry: geometry,
                         color: NSColor(effects.auraColor),
-                        pulses: plan.auraPulses
+                        pulse: plan.auraPulses ? effects.auraPulse : nil
                     )
                 }
             }
             .overlay {
                 if plan.showsSpark {
-                    WindowBorderSparkView(geometry: geometry, color: Self.sparkColor(for: gradient))
+                    WindowBorderSparkView(
+                        geometry: geometry,
+                        color: Self.sparkColor(for: gradient, backdropIsLight: colorScheme == .light)
+                    )
                 }
             }
     }

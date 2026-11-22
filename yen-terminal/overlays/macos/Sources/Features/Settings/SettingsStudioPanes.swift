@@ -227,6 +227,8 @@ enum SettingsBorderRow: CaseIterable, Identifiable {
     case aura
     /// Shown only while the aura is on.
     case auraColor
+    /// Shown only while the aura is on.
+    case auraPulse
 
     var id: Self { self }
 }
@@ -246,22 +248,35 @@ struct SettingsAppearancePane: View {
 
     static func borderRows(enabled: Bool, auraEnabled: Bool) -> [SettingsBorderRow] {
         guard enabled else { return [] }
-        return SettingsBorderRow.allCases.filter { $0 != .auraColor || auraEnabled }
+        let auraRows: Set<SettingsBorderRow> = [.auraColor, .auraPulse]
+        return SettingsBorderRow.allCases.filter { auraEnabled || !auraRows.contains($0) }
     }
 
-    static func sparkHint(reduceMotion: Bool) -> String {
-        reduceMotion
-            ? "Reduce Motion is on, so the light is hidden."
-            : "A light travels around the outline."
+    static func sparkHint(limit: WindowBorderMotionLimit) -> String {
+        switch limit {
+        case .none: return "A light travels around the outline."
+        case .reduceMotion: return "Reduce Motion is on, so the light is hidden."
+        case .lowPowerMode: return "Low Power Mode is on, so the light is hidden."
+        }
     }
 
-    static func auraHint(reduceMotion: Bool) -> String {
-        reduceMotion
-            ? "Reduce Motion is on, so the glow holds still."
-            : "A soft glow pulses around the outline."
+    static func auraHint(limit: WindowBorderMotionLimit) -> String {
+        switch limit {
+        case .none: return "A soft glow pulses around the outline."
+        case .reduceMotion: return "Reduce Motion is on, so the glow holds still."
+        case .lowPowerMode: return "Low Power Mode is on, so the glow holds still."
+        }
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject var powerState = LowPowerModeMonitor.shared
+
+    private var motionLimit: WindowBorderMotionLimit {
+        WindowBorderRenderingPolicy.motionLimit(
+            reduceMotion: reduceMotion,
+            lowPowerMode: powerState.isLowPowerModeEnabled
+        )
+    }
 
     var body: some View {
         let font = store.snapshot.font
@@ -484,7 +499,7 @@ struct SettingsAppearancePane: View {
             ) {
                 SettingsStudioLabel(
                     title: "Spark",
-                    hint: Self.sparkHint(reduceMotion: reduceMotion),
+                    hint: Self.sparkHint(limit: motionLimit),
                     isChild: true
                 )
             }
@@ -498,7 +513,7 @@ struct SettingsAppearancePane: View {
             ) {
                 SettingsStudioLabel(
                     title: "Aura",
-                    hint: Self.auraHint(reduceMotion: reduceMotion),
+                    hint: Self.auraHint(limit: motionLimit),
                     isChild: true
                 )
             }
@@ -514,6 +529,21 @@ struct SettingsAppearancePane: View {
                 SettingsStudioLabel(title: "Aura Color", isChild: true)
             }
             .accessibilityLabel("Border Aura Color")
+        case .auraPulse:
+            Picker(
+                selection: Binding(
+                    get: { appearance.windowBorderEffects.auraPulse },
+                    set: { store.setWindowBorderAuraPulse($0) }
+                )
+            ) {
+                ForEach(WindowBorderAuraPulse.allCases) { pulse in
+                    Text(pulse.displayName).tag(pulse)
+                }
+            } label: {
+                SettingsStudioLabel(title: "Aura Pulse", isChild: true)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Border Aura Pulse")
         }
     }
 }

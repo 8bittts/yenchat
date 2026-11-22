@@ -167,4 +167,6 @@ Policy and journal indexes use native disclosures and fragment links that work b
 - Breakpoints are Tailwind defaults (`sm` 640, `md` 768, `lg` 1024), mobile first.
 
 The homepage uses a fixed dark surround for the phosphor monitor and terminal previews.
+The split preview (`SplitDemo` in `components/home/workspace-demos.tsx`) draws the app's Spark and Aura on its focused pane: stacked SVG strokes that share one head, and a pulsing glow on the pane slot.
+Both animations sit inside the `prefers-reduced-motion: no-preference` block, so reduced motion hides the spark and holds the glow, as the app does.
 Its field guide follows the site theme, and the heading renders in full without animation.

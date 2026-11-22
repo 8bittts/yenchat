@@ -270,6 +270,45 @@ describe("web client UI smoke", () => {
 		expect(shaLink?.getAttribute("href")).toBe("/stable/yen-1032.dmg.sha256");
 	});
 
+	test("Split preview draws Spark and Aura on the focused pane only, and each toggle removes one", async () => {
+		await render(<HomeClient version="1.032" />);
+		const pane = (name: string) =>
+			document.querySelector(`[aria-label="Focus ${name} pane"]`);
+		const slot = (name: string) => pane(name)?.parentElement ?? null;
+		const toggle = (name: string) =>
+			Array.from(document.querySelectorAll("#splits button")).find(
+				(el) => el.textContent === name,
+			) ?? null;
+
+		// Both effects start on, and only the focused pane carries them.
+		expect(slot("Editor")?.querySelector(".ph-spark")).toBeTruthy();
+		expect(slot("Editor")?.classList.contains("ph-aura")).toBe(true);
+		expect(slot("Server")?.querySelector(".ph-spark")).toBeNull();
+		expect(slot("Server")?.classList.contains("ph-aura")).toBe(false);
+
+		// The effects follow the focus.
+		await click(pane("Server"));
+		expect(document.querySelectorAll(".ph-spark")).toHaveLength(1);
+		expect(slot("Server")?.querySelector(".ph-spark")).toBeTruthy();
+		expect(document.querySelectorAll(".ph-aura")).toHaveLength(1);
+		expect(slot("Server")?.classList.contains("ph-aura")).toBe(true);
+
+		await click(toggle("Spark"));
+		expect(document.querySelector(".ph-spark")).toBeNull();
+		expect(toggle("Spark")?.getAttribute("aria-pressed")).toBe("false");
+		expect(document.querySelectorAll(".ph-aura")).toHaveLength(1);
+
+		await click(toggle("Aura"));
+		expect(document.querySelector(".ph-aura")).toBeNull();
+		expect(toggle("Aura")?.getAttribute("aria-pressed")).toBe("false");
+
+		// The spark comes back, and it is decoration: assistive tech skips it.
+		await click(toggle("Spark"));
+		expect(
+			document.querySelector(".ph-spark")?.getAttribute("aria-hidden"),
+		).toBe("true");
+	});
+
 	test("static page trees stay Server Components", () => {
 		// These pages carry no hooks, handlers, or browser APIs. Marking any of
 		// them "use client" ships its whole static tree to the browser a second time

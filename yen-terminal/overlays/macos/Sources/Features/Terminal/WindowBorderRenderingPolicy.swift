@@ -31,6 +31,13 @@ struct WindowBorderEffectPlan: Equatable {
     let auraPulses: Bool
 }
 
+/// The system setting that stops outline motion, if one is on.
+enum WindowBorderMotionLimit: Equatable {
+    case none
+    case reduceMotion
+    case lowPowerMode
+}
+
 /// The spark: a head and a fading tail of short segments that follow the outline.
 struct WindowBorderSparkModel: Equatable {
     /// Seconds for one lap.
@@ -173,17 +180,25 @@ enum WindowBorderRenderingPolicy {
 
     // MARK: Effects
 
+    /// Reduce Motion is an accessibility choice, so it is named first when both are on.
+    static func motionLimit(reduceMotion: Bool, lowPowerMode: Bool) -> WindowBorderMotionLimit {
+        if reduceMotion { return .reduceMotion }
+        return lowPowerMode ? .lowPowerMode : .none
+    }
+
     /// Effects mark the focused outline only, so background windows stay still.
-    /// Reduce Motion hides the spark and holds the aura at one opacity.
+    /// A motion limit hides the spark and holds the aura at one opacity: the
+    /// motion is decoration, and it would redraw the window all day.
     static func effectPlan(
         effects: WindowBorderEffects,
         isFocused: Bool,
-        reduceMotion: Bool
+        motionLimit: WindowBorderMotionLimit
     ) -> WindowBorderEffectPlan {
-        WindowBorderEffectPlan(
-            showsSpark: isFocused && effects.sparkEnabled && !reduceMotion,
+        let moves = motionLimit == .none
+        return WindowBorderEffectPlan(
+            showsSpark: isFocused && effects.sparkEnabled && moves,
             showsAura: isFocused && effects.auraEnabled,
-            auraPulses: isFocused && effects.auraEnabled && !reduceMotion
+            auraPulses: isFocused && effects.auraEnabled && moves
         )
     }
 
@@ -215,13 +230,13 @@ enum WindowBorderRenderingPolicy {
         )
     }
 
-    static func auraModel(lineWidth: CGFloat) -> WindowBorderAuraModel {
+    static func auraModel(lineWidth: CGFloat, pulse: WindowBorderAuraPulse) -> WindowBorderAuraModel {
         WindowBorderAuraModel(
             blurRadius: 6 + lineWidth * 2,
             restingOpacity: 0.8,
             pulseLowOpacity: 0.5,
             pulseHighOpacity: 1,
-            pulseHalfPeriod: 1.8
+            pulseHalfPeriod: pulse.halfPeriod
         )
     }
 

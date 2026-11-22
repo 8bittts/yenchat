@@ -86,6 +86,7 @@ struct WindowBorderPreferencesTests {
             #expect(!effects.sparkEnabled)
             #expect(!effects.auraEnabled)
             #expect(effects.auraColorHex == "#FF5100")
+            #expect(effects.auraPulse == .medium)
             #expect(effects == WindowBorderEffects.none)
         }
     }
@@ -117,35 +118,49 @@ struct WindowBorderPreferencesTests {
             controller.windowBorderSparkEnabled = true
             controller.windowBorderAuraEnabled = true
             controller.windowBorderAuraColorHex = "#22c55e"
+            controller.windowBorderAuraPulse = .fast
 
             #expect(controller.windowBorderAuraColorHex == "#22C55E")
+            #expect(defaults.string(forKey: WindowBorderPreferences.auraPulsePreferenceKey) == "fast")
             #expect(defaults.bool(forKey: WindowBorderPreferences.sparkPreferenceKey))
             #expect(defaults.bool(forKey: WindowBorderPreferences.auraPreferenceKey))
             #expect(defaults.string(forKey: WindowBorderPreferences.auraColorPreferenceKey) == "#22C55E")
 
             defaults.set(false, forKey: WindowBorderPreferences.sparkPreferenceKey)
             defaults.set("#0EA5E9", forKey: WindowBorderPreferences.auraColorPreferenceKey)
+            defaults.set("slow", forKey: WindowBorderPreferences.auraPulsePreferenceKey)
             controller.loadWindowBorderPreferences()
 
             #expect(controller.windowBorderEffects == WindowBorderEffects(
                 sparkEnabled: false,
                 auraEnabled: true,
-                auraColorHex: "#0EA5E9"
+                auraColorHex: "#0EA5E9",
+                auraPulse: .slow
             ))
+
+            // A value no build wrote falls back to the default speed.
+            defaults.set("warp", forKey: WindowBorderPreferences.auraPulsePreferenceKey)
+            #expect(WindowBorderPreferences.state().effects.auraPulse == .medium)
         }
     }
 
     @Test func aResetRollbackRestoresBorderEffects() {
         withIsolatedWindowBorderPreferences {
             var state = WindowBorderPreferences.defaultState
-            state.effects = WindowBorderEffects(sparkEnabled: true, auraEnabled: true, auraColorHex: "#6366f1")
+            state.effects = WindowBorderEffects(
+                sparkEnabled: true,
+                auraEnabled: true,
+                auraColorHex: "#6366f1",
+                auraPulse: .slow
+            )
 
             SettingsConfigurationReset.storeWindowBorderState(state)
 
             #expect(WindowBorderPreferences.state().effects == WindowBorderEffects(
                 sparkEnabled: true,
                 auraEnabled: true,
-                auraColorHex: "#6366F1"
+                auraColorHex: "#6366F1",
+                auraPulse: .slow
             ))
         }
     }
@@ -808,6 +823,7 @@ struct WindowBorderPreferencesTests {
             WindowBorderPreferences.sparkPreferenceKey,
             WindowBorderPreferences.auraPreferenceKey,
             WindowBorderPreferences.auraColorPreferenceKey,
+            WindowBorderPreferences.auraPulsePreferenceKey,
         ]
 
         var originalValues: [String: Any] = [:]

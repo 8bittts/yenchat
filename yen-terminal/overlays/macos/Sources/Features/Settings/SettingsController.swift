@@ -518,11 +518,25 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             notifyGeneralSettingsObservers()
         }
     }
+    @Published var windowBorderAuraPulse: WindowBorderAuraPulse = WindowBorderPreferences.defaultState.effects.auraPulse {
+        didSet {
+            guard windowBorderAuraPulse != oldValue else { return }
+            if !suppressWindowBorderPersistence {
+                UserDefaults.standard.set(
+                    windowBorderAuraPulse.rawValue,
+                    forKey: WindowBorderPreferences.auraPulsePreferenceKey
+                )
+            }
+            notifyTerminalPresentationObservers()
+            notifyGeneralSettingsObservers()
+        }
+    }
     var windowBorderEffects: WindowBorderEffects {
         WindowBorderEffects(
             sparkEnabled: windowBorderSparkEnabled,
             auraEnabled: windowBorderAuraEnabled,
-            auraColorHex: windowBorderAuraColorHex
+            auraColorHex: windowBorderAuraColorHex,
+            auraPulse: windowBorderAuraPulse
         )
     }
 
@@ -2860,6 +2874,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         windowBorderSparkEnabled = state.effects.sparkEnabled
         windowBorderAuraEnabled = state.effects.auraEnabled
         windowBorderAuraColorHex = state.effects.auraColorHex
+        windowBorderAuraPulse = state.effects.auraPulse
         if state.colorMode == .matchTheme {
             refreshResolvedActiveThemeInfo()
         }
