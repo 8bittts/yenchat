@@ -11,6 +11,18 @@ enum RemoteHostsPaletteAction: Equatable {
     /// Type a command at the prompt of the terminal the palette opened over,
     /// without running it.
     case insertCommand(String)
+    /// Reopen the palette with the Hosts query.
+    case showHosts
+}
+
+/// When the palette query asks for Hosts. Stub.
+enum RemoteHostsIntent {
+    static let tags = ["hosts", "remote", "ssh", "tailscale"]
+    static let minimumWordLength = 3
+
+    static func matches(_ query: String) -> Bool {
+        true
+    }
 }
 
 /// One Hosts row. Pure data, so the catalog invalidates only when a row changes
@@ -69,6 +81,26 @@ enum RemoteHostsPaletteRows {
             ))
             return rows
         }
+    }
+
+    static let staticRow = RemoteHostsPaletteEntry(
+        id: "hosts:show",
+        title: titlePrefix + "Show Sessions on Your Other Macs",
+        subtitle: nil,
+        description: "List your other Macs on Tailscale and their sessions; or type hosts",
+        leadingIcon: "network",
+        searchTags: baseTags,
+        action: .showHosts
+    )
+
+    /// The Hosts rows for a palette query. Stub.
+    static func catalogEntries(
+        query: String,
+        snapshot: RemoteHostsStore.Snapshot,
+        isOpenHere: (RemotePaneIdentity) -> Bool,
+        now: Date = Date()
+    ) -> [RemoteHostsPaletteEntry] {
+        entries(snapshot: snapshot, isOpenHere: isOpenHere, now: now)
     }
 
     static func peerRows(

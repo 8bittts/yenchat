@@ -134,4 +134,46 @@ struct RemoteHostsPaletteRowsTests {
         #expect(key(rows(nil)) != key(rows(.running(peers: [mini]), [mini.id: .offline])))
         #expect(key(rows(.stopped)) == key(rows(.stopped)))
     }
+
+    // MARK: Hosts intent
+
+    @Test func theHostsIntentRuleNeedsAHostsWordOfThreeLetters() {
+        for query in ["hosts", "Hosts: mini", "hos", "host", "rem", "remote", "ssh", "tail", "tailscale", "open ssh session", "HOSTS"] {
+            #expect(RemoteHostsIntent.matches(query), "\(query)")
+        }
+        for query in ["", " ", "h", "ho", "re", "ss", "btop", "localhost", "sshd", "remove", "tailx", "git status", "settings"] {
+            #expect(!RemoteHostsIntent.matches(query), "\(query)")
+        }
+    }
+
+    @Test func withoutHostsIntentThePaletteShowsOnlyTheStaticRow() {
+        var never = RemoteHostsStore.Snapshot()
+        never.status = nil
+        #expect(RemoteHostsPaletteRows.catalogEntries(query: "", snapshot: never, isOpenHere: { _ in false }, now: now) == [RemoteHostsPaletteRows.staticRow])
+        #expect(RemoteHostsPaletteRows.catalogEntries(query: "btop", snapshot: never, isOpenHere: { _ in false }, now: now) == [RemoteHostsPaletteRows.staticRow])
+
+        // An empty query shows only the static row even after a discovery.
+        var known = RemoteHostsStore.Snapshot()
+        known.status = .running(peers: [mini])
+        known.peerStates = [mini.id: .listed(.sessions([detached], complete: true))]
+        #expect(RemoteHostsPaletteRows.catalogEntries(query: "", snapshot: known, isOpenHere: { _ in false }, now: now) == [RemoteHostsPaletteRows.staticRow])
+        #expect(RemoteHostsPaletteRows.staticRow.action == .showHosts)
+        #expect(RemoteHostsPaletteRows.staticRow.title == "Hosts: Show Sessions on Your Other Macs")
+    }
+
+    @Test func aPeerNameFindsTheLastSnapshotWithoutHostsIntent() {
+        var known = RemoteHostsStore.Snapshot()
+        known.status = .running(peers: [mini])
+        known.peerStates = [mini.id: .listed(.sessions([detached], complete: true))]
+        let rows = RemoteHostsPaletteRows.catalogEntries(query: "mini", snapshot: known, isOpenHere: { _ in false }, now: now)
+        #expect(rows.first == RemoteHostsPaletteRows.staticRow)
+        #expect(rows.contains { $0.title == "Hosts: ~/src/app on Mini" })
+    }
+
+    @Test func hostsIntentShowsTheFullRowsInsteadOfTheStaticRow() {
+        var known = RemoteHostsStore.Snapshot()
+        known.status = .stopped
+        let rows = RemoteHostsPaletteRows.catalogEntries(query: "hosts", snapshot: known, isOpenHere: { _ in false }, now: now)
+        #expect(rows.map(\.title) == ["Hosts: Tailscale Is Turned Off"])
+    }
 }

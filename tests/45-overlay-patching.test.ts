@@ -1006,18 +1006,31 @@ ${patchBlock}`;
 		});
 	});
 
-	test("remote pane tab title patch routes computeTitle through the host label and fails closed on drift", () => {
+	test("remote pane tab title patch labels the title of its source pane and fails closed on drift", () => {
 		const patchBlock = patchCommands(["remote-pane-tab-title"]);
-		const titleOld = readFileSync(
-			join(patchesDir, "remote-pane-tab-title.old"),
-			"utf8",
-		);
-		const bell = [
+		// Upstream BaseTerminalController text the patch anchors on.
+		const sink = [
+			"            titleSurface.$title",
+			"                .combineLatest(titleSurface.$bell)",
+			'                .map { [weak self] in self?.computeTitle(title: $0, bell: $1) ?? "" }',
+			"                .sink { [weak self] in self?.titleDidChange(to: $0) }",
+		].join("\n");
+		const compute = [
+			"    private func computeTitle(title: String, bell: Bool) -> String {",
+			"        var result = title",
 			"        if bell && yen.config.bellFeatures.contains(.title) {",
 			'            result = "🔔 \\(result)"',
 			"        }",
 			"        return result",
 			"    }",
+		].join("\n");
+		const override = [
+			"        if let titleOverride {",
+			"            window.title = computeTitle(",
+			"                title: titleOverride,",
+			"                bell: focusedSurface?.bell ?? false)",
+			"            return",
+			"        }",
 		].join("\n");
 
 		withTempDir((fixtureRoot) => {
@@ -1027,7 +1040,11 @@ ${patchBlock}`;
 			);
 			mkdirSync(terminalDir, { recursive: true });
 			const controllerPath = join(terminalDir, "BaseTerminalController.swift");
-			writeFileSync(controllerPath, `${titleOld}${bell}\n`, "utf8");
+			writeFileSync(
+				controllerPath,
+				`${sink}\n${compute}\n${override}\n`,
+				"utf8",
+			);
 
 			const command = `set -euo pipefail
 cd "${fixtureRoot}"
@@ -1035,14 +1052,19 @@ PATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}
 PATCHES_DIR="${patchesDir}"
 ${patchBlock}`;
 			const firstRun = run("bash", ["-lc", command]);
-			expect(firstRun.status).toBe(0);
+			expect(firstRun.status, output(firstRun)).toBe(0);
 			expect(output(firstRun)).toContain("Applied Remote pane tab title");
 			const controller = readFileSync(controllerPath, "utf8");
-			// The host label comes first, so the bell decoration still wraps it.
+			// The label comes from the pane the title came from, and from the
+			// focused or last title pane under a typed tab title.
 			expect(controller).toContain(
-				"        var result = RemotePanes.tabTitle(title, for: focusedSurface)\n        if bell",
+				"self?.computeTitle(title: RemotePanes.tabTitle($0, for: titleSurface, in: self), bell: $1)",
 			);
-			expect(controller).not.toContain("        var result = title\n");
+			expect(controller).toContain(
+				"                title: RemotePanes.tabTitle(titleOverride, in: self),",
+			);
+			// computeTitle stays upstream, so the bell mark wraps the label.
+			expect(controller).toContain(compute);
 
 			const secondRun = run("bash", ["-lc", command]);
 			expect(secondRun.status).toBe(0);
@@ -1050,7 +1072,7 @@ ${patchBlock}`;
 
 			writeFileSync(
 				controllerPath,
-				`${titleOld.replace("var result = title", "var computed = title")}${bell}\n`,
+				`${sink.replace("computeTitle(title: $0", "makeTitle(title: $0")}\n${compute}\n${override}\n`,
 				"utf8",
 			);
 			const driftRun = run("bash", ["-lc", command]);

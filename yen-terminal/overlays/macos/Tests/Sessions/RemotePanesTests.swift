@@ -18,6 +18,7 @@ struct RemotePanesTests {
         RemotePaneIdentity(displayName: "Studio", sshTarget: "studio.example.invalid", sessionID: sessionID)!
     }
 
+    /// The CLI call inside the pane command, whatever wraps it.
     private var expectedCommand: String {
         "'\(Self.fakeCLI)' 'sessions' 'attach' '--host' 'studio.example.invalid' '\(sessionID.uuidString)'"
     }
@@ -69,7 +70,7 @@ struct RemotePanesTests {
         var config = markedConfig(identity)
         withFakeCLI { RemotePanes.prepare(&config, paneID: paneID) }
 
-        #expect(config.command == expectedCommand)
+        #expect(config.command?.contains(expectedCommand) == true)
         #expect(config.waitAfterCommand)
         #expect(config.environmentVariables[RemotePanes.markerEnvironmentKey] == nil)
         #expect(RemotePanes.identity(for: paneID) == identity)
@@ -107,7 +108,7 @@ struct RemotePanesTests {
             )
         }
 
-        #expect(config.command == expectedCommand)
+        #expect(config.command?.contains(expectedCommand) == true)
         #expect(config.environmentVariables[PersistentSessions.environmentKey] == nil)
         #expect(RemotePanes.identity(for: paneID) == identity)
     }
@@ -120,7 +121,7 @@ struct RemotePanesTests {
                 RemotePanes.prepare(&during, paneID: paneID)
             }
         }
-        #expect(during.command == expectedCommand)
+        #expect(during.command?.contains(expectedCommand) == true)
         #expect(RemotePanes.identity(for: paneID) == identity)
 
         // The same pane UUID created later is a new local pane.
@@ -229,11 +230,175 @@ struct RemotePanesTests {
         #expect(restored.surfaceTree.first?.remotePaneIdentity == identity)
     }
 
+    // MARK: Review round 1
+
+    /// A stand-in CLI that keeps running, like an attached client.
+    private static let liveCLI: String = {
+        let path = NSTemporaryDirectory() + "yen-remote-live-cli-\(getpid()).sh"
+        try? "#!/bin/sh\nsleep 600\n".write(toFile: path, atomically: true, encoding: .utf8)
+        chmod(path, 0o755)
+        return path
+    }()
+
+    @Test func aNormalEndClosesTheTabAndAFailureStaysOnScreen() throws {
+        var config = markedConfig(identity)
+        withFakeCLI { RemotePanes.prepare(&config, paneID: UUID()) }
+        #expect(!config.waitAfterCommand)
+
+        func run(cliExit: Int32, stdin: String) throws -> (status: Int32, output: String) {
+            let cli = NSTemporaryDirectory() + "yen-remote-exit-\(cliExit)-\(getpid()).sh"
+            try "#!/bin/sh\nexit \(cliExit)\n".write(toFile: cli, atomically: true, encoding: .utf8)
+            chmod(cli, 0o755)
+            RemotePanes._testSetCLIPath(cli)
+            defer { RemotePanes._testSetCLIPath(nil) }
+            let command = try #require(RemotePanes.attachCommand(for: identity))
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = ["-c", command]
+            let input = Pipe(), output = Pipe()
+            process.standardInput = input
+            process.standardOutput = output
+            process.standardError = output
+            try process.run()
+            input.fileHandleForWriting.write(Data(stdin.utf8))
+            try input.fileHandleForWriting.close()
+            process.waitUntilExit()
+            let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            return (process.terminationStatus, text)
+        }
+
+        let normal = try run(cliExit: 0, stdin: "")
+        #expect(normal.status == 0)
+        #expect(normal.output.isEmpty)
+        let interrupted = try run(cliExit: 130, stdin: "")
+        #expect(interrupted.status == 130)
+        #expect(interrupted.output.isEmpty)
+        let failed = try run(cliExit: 10, stdin: "\n")
+        #expect(failed.status == 10)
+        #expect(failed.output.contains("Press Return to close"))
+    }
+
+    @Test func onlyARestoredPaneRetriesAnUnreachablePeer() throws {
+        let opened = try #require(withFakeCLI { RemotePanes.attachCommand(for: identity) })
+        #expect(!opened.contains("--retry-unreachable"))
+
+        let paneID = UUID()
+        var restored = YEN.SurfaceConfiguration()
+        withFakeCLI {
+            RemotePanes.decodingTree(restoring: [paneID.uuidString: identity]) {
+                RemotePanes.prepare(&restored, paneID: paneID)
+            }
+        }
+        #expect(restored.command?.contains("'--retry-unreachable'") == true)
+    }
+
+    @Test func theProcessTreeCheckFindsOnlyARunningClient() throws {
+        let id = sessionID.uuidString
+        func spawn(_ arguments: [String]) throws -> Process {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = arguments
+            try process.run()
+            return process
+        }
+        // A parent whose child carries the id, like login -> sh -> CLI.
+        let parent = try spawn(["-c", "/bin/sh -c 'sleep 30' attach \(id) & wait"])
+        let unrelated = try spawn(["-c", "sleep 30"])
+        defer {
+            for process in [parent, unrelated] { process.terminate() }
+        }
+        var found = false
+        for _ in 0..<40 where !found {
+            found = RemotePanes.processTree(under: parent.processIdentifier, mentions: id)
+            if !found { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+        }
+        #expect(found)
+        #expect(!RemotePanes.processTree(under: unrelated.processIdentifier, mentions: id))
+    }
+
+    @Test func aPaneWhoseClientEndedIsNotReusedOrOpenHere() throws {
+        RemotePanes._testSetCLIPath("/usr/bin/false")
+        let appDelegate = try #require(NSApp.delegate as? AppDelegate)
+        let controller = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
+        RemotePanes._testSetCLIPath(nil)
+        Self.retainedControllers.append(controller)
+        let surface = try #require(controller.surfaceTree.first)
+        #expect(surface.remotePaneIdentity == identity)
+
+        var reused: YEN.SurfaceView? = surface
+        for _ in 0..<60 where reused != nil {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            reused = RemotePanes.existingPane(for: identity, in: [controller])
+        }
+        #expect(reused == nil)
+        #expect(!RemotePanes.isAttached(surface))
+    }
+
+    @Test func aRunningClientIsReused() throws {
+        RemotePanes._testSetCLIPath(Self.liveCLI)
+        let appDelegate = try #require(NSApp.delegate as? AppDelegate)
+        let controller = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
+        RemotePanes._testSetCLIPath(nil)
+        Self.retainedControllers.append(controller)
+        let surface = try #require(controller.surfaceTree.first)
+        var found: YEN.SurfaceView?
+        for _ in 0..<60 where found == nil {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            found = RemotePanes.existingPane(for: identity, in: [controller])
+        }
+        #expect(found === surface)
+    }
+
+    @Test func theTitleKeepsItsLabelWhenNoPaneHasFocus() throws {
+        let controller = try makeController(with: markedConfig(identity))
+        let remote = try #require(controller.surfaceTree.first)
+        controller.focusedSurfaceDidChange(to: remote)
+        #expect(controller.window?.title.hasPrefix("Studio") == true)
+        // The palette field or another control takes focus: the title still
+        // comes from the remote pane and must keep its label.
+        controller.focusedSurfaceDidChange(to: nil)
+        #expect(controller.window?.title.hasPrefix("Studio") == true)
+    }
+
+    @Test func aMixedTabIsLabeledOnlyWhileItsTitleComesFromTheRemotePane() throws {
+        let appDelegate = try #require(NSApp.delegate as? AppDelegate)
+        let app = try #require(appDelegate.yen.app)
+        let controller = try makeController(with: nil)
+        let local = try #require(controller.surfaceTree.first)
+        RemotePanes._testSetCLIPath(Self.liveCLI)
+        let remote = YEN.SurfaceView(app, baseConfig: markedConfig(identity))
+        RemotePanes._testSetCLIPath(nil)
+        controller.surfaceTree = try controller.surfaceTree.inserting(view: remote, at: local, direction: .right)
+
+        controller.focusedSurfaceDidChange(to: remote)
+        #expect(controller.window?.title.hasPrefix("Studio") == true)
+        controller.focusedSurfaceDidChange(to: local)
+        #expect(controller.window?.title.hasPrefix("Studio") == false)
+        controller.focusedSurfaceDidChange(to: nil)
+        #expect(controller.window?.title.hasPrefix("Studio") == false)
+    }
+
+    @Test func aClosedRemotePaneIsForgottenUnlessUndoBringsItBack() async throws {
+        let gone = UUID(), undone = UUID()
+        for paneID in [gone, undone] {
+            var config = markedConfig(identity)
+            withFakeCLI { RemotePanes.prepare(&config, paneID: paneID) }
+        }
+        RemotePanes.paneLeftTree(gone, after: .milliseconds(50), isStillPresent: { _ in false })
+        RemotePanes.paneLeftTree(undone, after: .milliseconds(50), isStillPresent: { _ in true })
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(RemotePanes.identity(for: gone) == nil)
+        #expect(RemotePanes.identity(for: undone) == identity)
+    }
+
     // MARK: Helpers
 
     private func makeController(with config: YEN.SurfaceConfiguration?) throws -> TerminalController {
         let appDelegate = try #require(NSApp.delegate as? AppDelegate, "Expected AppDelegate-backed test host.")
-        let controller = withFakeCLI { TerminalController(appDelegate.yen, withBaseConfig: config) }
+        // A client that keeps running, so the pane and its window stay open.
+        RemotePanes._testSetCLIPath(Self.liveCLI)
+        defer { RemotePanes._testSetCLIPath(nil) }
+        let controller = TerminalController(appDelegate.yen, withBaseConfig: config)
         Self.retainedControllers.append(controller)
         return controller
     }

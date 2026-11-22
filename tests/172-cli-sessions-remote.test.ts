@@ -567,6 +567,59 @@ describe("yen sessions attach --host: reconnect", () => {
 		expect(calls()).toHaveLength(1);
 	});
 
+	test("--retry-unreachable retries a first attempt that cannot reach the peer", () => {
+		plan([
+			"0 255 ssh: connect to host mini port 22: Connection refused",
+			"0 255 ssh: Could not resolve hostname mini: nodename nor servname provided, or not known",
+			"1 0",
+		]);
+		const result = sessions([
+			"attach",
+			"--host",
+			"mini",
+			"--retry-unreachable",
+			sessionID,
+		]);
+		expect(result.status, result.stderr).toBe(0);
+		expect(calls()).toHaveLength(3);
+		expect(result.stderr.match(/retrying in \d+s/g)).toHaveLength(2);
+	});
+
+	test("--retry-unreachable still stops at once on every other first-attempt failure", () => {
+		const cases: [string, number][] = [
+			["0 255 user@mini: Permission denied (publickey).", EXIT.firstConnection],
+			[
+				"0 255 Host key for mini has changed and you have requested strict checking.",
+				EXIT.hostKeyChanged,
+			],
+			["1 127", EXIT.notInstalled],
+		];
+		for (const [line, expected] of cases) {
+			rmSync(join(sshDir, "count"), { force: true });
+			plan([line, "1 0"]);
+			const result = sessions([
+				"attach",
+				"--host",
+				"mini",
+				"--retry-unreachable",
+				sessionID,
+			]);
+			expect(result.status, line).toBe(expected);
+			expect(calls()).toHaveLength(1);
+		}
+	});
+
+	test("--retry-unreachable belongs to attach --host and is in the usage text", () => {
+		plan(["1 0"]);
+		expect(sessions(["attach", "--retry-unreachable", sessionID]).status).toBe(
+			EXIT.usage,
+		);
+		expect(
+			sessions(["list", "--host", "mini", "--retry-unreachable"]).status,
+		).toBe(EXIT.usage);
+		expect(sessions(["--help"]).stdout).toContain("--retry-unreachable");
+	});
+
 	test("a normal remote exit ends attach without reconnecting", () => {
 		plan(["1 0", "1 0"]);
 		const result = sessions(["attach", "--host", "mini", sessionID]);

@@ -118,10 +118,29 @@ enum RemotePanes {
         return resourcePath.map { ($0 as NSString).appendingPathComponent("bin/yen") }
     }
 
-    nonisolated static func attachCommand(for identity: RemotePaneIdentity) -> String? {
+    nonisolated static func attachCommand(for identity: RemotePaneIdentity, retryUnreachable: Bool = false) -> String? {
         guard let cliPath = cliPath() else { return nil }
         return RemoteSessions.attachCommandLine(host: identity.sshTarget, id: identity.sessionID, cliPath: cliPath)
     }
+
+    /// True while some process in the tree under `rootPID` carries `argument`
+    /// in its argv. Stub.
+    nonisolated static func processTree(under rootPID: pid_t, mentions argument: String) -> Bool {
+        true
+    }
+
+    /// True while the pane's attach client still runs. Stub.
+    @MainActor static func isAttached(_ surface: YEN.SurfaceView) -> Bool {
+        identity(for: surface.id) != nil
+    }
+
+    /// A pane left its tree; forget its identity once undo can no longer
+    /// bring it back. Stub.
+    static func paneLeftTree(
+        _ paneID: UUID,
+        after delay: Duration,
+        isStillPresent: @escaping @MainActor (UUID) -> Bool
+    ) {}
 
     nonisolated static func _testSetCLIPath(_ path: String?) {
         registry.withLock { $0.cliPathOverride = path }

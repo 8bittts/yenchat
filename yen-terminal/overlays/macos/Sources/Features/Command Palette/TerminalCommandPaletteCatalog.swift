@@ -332,6 +332,8 @@ extension TerminalCommandPaletteView {
             _ = RemotePanes.open(identity, from: surfaceView.window)
         case .refresh:
             hostsStore.refresh()
+        case .showHosts:
+            break
         case .insertCommand(let command):
             // The command is for this Mac; never type it into a remote shell.
             guard surfaceView.remotePaneIdentity == nil else { return }
