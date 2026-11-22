@@ -138,10 +138,13 @@ struct RemoteHostsPaletteRowsTests {
     // MARK: Hosts intent
 
     @Test func theHostsIntentRuleNeedsAHostsWordOfThreeLetters() {
-        for query in ["hosts", "Hosts: mini", "hos", "host", "rem", "remote", "ssh", "tail", "tailscale", "open ssh session", "HOSTS"] {
+        // "hosts" matches from three letters; the other tags only as whole
+        // words, so typing "remove" or "tail" on the way to another command
+        // starts nothing.
+        for query in ["hosts", "Hosts: mini", "hos", "host", "remote", "ssh", "tailscale", "open ssh session", "HOSTS", "Remote mini"] {
             #expect(RemoteHostsIntent.matches(query), "\(query)")
         }
-        for query in ["", " ", "h", "ho", "re", "ss", "btop", "localhost", "sshd", "remove", "tailx", "git status", "settings"] {
+        for query in ["", " ", "h", "ho", "re", "rem", "remo", "remot", "remove", "ss", "tai", "tail", "tails", "btop", "localhost", "sshd", "tailx", "git status", "settings", "Remove Moving Wallpaper"] {
             #expect(!RemoteHostsIntent.matches(query), "\(query)")
         }
     }
