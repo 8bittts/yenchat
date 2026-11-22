@@ -185,6 +185,7 @@ case "$MODE" in
                 -only-testing:YENTests/TokenUsageIndexTests
                 -only-testing:YENTests/WallpaperStateTests
                 -only-testing:YENTests/WallpaperToggleTests
+                -only-testing:YENTests/YouTubeDownloaderTests
                 -only-testing:YENTests/KeyboardSettingsStoreTests
                 -only-testing:YENTests/SoundsSettingsStoreTests
                 -only-testing:YENTests/ThemesSettingsStoreTests
