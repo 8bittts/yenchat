@@ -27,7 +27,7 @@ struct TailscaleDiscoveryTests {
                        "KeyExpiry": "2026-01-01T00:00:00Z"},
         "nodekey:07": {"ID": "nNoDNS", "HostName": "air", "DNSName": "", "OS": "macOS",
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.8"], "Online": false},
-        "nodekey:08": {"ID": "nHostile", "HostName": "evil\u001b]0;pwned\u0007\nname​", "DNSName": "-oProxyCommand=sh.",
+        "nodekey:08": {"ID": "nHostile", "HostName": "evil\u001b]0;pwned\u0007\nname\u200b", "DNSName": "-oProxyCommand=sh.",
                        "OS": "macOS", "UserID": 1001, "TailscaleIPs": ["100.64.0.9;id", "fd7a:115c:a1e0::9"], "Online": true},
         "nodekey:09": {"ID": "nUnusable", "HostName": "nothing", "DNSName": "a b.example-tailnet.ts.net.", "OS": "macOS",
                        "UserID": 1001, "TailscaleIPs": ["-x", "$(id)"], "Online": true},
@@ -52,6 +52,25 @@ struct TailscaleDiscoveryTests {
         #expect(peers.map(\.id) == ["nNoDNS", "nHostile", "nMini"])
         let mini = try #require(peers.first { $0.id == "nMini" })
         #expect(mini == TailscalePeer(id: "nMini", displayName: "Mini", sshTarget: "mini.example-tailnet.ts.net", isOnline: true))
+    }
+
+    /// `DNSName` is filled from the netmap whether or not MagicDNS is on, but
+    /// the name resolves only when `CurrentTailnet.MagicDNSEnabled` is true.
+    @Test func usesTailscaleIPsWhenMagicDNSIsOff() throws {
+        let off = Self.running.replacingOccurrences(of: #""MagicDNSEnabled": true"#, with: #""MagicDNSEnabled": false"#)
+        let absent = Self.running.replacingOccurrences(
+            of: #""CurrentTailnet": {"Name": "example-tailnet", "MagicDNSSuffix": "example-tailnet.ts.net", "MagicDNSEnabled": true}"#,
+            with: #""CurrentTailnet": null"#
+        )
+        #expect(off != Self.running && absent != Self.running)
+        for json in [off, absent] {
+            guard case .running(let peers) = parse(json) else {
+                Issue.record("expected a running status")
+                return
+            }
+            #expect(peers.map(\.sshTarget) == ["100.64.0.8", "fd7a:115c:a1e0::9", "100.64.0.2"])
+            #expect(peers.map(\.displayName) == ["air", "evil ]0;pwned name", "Mini"])
+        }
     }
 
     @Test func fallsBackToTheFirstTailscaleIPWithoutAMagicDNSName() throws {

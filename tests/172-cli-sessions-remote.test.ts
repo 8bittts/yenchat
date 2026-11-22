@@ -127,6 +127,8 @@ describe("yen sessions --host: the ssh command", () => {
 		expect(option(argv, "ServerAliveInterval")).toMatch(/^\d+$/);
 		expect(option(argv, "ServerAliveCountMax")).toMatch(/^\d+$/);
 		expect(option(argv, "ForwardAgent")).toBe("no");
+		// A RemoteCommand in the user's ssh config would make ssh refuse ours.
+		expect(option(argv, "RemoteCommand")).toBe("none");
 		expect(argv.slice(0, dashes)).toContain("-T");
 		// YEN never weakens host key checking.
 		for (const weakened of [
@@ -149,6 +151,7 @@ describe("yen sessions --host: the ssh command", () => {
 		expect(argv.slice(0, dashes)).toContain("-t");
 		expect(option(argv, "BatchMode")).toBeUndefined();
 		expect(option(argv, "PermitLocalCommand")).toBe("yes");
+		expect(option(argv, "RemoteCommand")).toBe("none");
 		expect(option(argv, "LocalCommand")).toMatch(
 			/^\/usr\/bin\/touch \/[A-Za-z0-9._/-]+$/,
 		);
@@ -181,6 +184,22 @@ describe("yen sessions --host: the ssh command", () => {
 			const result = sessions(args);
 			expect(result.status).toBe(EXIT.usage);
 			expect(result.stderr).toContain("is not a host name or address");
+		}
+		expect(calls()).toEqual([]);
+	});
+
+	test.each([
+		"é",
+		"mïni",
+		"\uff4d\uff49\uff4e\uff49",
+		"mini\u202etxt",
+		"mini\u0301",
+		"d\u00e9v@mini",
+	])("refuses the non-ASCII target %j under a UTF-8 locale", (target) => {
+		plan(["1 0"]);
+		for (const locale of ["en_US.UTF-8", "C"]) {
+			const result = sessions(["list", "--host", target], { LC_ALL: locale });
+			expect(result.status).toBe(EXIT.usage);
 		}
 		expect(calls()).toEqual([]);
 	});
@@ -266,6 +285,33 @@ describe("yen sessions --host: failure classes", () => {
 		expect(listed.stdout).toBe("");
 	});
 
+	test("a peer whose YEN predates yen sessions exits 13", () => {
+		plan(["1 1"], {
+			1: "\u001b[38;2;234;179;8mUnknown command:\u001b[0m \u001b[1msessions\u001b[0m\n",
+		});
+		expect(sessions(["list", "--host", "mini"]).status).toBe(EXIT.tooOld);
+	});
+
+	test("a peer that fails before its header is a listing failure, not too old", () => {
+		plan(["1 1 zmx is not available; reinstall YEN."]);
+		const listed = sessions(["list", "--host", "mini"]);
+		expect(listed.status).toBe(1);
+		expect(listed.stderr).toContain("zmx is not available; reinstall YEN.");
+		expect(listed.stderr).toContain("could not list the sessions on mini");
+		expect(listed.stderr).not.toContain("update YEN");
+	});
+
+	test("lines a login shell prints before the header are skipped", () => {
+		plan(["1 0"], {
+			1: `Welcome to my shell\nLast login: today\n${header}\n${sessionID}\tdetached\t-\t/Users/dev\n`,
+		});
+		const listed = sessions(["list", "--porcelain", "--host", "mini"]);
+		expect(listed.status, listed.stderr).toBe(0);
+		expect(listed.stdout).toBe(
+			`${header}\n${sessionID}\tdetached\t-\t/Users/dev\n`,
+		);
+	});
+
 	test("a peer speaking another porcelain version exits 13", () => {
 		plan(["1 0"], { 1: `yen-sessions\t2\n${sessionID}\tdetached\t1\t/x\n` });
 		expect(sessions(["list", "--host", "mini"]).status).toBe(EXIT.tooOld);
@@ -276,6 +322,76 @@ describe("yen sessions --host: failure classes", () => {
 		const result = sessions(["attach", "--host", "mini", sessionID]);
 		expect(result.status).toBe(EXIT.noSession);
 		expect(result.stderr).toContain(`no session ${sessionID} on mini`);
+	});
+});
+
+describe("yen sessions: the app bundle", () => {
+	// bin/yen sources lib/sessions-remote.sh for every sessions command, so the
+	// bundle phase must ship it (scripts/lib/bundle-resource-phases/02-cli-resources.sh).
+	test("the CLI resources phase ships the remote helper and the bundled CLI uses it", () => {
+		const app = join(root, "bundle", "YEN.app");
+		const resources = join(app, "Contents/Resources");
+		mkdirSync(join(resources, "bin"), { recursive: true });
+		const plist = join(app, "Contents/Info.plist");
+		for (const key of [
+			"CFBundleShortVersionString",
+			"CFBundleVersion",
+			"YENBuild",
+			"YENCommit",
+		]) {
+			spawnSync("/usr/libexec/PlistBuddy", [
+				"-c",
+				`Add :${key} string 0`,
+				plist,
+			]);
+		}
+		const phase = spawnSync(
+			"/bin/bash",
+			[
+				"-c",
+				'set -e; source "$1"',
+				"phase",
+				join(
+					repoRoot,
+					"scripts/lib/bundle-resource-phases/02-cli-resources.sh",
+				),
+			],
+			{
+				encoding: "utf8",
+				env: {
+					...process.env,
+					APP_PATH: app,
+					YEN_CLI_DIR: join(repoRoot, "yen-cli"),
+					CUSTOMIZATIONS_DIR: join(repoRoot, "yen-terminal/customizations"),
+					VERSION: "9.9",
+					VERSION_INT: "9999",
+					COMMIT: "test",
+				},
+			},
+		);
+		expect(phase.status, phase.stderr).toBe(0);
+		expect(existsSync(join(resources, "lib/sessions-remote.sh"))).toBe(true);
+		writeFileSync(
+			join(resources, "bin/yen"),
+			readFileSync(join(repoRoot, "yen-cli/bin/yen")),
+			{ mode: 0o755 },
+		);
+		plan(["1 0"], { 1: `${header}\n` });
+		const listed = spawnSync(
+			join(resources, "bin/yen"),
+			["sessions", "list", "--host", "mini", "--porcelain"],
+			{
+				encoding: "utf8",
+				env: {
+					...process.env,
+					YEN_LIB: "",
+					YEN_SSH_BIN: fakeSSH,
+					FAKE_SSH_DIR: sshDir,
+				},
+			},
+		);
+		expect(listed.status, listed.stderr).toBe(0);
+		expect(listed.stdout).toBe(`${header}\n`);
 	});
 });
 
@@ -354,6 +470,54 @@ describe("yen sessions --host: listing", () => {
 		},
 	);
 });
+
+describe("yen sessions --host: stopping", () => {
+	test.each([
+		["list", "--host", "mini", "--porcelain"],
+		["attach", "--host", "mini", sessionID],
+	])(
+		"SIGTERM to %s ends ssh and removes the temporary directory",
+		async (...args) => {
+			plan(["1 sleep30"]);
+			const scratch = mkdtempSync(join(root, "tmp-"));
+			const environment: NodeJS.ProcessEnv = {
+				...process.env,
+				YEN_LIB: "",
+				YEN_SSH_BIN: fakeSSH,
+				FAKE_SSH_DIR: sshDir,
+				TMPDIR: scratch,
+			};
+			const cli = Bun.spawn([yen, "sessions", ...args], {
+				env: environment,
+				stdin: "ignore",
+				stdout: "ignore",
+				stderr: "ignore",
+			});
+			const pidFile = join(sshDir, "pid-1");
+			for (let i = 0; i < 100 && !existsSync(pidFile); i++) await Bun.sleep(50);
+			const ssh = Number(readFileSync(pidFile, "utf8"));
+			expect(alive(ssh)).toBe(true);
+			cli.kill("SIGTERM");
+			const code = await cli.exited;
+			expect(code).not.toBe(0);
+			for (let i = 0; i < 40 && alive(ssh); i++) await Bun.sleep(50);
+			const survived = alive(ssh);
+			if (survived) process.kill(ssh, "SIGKILL");
+			expect(survived).toBe(false);
+			expect(readdirSync(scratch)).toEqual([]);
+		},
+		15_000,
+	);
+});
+
+function alive(pid: number) {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 describe("yen sessions attach --host: reconnect", () => {
 	test("reconnects after a dropped link until the remote exits normally", () => {

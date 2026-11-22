@@ -10,6 +10,8 @@
 # status=exec runs the remote command with $FAKE_SSH_LOGIN_SHELL -c, as the
 # peer's login shell would, and exits with its status; $FAKE_SSH_REMOTE_YEN_LIB
 # stands for a YEN_LIB the peer's shell startup files export.
+# status=sleep<seconds> records its pid in $FAKE_SSH_DIR/pid-<n> and hangs,
+# like ssh waiting on a dead link.
 # $FAKE_SSH_DIR/stdout-<n>, when present, is printed as the remote output.
 set -u
 dir="$FAKE_SSH_DIR"
@@ -36,6 +38,10 @@ done
 [[ "$connected" == 1 && -n "$local_command" ]] && /bin/sh -c "$local_command"
 [[ -f "$dir/stdout-$count" ]] && cat "$dir/stdout-$count"
 [[ -n "$message" ]] && echo "$message" >&2
+if [[ "$status" == sleep* ]]; then
+    echo "$$" > "$dir/pid-$count"
+    exec /bin/sleep "${status#sleep}"
+fi
 if [[ "$status" == exec ]]; then
     [[ -z "${FAKE_SSH_REMOTE_YEN_LIB:-}" ]] || export YEN_LIB="$FAKE_SSH_REMOTE_YEN_LIB"
     exec "${FAKE_SSH_LOGIN_SHELL:-/bin/zsh}" -c "$remote"

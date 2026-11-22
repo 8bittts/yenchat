@@ -38,9 +38,11 @@ trap cleanup EXIT
 check() {
     local label="$1" expected="$2" actual="$3"
     if [[ "$actual" == "$expected" ]]; then
+        : > "$base/list.err"
         echo "PASS: $label ($actual)"
     else
         echo "FAIL: $label: expected $expected, got $actual"
+        [[ -s "$base/list.err" ]] && sed 's/^/    /' "$base/list.err"
         failures=$((failures + 1))
     fi
 }
@@ -98,7 +100,19 @@ ssh_config "$base/client_key" "$base/known_hosts_empty" > "$base/ssh_unknown"
 ssh_config "$base/client_key" "$base/known_hosts_changed" > "$base/ssh_changed"
 ssh_config "$base/other_key" "$base/known_hosts" > "$base/ssh_denied"
 ssh_config "$base/client_key" "$base/known_hosts" "$((port == 65535 ? port - 1 : port + 1))" > "$base/ssh_refused"
-for variant in ok unknown changed denied refused; do
+# The user's own ssh config must not break the fixed command: a RemoteCommand,
+# a forced tty, a forward that cannot bind, and a jump host.
+{ ssh_config "$base/client_key" "$base/known_hosts"; echo "  RemoteCommand echo hijacked"; } > "$base/ssh_remotecommand"
+{ ssh_config "$base/client_key" "$base/known_hosts"; echo "  RequestTTY force"; } > "$base/ssh_tty"
+{ ssh_config "$base/client_key" "$base/known_hosts"; printf '  ExitOnForwardFailure yes\n  LocalForward 127.0.0.1:%s 127.0.0.1:%s\n' "$port" "$port"; } > "$base/ssh_forward"
+{
+    ssh_config "$base/client_key" "$base/known_hosts" | sed 's/^Host yen-loop$/Host yen-jump/'
+    ssh_config "$base/client_key" "$base/known_hosts"
+    echo "  ProxyJump yen-jump"
+} > "$base/ssh_jump"
+# Control: a jump host that refuses the key must break the listing, which proves it is on the path.
+sed '/^Host yen-loop$/,$!s|IdentityFile .*|IdentityFile '"$base"'/other_key|' "$base/ssh_jump" > "$base/ssh_badjump"
+for variant in ok unknown changed denied refused remotecommand tty forward jump badjump; do
     printf '#!/bin/bash\nexec /usr/bin/ssh -F %q "$@"\n' "$base/ssh_$variant" > "$base/bin-$variant"
     chmod 755 "$base/bin-$variant"
 done
@@ -120,6 +134,15 @@ if [[ -n "$old_cli" ]]; then
 else
     echo "SKIP: YEN without --porcelain (pass --old-cli)"
 fi
+
+echo "== the user's ssh config"
+check "RemoteCommand in the config" 0 "$(listing remotecommand)"
+check "RequestTTY force in the config" 0 "$(listing tty)"
+check "a LocalForward that cannot bind" 0 "$(listing forward)"
+check "ProxyJump through a jump host" 0 "$(listing jump)"
+check "control: the jump host is on the path (its key refused)" 11 "$(listing badjump)"
+/usr/bin/ssh -F "$base/ssh_forward" -o BatchMode=yes yen-loop true > /dev/null 2>&1
+check "control: plain ssh with that LocalForward fails" 255 "$?"
 
 echo "== list and attach"
 env -i PATH="$PATH" HOME="$home" ZMX_DIR="$home/.local/state/yen/zmx" "$zmx" run "$session" -d \

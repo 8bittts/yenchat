@@ -76,6 +76,7 @@ struct RemoteSessionsTests {
         "", "-oProxyCommand=sh", "-p", "mini -oProxyCommand=sh", "mini;id", "$(id)", "`id`", "mini\nother",
         "user@-oProxyCommand=sh", "-user@mini", "mini.", "mini..ts.net", "mini_host", "ünicode", "@mini",
         String(repeating: "a", count: 254), "fd7a:115c:a1e0::1;id",
+        "é", "mïni", "\u{FF4D}\u{FF49}\u{FF4E}\u{FF49}", "mini\u{202E}txt", "mini\u{0301}", "d\u{E9}v@mini", "mini\r\n",
     ])
     func refusesTargets(_ target: String) {
         #expect(!RemoteSessions.isValidTarget(target))
