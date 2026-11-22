@@ -253,6 +253,26 @@ exit "$ISSUES"
 				for (const path of helpers) copyFileSync(app, path);
 				const valid = verify();
 				expect(valid.status, valid.stderr).toBe(0);
+				const pdf = join(contents, "Resources/bin/yen-pdfthumb");
+				const ios = spawnSync(
+					"xcrun",
+					[
+						"vtool",
+						"-set-build-version",
+						"ios",
+						"27.0",
+						"27.0",
+						"-replace",
+						"-output",
+						pdf,
+						app,
+					],
+					{ encoding: "utf8" },
+				);
+				expect(ios.status, ios.stderr).toBe(0);
+				const wrongPlatform = verify();
+				expect(wrongPlatform.status).toBe(1);
+				expect(wrongPlatform.stderr).toContain("IOS");
 				const otherSlice = join(root, "old");
 				compile(otherSlice, "x86_64-apple-macos26.0");
 				const mixed = spawnSync(
