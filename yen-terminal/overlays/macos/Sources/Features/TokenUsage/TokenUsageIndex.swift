@@ -32,9 +32,20 @@ struct TokenUsageIndex: Sendable {
         return counts
     }
 
+    func latestCodexPlan() throws -> [TokenPlanMeter] {
+        let db = try SQLiteDatabase(readOnlyPath: directory.appendingPathComponent("today.sqlite").path)
+        let query = try db.prepare("""
+            SELECT json_extract(state,'$.plan') FROM cursors WHERE tool=? AND json_type(state,'$.plan')='object'
+            ORDER BY json_extract(state,'$.plan.date') DESC LIMIT 1
+            """)
+        query.bind(1, TokenTool.codex.rawValue)
+        guard try query.step(), let state = query.text(0) else { return [] }
+        return try JSONDecoder().decode(TokenPlanReading.self, from: Data(state.utf8)).meters
+    }
+
     private func prepareIndex(_ db: SQLiteDatabase) throws {
         let version = try db.prepare("PRAGMA user_version")
-        guard try version.step(), version.int(0) != 2 else { return }
+        guard try version.step(), version.int(0) != 3 else { return }
         version.reset()
         // Only YEN's disposable cache is migrated. Re-read unchanged logs using the new counting rules.
         try db.transaction {
@@ -48,7 +59,7 @@ struct TokenUsageIndex: Sendable {
                     PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
                 CREATE INDEX best ON events(tool,id,output DESC,n DESC);
                 CREATE INDEX recent ON events(path,seq DESC);
-                PRAGMA user_version=2;
+                PRAGMA user_version=3;
                 """)
         }
     }
@@ -172,7 +183,7 @@ struct TokenUsageIndex: Sendable {
                 DO UPDATE SET n=excluded.n,output=excluded.output WHERE (excluded.output,excluded.n)>(output,n)
                 """)
             let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
-            let end = try stream(handle, from: offset, through: size) { bytes, _ in
+            let end = try stream(handle, from: offset, through: size, tool: tool) { bytes, _ in
                 if tool == .codex {
                     try codex.ingest(bytes, file: url.path, rollout: rollout, day: day, db: db)
                     return
@@ -201,9 +212,10 @@ struct TokenUsageIndex: Sendable {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func stream(_ handle: FileHandle, from start: Int, through size: Int,
+    private func stream(_ handle: FileHandle, from start: Int, through size: Int, tool: TokenTool,
                         consume: (Data, Int) throws -> Void) throws -> Int {
         var position = start, committed = start, line = Data()
+        var skipping = false
         while position < size {
             try Task.checkCancellation()
             try autoreleasepool {
@@ -212,16 +224,22 @@ struct TokenUsageIndex: Sendable {
                 }
                 var rest = chunk[...]
                 while let lf = rest.firstIndex(of: 10) {
-                    line.append(rest[..<lf])
+                    if !skipping { line.append(rest[..<lf]) }
                     position += rest.distance(from: rest.startIndex, to: lf) + 1
-                    try autoreleasepool { try consume(line, committed) }
+                    if !skipping { try autoreleasepool { try consume(line, committed) } }
+                    skipping = false
                     committed = position
                     line.removeAll(keepingCapacity: false)
                     rest = rest[rest.index(after: lf)...]
                 }
-                line.append(rest)
+                if !skipping { line.append(rest) }
                 position += rest.count
-                guard line.count <= 8 * 1024 * 1024 else { throw CocoaError(.fileReadTooLarge) }
+                if line.count > 8 * 1024 * 1024 {
+                    // Compactions and image/tool payloads can dwarf the usage events between them.
+                    guard tool == .codex, TokenCodex.isNonUsageEnvelope(line) else { throw CocoaError(.fileReadTooLarge) }
+                    line.removeAll(keepingCapacity: false)
+                    skipping = true
+                }
             }
         }
         return committed

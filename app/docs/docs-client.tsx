@@ -609,23 +609,24 @@ function AgentTokenUsageSection() {
 				The switch is off by default.
 			</p>
 			<p className="text-body">
-				Click the YEN icon in the macOS menu bar for a breakdown by tool. Expand
-				a row for its exact count and share of the total. The total follows your
-				Mac’s local day and includes activity recorded by these tools outside
-				YEN.
+				Click the YEN icon to see each tool’s exact daily count and share.
+				Provider links open the official dashboards. Use the column button to
+				change the layout. Click the footer display button to cycle through
+				total tokens, the top provider, rotating plan limits, and the icon
+				alone.
 			</p>
 			<figure>
 				<Image
 					src="/doc-images/agent-token-usage.png"
-					alt="The YEN token menu shows 194 tokens across four providers. The expanded Codex row shows 154 tokens and 79.4% of usage."
-					width={640}
-					height={848}
+					alt="Example token menu with 10,000 daily tokens, inline provider counts and separate Grok, Cursor and Grok Bot plan bars."
+					width={730}
+					height={1072}
 					sizes="(max-width: 360px) 100vw, 320px"
 					className="h-auto w-full max-w-xs"
 				/>
 				<figcaption className="media-caption">
-					In YEN 1.284, expand a tool to see its exact count and share of
-					today’s total.
+					Example readings. Each provider’s top bar shows its share of today’s
+					tokens. The smaller bars show usage within each named plan window.
 				</figcaption>
 			</figure>
 			<ul className="list-disc space-y-2 pl-5 text-body">
@@ -649,6 +650,13 @@ function AgentTokenUsageSection() {
 					a usage log instead.
 				</li>
 			</ul>
+			<p className="text-body">
+				Plan bars show the percentage used in each named pool. For Cursor and
+				Grok Bot, open the connection button and enter a personal Cursor API
+				key, or use existing local plan readings from JPtheCat. Disconnect there
+				to remove the key from your Mac’s Keychain. Claude, Codex, and Grok
+				Build show current plan readings when their local tools record them.
+			</p>
 			<p className="text-body">
 				An asterisk marks a partial total. Unavailable means the source could
 				not be read. Zero means it was readable and recorded no tokens today.

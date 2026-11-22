@@ -17,7 +17,7 @@ struct TokenUsageIndexTests {
             """
         }
         let compacted = """
-            {"timestamp":"\(stamp)","type":"compacted","payload":{"message":"\(String(repeating: "x", count: 9 * 1024 * 1024))"}}
+            {"timestamp":"\(stamp)","ordinal":42,"type":"compacted","payload":{"message":"\(String(repeating: "x", count: 9 * 1024 * 1024))"}}
             """
         let file = root.appendingPathComponent("rollout-large.jsonl")
         try Data(([row(15), compacted, row(28)].joined(separator: "\n") + "\n").utf8).write(to: file)

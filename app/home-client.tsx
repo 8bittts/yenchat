@@ -213,10 +213,10 @@ export function HomeClient({ version }: { version: string }) {
 					<figure className="ph-token-figure">
 						<Image
 							src="/doc-images/agent-token-usage.png"
-							width={640}
-							height={848}
+							width={730}
+							height={1072}
 							sizes="(max-width: 700px) 70vw, 320px"
-							alt="YEN’s menu bar breakdown with the Codex token count expanded"
+							alt="YEN’s token menu with daily counts and plan usage bars shown together"
 						/>
 						<figcaption>Local usage records · Four supported tools</figcaption>
 					</figure>

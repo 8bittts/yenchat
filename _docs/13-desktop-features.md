@@ -126,7 +126,12 @@ Tried and reverted, do not retry without new evidence:
 
 General → Menu Bar → Show Token Usage enables the experimental agent token counter.
 Click its YEN status item to open the local day’s overview beneath the icon on the same display.
-Expand a provider row to see its exact count and share.
+Each provider shows its exact daily count, share of counted tokens and official usage link.
+Current plan readings appear below the daily share and each percentage belongs to its named pool.
+The layout button switches between one and two columns.
+The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.
+A source label identifies plan readings supplied by an existing JPtheCat opt-in.
+The connection button accepts a personal Cursor API key for Cursor and Grok Bot plan usage and offers Disconnect.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.
 Turning the switch off cancels collection and removes the item.

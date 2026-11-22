@@ -8,12 +8,15 @@ final class TokenUsageMenu: NSObject {
     private var localMonitor: Any?
     private var outsideMonitor: Any?
     private let snapshot = TokenMenuSnapshot()
+    private let connection = TokenPlanConnection()
     private let index: TokenUsageIndex
     private var watcher: TokenSourceWatcher?
     private var changes: [TokenTool: Set<URL>] = [:]
-    private var worker: Task<TokenUsageIndex.Counts?, Never>?
+    private var worker: Task<TokenMenuReading, Never>?
     private var pending = Set<TokenTool>()
     private var delay: Task<Void, Never>?
+    private var rotation: Task<Void, Never>?
+    private var meterIndex = 0
     private var active = true
     private var displayedDay = Calendar.current.startOfDay(for: Date())
 
@@ -24,6 +27,8 @@ final class TokenUsageMenu: NSObject {
             .appendingPathComponent("TokenUsage")
         index = TokenUsageIndex(home: fm.homeDirectoryForCurrentUser, directory: cache)
         super.init()
+        item.autosaveName = "YENTokenUsage"
+        item.isVisible = true
         let button = item.button
         let image = Bundle.main.url(forResource: "YENMenuMark", withExtension: "svg").flatMap(NSImage.init(contentsOf:))
         image?.size = .init(width: 16, height: 16)
@@ -32,6 +37,7 @@ final class TokenUsageMenu: NSObject {
         button?.imagePosition = .imageLeading
         button?.target = self
         button?.action = #selector(toggle)
+        configureRotation()
         updateTitle()
         watcher = TokenSourceWatcher(home: index.home) { [weak self] tool, paths in
             guard let self else { return }
@@ -53,6 +59,8 @@ final class TokenUsageMenu: NSObject {
         watcher?.stop()
         watcher = nil
         worker?.cancel()
+        connection.stop()
+        rotation?.cancel()
         delay?.cancel()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
@@ -74,7 +82,9 @@ final class TokenUsageMenu: NSObject {
         window.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
         window.dismiss = { [weak self] in self?.closePanel() }
         panel = window
-        let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, mark: button.image)
+        let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, connection: connection, mark: button.image,
+            heightLimit: (button.window?.screen?.visibleFrame.height ?? 700) - 24,
+            cycle: { [weak self] in self?.cycleDisplay() }, refresh: { [weak self] in self?.refreshAll() })
             .fixedSize().background(GeometryReader { geometry in
                 Color.clear.preference(key: TokenPanelSize.self, value: geometry.size)
             }).onPreferenceChange(TokenPanelSize.self) { [weak self, weak window] size in
@@ -155,12 +165,21 @@ final class TokenUsageMenu: NSObject {
 
     private func start() {
         guard active, worker == nil, !pending.isEmpty else { return }
-        let paths = changes
+        let paths = changes.filter { snapshot.counts?[$0.key] != nil }
         changes.removeAll()
         let tools = pending
         let day = displayedDay
         pending.removeAll()
-        let task = Task.detached(priority: .utility) { [index] in try? index.read(tools: tools, changes: paths) }
+        let task = Task.detached(priority: .utility) { [index] in
+            let counts = (try? index.read(tools: tools, changes: paths)) ?? [:]
+            let now = Date()
+            return TokenMenuReading(counts: counts, sharedPools: TokenLocalPlans.sharedCursorPools(home: index.home, now: now),
+                                    workspace: tools.contains(.openCode) ? TokenLocalPlans.openCodeWorkspace(home: index.home) : nil, plans: [
+                .claude: TokenLocalPlans.claude(home: index.home, now: now),
+                .codex: (try? index.latestCodexPlan()) ?? [],
+                .grok: TokenLocalPlans.grok(home: index.home, now: now)
+            ])
+        }
         worker = task
         Task { [weak self] in
             let result = await task.value
@@ -168,11 +187,38 @@ final class TokenUsageMenu: NSObject {
             self.worker = nil
             if day == self.displayedDay {
                 var counts = self.snapshot.counts ?? [:]
-                for tool in tools { counts[tool] = result?[tool] }
+                for tool in tools { counts[tool] = result.counts[tool] }
+                self.snapshot.sharedPools = result.sharedPools
+                if tools.contains(.openCode) { self.snapshot.workspace = result.workspace }
+                self.snapshot.plans = result.plans
                 self.snapshot.counts = counts
                 self.updateTitle()
             }
             if !self.pending.isEmpty && self.delay == nil { self.schedule([]) }
+        }
+    }
+
+    private func cycleDisplay() {
+        let modes = TokenMenuDisplay.allCases
+        let next = (modes.firstIndex(of: snapshot.display)! + 1) % modes.count
+        snapshot.display = modes[next]
+        UserDefaults.standard.set(snapshot.display.rawValue, forKey: TokenMenuDisplay.key)
+        configureRotation()
+        updateTitle()
+    }
+
+    private func configureRotation() {
+        rotation?.cancel()
+        meterIndex = 0
+        guard snapshot.display == .limits else { return }
+        rotation = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, let self else { return }
+                self.connection.refresh()
+                self.meterIndex += 1
+                self.updateTitle()
+            }
         }
     }
 
@@ -181,8 +227,29 @@ final class TokenUsageMenu: NSObject {
         let sum = counts?.values.reduce(0, +) ?? 0
         let value = counts == nil ? "…" : counts?.isEmpty == true ? "—" : sum.formatted(.number.notation(.compactName))
         let partial = (1..<TokenTool.allCases.count).contains(counts?.count ?? 0)
-        item.button?.title = " " + value + (partial ? "*" : "")
-        let title = counts == nil ? "Reading local token usage" : "Token usage today: \(sum.formatted()) from \(counts?.count ?? 0) of 4 sources"
+        let caption: String
+        switch snapshot.display {
+        case .total: caption = value + (partial ? "*" : "")
+        case .provider:
+            let leader = TokenTool.allCases.max { (counts?[$0] ?? -1) < (counts?[$1] ?? -1) }
+            if let leader, let count = counts?[leader], count > 0 {
+                caption = leader.rawValue + " " + count.formatted(.number.notation(.compactName))
+            } else { caption = value }
+        case .limits:
+            let now = Date()
+            let labels = TokenTool.allCases.flatMap { tool in
+                let meters = snapshot.meters(for: tool, connection: connection)
+                return meters.filter { $0.isCurrent(at: now) }.map { meter in
+                    let name = tool == .grok ? meter.label : tool.rawValue + " " + meter.label
+                    return name + " " + (meter.percent / 100).formatted(.percent)
+                }
+            }
+            caption = labels.isEmpty ? "Limits —" : labels[meterIndex % labels.count]
+        case .mark: caption = ""
+        }
+        item.button?.title = caption.isEmpty ? "" : " " + caption
+        let summary = counts == nil ? "Reading local token usage" : "Token usage today: \(sum.formatted()) from \(counts?.count ?? 0) of 4 sources"
+        let title = snapshot.display == .limits ? caption + ". " + summary : summary
         item.button?.toolTip = title
         item.button?.setAccessibilityLabel(title)
         if panel != nil {
@@ -213,81 +280,29 @@ private struct TokenPanelSize: PreferenceKey {
     static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }
 
-@MainActor
-private final class TokenMenuSnapshot: ObservableObject {
-    @Published var counts: TokenUsageIndex.Counts?
+private struct TokenMenuReading: Sendable {
+    let counts: TokenUsageIndex.Counts
+    let sharedPools: [TokenPlanMeter]
+    let workspace: String?
+    let plans: [TokenTool: [TokenPlanMeter]]
 }
 
-private struct TokenUsageOverview: View {
-    @ObservedObject var snapshot: TokenMenuSnapshot
-    let mark: NSImage?
-    @State private var expanded: TokenTool?
-    private let tones: [Color] = [.yenBrand, Color(red: 0.78, green: 0.73, blue: 0.65),
-                                   Color(red: 0.66, green: 0.70, blue: 0.76), Color(red: 0.54, green: 0.62, blue: 0.57)]
+enum TokenMenuDisplay: String, CaseIterable {
+    case total = "Total tokens", provider = "Top provider", limits = "Plan limits", mark = "Icon only"
+    static let key = "com.yenchat.yen.tokenUsage.display"
+}
 
-    var body: some View {
-        let counts = snapshot.counts ?? [:]
-        let total = counts.values.reduce(0, +)
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                if let mark {
-                    Image(nsImage: mark).renderingMode(.template).resizable().frame(width: 15, height: 15)
-                        .foregroundStyle(Color.yenBrand).accessibilityHidden(true)
-                }
-                Text("Token usage").font(.headline)
-                Spacer()
-                Text("Today").foregroundStyle(.secondary)
-            }
-            Divider()
-            Text(counts.count == 4 ? "All providers" : "Counted tokens").foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline) {
-                Text(snapshot.counts == nil ? "…" : counts.isEmpty ? "—" : total.formatted(.number.notation(.compactName)))
-                    .font(.largeTitle.weight(.medium)).monospacedDigit()
-                Text("tokens").foregroundStyle(.secondary)
-            }
-            if total > 0 {
-                GeometryReader { geometry in
-                    HStack(spacing: 0) {
-                        ForEach(Array(TokenTool.allCases.enumerated()), id: \.offset) { index, tool in
-                            tones[index].frame(width: geometry.size.width * CGFloat(counts[tool] ?? 0) / CGFloat(total))
-                        }
-                    }.clipShape(RoundedRectangle(cornerRadius: 3))
-                }.frame(height: 8).accessibilityHidden(true)
-            }
-            HStack {
-                Text("Provider")
-                Spacer()
-                Text("Tokens")
-            }.font(.caption).foregroundStyle(.secondary)
-            ForEach(Array(TokenTool.allCases.enumerated()), id: \.offset) { index, tool in
-                Divider()
-                DisclosureGroup(isExpanded: Binding(get: { expanded == tool }, set: { expanded = $0 ? tool : nil })) {
-                    Text(detail(for: counts[tool], total: total)).font(.caption)
-                        .foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
-                } label: {
-                    HStack {
-                        Circle().fill(tones[index]).frame(width: 7, height: 7)
-                        Text(tool.rawValue)
-                        Spacer()
-                        Text(counts[tool]?.formatted(.number.notation(.compactName)) ?? (snapshot.counts == nil ? "Reading…" : "Unavailable"))
-                            .monospacedDigit()
-                    }.accessibilityElement(children: .combine)
-                }
-            }
-            Divider()
-            Text(snapshot.counts == nil ? "Reading local sources…" : counts.isEmpty ? "No readable local sources" :
-                    counts.count == 4 ? "4 local sources" : "Partial total · \(counts.count) of 4 local sources")
-                .font(.caption).foregroundStyle(.secondary)
-        }.padding(16).frame(width: 320)
-            .background(Color(nsColor: .windowBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(.primary.opacity(0.14)))
+@MainActor
+final class TokenMenuSnapshot: ObservableObject {
+    @Published var sharedPools: [TokenPlanMeter] = []
+    @Published var workspace: String?
+    func meters(for tool: TokenTool, connection: TokenPlanConnection) -> [TokenPlanMeter] {
+        let local = plans[tool] ?? []
+        guard tool == .grok else { return local }
+        return local + (connection.connected ? connection.meters : sharedPools)
     }
 
-    private func detail(for count: Int?, total: Int) -> String {
-        guard let count else { return snapshot.counts == nil ? "Reading local source…" : "No readable local source." }
-        guard count > 0, total > 0 else { return "Local source available. No recorded tokens today." }
-        let share = (Double(count) / Double(total)).formatted(.percent.precision(.fractionLength(0...1)))
-        return "\(count.formatted()) tokens · \(share) of counted usage"
-    }
+    @Published var counts: TokenUsageIndex.Counts?
+    @Published var plans: [TokenTool: [TokenPlanMeter]] = [:]
+    @Published var display = TokenMenuDisplay(rawValue: UserDefaults.standard.string(forKey: TokenMenuDisplay.key) ?? "") ?? .total
 }

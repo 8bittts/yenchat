@@ -131,6 +131,13 @@ Each legacy session belongs to its creation day.
 The index ranks duplicate snapshots by output and then total tokens.
 Codex corrections reconcile input, cached input and output independently within a rollout.
 Grok uses completed turns, and OpenCode includes all gateways in its store.
+The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
+When JPtheCat has an enabled plan cache, YEN can read its local Cursor and Grok Bot readings.
+Once the optional Cursor connection is active, it replaces the JPtheCat readings for Cursor and Grok Bot.
+The optional Cursor connection exchanges a user-supplied API key for a temporary access token on api2.cursor.sh.
+The same host supplies Cursor’s current billing-cycle pools and Grok Bot’s weekly included pool.
+YEN saves only the user-supplied key in its own Keychain item and deletes that item on disconnect.
+Disabling the token menu cancels requests.
 Terminal panes and the renderer do not subscribe to usage updates.
 
 The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behind desktop icons.

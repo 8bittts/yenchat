@@ -3,9 +3,22 @@ import Foundation
 /// A rollout reports cumulative input, cached input (inside input), and output.
 /// Keep just the last counters in memory. Correct earlier deltas newest-first on disk.
 struct TokenCodex: Codable {
+    private var previousReading: TokenPlanReading?
+    private(set) var plan: TokenPlanReading?
     private var footprint = 0
     private var buckets = [0, 0, 0]
     private var ordinal = 0
+
+    /// Inspect only the outer discriminators of a large rollout record.
+    static func isNonUsageEnvelope(_ data: Data) -> Bool {
+        let prefix = String(decoding: data.prefix(1024), as: UTF8.self)
+        guard let payload = prefix.range(of: #",\s*"payload"\s*:\s*\{"#, options: .regularExpression),
+              let header = try? JSONSerialization.jsonObject(with: Data((prefix[..<payload.lowerBound] + "}").utf8)) as? TokenRecord.Object,
+              let type = header["type"] as? String else { return false }
+        if type != "event_msg" { return true }
+        let fields = prefix[payload.upperBound...]
+        return fields.range(of: #"^\s*"type"\s*:\s*"(?!token_count")[a-z_]+"\s*,"#, options: .regularExpression) != nil
+    }
 
     static func rolloutID(_ url: URL) -> String {
         let name = url.deletingPathExtension().lastPathComponent
@@ -14,9 +27,14 @@ struct TokenCodex: Codable {
     }
 
     mutating func ingest(_ bytes: Data, file: String, rollout: String, day: DateInterval, db: SQLiteDatabase) throws {
-        guard let obj = TokenRecord.object(bytes, containing: "\"total_token_usage\""), obj["type"] as? String == "event_msg",
-              let payload = obj["payload"] as? TokenRecord.Object, payload["type"] as? String == "token_count",
-              let info = payload["info"] as? TokenRecord.Object, let usage = info["total_token_usage"] as? TokenRecord.Object else { return }
+        guard let obj = TokenRecord.object(bytes, containing: "\"token_count\""), obj["type"] as? String == "event_msg",
+              let payload = obj["payload"] as? TokenRecord.Object, payload["type"] as? String == "token_count" else { return }
+        if let limits = payload["rate_limits"] as? TokenRecord.Object, let date = TokenRecord.date(obj["timestamp"]),
+           let reading = TokenPlanReading.codex(limits, at: date) {
+            plan = reading.isRollingPlaceholder(after: previousReading) ? nil : reading
+            previousReading = reading
+        }
+        guard let info = payload["info"] as? TokenRecord.Object, let usage = info["total_token_usage"] as? TokenRecord.Object else { return }
         let input = TokenRecord.number(usage["input_tokens"]), cached = TokenRecord.number(usage["cached_input_tokens"])
         let output = TokenRecord.number(usage["output_tokens"]), next = input + cached + output
         if next * 2 < footprint { buckets = [0, 0, 0] }
