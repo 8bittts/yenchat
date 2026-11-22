@@ -864,10 +864,10 @@ function SplitPaneLabelsSection() {
 				or zoomed panes.
 			</p>
 			<p className="text-body">
-				Horizontal tabs show the name on the left and, for a tab with splits,
-				its pane count on the right. Hold Command to see each tab&apos;s Cmd +
-				1-9 shortcut. When a tab gets narrow, the count hides to leave room for
-				its name.
+				Starting in YEN 1.285, horizontal tabs show the name on the left and,
+				for a tab with splits, its pane count on the right. Hold Command to see
+				each tab&apos;s Cmd + 1-9 shortcut. When a tab gets narrow, the count
+				hides to leave room for its name.
 			</p>
 			<figure>
 				<Image
