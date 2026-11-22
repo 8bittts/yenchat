@@ -96,6 +96,7 @@ Owner doc: `_docs/04-security.md`.
 
 `tests/84-ide-s3c-lsp-foundation.test.ts` and `tests/88-ide-s3d-devcontainer-vscode-ast.test.ts` each failed once in a full `bun test` run while the load average was 10 to 14, and each passes alone.
 In 84 a `runYen` call returned `status: null` at the 5-second test limit; in 88 the `ide-temp` cleanup hook timed out after the test took 28 seconds.
+`tests/100-ide-s3n-benchmark-harness.test.ts` failed the same way at load 14 ("benchmark status reports missing evidence on a fresh state dir": a hook timed out after 7.5 seconds) and passes alone.
 
 - [ ] Reproduce under generated load, then give the spawned CLI calls and the cleanup hook a limit that holds without hiding a real hang.
 
