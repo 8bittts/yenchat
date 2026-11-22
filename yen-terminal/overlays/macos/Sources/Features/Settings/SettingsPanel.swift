@@ -57,9 +57,6 @@ enum SettingsSpacing {
     static let previewLeadingInset: CGFloat = 20
     /// The preview caption sits to the right of the window controls.
     static let previewCaptionLeading: CGFloat = 86
-    /// Room between the window edge and the preview's border outline, so the
-    /// window's rounded corners do not clip the outline's edges and corners.
-    static let previewBorderInset: CGFloat = 6
 }
 
 /// The text styles the Settings window uses, by role. All are Dynamic Type
@@ -180,6 +177,10 @@ struct SettingsPanel: View {
                 theme: previewTheme
             )
             .ignoresSafeArea()
+
+            // Inside the safe area, so the outline starts below the titlebar band
+            // as it does over a terminal window's content.
+            SettingsStudioPreviewOutline(appearance: general.snapshot.appearance)
 
             // A quiet label beside the traffic lights, in the preview's own dim
             // text color so it reads on light and dark themes. The top safe-area

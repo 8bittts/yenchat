@@ -221,37 +221,45 @@ struct SettingsStudioPreview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .clipped()
-        .overlay {
-            if appearance.windowBorderEnabled {
-                // The same stroke metrics a terminal window uses, so the weight
-                // and the corner shown here are the ones the user gets.
-                let stroke = WindowBorderRenderingPolicy.strokeModel(
-                    width: appearance.windowBorderWidth,
-                    radius: appearance.windowBorderRadius,
-                    chromeMode: .native,
-                    isFocused: true,
-                    useDashedUnfocusedStyle: false
-                )
-                RoundedRectangle(cornerRadius: stroke.cornerRadius, style: .continuous)
-                    .inset(by: stroke.inset)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                appearance.windowBorderFocusedGradient.startColor,
-                                appearance.windowBorderFocusedGradient.endColor,
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        lineWidth: stroke.lineWidth
-                    )
-                    .padding(SettingsSpacing.previewBorderInset)
-                    .allowsHitTesting(false)
-            }
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Terminal preview")
         .accessibilityValue("\(theme.name) theme, \(font.fontFamily) \(Int(font.fontSize)) point")
+    }
+}
+
+// MARK: - Preview Outline
+
+/// The window outline over the preview, on the frame a terminal window gives it.
+///
+/// It sits below the titlebar band, like terminal content, so it never crowds
+/// the window controls. Framed panes carry it on their 10 pt pane frame, inset
+/// from the window edge; edge-to-edge panes carry it on the window edge with
+/// the native corner.
+struct SettingsStudioPreviewOutline: View {
+    let appearance: GeneralSettingsStore.Snapshot.Appearance
+    @ObservedObject private var paneSettings = SplitPaneLabelSettings.shared
+
+    var body: some View {
+        if appearance.windowBorderEnabled {
+            let placement = WindowBorderRenderingPolicy.windowOutlinePlacement(
+                panesAreFramed: paneSettings.paneStyle == .comfortable,
+                browserSplitVisible: false
+            )
+            let framed = placement == .paneGrid
+            WindowBorderOverlay(
+                gradient: appearance.windowBorderFocusedGradient,
+                width: appearance.windowBorderWidth,
+                radius: appearance.windowBorderRadius,
+                chromeMode: .native,
+                isFocused: true,
+                useDashedUnfocusedStyle: false
+            )
+            .paneBorder(framed: framed)
+            .padding(framed ? YENDesignTokens.paneInset : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
     }
 }
 
