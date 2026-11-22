@@ -114,12 +114,22 @@ private enum TokenPlanKey {
 @MainActor
 final class TokenPlanConnection: ObservableObject {
     private static let enabledKey = "com.yenchat.yen.tokenUsage.cursorPlan"
-    @Published private(set) var connected = UserDefaults.standard.bool(forKey: enabledKey)
+    @Published private(set) var connected: Bool
     @Published private(set) var meters: [TokenPlanMeter] = []
     @Published private(set) var message: String?
     @Published private(set) var loading = false
     private var task: Task<Void, Never>?
     private var lastAttempt = Date.distantPast
+    private let client: TokenPlanClient
+    private let savedKey: () -> String?
+
+    /// A test supplies the client, the saved key and the connection state, so it never touches the Keychain.
+    init(client: TokenPlanClient = TokenPlanClient(), savedKey: @escaping () -> String? = TokenPlanKey.read,
+         connected: Bool = UserDefaults.standard.bool(forKey: TokenPlanConnection.enabledKey)) {
+        self.client = client
+        self.savedKey = savedKey
+        self.connected = connected
+    }
 
     /// Reset All Settings removes the saved key and the menu's display choices.
     @discardableResult
@@ -137,7 +147,7 @@ final class TokenPlanConnection: ObservableObject {
     func refresh(force: Bool = false) {
         guard connected, task == nil, force || Date().timeIntervalSince(lastAttempt) >= 300 else { return }
         lastAttempt = Date()
-        guard let key = TokenPlanKey.read() else { message = "Unlock the Keychain or reconnect to Cursor."; return }
+        guard let key = savedKey() else { message = "Unlock the Keychain or reconnect to Cursor."; return }
         load(key: key, save: false)
     }
 
@@ -148,7 +158,7 @@ final class TokenPlanConnection: ObservableObject {
         lastAttempt = Date()
         task = Task {
             do {
-                let pools = try await TokenPlanClient().read(key: key)
+                let pools = try await client.read(key: key)
                 try Task.checkCancellation()
                 if save {
                     guard TokenPlanKey.save(key) else {

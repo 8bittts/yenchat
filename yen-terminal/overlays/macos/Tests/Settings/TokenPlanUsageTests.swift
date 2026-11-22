@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import YEN
 
@@ -60,6 +61,38 @@ struct TokenPlanUsageTests {
         #expect(pools.partial)
         #expect(pools.meters.map(\.label) == ["Grok Bot weekly"])
         #expect(pools.meters.map(\.percent) == [0])
+    }
+
+    @MainActor @Test func aDroppedRequestKeepsTheLastReadingAndARejectedKeyClearsIt() async throws {
+        enum Reply { case reading, outage, rejected }
+        let reply = OSAllocatedUnfairLock(initialState: Reply.reading)
+        let client = TokenPlanClient { request in
+            let state = reply.withLock { $0 }
+            if state == .outage { throw URLError(.notConnectedToInternet) }
+            let body: String
+            switch request.url?.lastPathComponent {
+            case "exchange_user_api_key": body = #"{"accessToken":"fixture-session"}"#
+            case "GetSandUsageStatus": body = #"{"hasNonZeroIncludedLimit":true,"usagePercent":81}"#
+            default: body = #"{"planUsage":{"totalPercentUsed":12}}"#
+            }
+            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: state == .rejected ? 401 : 200,
+                                                        httpVersion: nil, headerFields: nil))
+            return (Data(body.utf8), response)
+        }
+        let connection = TokenPlanConnection(client: client, savedKey: { "fixture-key" }, connected: true)
+        func refresh(_ next: Reply) async throws {
+            reply.withLock { $0 = next }
+            connection.refresh(force: true)
+            while connection.loading { try await Task.sleep(for: .milliseconds(5)) }
+        }
+        try await refresh(.reading)
+        #expect(connection.meters.map(\.label) == ["Cursor included", "Grok Bot weekly"])
+        // A laptop waking without a network must not blank the bars until the next poll.
+        try await refresh(.outage)
+        #expect(connection.meters.map(\.label) == ["Cursor included", "Grok Bot weekly"])
+        #expect(connection.message != nil)
+        try await refresh(.rejected)
+        #expect(connection.meters.isEmpty)
     }
 
     @Test func accountQuotaIgnoresAddOnAndRollingZero() throws {
