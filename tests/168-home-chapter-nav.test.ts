@@ -28,7 +28,7 @@ describe("homepage chapter nav on phones", () => {
 	});
 
 	test("phones lay the labels out in aligned columns", () => {
-		const phone = mediaBlock("(max-width: 520px)");
+		const phone = mediaBlock("(max-width: 639px)");
 		expect(phone).toMatch(/\.ph-chapters \.ph-wrap \{[^}]*display: grid;/);
 		expect(phone).toMatch(/grid-template-columns: repeat\(3, max-content\);/);
 	});

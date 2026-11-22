@@ -1476,8 +1476,8 @@ details[open] .ph-disclosure:after {
 }
 
 /* Phones: the five labels do not fit one row, so they sit in aligned
-   columns, three then two. Fits a 320px phone. */
-@media (max-width: 520px) {
+   columns, three then two, below the sm breakpoint. Fits a 320px phone. */
+@media (max-width: 639px) {
 	.ph-chapters .ph-wrap {
 		display: grid;
 		grid-template-columns: repeat(3, max-content);

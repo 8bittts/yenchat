@@ -62,6 +62,7 @@ The 53 posts imported from the Substack export live in `content/blog/posts/<slug
 - `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, checks that all 53 imported posts remain alongside locally authored posts, and fails if a post references media missing from `public/blog-media/`.
 - A new post is a new `content/blog/posts/<slug>.json` in the same shape plus its slug in `slugs.json`, with its media under `public/blog-media/`.
 - `tests/158` refuses a post slug that collides with a blog route such as `releases`.
+- `lib/blog.ts` (`accessibleArticleHtml`) repairs article markup on load: an image link whose image has empty alt text gets an `aria-label`, headings get an `aria-level` so the outline under the page `h1` starts at 2 and never skips, and each `pre` becomes focusable. The visual tags stay unchanged, so a new post needs none of this by hand; `tests/167-blog-article-accessibility.test.ts` checks every post.
 
 ### Posts and release notes
 

@@ -130,6 +130,8 @@ It imports the journal and policy layouts from `app/editorial.css`.
 The stylesheet uses `@utility` for classes that need variants (`lg:`, `hover:`), `:root` and `.dark` for HSL channel values, `@theme` mapping them to Tailwind tokens, `@theme inline` for `next/font` variables (defined on `<body>`), `@layer base`, and `@layer components` for variant-free classes.
 Only `@utility` classes accept variants in Tailwind v4.
 Dark mode is `next-themes` switching the `.dark` overrides; text tokens meet WCAG AA in both modes.
+The header and footer are dark in both modes, so `html`, `body` and the `theme-color` meta use the dark chrome color `--ph-night` (`COLORS.chrome`) in both modes; `PageShell` paints the theme background on its own box.
+Phones paint the root color in the safe areas, behind a collapsed toolbar and in overscroll, so a light root shows as a band below the footer; `tests/166-mobile-root-backdrop.test.ts` guards it, and only the iOS Simulator or a phone shows it, never headless Chrome.
 
 **Utilities to reuse, never re-create:**
 
