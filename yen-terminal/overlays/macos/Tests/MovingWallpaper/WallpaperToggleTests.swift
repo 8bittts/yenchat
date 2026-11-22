@@ -3,17 +3,29 @@ import Foundation
 import Testing
 @testable import YEN
 
+/// Preferences kept in memory. A named suite leaves an empty file in
+/// `~/Library/Preferences` even after `removePersistentDomain`.
+private final class MemoryDefaults: UserDefaults {
+    private nonisolated(unsafe) var values: [String: Any] = [:]
+
+    init() {
+        super.init(suiteName: nil)!
+    }
+
+    override func object(forKey defaultName: String) -> Any? { values[defaultName] }
+    override func set(_ value: Any?, forKey defaultName: String) { values[defaultName] = value }
+    override func removeObject(forKey defaultName: String) { values[defaultName] = nil }
+}
+
 /// The switch in Settings must own the desktop panels: on shows them, off
 /// removes every one, and nothing brings them back while it is off.
 @MainActor
 struct WallpaperToggleTests {
-    private let defaults: UserDefaults
-    private let suiteName = "wallpaper-toggle-tests-\(UUID().uuidString)"
+    private let defaults = MemoryDefaults()
     private let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     private let wallpaper: URL
 
     init() throws {
-        defaults = try #require(UserDefaults(suiteName: suiteName))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         wallpaper = folder.appendingPathComponent("loop.gif")
         // A one-pixel GIF: a real file the engine accepts, with no video decode.
@@ -27,7 +39,6 @@ struct WallpaperToggleTests {
     }
 
     private func cleanUp() {
-        defaults.removePersistentDomain(forName: suiteName)
         try? FileManager.default.removeItem(at: folder)
     }
 
