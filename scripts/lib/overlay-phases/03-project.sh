@@ -62,11 +62,6 @@ if [ -f "$INFO_PLIST" ]; then
     plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "NSMicrophoneUsageDescription" "YEN uses your microphone for Option + Space speech-to-text dictation in any app."
     plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "NSSpeechRecognitionUsageDescription" "YEN uses speech recognition to convert speech to text when you hold Option + Space to dictate."
 
-    # Shuffle from Photos reads the library through PhotoKit. 02-renames.sh
-    # strips this entitlement with upstream's unused ones; that file is an
-    # engine build input (48-vendor-zmx.sh), so the grant lives here.
-    plist_grant_entitlement "macos" "com.apple.security.personal-information.photos-library"
-
     # Remove camera usage description (Hands-Free Pointer removed; no YEN code uses camera).
     # The project build setting would put it back in the built app.
     plist_delete "$INFO_PLIST" "NSCameraUsageDescription"

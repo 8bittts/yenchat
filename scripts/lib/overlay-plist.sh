@@ -42,21 +42,3 @@ plist_set_usage_description() {
     plist_upsert "$plist" "$key" "string" "$value"
     sed -i '' -e "/INFOPLIST_KEY_${key} = /d" "$pbxproj"
 }
-
-# Grant one entitlement in every signing profile found in a folder. The hardened
-# runtime denies a protected resource without its entitlement and shows no prompt.
-plist_grant_entitlement() {
-    local ent_dir="$1"
-    local key="$2"
-    local ent_file
-    local granted=0
-    for ent_file in YEN.entitlements YENDebug.entitlements YENReleaseLocal.entitlements; do
-        [ -f "$ent_dir/$ent_file" ] || continue
-        plist_upsert "$ent_dir/$ent_file" "$key" "bool" "true"
-        granted=$((granted + 1))
-    done
-    if [ "$granted" -eq 0 ]; then
-        echo "  ERROR: no entitlements file in $ent_dir to grant $key" >&2
-        return 1
-    fi
-}

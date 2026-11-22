@@ -233,3 +233,38 @@ if [ -f "$PBXPROJ" ]; then
         "$PBXPROJ"
 fi
 }
+
+# Keep only the privacy entitlements a YEN feature uses, in all three signing
+# profiles: Release, Debug and ReleaseLocal. Upstream declares more so that
+# programs in the terminal can ask for them; YEN drops the ones none of its
+# features need. The hardened runtime denies a protected resource without its
+# entitlement and shows no prompt.
+configure_overlay_entitlements() {
+local ent_dir="$1"
+local ent_file
+for ent_file in YEN.entitlements YENDebug.entitlements YENReleaseLocal.entitlements; do
+    [ -f "$ent_dir/$ent_file" ] || continue
+    python3 -c "
+import sys, plistlib
+ent_file = sys.argv[1]
+try:
+    with open(ent_file, 'rb') as f:
+        d = plistlib.load(f)
+except Exception as e:
+    print(f'  ERROR: Failed to parse {ent_file}: {e}')
+    sys.exit(1)
+for k in ['com.apple.security.personal-information.addressbook',
+           'com.apple.security.personal-information.calendars',
+           'com.apple.security.personal-information.location',
+           'com.apple.security.device.camera']:
+    d.pop(k, None)
+# Dictation requires both microphone and speech-recognition privacy grants.
+d['com.apple.security.device.audio-input'] = True
+d['com.apple.security.personal-information.speech-recognition'] = True
+# Shuffle from Photos reads the library through PhotoKit.
+d['com.apple.security.personal-information.photos-library'] = True
+with open(ent_file, 'wb') as f:
+    plistlib.dump(d, f)
+" "$ent_dir/$ent_file" || { echo "  ERROR: Entitlements cleanup failed for $ent_file"; exit 1; }
+done
+}

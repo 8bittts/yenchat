@@ -3848,40 +3848,56 @@ plist_set_usage_description ${shellQuote(plistPath)} ${shellQuote(projectPath)} 
 		});
 	});
 
-	plistTest("an entitlement is granted in every signing profile", () => {
-		withTempDir((fixtureRoot) => {
-			const profiles = ["YEN.entitlements", "YENDebug.entitlements"];
-			for (const name of profiles)
-				writeFileSync(join(fixtureRoot, name), emptyPlist, "utf8");
-			const key = "com.apple.security.personal-information.photos-library";
-			const grant = `set -euo pipefail
-source ${shellQuote(plistHelpers)}
-plist_grant_entitlement "$1" ${key}`;
-			for (let pass = 0; pass < 2; pass++) {
-				const res = run("bash", ["-c", grant, "bash", fixtureRoot]);
-				expect(res.status, output(res)).toBe(0);
-				for (const name of profiles) {
+	plistTest(
+		"entitlement cleanup keeps the entitlements YEN features need",
+		() => {
+			withTempDir((root) => {
+				const entitlements = join(root, "macos/YEN.entitlements");
+				mkdirSync(dirname(entitlements), { recursive: true });
+				const granted = [
+					"automation.apple-events",
+					"device.camera",
+					"personal-information.addressbook",
+					"personal-information.calendars",
+					"personal-information.location",
+					"personal-information.photos-library",
+				]
+					.map((name) => `<key>com.apple.security.${name}</key><true/>`)
+					.join("");
+				writeFileSync(
+					entitlements,
+					emptyPlist.replace("<dict></dict>", `<dict>${granted}</dict>`),
+					"utf8",
+				);
+				for (let pass = 0; pass < 2; pass++) {
+					const result = runBrandingHelper(
+						root,
+						"configure_overlay_entitlements macos",
+					);
+					expect(result.status, output(result)).toBe(0);
 					const json = run("plutil", [
 						"-convert",
 						"json",
 						"-o",
 						"-",
-						join(fixtureRoot, name),
+						entitlements,
 					]);
 					expect(json.status, output(json)).toBe(0);
-					expect(JSON.parse(json.stdout)).toEqual({ [key]: true });
+					// Dictation needs the microphone and speech recognition, and Shuffle
+					// from Photos needs the Photos library: the hardened runtime denies
+					// each one without its entitlement and shows no prompt.
+					expect(JSON.parse(json.stdout)).toEqual({
+						"com.apple.security.automation.apple-events": true,
+						"com.apple.security.device.audio-input": true,
+						"com.apple.security.personal-information.photos-library": true,
+						"com.apple.security.personal-information.speech-recognition": true,
+					});
 				}
-			}
-			// A folder with no profile grants nothing, so it must not pass.
-			const empty = join(fixtureRoot, "empty");
-			mkdirSync(empty);
-			const missing = run("bash", ["-c", grant, "bash", empty]);
-			expect(missing.status).not.toBe(0);
-			expect(output(missing)).toContain("no entitlements file");
-		});
-	});
+			});
+		},
+	);
 
-	test("the project phase writes the Photos prompt and entitlement", () => {
+	test("the overlay phases write the privacy prompts and keep the entitlements", () => {
 		const phase = phaseSource("03-project.sh");
 		for (const key of [
 			"NSPhotoLibraryUsageDescription",
@@ -3891,8 +3907,8 @@ plist_grant_entitlement "$1" ${key}`;
 			expect(phase).toContain(
 				`plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "${key}" "YEN uses `,
 			);
-		expect(phase).toContain(
-			'plist_grant_entitlement "macos" "com.apple.security.personal-information.photos-library"',
+		expect(phaseSource("02-renames.sh")).toContain(
+			"\n    configure_overlay_entitlements .\n",
 		);
 	});
 });
