@@ -103,9 +103,12 @@ struct TokenUsageOverview: View {
             }
             Divider()
             if let history = snapshot.history {
+                // The chart takes every point the totals leave, so the face has no empty band;
+                // a short overview gets a thinner chart without its caption.
                 ViewThatFits(in: .vertical) {
-                    VStack(alignment: .leading, spacing: 12) { totals(history); trend(history) }
-                    totals(history)
+                    VStack(alignment: .leading, spacing: 12) { totals(history); trend(history, caption: true) }
+                    VStack(alignment: .leading, spacing: 12) { totals(history); trend(history, caption: false) }
+                    VStack(spacing: 0) { totals(history); Spacer(minLength: 0) }
                     ScrollView { totals(history) }
                 }
             } else {
@@ -113,8 +116,8 @@ struct TokenUsageOverview: View {
                     ProgressView().controlSize(.small)
                     Text("Reading 90 days of local records…").font(.caption).foregroundStyle(.secondary)
                 }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
             Divider()
             Text("Tokens from local records, today included").font(.caption).foregroundStyle(.secondary)
         }
@@ -155,7 +158,7 @@ struct TokenUsageOverview: View {
         }
     }
 
-    private func trend(_ history: [TokenTool: [Int]]) -> some View {
+    private func trend(_ history: [TokenTool: [Int]], caption: Bool) -> some View {
         let tones = tones
         let days = (0...TokenUsageIndex.historyDays).map { day in
             TokenTool.allCases.map { day == TokenUsageIndex.historyDays ? counts[$0] ?? 0 : history[$0]?[day] ?? 0 }
@@ -173,13 +176,15 @@ struct TokenUsageOverview: View {
                                      with: .color(tones[tool]))
                     }
                 }
-            }.frame(minHeight: 44, maxHeight: 120).accessibilityLabel("Daily tokens for the last 90 days")
+            }.frame(minHeight: caption ? 44 : 16, maxHeight: .infinity).accessibilityLabel("Daily tokens for the last 90 days")
                 .accessibilityValue("Busiest day " + peak.formatted())
-            HStack {
-                Text("Daily, last 90 days")
-                Spacer()
-                Text("Busiest day " + peak.formatted(Self.compact))
-            }.font(.caption).foregroundStyle(.secondary)
+            if caption {
+                HStack {
+                    Text("Daily, last 90 days")
+                    Spacer()
+                    Text("Busiest day " + peak.formatted(Self.compact))
+                }.font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 

@@ -138,7 +138,7 @@ The tint is brand orange, darkened on a light theme so small text keeps 4.5:1 (`
 Plan labels start at the provider name’s left edge.
 The chart button turns the card over to the analytics view, which keeps the overview’s size.
 The card rests unrotated on either face and shrinks during the turn by the share that perspective enlarges it, so its window never clips it.
-When the overview is too short for the chart, the analytics view shows the totals alone.
+The chart takes all the height the totals leave, so the view has no empty band; a short overview gets a thinner chart without its caption.
 That view shows token totals for the last 7, 30 and 90 days for each provider and for all providers, today included, above a daily chart of the 90 days.
 It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
