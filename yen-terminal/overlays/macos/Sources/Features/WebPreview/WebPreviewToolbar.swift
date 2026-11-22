@@ -133,7 +133,7 @@ private struct WebPreviewNavigationControls: View {
             .help(model.isLoading ? "Stop" : "Reload")
             .accessibilityLabel(model.isLoading ? "Stop" : "Reload")
 
-            TextField("https://yen.chat/docs", text: $model.addressText)
+            TextField("https://yen.chat/#guide", text: $model.addressText)
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: addressMinWidth, idealWidth: addressIdealWidth)
                 .focused($addressFieldFocused)

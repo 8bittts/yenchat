@@ -196,7 +196,7 @@ describe("web client UI smoke", () => {
 		);
 
 		const docsLink = document.querySelector(
-			'a[href="/docs"][aria-current="page"]',
+			'a[href="/#guide"][aria-current="page"]',
 		);
 		expect(docsLink?.textContent).toBe("Docs");
 
@@ -229,10 +229,9 @@ describe("web client UI smoke", () => {
 			.filter((href) => href.startsWith("/") || href.includes("yen.chat"));
 		expect(internalHrefs).toEqual([
 			"https://yen.chat/",
-			"https://yen.chat/docs",
-			"https://yen.chat/docs",
+			"https://yen.chat/#guide",
+			"https://yen.chat/#guide",
 			"https://blog.yen.chat/",
-			"https://yen.chat/tunes",
 			"https://yen.chat/terms",
 		]);
 	});
@@ -247,34 +246,31 @@ describe("web client UI smoke", () => {
 		}
 	});
 
-	test("HomeClient honors reduced motion and renders stable release links", async () => {
+	test("Home shows the session lifecycle, focused repository, and current release links", async () => {
 		prefersReducedMotion = true;
 
 		await render(<HomeClient version="1.032" />);
 		expect(document.body.textContent).not.toContain("Summarize via AI:");
 
-		expect(document.body.textContent).toContain(
-			"Quit, crash, update. Your terminal keeps running.",
-		);
 		expect(document.querySelector("h1")?.textContent).toBe(
-			"Quit, crash, update. Your terminal keeps running.",
+			"Quit the app. Keep the shell.",
 		);
-		expect(document.querySelector("h1")?.className).toContain("sr-only");
+		const button = (name: string) =>
+			Array.from(document.querySelectorAll("button")).find(
+				(el) => el.textContent === name,
+			) ?? null;
+		await click(button("Quit YEN"));
+		expect(document.body.textContent).toContain("YEN is closed.");
+		await click(button("Send request"));
 		expect(document.body.textContent).toContain(
-			"Speech-to-text in any app. No AI required.",
+			"Request 2 returned 200 OK while YEN was closed.",
 		);
-		expect(
-			document.querySelector('[data-layout-reserve="terminal-demo"]')
-				?.textContent,
-		).toContain("Speech-to-text in any app. No AI required.");
-		// The hero heading deliberately does NOT reserve its final height — see
-		// _docs/10-gtm.md "Hero typewriter". A reserve was tried and reverted: it
-		// removes a 75px post-hydration shift but leaves the full title's height
-		// (240px at narrow widths) blank above the fold for the whole animation,
-		// which reads as broken. The growth IS the effect.
-		expect(
-			document.querySelector('[data-layout-reserve="hero-title"]'),
-		).toBeNull();
+		await click(button("Reopen YEN"));
+		expect(document.body.textContent).toContain("#02");
+		await click(document.querySelector('[aria-label="Focus Server pane"]'));
+		const drawer = document.querySelector(".ph-drawer");
+		expect(drawer?.textContent).toContain("~/project/api");
+		expect(drawer?.textContent).toContain("Keyboard focusServer");
 		expect(document.body.textContent).toContain("v1.032");
 
 		const shaLink = Array.from(document.querySelectorAll("a")).find((link) =>
@@ -293,6 +289,7 @@ describe("web client UI smoke", () => {
 		// hook, silently re-clientises the tree with every other suite still green.
 		for (const relativePath of [
 			"app/docs/docs-client.tsx",
+			"app/home-client.tsx",
 			"app/yeni/yeni-client.tsx",
 			"app/blog/releases/page.tsx",
 			"app/blog/page.tsx",
@@ -314,10 +311,7 @@ describe("web client UI smoke", () => {
 		expect(document.querySelector("h1")?.textContent).toBe(
 			"Music for coding, focus, and the beautifully quiet hours between builds.",
 		);
-		// /tunes has its own typewriter hero and used the SAME data-layout-reserve
-		// attribute as home, so the reserve must be pinned absent here too — see
-		// _docs/10-gtm.md "Hero typewriter". Guarding only the home test would let
-		// the reserve be reintroduced on /tunes with the suite still green.
+		// The Tunes heading grows as it types. See the design system.
 		expect(
 			document.querySelector('[data-layout-reserve="hero-title"]'),
 		).toBeNull();
@@ -378,8 +372,9 @@ describe("web client UI smoke", () => {
 			expect(document.getElementById(anchor.hash.slice(1))).not.toBeNull();
 		}
 		expect(
-			document.getElementById("ide-workflows")?.querySelector("details summary")
-				?.textContent,
+			document
+				.getElementById("ide-workflows")
+				?.querySelector(":scope > div details summary")?.textContent,
 		).toContain("Workflow commands");
 		expect(
 			document.querySelector(
@@ -584,7 +579,7 @@ describe("public web surface render smoke", () => {
 			);
 			expect(document.querySelector("#mobile-site-nav")).toBeTruthy();
 			expect(
-				document.querySelector('#mobile-site-nav a[href="/docs"]'),
+				document.querySelector('#mobile-site-nav a[href="/#guide"]'),
 			).toBeTruthy();
 		}
 

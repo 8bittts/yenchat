@@ -1,6 +1,6 @@
 # YEN Documentation Map
 
-Open-source (MIT) macOS terminal, in maintenance mode ([00-foundation.md](00-foundation.md) → Decisions), built on a vendored Ghostty mirror with YEN overlays, a native browser, a file browser, on-device dictation, and the public website at `yen.chat` with its manual at [yen.chat/docs](https://yen.chat/docs).
+Open-source (MIT) macOS terminal, in maintenance mode ([00-foundation.md](00-foundation.md) → Decisions), built on a vendored Ghostty mirror with YEN overlays, a native browser, a file browser, on-device dictation, and the public website at `yen.chat` with its manual at [yen.chat/docs](https://yen.chat/#guide).
 Agent routing lives in `AGENTS.md`; this index follows the fleet documentation standard that `/docs` audits against.
 
 ## Owner docs
@@ -67,7 +67,7 @@ Sync rules:
 - A command or shortcut change updates `12`, `KeybindRegistry`, `app/docs/docs-client.tsx` and `public/llms.txt`.
 - A service, data-flow or provider change updates `08`, the environment section of `05`, and the combined `/terms` page (privacy lives there; `/privacy` redirects).
 
-Public-surface audit: `app/`, `public/`, `/privacy`, `/terms`, `/docs`, `/alternatives`, `/use-cases`, `/llms.txt`, `/robots.txt`, `/sitemap.xml` and `/manifest.webmanifest`, checked against code and then against `https://yen.chat` using the SEO baseline in `09`.
+Audit the homepage and its manual, Terms, the blog, discovery files, and redirects for retired pages against the SEO baseline in `09`.
 
 ## Known doc drift
 

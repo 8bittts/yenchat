@@ -22,7 +22,7 @@ Any expansion starts as a `_docs/todos.md` phase that points back here.
 
 | Surface | Opened by | Controls |
 |---------|-----------|----------|
-| Utility window (default) | Palette `Browser`, `yen web open`, terminal links | Native `NSToolbar`; first open shows `https://yen.chat/docs`; reopening focuses without resetting the page |
+| Utility window (default) | Palette `Browser`, `yen web open`, terminal links | Native `NSToolbar`; first open shows `https://yen.chat/#guide`; reopening focuses without resetting the page |
 | Split beside a terminal | Palette `Browser Split`, `yen web open --split` or `--target split`, or the default-off Open the Browser in a Split setting | Inline `BrowserSplitPane` toolbar |
 
 Each surface has its own `WebPreviewModel`, so address, loading and history stay independent.

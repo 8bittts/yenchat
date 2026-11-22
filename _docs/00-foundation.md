@@ -45,7 +45,6 @@ Dates are the evidence in this doc; the owner docs carry none.
 - **The release cost model is settled.** Reusing a prior build for the shipping artifact, caching the SDK probe, and skipping `/update-yen` Step 4's native slice after the vendor phase's VB-05 were each rejected as determinism hazards ([05-infrastructure.md](05-infrastructure.md)).
 - **Gate receipts account for every unit.** The unit contract replaced per-incident skip markers ([04-security.md](04-security.md)).
 - **Native UI findings are verified in a running build.** The shortcut list once stayed one update behind in the running app, which no test showed because the suites exercised the derived-state model and never the view path that fed it ([09-quality.md](09-quality.md)).
-- **The hero typewriter grows the layout.** Reserving its final height was tried and reverted ([02-design-system.md](02-design-system.md)).
 - **No download tracking.** The download database and the owner report were removed when the source went public; the site keeps Vercel Web Analytics only ([08-growth.md](08-growth.md)).
 - **Tests never hold a live credential.** A Monday test run once sent a real owner email and burned that day's idempotency key, so `tests/01-preload.ts` strips credential-shaped variables ([09-quality.md](09-quality.md)).
 - **Dictation microphone options are seeded eagerly.** Two releases shipped the Microphone row with no reachable UI while it waited on its own `.onAppear` ([11-speech-to-text.md](11-speech-to-text.md)).

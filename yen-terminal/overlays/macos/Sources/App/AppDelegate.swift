@@ -1491,7 +1491,7 @@ class AppDelegate: NSObject,
     }
 
     @IBAction func showHelp(_ sender: Any) {
-        guard let url = URL(string: "https://yen.chat/docs") else { return }
+        guard let url = URL(string: "https://yen.chat/#guide") else { return }
         NSWorkspace.shared.open(url)
     }
 

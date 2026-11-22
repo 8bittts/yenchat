@@ -1,6 +1,6 @@
 # YEN
 
-**Quit, crash, update. Your terminal keeps running.**
+**Quit the app. Keep the shell.**
 
 ![YEN Terminal](https://yen.chat/doc-images/_yen-0.png)
 
@@ -8,11 +8,11 @@ YEN is a free, open-source, GPU-accelerated terminal for macOS that just works.
 Your panes keep running through quits, crashes and updates, you can talk to any app on your Mac, and nothing needs configuring before it is useful.
 It is built on [Ghostty](https://github.com/ghostty-org/ghostty) and released under the [MIT License](LICENSE).
 
-[Download for macOS](https://yen.chat) · [Docs](https://yen.chat/docs) · [Release notes](https://blog.yen.chat/releases)
+[Download for macOS](https://yen.chat) · [Docs](https://yen.chat/#guide) · [Release notes](https://blog.yen.chat/releases)
 
 ## Why YEN
 
-### Sessions that never die
+### Leave a server running
 
 Quit YEN, let it update, or watch it crash: your shell sessions keep running.
 Open it again and each restored session reattaches with its screen and scrollback, right where you left it.
@@ -40,13 +40,18 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 - A built-in WebKit browser for docs and local dev servers, in a window or a split.
 - Project detection, trust, diagnostics, test runs, review and automation through the bundled `yen` command.
 - 20 curated themes, previewed live in Settings.
-- Metal rendering at 60 FPS and up.
+- A focused outline around the pane that receives the next keystroke, with a choice of comfortable gutters or compact dividers.
 
-### Optional desktop features in YEN 1.283
+### A menu bar for your agents
 
-The [agent token usage experiment](https://yen.chat/docs#agent-token-usage) shows daily counts for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
-On macOS 27 or later, Experimental > Moving Wallpaper plays a video or GIF behind desktop icons.
-Both switches start off.
+The [agent token usage experiment](https://yen.chat/#agent-token-usage) shows daily counts for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
+The breakdown follows your Mac’s local day, including activity outside YEN.
+
+### A moving desktop
+
+On macOS 27 or later, Experimental > Moving Wallpaper plays video behind your desktop icons.
+Choose a local clip, a GIF, YouTube, or Photos, and assign a different selection to each desktop.
+Token counting and wallpaper both start switched off.
 
 ### Private by default
 
@@ -70,7 +75,7 @@ Apple's legacy recognizer can use Apple's service when on-device recognition is 
 3. Open YEN from Applications.
 
 YEN updates itself.
-See the [public documentation](https://yen.chat/docs) for every feature and command.
+See the [public documentation](https://yen.chat/#guide) for every feature and command.
 
 ## Development
 

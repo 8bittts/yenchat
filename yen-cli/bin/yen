@@ -164,7 +164,7 @@ Examples:
   yen config  Show config path
   yen init zsh  Get zsh integration code
 
-Documentation: https://yen.chat/docs
+Documentation: https://yen.chat/#guide
 
 EOF
 }

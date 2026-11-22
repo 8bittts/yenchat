@@ -30,24 +30,6 @@ export function Footer({ siteOrigin = "" }: FooterProps) {
 						Blog
 					</a>
 					<a
-						href="https://twitter.com/yenFTW"
-						className="nav-link nav-link-inactive"
-						target="_blank"
-						rel="noopener noreferrer"
-						onClick={() =>
-							trackProductEvent("footer_click", { item: "Twitter" })
-						}
-					>
-						@yenFTW
-					</a>
-					<Link
-						href={`${siteOrigin}/tunes`}
-						className="nav-link nav-link-inactive"
-						onClick={() => trackProductEvent("footer_click", { item: "Music" })}
-					>
-						Music
-					</Link>
-					<a
 						href="https://btc.email"
 						className="nav-link nav-link-inactive"
 						target="_blank"
@@ -56,39 +38,20 @@ export function Footer({ siteOrigin = "" }: FooterProps) {
 					>
 						Email
 					</a>
-					<a
-						href="https://jpthecat.com"
+					<Link
+						href={`${siteOrigin}/terms`}
 						className="nav-link nav-link-inactive"
-						target="_blank"
-						rel="noopener noreferrer"
-						onClick={() =>
-							trackProductEvent("footer_click", { item: "Tokens" })
-						}
+						onClick={() => trackProductEvent("footer_click", { item: "Terms" })}
 					>
-						Tokens
-					</a>
+						Terms
+					</Link>
 				</nav>
-
-				{/* Legal + Copyright */}
-				<div className="flex w-full items-baseline gap-3 sm:w-auto md:gap-6">
-					<nav
-						className="flex items-center gap-3 whitespace-nowrap md:gap-6"
-						aria-label="Legal"
-					>
-						<Link
-							href={`${siteOrigin}/terms`}
-							className="nav-link nav-link-inactive"
-							onClick={() =>
-								trackProductEvent("footer_click", { item: "Terms" })
-							}
-						>
-							Terms
-						</Link>
-					</nav>
-					<p className="text-body-xs hidden md:block" suppressHydrationWarning>
-						YEN © {new Date().getFullYear()}
-					</p>
-				</div>
+				<p
+					className="text-body-xs self-end sm:self-auto"
+					suppressHydrationWarning
+				>
+					YEN © {new Date().getFullYear()}
+				</p>
 			</div>
 		</footer>
 	);

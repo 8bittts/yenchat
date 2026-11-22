@@ -28,7 +28,7 @@ const SERVER_OUTPUT = join(NEXT_OUTPUT, "server");
 const ROUTE_CACHE_ARTIFACT = /^(?:APP_PAGE|APP_ROUTE)\/[0-9a-f]{64}\/\$\/(.+)$/;
 const INTERNAL_ERROR_ROUTES = new Set(["/_global-error", "/_not-found"]);
 const MAX_CSP_HEADER_BYTES = 8_000;
-const DYNAMIC_PROBE_PATH = "/library";
+const DYNAMIC_PROBE_PATH = "/yen-page-not-found";
 const REPRESENTATIVE_PRODUCTION_NONCE = "x".repeat(48);
 const NODE_EXECUTABLE = "node";
 const ACTIVE_MARKUP_CONTENT_TYPES = [
@@ -261,7 +261,7 @@ async function waitForDynamicProbe(
 			const response = await fetch(
 				`http://localhost:${port}${DYNAMIC_PROBE_PATH}`,
 			);
-			if (response.status === 200) return response;
+			if (response.status === 404) return response;
 		} catch {
 			// The production server has not opened its socket yet.
 		}
@@ -279,7 +279,7 @@ async function readDynamicProbe(
 	nonce: string;
 	scripts: InlineScriptElement[];
 }> {
-	if (response.status !== 200) {
+	if (response.status !== 404) {
 		throw new Error(`${label} returned ${response.status}`);
 	}
 	const nonce = response.headers.get("x-nonce");

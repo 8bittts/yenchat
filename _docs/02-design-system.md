@@ -139,24 +139,19 @@ Dark mode is `next-themes` switching the `.dark` overrides; text tokens meet WCA
 
 **Components.** Every public page uses `PageShell` or `DocPageShell`, never a hand-rolled header without mobile-nav state.
 Header and footer navigation links share `nav-link` / `nav-link-inactive` (see `components/shared/{header,footer}.tsx`); do not size footer links down with `text-body-xs`.
-`DocPageShell` takes `variant="guide"` for `/docs`: the centered `container-page` frame with one-third navigation and two-thirds content.
-Keep the guide inside the shared page width; do not stretch it to the viewport edges.
-Legal and release pages use `"half"`; `/yeni` uses `"narrow"`.
+The homepage field guide uses native disclosures within the Phosphor grid.
+Direct section links open the relevant chapter.
+Legal and release pages use the half-width document shell.
 Public pages do not include AI-summary buttons or links that send page URLs to external assistants.
-Page titles use `text-heading-lg`; the compact `/docs` navigation title uses `text-heading-md` to fit its narrow column.
+Page titles use the shared sans family.
+Terminal output, commands, and instrument labels use the shared monospace family.
 Code examples use `TerminalCodeBlock` (`wrap` for prose-style blocks); framed tables and embeds use `TerminalPanel` (`components/docs/terminal-panel.tsx`).
 The product manual uses `text-body` for paragraphs, lists, tables, and disclosure summaries; subsection headings use semantic `h3` elements with `text-heading-sm`.
 Do not shrink ordinary instructions or use muted text as a second body style.
 `inline-code-brand` inherits its surrounding font size; code blocks retain their shared monospace treatment.
 
-**Spacing families.** Four, and no fifth:
-
-| Family | Pattern | Surfaces |
-|--------|---------|----------|
-| Landing hero | `pt-20 pb-6 md:py-28` | `/`, `/tunes` |
-| Full section | `section-padding` | 404, multi-section pages |
-| PSEO and library | `py-10 md:py-14` or `py-10 md:py-16` | `/alternatives`, `/use-cases`, `/library` |
-| Doc shell | `py-8 lg:pt-10` via `DocPageShell` | `/docs`, `/privacy`, `/terms`, blog.yen.chat, `/yeni` |
+Phosphor uses the responsive `ph-wrap` width for the hero, demos, field guide, and release log.
+Terms and the separate blog retain the shared document shell.
 
 **Rules.**
 
@@ -165,12 +160,5 @@ Do not shrink ordinary instructions or use muted text as a second body style.
 - No developer language on public pages ("scaffold", "MVP", "v1").
 - Breakpoints are Tailwind defaults (`sm` 640, `md` 768, `lg` 1024), mobile first.
 
-## Hero Typewriter
-
-The animated heading on `/` and `/tunes` grows the layout as it types, on purpose.
-
-- [HARD REQUIREMENT] Never reserve its final height: a reserve removes a 75px CTA shift but leaves about 240px blank above the fold at narrow widths for the whole animation.
-- Measure only with `prefers-reduced-motion: reduce` off; `useTypewriter` renders the final string at once under reduced motion, and headless Chrome often defaults to it.
-- Measure buffered `layout-shift` entries and the CTA's Y position; heading wraps can move the paragraph, controls, and terminal panel.
-- [NOTE] Heading growth on `/` and `/tunes` is an accepted CLS exception.
-  Match later shifts to their source elements before attributing them to this animation; unrelated shifts remain defects.
+The homepage uses a fixed dark surround for the phosphor monitor and terminal previews.
+Its field guide follows the site theme, and the heading renders in full without animation.

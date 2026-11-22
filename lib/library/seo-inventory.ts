@@ -80,10 +80,11 @@ function withPublicStatus(
 		"sitemapIncluded" | "indexable" | "lastModified"
 	>,
 ): SeoInventoryPage {
+	const current = page.path === "/" || page.path === "/terms";
 	return {
 		...page,
-		sitemapIncluded: true,
-		indexable: true,
+		sitemapIncluded: current,
+		indexable: current,
 		lastModified: PUBLIC_LIBRARY_LAST_MODIFIED,
 	};
 }
@@ -96,8 +97,8 @@ function publicLibraryPageToInventoryPage(
 		title: page.seo.title,
 		path: page.path,
 		description: page.seo.description,
-		sitemapIncluded: true,
-		indexable: true,
+		sitemapIncluded: false,
+		indexable: false,
 		evidenceScore: page.evidenceScore,
 		sourceCount: page.officialSources.length + page.yenProofPoints.length,
 		lastModified: page.lastModified,
@@ -124,13 +125,7 @@ export function getLibrarySeoInventory() {
 
 	const corePages = CORE_SEO_PAGES.map(withPublicStatus);
 	const hubPages = HUB_SEO_PAGES.map(withPublicStatus);
-	const sitemapPages = [
-		...corePages.slice(0, 3),
-		...hubPages,
-		...alternativePages,
-		...useCasePages,
-		...corePages.slice(3),
-	];
+	const sitemapPages = corePages.filter((page) => page.sitemapIncluded);
 
 	return {
 		siteUrl: SITE_URL,

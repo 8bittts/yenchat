@@ -85,7 +85,7 @@ See [11-speech-to-text.md](11-speech-to-text.md) for the audio tap contract.
 
 ## Web Quality Baselines
 
-These apply to `/`, `/docs`, `/tunes`, the blog.yen.chat index, posts and release notes, `/alternatives`, `/use-cases` and their slug pages, `/yeni`, `/privacy`, `/terms`, and the shared 404 and error screens.
+These apply to the homepage, Terms, and the separate blog.
 
 **Accessibility (WCAG AA).**
 
@@ -105,7 +105,7 @@ Check every changed public page at about 390x844 for the last-section-to-footer 
 **SEO and indexing.**
 
 - `https://yen.chat` is canonical; `www` redirects permanently, and every canonical, sitemap, OpenGraph and Twitter URL uses the apex host.
-- Indexable: `/`, `/docs`, `/tunes`, `/yeni` (unlinked, not in the sitemap), `/alternatives` and `/use-cases` with their slugs, `/terms` (combined terms and privacy; `/privacy` redirects here), `/whitepaper.pdf`. Each needs a canonical URL, OpenGraph and Twitter metadata, and `index,follow`.
+- The main site indexes the homepage and Terms. Both carry canonical, Open Graph, Twitter, and robots metadata.
 - Noindex: `/api/*`, `/download`, `/stable/*`, `/cookies`, 404, and `/library`, with route-level `X-Robots-Tag` where it applies.
 - `robots.txt` comes only from `app/robots.ts`: it disallows `/api` and `/stable`, leaves `/download` and `/cookies` crawlable so crawlers see the header or redirect, and allows the major search and AI crawlers.
 - `app/manifest.ts` is the only manifest; a static `public/manifest.webmanifest` collides with the route and returns 500 in development.
@@ -115,7 +115,7 @@ Check every changed public page at about 390x844 for the last-section-to-footer 
 - No `SoftwareApplication` JSON-LD without real review data.
 - `public/llms.txt` keeps high-value resources as Markdown links; run the Lighthouse Agentic Browsing audit after editing it.
 
-**CSP.** `bun run build` runs `scripts/44-build-web-csp.ts`: it derives exact per-route hashes from emitted HTML, probes the dynamic `/library` route twice, rewrites `lib/csp/generated-inline-script-hashes.ts` when needed, and requires a converged second build.
+**CSP.** `bun run build` runs `scripts/44-build-web-csp.ts`: it derives exact per-route hashes from emitted HTML, probes an unknown URL twice for a fresh nonce and authorized error-page scripts, rewrites `lib/csp/generated-inline-script-hashes.ts` when needed, and requires a converged second build.
 The committed manifest is a cache: any app change makes it stale, and the production build then rewrites it and builds twice rather than failing.
 A local `bun run build` therefore often leaves it modified; commit it with web work that ships, as the release-notes commit does, and restore it with `git checkout --` before a commit that ships no web change.
 Vercel builds set a Next build adapter, so Next 16.3.8+ writes prerendered output to `.next/server/route-cache/` there instead of `.next/server/app/`; the CSP build and `scripts/46-scan-bundle-leaks.ts` read both layouts.

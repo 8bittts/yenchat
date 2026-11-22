@@ -9,7 +9,8 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - `app/globals.css` — every token and shared utility.
 - `components/docs/doc-page-shell.tsx`, `PageShell`, `components/shared/{header,footer}.tsx` — page shells.
 - `lib/seo.ts` (`PUBLIC_PAGE_SEO`), `app/sitemap.ts`, `app/robots.ts`, `app/manifest.ts` — metadata and discovery.
-- `lib/library/public-pages.ts` — PSEO registry and eligibility; `lib/library/seo-inventory.ts` — the `/library` view model.
+- `lib/library/public-pages.ts` — archived comparison registry.
+  Known legacy routes redirect to the homepage.
 - `proxy.ts` and `scripts/44-build-web-csp.ts` — host validation and CSP.
 - `lib/blog.ts`, `lib/http/blog-host.ts`, `app/blog/`, `content/blog/` and `public/blog-media/` — blog.yen.chat ([Blog](#blog-blogyenchat)).
 - `lib/release-notes/release-notes-copy.ts` — curated release prose; `lib/release-notes/release-notes-data.ts` is generated.
@@ -19,7 +20,8 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 [CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
 
 - Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS. Never claim "no third parties".
-- Shared chrome: header links are Docs and GitHub (`https://github.com/8bittts/yenchat`, new tab) only; footer links are Blog (`https://blog.yen.chat/`), @yenFTW (`https://twitter.com/yenFTW`), Music (`/tunes`), Email (`https://btc.email`) and Tokens (`https://jpthecat.com`), every external one in a new tab. `tests/121` pins both orders. Footer legal is Terms only (`/terms`, combined privacy and cookie policy; `/privacy` redirects). Release notes stay out of header and footer; the blog index links them.
+- The header links to Docs at `/#guide`, GitHub, and @yenFTW.
+- The footer links to Blog, Email, and Terms and displays the YEN copyright.
 - Downloads are GitHub Release assets; `/download` redirects to the current DMG and records nothing.
 - Public counts come from manifests or scripts (the curated theme manifest for themes), never from old copy; never advertise retired custom sounds or sound packs.
 - Historical public assets such as `public/skills.md` may stay reachable but are labeled historical.
@@ -97,7 +99,7 @@ Formatting: spaced em dashes ("text — text", never `--`); spaced slashes betwe
 
 ## Public Manual
 
-`app/docs/docs-client.tsx` owns the task-focused manual; `app/docs/page.tsx` owns its navigation.
+`app/docs/docs-client.tsx` owns the task-focused manual; `components/home/operator-guide.tsx` embeds it on the homepage.
 Keep setup, workspace controls, feature limits, and troubleshooting visible; use bundled command help for the exhaustive CLI inventory.
 Preserve useful existing anchors when combining sections, and keep navigation in reading order.
 Historical essays and conceptual product comparisons belong outside the manual.

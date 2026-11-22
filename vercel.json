@@ -93,12 +93,12 @@
 	"redirects": [
 		{
 			"source": "/features",
-			"destination": "/docs",
+			"destination": "/#guide",
 			"permanent": true
 		},
 		{
 			"source": "/integrations",
-			"destination": "/docs",
+			"destination": "/#guide",
 			"permanent": true
 		},
 		{

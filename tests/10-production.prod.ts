@@ -61,9 +61,9 @@ function findUnauthorizedScripts(
 }
 
 describe("Production: strict CSP authorization", () => {
-	test("a representative PSEO page is stable HTML authorized by exact hashes", async () => {
-		const first = await fetch(`${PROD_URL}/alternatives/warp`);
-		const second = await fetch(`${PROD_URL}/alternatives/warp`);
+	test("a terms page is stable HTML authorized by exact hashes", async () => {
+		const first = await fetch(`${PROD_URL}/terms`);
+		const second = await fetch(`${PROD_URL}/terms`);
 		expect(first.status).toBe(200);
 		expect(second.status).toBe(200);
 		expect(first.headers.get("x-nonce")).toBeNull();
@@ -85,16 +85,14 @@ describe("Production: strict CSP authorization", () => {
 	});
 
 	test("encoded and case aliases redirect to an authorized static page", async () => {
-		for (const alias of ["/alternatives/%77arp", "/alternatives/Warp"]) {
+		for (const alias of ["/%74erms", "/Terms"]) {
 			const redirect = await fetch(`${PROD_URL}${alias}?source=csp-test`, {
 				redirect: "manual",
 			});
 			expect(redirect.status).toBe(308);
 			expect(
 				new URL(redirect.headers.get("location") ?? "", PROD_URL).toString(),
-			).toBe(
-				new URL("/alternatives/warp?source=csp-test", PROD_URL).toString(),
-			);
+			).toBe(new URL("/terms?source=csp-test", PROD_URL).toString());
 
 			const response = await fetch(`${PROD_URL}${alias}`);
 			expect(response.status).toBe(200);
@@ -127,11 +125,11 @@ describe("Production: strict CSP authorization", () => {
 		}
 	});
 
-	test("the dynamic library page uses a fresh nonce plus exact root hashes", async () => {
-		const first = await fetch(`${PROD_URL}/library`);
-		const second = await fetch(`${PROD_URL}/library`);
-		expect(first.status).toBe(200);
-		expect(second.status).toBe(200);
+	test("a missing page uses a fresh nonce plus exact root hashes", async () => {
+		const first = await fetch(`${PROD_URL}/yen-page-not-found`);
+		const second = await fetch(`${PROD_URL}/yen-page-not-found`);
+		expect(first.status).toBe(404);
+		expect(second.status).toBe(404);
 
 		const firstNonce = first.headers.get("x-nonce");
 		const secondNonce = second.headers.get("x-nonce");
@@ -201,12 +199,35 @@ describe("Production: Downloads", () => {
 });
 
 describe("Production: Native browser public surface", () => {
-	test("/docs advertises the shipped native browser controls in metadata", async () => {
+	test("retired main-site pages preserve the query on a permanent redirect", async () => {
+		for (const path of [
+			"/docs",
+			"/tunes",
+			"/yeni",
+			"/library",
+			"/alternatives",
+			"/alternatives/warp",
+			"/use-cases",
+			"/use-cases/terminal-with-native-browser-preview",
+		]) {
+			const response = await fetch(new URL(`${path}?ref=bookmark`, PROD_URL), {
+				redirect: "manual",
+			});
+			expect(response.status, path).toBe(308);
+			const location = response.headers.get("location");
+			expect(location, path).toBeTruthy();
+			expect(new URL(location ?? "", PROD_URL).href, path).toBe(
+				new URL("/?ref=bookmark", PROD_URL).href,
+			);
+		}
+	});
+	test("old docs lead to the manual on the homepage", async () => {
 		const response = await fetch(`${PROD_URL}/docs`);
 		expect(response.status).toBe(200);
 
 		const html = await response.text();
-		expect(html).toContain("native WebKit browser preview");
+		expect(new URL(response.url).pathname).toBe("/");
+		expect(html).toContain('id="guide"');
 		expect(html).toContain("yen web");
 		expect(html).toContain("Browser Split");
 	});

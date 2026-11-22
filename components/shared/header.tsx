@@ -52,7 +52,7 @@ export function Header({
 						aria-label="Primary navigation"
 					>
 						<Link
-							href={`${siteOrigin}/docs`}
+							href={`${siteOrigin}/#guide`}
 							aria-current={currentPage === "docs" ? "page" : undefined}
 							className={`nav-link ${
 								currentPage === "docs" ? "nav-link-active" : "nav-link-inactive"
@@ -73,6 +73,12 @@ export function Header({
 							}
 						>
 							GitHub
+						</a>
+						<a
+							className="nav-link nav-link-inactive"
+							href="https://twitter.com/yenFTW"
+						>
+							@yenFTW
 						</a>
 						<ThemeToggle />
 					</nav>
@@ -128,14 +134,15 @@ export function Header({
 				<div className="mobile-menu-container">
 					<div className="text-sm text-text-muted flex items-center gap-6 flex-wrap">
 						<Link
-							href={`${siteOrigin}/docs`}
+							href={`${siteOrigin}/#guide`}
 							className="mobile-menu-link"
-							onClick={() =>
+							onClick={() => {
+								onMobileNavToggle?.(false);
 								trackProductEvent("header_click", {
 									item: "Docs",
 									mobile: true,
-								})
-							}
+								});
+							}}
 						>
 							Docs
 						</Link>
@@ -152,6 +159,9 @@ export function Header({
 							}
 						>
 							GitHub
+						</a>
+						<a className="mobile-menu-link" href="https://twitter.com/yenFTW">
+							@yenFTW
 						</a>
 					</div>
 				</div>

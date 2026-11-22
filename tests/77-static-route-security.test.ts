@@ -185,8 +185,8 @@ describe("proxy security header bypass matching", () => {
 	test("dynamic CSP nonce matches the emitted and forwarded headers", () => {
 		const response = proxy({
 			headers: new Headers({ host: "yen.chat" }),
-			nextUrl: new URL("https://yen.chat/library"),
-			url: "https://yen.chat/library",
+			nextUrl: new URL("https://yen.chat/yen-page-not-found"),
+			url: "https://yen.chat/yen-page-not-found",
 		} as never);
 
 		const csp = response.headers.get("Content-Security-Policy") ?? "";
@@ -204,7 +204,7 @@ describe("proxy security header bypass matching", () => {
 	});
 
 	test("prerendered pages use exact hashes without a response nonce", () => {
-		const path = "/alternatives/warp";
+		const path = "/terms";
 		const expectedHashes = STATIC_INLINE_SCRIPT_HASHES[path] ?? [];
 		expect(expectedHashes.length).toBeGreaterThan(0);
 
@@ -231,7 +231,7 @@ describe("proxy security header bypass matching", () => {
 	});
 
 	test("encoded and case aliases redirect to the exact static path", () => {
-		for (const alias of ["/alternatives/%77arp", "/alternatives/Warp"]) {
+		for (const alias of ["/%74erms", "/Terms"]) {
 			const url = `https://yen.chat${alias}?source=csp-test`;
 			const response = proxy({
 				headers: new Headers({ host: "yen.chat" }),
@@ -241,7 +241,7 @@ describe("proxy security header bypass matching", () => {
 
 			expect(response.status).toBe(308);
 			expect(response.headers.get("location")).toBe(
-				"https://yen.chat/alternatives/warp?source=csp-test",
+				"https://yen.chat/terms?source=csp-test",
 			);
 			expect(response.headers.get("x-nonce")).toBeNull();
 		}

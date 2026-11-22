@@ -2,7 +2,27 @@ import Image from "next/image";
 import Link from "next/link";
 import type { DocNavItem } from "@/components/docs/doc-nav";
 import { DocPageShell } from "@/components/docs/doc-page-shell";
-import { DocSection } from "@/components/docs/doc-section";
+
+function DocSection({
+	id,
+	title,
+	children,
+}: {
+	id: string;
+	title: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<details id={id} className="ph-manual-chapter">
+			<summary>
+				{title}
+				<span className="ph-disclosure" aria-hidden="true" />
+			</summary>
+			<div className="space-y-6">{children}</div>
+		</details>
+	);
+}
+
 import { TerminalCodeBlock } from "@/components/docs/terminal-code-block";
 import { TerminalPanel } from "@/components/docs/terminal-panel";
 import { DOWNLOAD_HREF } from "@/lib/analytics/download-cta";
@@ -95,7 +115,11 @@ function TerminalIDESection() {
 
 			<p className="text-body mb-4">
 				The terminal renders with Metal. Windows, tabs, split layouts, and
-				positions restore on relaunch; this does not resume running commands.
+				positions restore on relaunch. With{" "}
+				<a href="#persistent-sessions" className="link-brand underline">
+					Keep Sessions Running
+				</a>{" "}
+				enabled, restored shell panes also reconnect to their live processes.
 				Use the{" "}
 				<a href="#commands" className="link-brand underline">
 					shortcut reference
@@ -715,7 +739,9 @@ function SettingsSection() {
 					shortcuts are locked.
 				</li>
 			</ul>
-			<h3 className="text-heading-sm">Experimental moving wallpaper</h3>
+			<h3 id="moving-wallpaper" className="text-heading-sm">
+				Experimental moving wallpaper
+			</h3>
 			<p className="text-body">
 				In YEN 1.283 on macOS 27 or later, open General, then Experimental. Turn
 				on Moving Wallpaper and click Wallpaper Controls. Choose a video or GIF,
@@ -1042,7 +1068,7 @@ function BrowserPreviewSection() {
 			<div className="mb-6">
 				<TerminalCodeBlock
 					title="Terminal"
-					code={`yen web open https://yen.chat/docs
+					code={`yen web open https://yen.chat/#guide
 yen web open --split http://localhost:3000
 yen web reload --target window
 yen web status
@@ -1786,6 +1812,14 @@ export function DocsPageClient({ navItems }: DocsPageClientProps) {
 				</header>
 			}
 		>
+			<ManualChapters />
+		</DocPageShell>
+	);
+}
+
+export function ManualChapters() {
+	return (
+		<>
 			<GetStartedSection />
 			<TerminalIDESection />
 			<TabSidebarSection />
@@ -1801,6 +1835,6 @@ export function DocsPageClient({ navItems }: DocsPageClientProps) {
 			<AutomationSection />
 			<CommandsSection />
 			<TroubleshootingSection />
-		</DocPageShell>
+		</>
 	);
 }

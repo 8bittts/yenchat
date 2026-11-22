@@ -28,7 +28,7 @@ export function NotFoundClient() {
 							<Link href="/" className="btn-primary">
 								Go Home
 							</Link>
-							<Link href="/docs" className="btn-secondary">
+							<Link href="/#guide" className="btn-secondary">
 								View Docs
 							</Link>
 						</div>

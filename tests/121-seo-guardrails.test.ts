@@ -5,9 +5,7 @@ import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import { blogUrlForMainHostPath } from "../lib/http/blog-host";
 import {
-	getPublicLibrarySitemapEntries,
 	isPublicLibraryPageEligible,
-	isPublicLibraryPageLlmsDiscoverable,
 	PUBLIC_LIBRARY_LAST_MODIFIED,
 	PUBLIC_LIBRARY_MIN_EVIDENCE_SCORE,
 	PUBLIC_LIBRARY_PAGES,
@@ -85,11 +83,13 @@ describe("public SEO guardrails", () => {
 		const firstScreen = llmsText.split("\n").slice(0, 24).join("\n");
 
 		expect(firstScreen).toContain("[YEN website](https://yen.chat/)");
-		expect(firstScreen).toContain("[Documentation](https://yen.chat/docs)");
-		expect(firstScreen).toContain(
+		expect(firstScreen).toContain("[Documentation](https://yen.chat/#guide)");
+		expect(firstScreen).not.toContain(
 			"[Alternatives](https://yen.chat/alternatives)",
 		);
-		expect(firstScreen).toContain("[Use cases](https://yen.chat/use-cases)");
+		expect(firstScreen).not.toContain(
+			"[Use cases](https://yen.chat/use-cases)",
+		);
 		expect(firstScreen).toContain("[Download](https://yen.chat/download)");
 		expect(firstScreen).toContain("[Terms & Privacy](https://yen.chat/terms)");
 		expect(firstScreen).toContain("[Blog](https://blog.yen.chat/)");
@@ -99,32 +99,16 @@ describe("public SEO guardrails", () => {
 		for (const page of PUBLIC_LIBRARY_PAGES) {
 			const assertion = expect(llmsText, page.path);
 			const url = `https://yen.chat${page.path}`;
-			if (isPublicLibraryPageLlmsDiscoverable(page)) {
-				assertion.toContain(url);
-			} else {
-				assertion.not.toContain(url);
-			}
+			assertion.not.toContain(url);
 		}
 	});
 
 	test("sitemap is deterministic and includes only public eligible URLs", () => {
 		const sitemapEntries = sitemap();
 		const urls = sitemapEntries.map((entry) => entry.url);
-		const expectedPublicLibraryUrls = getPublicLibrarySitemapEntries().map(
-			(entry) => entry.url,
-		);
 
 		expect(new Set(urls).size).toBe(urls.length);
-		expect(urls).toEqual([
-			"https://yen.chat",
-			"https://yen.chat/docs",
-			"https://yen.chat/tunes",
-			"https://yen.chat/alternatives",
-			"https://yen.chat/use-cases",
-			...expectedPublicLibraryUrls,
-			"https://yen.chat/whitepaper.pdf",
-			"https://yen.chat/terms",
-		]);
+		expect(urls).toEqual(["https://yen.chat", "https://yen.chat/terms"]);
 		expect(urls.some((url) => url.includes("/library"))).toBe(false);
 
 		for (const entry of sitemapEntries) {
@@ -214,40 +198,28 @@ describe("public SEO guardrails", () => {
 			"utf8",
 		);
 
-		// Desktop nav, then the mobile menu: Docs and GitHub only.
 		expect(linkLabels("header.tsx")).toEqual([
 			"Docs",
 			"GitHub",
+			"@yenFTW",
 			"Docs",
 			"GitHub",
-		]);
-		expect(linkLabels("footer.tsx")).toEqual([
-			"Blog",
 			"@yenFTW",
-			"Music",
-			"Email",
-			"Tokens",
-			"Terms",
 		]);
-
+		expect(linkLabels("footer.tsx")).toEqual(["Blog", "Email", "Terms"]);
 		expect(headerSource).toMatch(
 			/href="https:\/\/github\.com\/8bittts\/yenchat"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/,
 		);
-		expect(headerSource).not.toContain("twitter.com");
+		expect(headerSource).toContain("https://twitter.com/yenFTW");
 		expect(footerSource).not.toContain("github.com");
-		for (const href of [
-			"https://blog.yen.chat/",
-			"https://twitter.com/yenFTW",
-			"https://btc.email",
-			"https://jpthecat.com",
-		]) {
+		for (const href of ["https://blog.yen.chat/", "https://btc.email"]) {
 			expect(footerSource).toMatch(
 				new RegExp(
 					`href="${href.replace(/[.?/]/g, "\\$&")}"\\s*className="[^"]*"\\s*target="_blank"\\s*rel="noopener noreferrer"`,
 				),
 			);
 		}
-		expect(footerSource).toContain('item: "Tokens"');
+		expect(footerSource).not.toContain("jpthecat.com");
 	});
 
 	test("yeni character bible has page-local social metadata and stays unlisted", () => {

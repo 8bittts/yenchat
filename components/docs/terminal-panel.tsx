@@ -40,7 +40,18 @@ export function TerminalPanel({
 					</span>
 				)}
 			</div>
-			<div className={contentClassName}>{children}</div>
+			{contentClassName.includes("overflow-x-auto") ? (
+				<section
+					aria-label={title ?? "Scrollable reference table"}
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users scroll wide reference tables with the arrow keys.
+					tabIndex={0}
+					className={contentClassName}
+				>
+					{children}
+				</section>
+			) : (
+				<div className={contentClassName}>{children}</div>
+			)}
 		</div>
 	);
 }

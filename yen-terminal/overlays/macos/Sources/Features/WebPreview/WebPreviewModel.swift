@@ -3,7 +3,7 @@ import AppKit
 import Foundation
 
 enum WebPreviewDefaults {
-    static let docsURL = URL(string: "https://yen.chat/docs")!
+    static let docsURL = URL(string: "https://yen.chat/#guide")!
 }
 
 struct WebPreviewRequest: Equatable, Sendable {

@@ -3,7 +3,7 @@ import SwiftUI
 struct AboutView: View {
     @Environment(\.openURL) var openURL
 
-    private let docsURL = URL(string: "https://yen.chat/docs")
+    private let docsURL = URL(string: "https://yen.chat/#guide")
     private let bitcoinEmailURL = URL(string: "https://btc.email")
 
     private var version: String? { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String }

@@ -14,7 +14,7 @@ Usage:
   yen web status [--automatic|--window|--split|--focused|--target target]
 
 Notes:
-  open without a URL opens https://yen.chat/docs.
+  open without a URL opens https://yen.chat/#guide.
   remote HTTP URLs are blocked by the app-side browser URL policy.
   --split requires an active YEN terminal window; the browser window remains the default target.
   stateful command targets are automatic, window, split, or focused; automatic uses an open split first, then the browser window.

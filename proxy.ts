@@ -174,6 +174,21 @@ function routeBlogHost(request: NextRequest): NextResponse | null {
 	return null;
 }
 
+function isRetiredPage(pathname: string, staticPath?: string) {
+	const legacy = staticPath ?? pathname;
+	const formerPages = [
+		"/docs",
+		"/tunes",
+		"/yeni",
+		"/library",
+		"/alternatives",
+		"/use-cases",
+	];
+	return (
+		formerPages.includes(legacy) ||
+		Boolean(staticPath && /^\/(alternatives|use-cases)\//.test(legacy))
+	);
+}
 export function proxy(request: NextRequest) {
 	const { hasConflict, host } = getRequestHost(request);
 	const pathname = request.nextUrl.pathname;
@@ -219,6 +234,12 @@ export function proxy(request: NextRequest) {
 	}
 
 	const canonicalStaticPath = findCanonicalStaticPath(pathname);
+	if (host !== BLOG_HOST && isRetiredPage(pathname, canonicalStaticPath)) {
+		const url = request.nextUrl.clone();
+		url.pathname = "/";
+		// A fragment-free redirect preserves the chapter in old /docs# links.
+		return NextResponse.redirect(url, 308);
+	}
 	if (canonicalStaticPath && canonicalStaticPath !== pathname) {
 		const canonicalUrl = new URL(request.url);
 		canonicalUrl.pathname = canonicalStaticPath;

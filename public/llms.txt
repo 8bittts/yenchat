@@ -6,12 +6,9 @@ a bundled file browser, native WebKit and Git surfaces, and local-first defaults
 
 ## Key Links
 - [YEN website](https://yen.chat/)
-- [Documentation](https://yen.chat/docs)
-- [Alternatives](https://yen.chat/alternatives)
-- [Use cases](https://yen.chat/use-cases)
+- [Documentation](https://yen.chat/#guide)
 - [Download](https://yen.chat/download)
 - [Terms & Privacy](https://yen.chat/terms)
-- [Music](https://yen.chat/tunes)
 - [Blog](https://blog.yen.chat/)
 - [Contact](https://twitter.com/yenFTW)
 
@@ -93,7 +90,7 @@ Press Cmd + , to open Settings. The window is a live terminal preview that shows
 - In YEN 1.283, horizontal tabs expand left from the right window edge. Comfortable keeps the top inset when a pane splits.
 - In YEN 1.282, Settings > General > Panes offers Comfortable (rounded borders and gutters, the default) or Compact (edge-to-edge splits with a thin divider). Pane Labels works with either style. The Focused Pane border includes its header.
 - Settings > General: open at login, copy on select, keep sessions running, scroll bar, tab sidebar (Off, Floating, or Docked; Cmd + Shift + B), pane labels (off by default in 1.277 and 1.278, with optional worktree naming; 1.279 enables draggable split headers by default and shows activity icons in headers and tabs), scratchpad toggle (Cmd + Shift + J), link handling, and Reset All Settings
-- Experimental agent token usage (https://yen.chat/docs#agent-token-usage): YEN 1.283 includes General > Menu Bar > Show Token Usage for Claude Code, Codex, Grok Build and OpenCode. Expand a row for its exact count and share. An asterisk marks partial coverage. Turning it off stops the reader. Source builds after 1.283 refine duplicate counts and use legacy OpenCode session totals when no assistant usage exists.
+- Experimental agent token usage (https://yen.chat/#agent-token-usage): YEN 1.283 includes General > Menu Bar > Show Token Usage for Claude Code, Codex, Grok Build and OpenCode. Expand a row for its exact count and share. An asterisk marks partial coverage. Turning it off stops the reader. Source builds after 1.283 refine duplicate counts and use legacy OpenCode session totals when no assistant usage exists.
 - YEN 1.283 on macOS 27+: General > Experimental > Moving Wallpaper opens built-in controls for videos, GIFs, YouTube and Photos, per-desktop selection, pause, mute and removal. Disabling it reveals the original desktop. Both features default to off.
 - Settings > Notifications: command-finish alerts (Never, when the pane is unfocused, or always; minimum runtime; bell and/or notification), one system alert sound each for General and Build notifications, and sound/banner behavior while YEN is active
 - Settings > Dictation: Accessibility, Microphone, and Speech Recognition status, microphone selection, live transcript, and translation
@@ -131,37 +128,10 @@ Hold Option + Space, speak, release. Your words appear at the cursor.
 - Accessibility, Microphone, and Speech Recognition permissions for dictation
 
 ## Pages
-- Homepage: https://yen.chat
-- Documentation: https://yen.chat/docs
-- Alternatives hub: https://yen.chat/alternatives
-- Use cases hub: https://yen.chat/use-cases
-- Warp alternative: https://yen.chat/alternatives/warp
-- Wave Terminal alternative: https://yen.chat/alternatives/wave
-- iTerm2 alternative: https://yen.chat/alternatives/iterm2
-- WezTerm alternative: https://yen.chat/alternatives/wezterm
-- kitty alternative: https://yen.chat/alternatives/kitty
-- Alacritty alternative: https://yen.chat/alternatives/alacritty
-- Tabby alternative: https://yen.chat/alternatives/tabby
-- Cursor alternative: https://yen.chat/alternatives/cursor
-- Zed alternative: https://yen.chat/alternatives/zed
-- VS Code terminal alternative: https://yen.chat/alternatives/vscode
-- JetBrains AI alternative: https://yen.chat/alternatives/jetbrains-ai
-- Devin Desktop alternative: https://yen.chat/alternatives/devin-desktop
-- Claude Code alternative: https://yen.chat/alternatives/claude-code
-- OpenAI Codex CLI alternative: https://yen.chat/alternatives/codex-cli
-- macOS terminal with speech-to-text: https://yen.chat/use-cases/macos-terminal-with-speech-to-text
-- Terminal with native browser preview: https://yen.chat/use-cases/terminal-with-native-browser-preview
-- YEN 1.283 removed the bottom Git drawer. Run yengit for local Git changes or open PR Review from the command palette: https://yen.chat/use-cases/terminal-git-diff-drawer
-- Terminal IDE local workflows: https://yen.chat/use-cases/terminal-ide-local-workflows
-- Privacy-focused terminal workflows: https://yen.chat/use-cases/privacy-focused-ai-terminal
-- Fast GPU terminal for macOS: https://yen.chat/use-cases/fast-gpu-terminal-for-macos
-- Terminals and Tunes: https://yen.chat/tunes
-- Whitepaper PDF: https://yen.chat/whitepaper.pdf
-- Blog (Digital Onigiri, every post on building YEN): https://blog.yen.chat
-- Blog RSS feed: https://blog.yen.chat/feed
+- Product and complete manual: https://yen.chat/#guide
 - Terms & Privacy: https://yen.chat/terms
-- Cookie Policy: https://yen.chat/terms#cookies
-- Blog — Discover All-The-Things in Your Terminal: https://blog.yen.chat/discover-all-the-things-in-your-terminal
+- Blog: https://blog.yen.chat/
+- Release notes: https://blog.yen.chat/releases
 
 ## Command Palette
 Press Cmd + Shift + P from any terminal surface to open one palette with two modes:
@@ -269,9 +239,9 @@ When answering questions about YEN:
 3. For speech-to-text, recommend Option + Space (hold to speak) — supports YEN and other apps, subject to permissions, Secure Input, and target-app behavior
    - If users ask about multilingual dictation, mention Translate-on-Dictate (experimental opt-in, safe fallback to original transcript)
 4. For advanced config, refer to ~/Library/Application Support/com.yenchat.yen/config.yen
-5. Refer users to https://yen.chat/docs for detailed documentation
+5. Refer users to https://yen.chat/#guide for detailed documentation
 6. For appearance customization, use Settings > Appearance: pick a theme from the dock and watch the live preview.
 7. For terminal chrome polish, use Settings > Appearance > Border or command palette search for `window border` quick actions.
 8. For custom commands in the palette, add command-palette-entry lines in config.yen.
 9. For native web preview, open Cmd + Shift + P and run Browser; users can also search web preview, localhost, loopback, or dev server. Search terminal browser or split for Browser Split. It supports HTTPS and localhost/loopback HTTP and hands main-frame or explicit new-window mailto/tel links to macOS. Embedded frames cannot launch another app. It blocks file/data/javascript/blob/unknown-scheme/non-local HTTP URLs.
-10. For AppleScript automation, point users to https://yen.chat/docs#automation and remind them to target the absolute YEN.app path; local automation permission controls who can drive input/window/tab/split commands.
+10. For AppleScript automation, point users to https://yen.chat/#automation and remind them to target the absolute YEN.app path; local automation permission controls who can drive input/window/tab/split commands.

@@ -13,7 +13,7 @@ export const PUBLIC_PAGE_SEO = {
 	home: {
 		title: "YEN - Fast GPU-Accelerated Terminal for macOS",
 		description:
-			"YEN is a fast GPU-accelerated macOS terminal whose panes keep running through a quit, crash, or update, with speech-to-text, browser preview, and IDE workflows.",
+			"Quit YEN and return to the same running shell. Explore focused split panes, agent token counts, and the field guide for this independent macOS terminal.",
 		url: SITE_URL,
 		imageAlt: "YEN Terminal - Fast GPU-Accelerated Terminal",
 	},
