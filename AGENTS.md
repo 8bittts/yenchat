@@ -68,13 +68,14 @@ Run these gates before commit:
 ```bash
 bun run check
 bun run build
-bun test
+bun run test
 bun run test:policy
 bun run test:prod
 bunx react-doctor@latest . --verbose --scope changed --base main
 ```
 
-`bun run check:full` chains `check`, `build` and `test:all` (`bun test`, `test:policy`, `test:prod`); react-doctor stays a separate step.
+`bun run check:full` chains `check`, `build` and `test:all` (`test`, `test:policy`, `test:prod`); react-doctor stays a separate step.
+`bun run test` is `bun test --parallel=8`: each test file runs in one of eight worker processes, so a file must not depend on state another file leaves behind.
 `lint`, `lint:fix` and the other script names carry the fleet meanings in `8leeai/_docs/13-starter-kit.md` → Script vocabulary.
 `.githooks/commit-msg` refuses AI attribution; `bun install` wires it through `prepare` (`scripts/setup-hooks.ts`), and `tests/156-commit-msg-hook.test.ts` proves it.
 Verify a native UI finding or fix in a running re-identified `zig-out` copy before reporting it; a code read, a unit test or an offscreen render is not evidence that a control renders or responds ([_docs/09-quality.md](_docs/09-quality.md) → Native Test Suite).

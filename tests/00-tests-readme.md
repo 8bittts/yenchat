@@ -5,7 +5,7 @@ Behavior and release verification tests for YEN.
 ## Running Tests
 
 ```bash
-bun test
+bun run test
 bun run test:policy
 bun run test:prod
 bun run test:ide-integration
@@ -13,7 +13,10 @@ bun run test:ide-integration
 
 ## Test Surfaces
 
-- `bun test`: deterministic local behavior/runtime regressions in `tests/*.test.ts` and `tests/*.test.tsx`.
+- `bun run test`: deterministic local behavior/runtime regressions in `tests/*.test.ts` and `tests/*.test.tsx`.
+  It is `bun test --parallel=8`, which spreads the files over eight worker processes; plain `bun test` runs the same files one after another in one process and takes about five times as long.
+  Eight workers leave cores free for a native build that runs beside the tests.
+  A file must not read state another file leaves behind, and a fixed port or a fixed path under the home folder is shared by every worker.
 - `bun run test:policy`: editorial and shipped-data policy gates that should not run on every default test pass.
   Documentation-copy contracts live in `tests/154-documentation-contracts.policy.ts`.
 - `bun run test:prod`: live production probes against `https://yen.chat` and the GitHub Release it points to.

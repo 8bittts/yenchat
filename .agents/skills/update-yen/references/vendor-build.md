@@ -34,7 +34,7 @@ bun run build
 bun run test:policy
 bun run test:prod
 bunx react-doctor@latest . --verbose --scope changed --base main
-bun test $(/bin/ls tests/*.test.ts tests/*.test.tsx | /usr/bin/grep -v '76-theme-contrast-gates')
+bun test --parallel=8 $(/bin/ls tests/*.test.ts tests/*.test.tsx | /usr/bin/grep -v '76-theme-contrast-gates')
 ```
 
 `tests/76-theme-contrast-gates.test.ts` runs after the build, with the other Build Verification steps; every other suite is independent of the build tree. The glob must name both `*.test.ts` and `*.test.tsx`, or the three `.tsx` suites are skipped without any error. Confirm the run reports one file fewer than `/bin/ls tests/*.test.ts tests/*.test.tsx | wc -l`. Do not run `apply-overlays.sh` or anything else that writes `yen-terminal/ghostty/` while the build is running.

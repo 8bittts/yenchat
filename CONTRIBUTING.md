@@ -25,7 +25,7 @@ Run each line from the repository root:
 ```sh
 bun install
 bun run check                           # lint + typecheck
-bun test                                # unit, contract, and fixture tests
+bun run test                            # unit, contract, and fixture tests, one worker per file
 bun scripts/44-build-web-csp.ts         # website build
 scripts/native/01-macos-smoke.sh --fast # native build and tests; needs Xcode, Zig, and the vendor tree
 ```
