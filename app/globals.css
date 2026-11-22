@@ -593,10 +593,12 @@
 		background-color: hsl(var(--card-content));
 	}
 
+	/* The focusable pre scrolls, not its code, so keyboard users can reach it. */
 	.blog-prose pre code {
 		@apply p-0;
 		background-color: transparent;
 		overflow-wrap: normal;
+		overflow-x: visible;
 	}
 
 	.blog-prose figure img,
@@ -1400,9 +1402,14 @@ details[open] .ph-disclosure:after {
 		padding-block: 10px;
 		font-size: 9px;
 	}
+	/* Wrap whole labels to a second row instead of splitting "Split panes". */
 	.ph-chapters .ph-wrap {
-		justify-content: space-between;
-		gap: 8px;
+		flex-wrap: wrap;
+		column-gap: 20px;
+		row-gap: 0;
+	}
+	.ph-chapters a {
+		white-space: nowrap;
 	}
 	.ph-chapters {
 		font-size: 11px;
