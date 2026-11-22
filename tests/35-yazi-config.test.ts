@@ -892,6 +892,36 @@ end
 		},
 	);
 
+	yaziTest(
+		"every `ya pub` opener has a plugin that listens for it and is set up",
+		() => {
+			// An opener such as `ya pub extract-native --list %s` only sends a
+			// message. Yazi refuses it ("does not have the ability to receive")
+			// unless a plugin subscribed to that kind, and a plugin subscribes
+			// only when init.lua calls its setup().
+			const config = readFileSync(yaziConfigPath, "utf8");
+			const initLua = readFileSync(yaziInitLuaPath, "utf8");
+			const kinds = [...config.matchAll(/run = "ya pub ([a-z0-9-]+)/g)].map(
+				(match) => match[1] ?? "",
+			);
+			expect(kinds.length).toBeGreaterThan(0);
+			for (const kind of kinds) {
+				const pluginPath = join(
+					repoRoot,
+					`yen-terminal/customizations/yazi-config/plugins/${kind}.yazi/main.lua`,
+				);
+				expect(existsSync(pluginPath), `${kind}.yazi is missing`).toBe(true);
+				expect(readFileSync(pluginPath, "utf8")).toContain(
+					`ps.sub_remote("${kind}"`,
+				);
+				expect(
+					initLua,
+					`init.lua never calls require("${kind}"):setup()`,
+				).toContain(`require("${kind}"):setup()`);
+			}
+		},
+	);
+
 	yaziTest("cleans extraction temp dirs when the final move fails", () => {
 		const result = runLuaScript(`
 local removed = {}
