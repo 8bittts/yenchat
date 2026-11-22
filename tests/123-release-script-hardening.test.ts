@@ -972,6 +972,22 @@ describe("release gate completeness", () => {
 		);
 	});
 
+	test("the release build compiles the engine for one architecture", () => {
+		// The universal target compiles the whole engine a second time for
+		// x86_64 and joins both in a 304 MB library; the app links only arm64.
+		// Measured over three alternating pairs of clean builds: 171 to 177 s
+		// for the one-architecture target against 179 to 189 s for universal.
+		const build = readFileSync(
+			join(repoRoot, "scripts/lib/build-release-phases/04-build.sh"),
+			"utf8",
+		);
+		const targets = Array.from(
+			build.matchAll(/-Dxcframework-target=([a-z]+)/g),
+			(match) => match[1],
+		);
+		expect(targets).toEqual(["native"]);
+	});
+
 	test("the bundle gates check architecture through the shared arm64-only assertion", () => {
 		for (const rel of [
 			"scripts/05-detect-failures.sh",
