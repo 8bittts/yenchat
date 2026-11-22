@@ -299,9 +299,9 @@ struct PersistentSessionsTests {
     }
 
     @Test func quittingAsksOnlyAboutPanesWithoutALiveSession() {
-        #expect(PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in false })
-        #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID) { _ in true })
-        #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: false, paneID: paneID) { _ in false })
+        #expect(PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID, hasSession: { _ in false }))
+        #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: true, paneID: paneID, hasSession: { _ in true }))
+        #expect(!PersistentSessions.quitKillsProcess(needsConfirmQuit: false, paneID: paneID, hasSession: { _ in false }))
     }
 
     @Test func closingAPaneEndsOnlyAnExistingSessionAndNeverDuringQuit() throws {

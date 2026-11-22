@@ -1251,5 +1251,20 @@
 			"--new-block",
 			"@$PATCHES_DIR/remove-scroll-pocket-observer.new"
 		]
+	},
+	"remote-pane-tab-title": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"Remote pane tab title",
+			"--mode",
+			"exact",
+			"--marker",
+			"RemotePanes.tabTitle(title, for: focusedSurface)",
+			"--old-block",
+			"@$PATCHES_DIR/remote-pane-tab-title.old",
+			"--new-block",
+			"@$PATCHES_DIR/remote-pane-tab-title.new"
+		]
 	}
 }

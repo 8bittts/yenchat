@@ -1,0 +1,2 @@
+    private func computeTitle(title: String, bell: Bool) -> String {
+        var result = RemotePanes.tabTitle(title, for: focusedSurface)

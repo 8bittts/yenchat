@@ -113,6 +113,22 @@ No Tailscale, a stopped backend and a logged-out node are states (`TailscaleStat
 The Mac App Store and standalone Tailscale apps cannot be a Tailscale SSH server; only the open-source `tailscaled` build can (Tailscale's macOS variants page).
 So a peer running either app needs an ordinary ssh server, which on macOS is Remote Login, and the tailnet only carries the connection.
 
+**Hosts store.**
+`RemoteHostsStore.shared` (`Sessions/RemoteHostsStore.swift`, main actor) holds the `TailscaleStatus`, the peers and each peer's `PeerState`: `loading` before its first listing, `offline` when Tailscale reports it offline, else `listed(RemoteSessionList)`.
+YEN never runs the Tailscale CLI or ssh for discovery at launch or in the background.
+- A Hosts surface calls `surfaceDidAppear` when it shows and `surfaceDidDisappear` when it hides; today the command palette is the only one.
+- The first visible surface refreshes when the last refresh started 30 seconds ago or more, then a 30-second timer refreshes while any surface stays visible. The last surface to hide invalidates the timer, so with no surface visible the store holds no timer and starts no process (`RemoteHostsStoreTests`).
+- An explicit refresh (the palette's Hosts rows) runs at once. A refresh in flight is reused, never stacked; one that is running when the surface hides finishes, because each process has its own deadline.
+- Offline peers are never contacted. At most four listings run at once, and a peer keeps its last listing on screen while it is listed again.
+
+**Remote panes.**
+A remote pane is a local pane whose command is the bundled `yen sessions attach --host <target> <id>`; it stays ephemeral locally, and its identity (`RemotePaneIdentity`: display name, ssh target, session id) is recorded per pane UUID and read as `SurfaceView.remotePaneIdentity`.
+- `RemotePanes.open` focuses the pane that already shows the same target and session id, because a second client in one app only mirrors the first and resizes it; otherwise it opens a new tab whose base configuration carries the identity in `YEN_REMOTE_PANE`.
+- `PersistentSessions.prepare` calls `RemotePanes.prepare` first for every new surface. It always removes `YEN_REMOTE_PANE`, ignores it on a pane that has its own command, sets the attach command and `wait-after-command` (a failed attach stays on screen with the CLI's message), and records the identity; every other pane is recorded as local. A split or tab made from a remote pane inherits no command and no marker, so it is a local, unlabeled shell.
+- The identity is checked again wherever it comes from: the target must pass `RemoteSessions.isValidTarget`, and the display name goes through `TailscaleDiscovery.displayLabel` and is cut to 32 characters.
+- Window restore saves `remotePanes` (pane UUID to identity) in `TerminalRestorableState` and `QuickTerminalRestorableState` and registers it before the split tree decodes, so a restored remote pane is created with its attach command and reattaches through the CLI. A saved entry that fails validation is dropped on its own. The window stays restorable, because its base configuration has no command (a window created with a command is not restorable). This reattach is the only ssh YEN starts at launch, and only for panes the user opened.
+- Quit confirmation skips a remote pane (`quitKillsProcess`), because quitting ends only the local client; the session keeps running on the peer.
+
 Test hooks, never set by the app: the CLI reads `YEN_SSH_BIN` (the ssh client, default `/usr/bin/ssh`), `YEN_SSH_RETRY_MAX_DELAY` (the backoff cap in seconds; 0 never sleeps) and `YEN_REMOTE_APP` (the one YEN.app the remote command runs); the app reads `YEN_TAILSCALE_BIN`.
 `tests/172-cli-sessions-remote.test.ts` drives the CLI with `tests/fixtures/fake-ssh.sh`, and `scripts/manual/35-verify-remote-attach-loopback.sh` runs it against a real loopback sshd ([09-quality.md](09-quality.md) → Loopback SSH peer).
 

@@ -51,6 +51,8 @@ class TerminalRestorableState: TerminalRestorable {
     let tabColor: TerminalTabColor
     let titleOverride: String?
     let splitPaneLabels: [String: String]?
+    /// Remote panes by UUID; restore reattaches each to its session.
+    let remotePanes: RemotePanes.SavedIdentities?
 
     enum CodingKeys: String, CodingKey {
         case focusedSurface
@@ -59,6 +61,7 @@ class TerminalRestorableState: TerminalRestorable {
         case tabColor
         case titleOverride
         case splitPaneLabels
+        case remotePanes
     }
 
     init(from controller: TerminalController) {
@@ -69,6 +72,7 @@ class TerminalRestorableState: TerminalRestorable {
         self.titleOverride = controller.titleOverride
         let labels = SplitPaneLabelPersistence.snapshot(for: controller.surfaceTree)
         self.splitPaneLabels = labels.isEmpty ? nil : labels
+        self.remotePanes = RemotePanes.snapshot(for: controller.surfaceTree).map(RemotePanes.SavedIdentities.init)
     }
 
     required init(copy other: TerminalRestorableState) {
@@ -78,12 +82,19 @@ class TerminalRestorableState: TerminalRestorable {
         self.tabColor = other.tabColor
         self.titleOverride = other.titleOverride
         self.splitPaneLabels = other.splitPaneLabels
+        self.remotePanes = other.remotePanes
     }
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.focusedSurface = try container.decodeIfPresent(String.self, forKey: .focusedSurface)
-        self.surfaceTree = try container.decode(SplitTree<YEN.SurfaceView>.self, forKey: .surfaceTree)
+        // Read before the tree: decoding the tree creates each pane's surface,
+        // and a remote pane must get its attach command at creation.
+        let remotePanes = try? container.decodeIfPresent(RemotePanes.SavedIdentities.self, forKey: .remotePanes)
+        self.remotePanes = remotePanes
+        self.surfaceTree = try RemotePanes.decodingTree(restoring: remotePanes?.entries) {
+            try container.decode(SplitTree<YEN.SurfaceView>.self, forKey: .surfaceTree)
+        }
         self.effectiveFullscreenMode = try container.decodeIfPresent(FullscreenMode.self, forKey: .effectiveFullscreenMode)
         self.tabColor = try container.decode(TerminalTabColor.self, forKey: .tabColor)
         self.titleOverride = try container.decodeIfPresent(String.self, forKey: .titleOverride)
@@ -98,6 +109,7 @@ class TerminalRestorableState: TerminalRestorable {
         try container.encode(tabColor, forKey: .tabColor)
         try container.encodeIfPresent(titleOverride, forKey: .titleOverride)
         try container.encodeIfPresent(splitPaneLabels, forKey: .splitPaneLabels)
+        try container.encodeIfPresent(remotePanes, forKey: .remotePanes)
     }
 }
 

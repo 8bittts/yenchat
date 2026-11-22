@@ -32,6 +32,8 @@ enum PaneActivity: Hashable {
     }
 
     @MainActor static func current(_ surface: YEN.SurfaceView) -> Self {
+        // The local process of a remote pane is the CLI holding ssh open.
+        if surface.remotePaneIdentity != nil { return .ssh }
         var name = [CChar](repeating: 0, count: 256)
         if let pid = surface.surfaceModel?.foregroundPID,
            proc_name(Int32(pid), &name, UInt32(name.count)) > 0 {

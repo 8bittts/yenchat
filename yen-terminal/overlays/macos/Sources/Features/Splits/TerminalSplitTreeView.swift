@@ -86,6 +86,18 @@ enum SplitPaneLabelRules {
         return "Terminal"
     }
 
+    /// The header's second text: the host of a remote pane (its local directory
+    /// belongs to the CLI), else the working directory.
+    static func secondaryText(remoteHost: String?, workingDirectory: String?) -> String? {
+        if let remoteHost { return remoteHost }
+        return workingDirectory.map { NSString(string: $0).abbreviatingWithTildeInPath }
+    }
+
+    static func accessibilityLabel(title: String, remoteHost: String?) -> String {
+        guard let remoteHost else { return "Focus pane: \(title)" }
+        return "Focus pane: \(title), on \(remoteHost)"
+    }
+
     static func foregroundRole(backgroundColor: NSColor) -> SplitPaneLabelForegroundRole {
         backgroundColor.isLightColor ? .dark : .light
     }
@@ -396,11 +408,13 @@ private struct SplitPaneLabelView: View {
     }
 
     private func displayTitle(for activity: PaneActivity) -> String {
-        SplitPaneLabelRules.displayTitle(
+        // A remote pane's local directory belongs to the CLI, not the shell.
+        let remote = surfaceView.remotePaneIdentity != nil
+        return SplitPaneLabelRules.displayTitle(
             explicitLabel: labelState.label,
-            worktreeLabel: worktreeLabel,
+            worktreeLabel: remote ? nil : worktreeLabel,
             surfaceTitle: activity.agentName ?? surfaceView.title,
-            workingDirectory: surfaceView.effectiveWorkingDirectory
+            workingDirectory: remote ? nil : surfaceView.effectiveWorkingDirectory
         )
     }
 
@@ -412,14 +426,17 @@ private struct SplitPaneLabelView: View {
     /// The directory this header keeps polled, or nil when worktree naming is off. An agent's
     /// reported worktree wins over the shell's `pwd` while that agent runs.
     private var worktreeWatchDirectory: String? {
-        guard splitPaneLabelSettings.isWorktreeNamingEnabled else { return nil }
+        guard splitPaneLabelSettings.isWorktreeNamingEnabled, surfaceView.remotePaneIdentity == nil else { return nil }
         return surfaceView.effectiveWorkingDirectory
     }
 
     var body: some View {
         PaneActivityReader(surface: surfaceView) { activity in
-            let directory = surfaceView.effectiveWorkingDirectory.map { NSString(string: $0).abbreviatingWithTildeInPath }
             let title = displayTitle(for: activity)
+            let directory = SplitPaneLabelRules.secondaryText(
+                remoteHost: surfaceView.remotePaneIdentity?.displayName,
+                workingDirectory: surfaceView.effectiveWorkingDirectory
+            )
             HStack(spacing: 0) {
                 HStack(spacing: SettingsSpacing.iconTextSpacing) {
                     PaneActivityIcon(activity: activity)
@@ -449,7 +466,7 @@ private struct SplitPaneLabelView: View {
                     }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Focus pane: \(title)")
+                .accessibilityLabel(SplitPaneLabelRules.accessibilityLabel(title: title, remoteHost: surfaceView.remotePaneIdentity?.displayName))
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { focusSurface() }
                 .help(dragEnabled ? "Click to focus. Drag to move this pane." : "Click to focus this pane.")

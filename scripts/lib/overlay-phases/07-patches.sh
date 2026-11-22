@@ -515,6 +515,10 @@ apply_overlay_patch persistent-session-close
 apply_overlay_patch persistent-session-tree-leave
 apply_overlay_patch persistent-session-window-close
 
+# A remote pane's tab title leads with its host (RemotePanes.tabTitle), through
+# the same computeTitle that adds the bell, so a typed tab title keeps it too.
+apply_overlay_patch remote-pane-tab-title
+
 # ============================================================================
 # Remove unsafe Sendable conformance from C-pointer wrapper classes
 # ============================================================================

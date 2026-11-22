@@ -101,6 +101,7 @@ extension TerminalCommandPaletteView {
         let isRepositoryWorkspace: Bool
         let jumpTargets: [ActionCatalogJumpTargetKey]
         let availability: ActionCatalogAvailabilityKey
+        let hosts: [RemoteHostsPaletteEntry]
     }
 
     struct PaletteActionDescriptor {

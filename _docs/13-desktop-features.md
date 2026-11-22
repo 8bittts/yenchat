@@ -415,3 +415,16 @@ The shell client dispatches inline, evidence, and decision submissions separatel
 Failed submissions retain completed inline IDs so retrying does not repost those drafts.
 Build executable catalog actions from the current view state.
 The invalidation key tracks search descriptions, not execution callback or update-model identity, so it must not cache executable closures.
+A key change re-syncs search from the current models, not from the `paletteActions` the single-parameter `onChange` closure captured, which lags one update.
+
+**Hosts.** The palette lists the user's other Macs on Tailscale and their sessions as `Hosts: ...` rows among the other actions, searchable by host name, `hosts`, `remote`, `ssh` and `tailscale`.
+Discovery follows the Hosts store rule in [01-architecture.md](01-architecture.md) → Persistent sessions, so the rows fill in after the palette opens.
+`RemoteHostsPaletteRows` owns the copy and `RemoteHostsPaletteRowsTests` pins it.
+- A session row reads `Hosts: <directory> on <Mac>`, with `Detached`, `Attached elsewhere`, `Open in YEN` or `Unavailable` and the start time below. Selecting it attaches in a new tab, or focuses the pane already attached to it.
+- A state row names the problem and the next step: Tailscale not installed, not running, turned off, signed out or starting; no other Macs; a Mac offline or unreachable; a first connection needed; a changed host key; YEN missing or too old there; no sessions there; or a listing that failed.
+- Selecting a state row checks again. `Connect to <Mac> Once` types `ssh <target>` at the prompt and a failed listing types `yen sessions list --host <target>`, without running either, and only into a local pane.
+- A running tailnet adds `Hosts: Refresh Remote Sessions`; a host key change offers no one-click fix.
+
+**Remote pane labels.** A remote pane always shows its host.
+The tab and window title lead with it (`<Mac> · <title>`, or the host alone while the remote shell sets no title), also over a typed tab title, through the engine's `computeTitle` (patch `remote-pane-tab-title` calls `RemotePanes.tabTitle`), so the tab bar and the tab sidebar carry it.
+The split header shows the SSH activity icon and the host in place of the local working directory, and skips worktree naming; a `Focus:` row leads with the host like the tab and shows no local directory.

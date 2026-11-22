@@ -261,6 +261,10 @@ enum PersistentSessions {
         resolveBinary: (UUID, String) -> String? = { sessionBinary(for: $0, socketDirectory: $1) },
         recordOwner: (UUID, String) -> Void = { claim($0, socketDirectory: $1) }
     ) {
+        // The engine patch calls this once per new surface, so remote panes
+        // hook in here: an opened or restored remote pane gets its attach
+        // command first and is then skipped below like any pane with a command.
+        RemotePanes.prepare(&config, paneID: paneID)
         config.environmentVariables.removeValue(forKey: environmentKey)
         config.environmentVariables.removeValue(forKey: binaryEnvironmentKey)
 
@@ -287,13 +291,16 @@ enum PersistentSessions {
     }
 
     /// Quitting kills a pane's process only when the pane is not in a live
-    /// session; a session survives the quit, so it needs no confirmation.
+    /// session; a session survives the quit, so it needs no confirmation. A
+    /// remote pane's session lives on the peer: quitting ends only the local
+    /// client, and restore reattaches it.
     nonisolated static func quitKillsProcess(
         needsConfirmQuit: Bool,
         paneID: UUID,
-        hasSession: (UUID) -> Bool = { hasSession($0) }
+        hasSession: (UUID) -> Bool = { hasSession($0) },
+        isRemote: (UUID) -> Bool = { RemotePanes.identity(for: $0) != nil }
     ) -> Bool {
-        needsConfirmQuit && !hasSession(paneID)
+        needsConfirmQuit && !hasSession(paneID) && !isRemote(paneID)
     }
 
     // MARK: - Lifecycle

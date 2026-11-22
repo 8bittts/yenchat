@@ -62,6 +62,8 @@ struct TerminalCommandPaletteView: View {
     @StateObject private var searchModel: TerminalCommandPaletteSearchModel
     @StateObject var repositoryWorkspaceModel: TerminalCommandPaletteRepositoryWorkspaceModel
     @StateObject var jumpTargetsModel: TerminalCommandPaletteJumpTargetsModel
+    /// Hosts discovery runs only while a palette is visible (RemoteHostsStore).
+    @ObservedObject var hostsStore: RemoteHostsStore
     @State private var suppressSurfaceRefocusOnDismiss = false
     @State private var dismissalHandled = false
 
@@ -71,6 +73,7 @@ struct TerminalCommandPaletteView: View {
         yenConfig: YEN.Config,
         settingsController: SettingsController,
         updateViewModel: UpdateViewModel?,
+        hostsStore: RemoteHostsStore? = nil,
         onAction: @escaping ((String) -> Void)
     ) {
         self.surfaceView = surfaceView
@@ -79,6 +82,7 @@ struct TerminalCommandPaletteView: View {
         self.settingsController = settingsController
         self.updateViewModel = updateViewModel
         self.onAction = onAction
+        self.hostsStore = hostsStore ?? .shared
         _searchModel = StateObject(wrappedValue: TerminalCommandPaletteSearchModel())
         _repositoryWorkspaceModel = StateObject(
             wrappedValue: TerminalCommandPaletteRepositoryWorkspaceModel()
@@ -131,17 +135,22 @@ struct TerminalCommandPaletteView: View {
                 .onAppear {
                     dismissalHandled = false
                     jumpTargetsModel.start()
+                    hostsStore.surfaceDidAppear(surfaceView)
                     refreshRepositoryWorkspaceActions()
                     syncSearchCatalog(with: paletteActions)
                 }
                 .onDisappear {
                     jumpTargetsModel.stop()
+                    hostsStore.surfaceDidDisappear(surfaceView)
                 }
                 .onChange(of: surfaceView.pwd) { _ in
                     refreshRepositoryWorkspaceActions()
                 }
                 .onChange(of: actionCatalogInvalidationKey) { _ in
-                    syncSearchCatalog(with: paletteActions)
+                    // Rebuild from the models: this single-parameter closure
+                    // carries the previous body's `paletteActions`, which left
+                    // search one update behind (Hosts rows arrive after open).
+                    syncSearchCatalog(with: actionCatalog)
                 }
             }
         }
@@ -158,6 +167,7 @@ struct TerminalCommandPaletteView: View {
         guard !dismissalHandled else { return }
         dismissalHandled = true
         jumpTargetsModel.stop()
+        hostsStore.surfaceDidDisappear(surfaceView)
         repositoryWorkspaceModel.reset()
         searchModel.resetSession()
         let shouldRestoreSurfaceFocus = Self.shouldRestoreSurfaceFocusOnDismiss(
@@ -260,7 +270,18 @@ struct TerminalCommandPaletteView: View {
             windowBorderResolvedThemeName: settingsController.windowBorderResolvedThemeName,
             reduceMotion: reduceMotion,
             differentiateWithoutColor: differentiateWithoutColor,
-            customCommands: customCommandInvalidationKeys
+            customCommands: customCommandInvalidationKeys,
+            hosts: hostsEntries
+        )
+    }
+
+    /// The Hosts rows for the current store state. A session already shown by
+    /// a pane here reads "Open in YEN" and focuses that pane.
+    var hostsEntries: [RemoteHostsPaletteEntry] {
+        let open = jumpTargetsModel.snapshots.compactMap { $0.surface.remotePaneIdentity }
+        return RemoteHostsPaletteRows.entries(
+            snapshot: hostsStore.snapshot,
+            isOpenHere: { identity in open.contains { $0.isSameSession(as: identity) } }
         )
     }
 

@@ -18,7 +18,7 @@ extension TerminalCommandPaletteView {
         // @Published properties on the same observed model, so one keystroke triggers
         // several passes. Computing the key once per descriptor leaves only the
         // locale-aware compare, and ordering is unchanged.
-        let unsorted = yenActionDescriptors + jumpActionDescriptors + terminalActionDescriptors
+        let unsorted = yenActionDescriptors + jumpActionDescriptors + hostsActionDescriptors + terminalActionDescriptors
         let byID = Dictionary(uniqueKeysWithValues: unsorted.map { ($0.id, $0) })
         // Same comparator as sortedTerminalPaletteOptions (upstream 5c952ac/#13872).
         actions.append(contentsOf: sortedTerminalPaletteOptions(unsorted.map(\.commandOption)).compactMap { byID[$0.id] })
@@ -307,6 +307,35 @@ extension TerminalCommandPaletteView {
                     object: snapshot.surface
                 )
             }
+        }
+    }
+
+    /// Hosts rows: the user's other Macs and their sessions (RemoteHostsPaletteRows).
+    private var hostsActionDescriptors: [PaletteActionDescriptor] {
+        hostsEntries.map { entry in
+            actionDescriptor(
+                id: entry.id,
+                title: entry.title,
+                subtitle: entry.subtitle,
+                description: entry.description,
+                leadingIcon: entry.leadingIcon,
+                searchTags: entry.searchTags
+            ) {
+                performHostsAction(entry.action)
+            }
+        }
+    }
+
+    private func performHostsAction(_ action: RemoteHostsPaletteAction) {
+        switch action {
+        case .attach(let identity):
+            _ = RemotePanes.open(identity, from: surfaceView.window)
+        case .refresh:
+            hostsStore.refresh()
+        case .insertCommand(let command):
+            // The command is for this Mac; never type it into a remote shell.
+            guard surfaceView.remotePaneIdentity == nil else { return }
+            insertHistoryCommand(command)
         }
     }
 

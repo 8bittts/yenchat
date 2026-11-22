@@ -1006,6 +1006,59 @@ ${patchBlock}`;
 		});
 	});
 
+	test("remote pane tab title patch routes computeTitle through the host label and fails closed on drift", () => {
+		const patchBlock = patchCommands(["remote-pane-tab-title"]);
+		const titleOld = readFileSync(
+			join(patchesDir, "remote-pane-tab-title.old"),
+			"utf8",
+		);
+		const bell = [
+			"        if bell && yen.config.bellFeatures.contains(.title) {",
+			'            result = "🔔 \\(result)"',
+			"        }",
+			"        return result",
+			"    }",
+		].join("\n");
+
+		withTempDir((fixtureRoot) => {
+			const terminalDir = join(
+				fixtureRoot,
+				"ghostty/macos/Sources/Features/Terminal",
+			);
+			mkdirSync(terminalDir, { recursive: true });
+			const controllerPath = join(terminalDir, "BaseTerminalController.swift");
+			writeFileSync(controllerPath, `${titleOld}${bell}\n`, "utf8");
+
+			const command = `set -euo pipefail
+cd "${fixtureRoot}"
+PATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}
+PATCHES_DIR="${patchesDir}"
+${patchBlock}`;
+			const firstRun = run("bash", ["-lc", command]);
+			expect(firstRun.status).toBe(0);
+			expect(output(firstRun)).toContain("Applied Remote pane tab title");
+			const controller = readFileSync(controllerPath, "utf8");
+			// The host label comes first, so the bell decoration still wraps it.
+			expect(controller).toContain(
+				"        var result = RemotePanes.tabTitle(title, for: focusedSurface)\n        if bell",
+			);
+			expect(controller).not.toContain("        var result = title\n");
+
+			const secondRun = run("bash", ["-lc", command]);
+			expect(secondRun.status).toBe(0);
+			expect(output(secondRun)).toContain("already applied (idempotent skip)");
+
+			writeFileSync(
+				controllerPath,
+				`${titleOld.replace("var result = title", "var computed = title")}${bell}\n`,
+				"utf8",
+			);
+			const driftRun = run("bash", ["-lc", command]);
+			expect(driftRun.status).toBe(1);
+			expect(output(driftRun)).toContain("patch anchor not found");
+		});
+	});
+
 	test("persistent session termios patches chain onto the exec wrap and fail closed on drift", () => {
 		const chain = [
 			"persistent-session-exec",

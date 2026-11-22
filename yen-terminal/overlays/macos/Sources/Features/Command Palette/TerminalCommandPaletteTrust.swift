@@ -15,12 +15,18 @@ extension TerminalCommandPaletteView {
 
             return controller.surfaceTree.map { surface in
                 let terminalTitle = surface.title.isEmpty ? window.title : surface.title
-                let displayTitle = jumpDisplayTitle(
+                let remote = surface.remotePaneIdentity
+                let jumpTitle = jumpDisplayTitle(
                     terminalTitle: terminalTitle,
                     titleOverride: controller.titleOverride
                 )
+                // A remote pane leads with its host, like its tab title.
+                let displayTitle = remote.map { RemotePanes.tabTitle(jumpTitle, host: $0.displayName) } ?? jumpTitle
                 let pwd = surface.pwd?.abbreviatedPath
-                let subtitle: String? = if let pwd, !displayTitle.contains(pwd) {
+                // A remote pane's local directory belongs to the CLI, not the shell.
+                let subtitle: String? = if remote != nil {
+                    nil
+                } else if let pwd, !displayTitle.contains(pwd) {
                     pwd
                 } else {
                     nil

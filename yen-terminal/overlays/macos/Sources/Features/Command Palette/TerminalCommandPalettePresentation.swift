@@ -41,7 +41,8 @@ extension TerminalCommandPaletteView {
         windowBorderResolvedThemeName: String?,
         reduceMotion: Bool,
         differentiateWithoutColor: Bool,
-        customCommands: [ActionCatalogCustomCommandKey]
+        customCommands: [ActionCatalogCustomCommandKey],
+        hosts: [RemoteHostsPaletteEntry] = []
     ) -> ActionCatalogInvalidationKey {
         actionCatalogInvalidationKey(
             isPresented: isPresented,
@@ -63,7 +64,8 @@ extension TerminalCommandPaletteView {
             windowBorderResolvedThemeName: windowBorderResolvedThemeName,
             reduceMotion: reduceMotion,
             differentiateWithoutColor: differentiateWithoutColor,
-            customCommands: customCommands
+            customCommands: customCommands,
+            hosts: hosts
         )
     }
 
@@ -111,7 +113,8 @@ extension TerminalCommandPaletteView {
         windowBorderResolvedThemeName: String?,
         reduceMotion: Bool,
         differentiateWithoutColor: Bool,
-        customCommands: [ActionCatalogCustomCommandKey]
+        customCommands: [ActionCatalogCustomCommandKey],
+        hosts: [RemoteHostsPaletteEntry] = []
     ) -> ActionCatalogInvalidationKey {
         ActionCatalogInvalidationKey(
             isPresented: isPresented,
@@ -137,7 +140,8 @@ extension TerminalCommandPaletteView {
                     differentiateWithoutColor: differentiateWithoutColor
                 ),
                 customCommands: customCommands
-            )
+            ),
+            hosts: hosts
         )
     }
 
