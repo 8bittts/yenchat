@@ -47,6 +47,7 @@ Then read the affected surface owner from `_docs/00-docs-map.md`, with `_docs/02
 - Put YEN changes in `yen-terminal/overlays/`, `yen-terminal/customizations/`, or the patch pipeline.
 - Keep the bundled shell CLI at `Contents/Resources/bin/yen` in the release fingerprint scan.
 - Prefer native macOS frameworks before adding a bundled binary.
+- Every vendored component needs its license notice in `yen-terminal/customizations/notices/`; the engine's is `TerminalEngine.txt`, because a bundle path must not carry the upstream name ([_docs/04-security.md](_docs/04-security.md) → Third-Party License Notices).
 - Keep browser preview state isolated and non-persistent.
 
 ## Web
@@ -121,6 +122,7 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Preserve the MIT notices and the desktop account, privacy and dictation boundaries | none (prose) |
 | Serve the current GitHub DMG from the download route | `tests/10-production.prod.ts` |
 | Keep owner documents current, use one backlog, and align public documentation and legal copy | `tests/154-documentation-contracts.policy.ts` covers named public contracts. Other changes require manual review. |
+| Ship a license notice for the engine and each vendored tool | `scripts/lib/third-party-notices.sh` in `scripts/03-verify-components.sh` and `scripts/05-detect-failures.sh`, proven by `tests/171-third-party-notices.test.ts` |
 | Scan the bundled shell CLI before release | `scripts/13-scan-artifact-fingerprints.sh`, proven by `tests/46-artifact-fingerprint-gate.test.ts` |
 | Isolate browser preview state | `yen-terminal/overlays/macos/Tests/Browser/WebPreviewRepresentableTests.swift` |
 | Use the shared web design system and verify layouts at desktop and mobile widths | `tests/55-web-ui-dom.test.tsx` checks shared shell behavior. Visual verification requires a browser. |

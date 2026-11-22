@@ -49,7 +49,7 @@ Its pre-build source-only units, in roster order (`scripts/lib/units/03-verify-c
 7. Yazi flavor assets
 8. Yazi launch-surface simplicity
 9. Removed GitHub CLI guard
-10. Overlay + workspace + CLI alias regression tests, plus the process/gate guardrail suites that were previously invoked by nothing (`bun test tests/35-yazi-config.test.ts tests/45-overlay-patching.test.ts tests/51-cli-alias-parity.test.ts tests/46 tests/47 tests/119 tests/120 tests/123 tests/124 tests/127`) plus a targeted `xcodebuild` slice for the command-palette, browser, keyboard, and utility-window suites when `YEN_COMPONENT_XCODE_REGRESSION_MODE=auto` sees native macOS changes since the latest `[deploy]` release; set `always` to force it or `off` to skip it
+10. Overlay + workspace + CLI alias regression tests, plus the process/gate guardrail suites that were previously invoked by nothing (`bun test tests/35-yazi-config.test.ts tests/45-overlay-patching.test.ts tests/51-cli-alias-parity.test.ts tests/46 tests/47 tests/119 tests/120 tests/123 tests/124 tests/127 tests/145 tests/169 tests/171`) plus a targeted `xcodebuild` slice for the command-palette, browser, keyboard, and utility-window suites when `YEN_COMPONENT_XCODE_REGRESSION_MODE=auto` sees native macOS changes since the latest `[deploy]` release; set `always` to force it or `off` to skip it
 11. Privileged-action surface baseline
 12. Non-concurrency warning allowlist
 13. Weather removal regression guard

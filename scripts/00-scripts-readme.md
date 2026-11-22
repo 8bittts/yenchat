@@ -74,6 +74,7 @@ Reference: `scripts/35-vendor-delta.sh` and the commit that registered it.
 2. Append one record to `scripts/lib/vendor-manifest.sh` (`key|type|title|subtitle|repo|binary|script|companion|require_companion`); `14-vendor.sh`, `11-sync-vendor-audit.sh` and `12-verify-vendor-audit.sh` iterate it.
 3. Never hand-write the baseline; the first run writes it with the integrity fields the gates read back.
 4. Wire `.gitignore`, `bundle-yen-resources.sh`, `finalize-build.sh` signing, `05-detect-failures.sh`, `scripts/lib/required-app-bins.sh`, the `13-scan-artifact-fingerprints.sh` scope, shell-integration `PATH`, this table, and `_docs/04-security.md`.
+   Add the tool's license file at the vendored version as `yen-terminal/customizations/notices/<key>.txt`; `03-verify-components.sh` fails while a baseline has no notice.
 5. Commit the baseline.
 
 ## Gate Details
@@ -89,6 +90,7 @@ The regression unit runs `tests/35`, `45` and `51` plus the guardrail suites.
 Post-build checks in seven categories:
 
 1. Artifacts: universal main binary, plist keys, bundled CLI, DMG and checksum, signed metadata, shell integration; DMG URL and SHA-256 parity, `hdiutil verify`, `spctl` and `stapler validate`.
+   The built binary must resolve `copy-on-select = true` to `both`, and the bundle must hold every tracked license notice unchanged.
 2. Security: hardened runtime, timestamps, Sparkle and app signatures, `codesign --verify --strict` on every required `Resources/bin` binary, and the audio-input entitlement.
 3. Critical files present and non-empty.
 4. Consistency: download links and well-formed appcast XML.
@@ -148,6 +150,8 @@ Their orchestrators and shared-state contracts are described in `_docs/05-infras
 | `zig-toolchain.sh`                                                                                                                                  | The one `zig version` versus `.minimum_zig_version` comparison, shared by `14-vendor.sh` and `validate-environment.sh`               |
 | `release-vendor-window.sh`                                                                                                                          | `/update-yen` Step 1 rule that accepts a Ghostty `behind` for a recent, published `vendor:` baseline                                 |
 | `gate-receipt.sh`, `gate-roster.txt`, `units/`                                                                                                      | Gate receipt contract                                                                                                                |
+| `copy-on-select-compat.sh`                                                                                                                          | Asks a built binary what `copy-on-select = true` resolves to, in a temporary home                                                    |
+| `third-party-notices.sh`                                                                                                                            | Requires a license notice per vendor baseline, and each notice in the built app                                                      |
 | `patch-file.py`, `patches/`                                                                                                                         | Fail-closed source patches for `apply-overlays.sh`                                                                                   |
 | `apple-script-action-policy.py`, `native-fullscreen-helper.py`, `remove-wrapper-sendable.py`, `rewrite-pbxproj-membership-exclusions.py`            | `apply-overlays.sh` patchers: AppleScript action policy, fullscreen transition state, wrapper `Sendable` removal, pbxproj membership |
 | `xcode-policy.sh`                                                                                                                                   | Stable-Xcode release gate by install path and version line                                                                           |

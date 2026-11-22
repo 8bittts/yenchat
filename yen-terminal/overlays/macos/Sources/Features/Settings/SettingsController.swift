@@ -2572,7 +2572,8 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         // A Settings edit waits out a short debounce before it is written. Write
         // it now: the re-read below would replace it with the value on disk, and
         // the debounced write would then store that old value. The write merges
-        // into the file, so the external change to any other line is kept.
+        // the managed keys into the file: an external change to any other line
+        // is kept, and for a managed key the value in Settings wins.
         flushPendingRealTimeConfigSyncIfNeeded()
 
         suppressRealTimeConfigSync = true

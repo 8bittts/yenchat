@@ -147,7 +147,7 @@ Fill in the `Observed` / `Verdict` blanks during a live run and attach the gener
 
 ---
 
-### Acceptance criteria (from the TODO)
+### Acceptance criteria
 
 1. Run the live matrix against: one non-YEN target app, one in-terminal target,
    one process-only or confirmed-readable cross-app target, one Secure
@@ -155,7 +155,7 @@ Fill in the `Observed` / `Verdict` blanks during a live run and attach the gener
 2. Capture structured log evidence for each live case: `stop_cause`,
    `fallback_used`, restart behavior, and revocation teardown timing.
 
-Do NOT mark the TODO complete from headless tests.
+Do not record the matrix as run from headless tests.
 This run is human-in-the-loop.
 
 ---
