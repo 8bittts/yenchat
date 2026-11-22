@@ -62,12 +62,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
 
-### A lint test times out on a loaded machine
-
-`tests/125-lint-swift-view-modifiers.test.ts` failed once in a full `bun test` run while the load average was 11: its second full scan of the overlay sources timed out at the 5-second default while the first passed.
-
-- [ ] Reproduce under generated load, then give the scan a limit that holds without hiding a real hang.
-
 ---
 ## WAIT-GATED
 

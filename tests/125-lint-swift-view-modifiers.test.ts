@@ -20,23 +20,38 @@ function withFixture(file: string, contents: string): () => string {
 	return () => dir;
 }
 
-describe("SwiftUI bare-modifier lint (scripts/41-lint-swift-view-modifiers.sh)", () => {
-	test("real overlay Sources are clean (regression guard for the sidebar crash)", () => {
-		const result = runLinter();
-		expect(result.status).toBe(0);
-		expect(result.stdout).toContain("clean");
-	});
+// A scan of every overlay source takes under a second on an idle machine and
+// 5.4 seconds under CPU and disk load, which is past Bun's 5-second default.
+// The limit stays finite, so a linter that hangs still fails.
+const REAL_SCAN_TIMEOUT_MS = 30_000;
 
-	test("real scan reports a non-trivial scanned-file count (no silent scope collapse)", () => {
-		const result = runLinter();
-		expect(result.status).toBe(0);
-		const scanned = result.stdout.match(/scanned (\d+) SwiftUI of (\d+) Swift/);
-		expect(scanned).not.toBeNull();
-		// Without this, the linter reported an identical "clean" whether it
-		// scanned every overlay source or none of them.
-		expect(Number(scanned?.[1])).toBeGreaterThanOrEqual(40);
-		expect(Number(scanned?.[2])).toBeGreaterThanOrEqual(Number(scanned?.[1]));
-	});
+describe("SwiftUI bare-modifier lint (scripts/41-lint-swift-view-modifiers.sh)", () => {
+	test(
+		"real overlay Sources are clean (regression guard for the sidebar crash)",
+		() => {
+			const result = runLinter();
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain("clean");
+		},
+		REAL_SCAN_TIMEOUT_MS,
+	);
+
+	test(
+		"real scan reports a non-trivial scanned-file count (no silent scope collapse)",
+		() => {
+			const result = runLinter();
+			expect(result.status).toBe(0);
+			const scanned = result.stdout.match(
+				/scanned (\d+) SwiftUI of (\d+) Swift/,
+			);
+			expect(scanned).not.toBeNull();
+			// Without this, the linter reported an identical "clean" whether it
+			// scanned every overlay source or none of them.
+			expect(Number(scanned?.[1])).toBeGreaterThanOrEqual(40);
+			expect(Number(scanned?.[2])).toBeGreaterThanOrEqual(Number(scanned?.[1]));
+		},
+		REAL_SCAN_TIMEOUT_MS,
+	);
 
 	test("fails closed on an empty scan set instead of reporting clean", () => {
 		const dir = mkdtempSync(join(tmpdir(), "yen-view-modifier-lint-empty-"));
