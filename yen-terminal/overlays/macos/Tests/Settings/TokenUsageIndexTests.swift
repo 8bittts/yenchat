@@ -176,6 +176,50 @@ struct TokenUsageIndexTests {
         #expect(try index.read(now: now, tools: [.codex])[.codex] == 0)
     }
 
+    @Test func historyCountsEachFinishedDayOnceAndKeepsItAfterTheSourceIsGone() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let calendar = Calendar.current, now = Date(), today = calendar.startOfDay(for: now)
+        func at(_ daysAgo: Int) -> Date { calendar.date(byAdding: .day, value: -daysAgo, to: today)!.addingTimeInterval(3600) }
+        func write(_ path: String, _ rows: [String]) throws {
+            let file = home.appendingPathComponent(path)
+            try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data((rows.joined(separator: "\n") + "\n").utf8).write(to: file)
+        }
+        func claude(_ id: String, _ date: Date, input: Int, output: Int) -> String {
+            """
+            {"type":"assistant","timestamp":"\(date.ISO8601Format())","requestId":"r","message":{"id":"\(id)","model":"claude-sonnet","usage":{"input_tokens":\(input),"output_tokens":\(output)}}}
+            """
+        }
+        func codex(_ total: Int, _ date: Date) -> String {
+            """
+            {"type":"event_msg","timestamp":"\(date.ISO8601Format())","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":\(total)}}}}
+            """
+        }
+        try write(".claude/projects/a.jsonl", [claude("old", at(3), input: 20, output: 1), claude("new", at(1), input: 10, output: 2),
+                                               claude("today", now, input: 100, output: 1)])
+        // A resumed session logs the same request again; the fuller copy is the one counted.
+        try write(".claude/projects/b.jsonl", [claude("old", at(3), input: 5, output: 0)])
+        try write(".codex/sessions/rollout-history.jsonl", [codex(100, at(2)), codex(150, at(1))])
+        let store = TokenTool.openCode.root(home: home)
+        try fm.createDirectory(at: store, withIntermediateDirectories: true)
+        try SQLiteDatabase(path: store.appendingPathComponent("opencode.db").path).execute("""
+            CREATE TABLE message(id TEXT,session_id TEXT,data TEXT);
+            INSERT INTO message VALUES('m','s','{"role":"assistant","time":{"created":\(Int(at(1).timeIntervalSince1970 * 1000))},"tokens":{"input":7}}');
+            """)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        let history = try index.history(now: now)
+        #expect(history[.claude]?.count == TokenUsageIndex.historyDays)
+        #expect(history[.claude]?.suffix(3) == [21, 0, 12])
+        #expect(history[.codex]?.suffix(3) == [0, 100, 50])
+        #expect(history[.openCode]?.suffix(2) == [0, 7])
+        // Grok has no records here, so it has no entry instead of a row of zeros.
+        #expect(history[.grok] == nil)
+        try fm.removeItem(at: home.appendingPathComponent(".claude"))
+        #expect(try index.history(now: now)[.claude]?.suffix(3) == [21, 0, 12])
+    }
+
     @MainActor @Test func observesAndCountsAppendsThroughAnAliasedProviderDirectory() async throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)

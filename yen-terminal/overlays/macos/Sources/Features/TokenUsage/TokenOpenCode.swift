@@ -12,36 +12,31 @@ struct TokenOpenCode {
         FROM session
         """
 
-    func count(in day: DateInterval) throws -> Int {
-        var result = 0
-        try db.transaction { result = try snapshotCount(in: day) }
+    func count(in day: DateInterval) throws -> Int { try daily(in: day).values.reduce(0, +) }
+
+    /// Tokens per local day inside the interval, read in one snapshot.
+    func daily(in interval: DateInterval) throws -> [Int: Int] {
+        var result: [Int: Int] = [:]
+        try db.transaction {
+            let rows = try db.prepare("SELECT created,\(Self.total) FROM (\(try source())) WHERE created >= ? AND created < ?")
+            rows.bind(1, Int(interval.start.timeIntervalSince1970 * 1000))
+            rows.bind(2, Int(interval.end.timeIntervalSince1970 * 1000))
+            while try rows.step() {
+                result[TokenRecord.localDay(Date(timeIntervalSince1970: rows.double(0) / 1000)), default: 0] += rows.int(1)
+            }
+        }
         return result
     }
 
-    private func snapshotCount(in day: DateInterval) throws -> Int {
+    private func source() throws -> String {
         let tables = try existingTables([Self.legacyMessageTable, Self.sessionMessageTable, "session"])
-        guard let messages = Self.assistantProjection(tables: tables) else {
-            return try sum(Self.sessions, in: day)
-        }
-        let today = try sum(messages, in: day)
-        guard today == 0, tables.contains("session") else { return today }
-        // An empty day does not justify attributing lifetime session counters to today.
+        guard let messages = Self.assistantProjection(tables: tables) else { return Self.sessions }
+        // A day without usage does not justify attributing lifetime session counters to it.
         let history = try db.prepare("SELECT 1 FROM (\(messages)) WHERE created>0 AND (\(Self.total))>0 LIMIT 1")
-        if try history.step() { return 0 }
+        guard try !history.step(), tables.contains("session") else { return messages }
         // Modern schemas can have sessions without the legacy cumulative counters.
         let counters = try db.prepare("SELECT 1 FROM pragma_table_info('session') WHERE name='tokens_input'")
-        guard try counters.step() else { return 0 }
-        return try sum(Self.sessions, in: day)
-    }
-
-    private func sum(_ projection: String, in day: DateInterval) throws -> Int {
-        let stmt = try db.prepare("""
-            SELECT COALESCE(SUM(\(Self.total)),0) FROM (\(projection)) WHERE created >= ? AND created < ?
-            """)
-        stmt.bind(1, Int(day.start.timeIntervalSince1970 * 1000))
-        stmt.bind(2, Int(day.end.timeIntervalSince1970 * 1000))
-        guard try stmt.step() else { throw CocoaError(.fileReadUnknown) }
-        return stmt.int(0)
+        return try counters.step() ? Self.sessions : messages
     }
 
 	static let legacyMessageTable = "message"

@@ -43,9 +43,73 @@ struct TokenUsageIndex: Sendable {
         return try JSONDecoder().decode(TokenPlanReading.self, from: Data(state.utf8)).meters
     }
 
+    /// Days of history before today. With today, the analytics view covers 90 days.
+    static let historyDays = 89
+
+    /// Tokens for each local day before today, oldest first. An unreadable source has no entry.
+    /// A finished day never changes, so its total is kept and its source is not read again.
+    func history(now: Date = Date()) throws -> [TokenTool: [Int]] {
+        let calendar = Calendar.current, today = calendar.startOfDay(for: now)
+        let days = (1...Self.historyDays).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }.map(TokenRecord.localDay)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let db = try SQLiteDatabase(path: directory.appendingPathComponent("history.sqlite").path)
+        try db.execute("CREATE TABLE IF NOT EXISTS totals(tool TEXT,day INTEGER,n INTEGER,PRIMARY KEY(tool,day)) WITHOUT ROWID")
+        var result: [TokenTool: [Int]] = [:]
+        for tool in TokenTool.allCases {
+            try Task.checkCancellation()
+            let saved = try db.prepare("SELECT day,n FROM totals WHERE tool=? AND day>=?")
+            saved.bind(1, tool.rawValue); saved.bind(2, days[0])
+            var known: [Int: Int] = [:]
+            while try saved.step() { known[saved.int(0)] = saved.int(1) }
+            if let gap = days.first(where: { known[$0] == nil }) {
+                let fresh: [Int: Int]
+                do {
+                    fresh = try totals(tool, in: DateInterval(start: Date(timeIntervalSince1970: Double(gap)), end: today))
+                } catch is CancellationError { throw CancellationError() }
+                catch { continue }
+                try db.transaction {
+                    let save = try db.prepare("INSERT OR REPLACE INTO totals VALUES(?,?,?)")
+                    for day in days where day >= gap {
+                        known[day] = fresh[day] ?? 0
+                        save.reset(); save.bind(1, tool.rawValue); save.bind(2, day); save.bind(3, fresh[day] ?? 0)
+                        _ = try save.step()
+                    }
+                }
+            }
+            result[tool] = days.map { known[$0] ?? 0 }
+        }
+        try db.execute("DELETE FROM totals WHERE day<\(days[0])")
+        return result
+    }
+
+    /// Reads the interval into a scratch index, so the day index and its cursors stay untouched.
+    private func totals(_ tool: TokenTool, in interval: DateInterval) throws -> [Int: Int] {
+        let fm = FileManager.default
+        let store = tool.root(home: home).resolvingSymlinksInPath().appendingPathComponent("opencode.db")
+        if tool == .openCode, fm.fileExists(atPath: store.path) {
+            return try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: store.path)).daily(in: interval)
+        }
+        let scratch = directory.appendingPathComponent("history-scan.sqlite").path
+        let discard = { for suffix in ["", "-wal", "-shm"] { try? fm.removeItem(atPath: scratch + suffix) } }
+        discard()
+        defer { discard() }
+        let db = try SQLiteDatabase(path: scratch)
+        try prepareIndex(db)
+        _ = try count(tool, db: db, day: interval, changes: nil)
+        let rows = try db.prepare("""
+            SELECT day,SUM(n) FROM (
+                SELECT day,n,ROW_NUMBER() OVER (PARTITION BY id ORDER BY output DESC,n DESC) AS rank
+                FROM events WHERE tool=?) WHERE rank=1 GROUP BY day
+            """)
+        rows.bind(1, tool.rawValue)
+        var result: [Int: Int] = [:]
+        while try rows.step() { result[rows.int(0)] = rows.int(1) }
+        return result
+    }
+
     private func prepareIndex(_ db: SQLiteDatabase) throws {
         let version = try db.prepare("PRAGMA user_version")
-        guard try version.step(), version.int(0) != 3 else { return }
+        guard try version.step(), version.int(0) != 4 else { return }
         version.reset()
         // Only YEN's disposable cache is migrated. Re-read unchanged logs using the new counting rules.
         try db.transaction {
@@ -55,11 +119,11 @@ struct TokenUsageIndex: Sendable {
                 CREATE TABLE day(start INTEGER);
                 CREATE TABLE opencode(stamp TEXT PRIMARY KEY,count INTEGER);
                 CREATE TABLE cursors(path TEXT PRIMARY KEY,inode INTEGER,size INTEGER,stamp REAL,offset INTEGER,state TEXT,tail TEXT,tool TEXT);
-                CREATE TABLE events(tool TEXT,path TEXT,id TEXT,n INTEGER,output INTEGER,input INTEGER,cached INTEGER,seq INTEGER,
+                CREATE TABLE events(tool TEXT,path TEXT,id TEXT,n INTEGER,output INTEGER,input INTEGER,cached INTEGER,seq INTEGER,day INTEGER,
                     PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
                 CREATE INDEX best ON events(tool,id,output DESC,n DESC);
                 CREATE INDEX recent ON events(path,seq DESC);
-                PRAGMA user_version=3;
+                PRAGMA user_version=4;
                 """)
         }
     }
@@ -185,8 +249,8 @@ struct TokenUsageIndex: Sendable {
                 clear.bind(1, tool.rawValue); clear.bind(2, url.path); _ = try clear.step()
             }
             let insert = try db.prepare("""
-                INSERT INTO events(tool,path,id,n,output) VALUES(?,?,?,?,?) ON CONFLICT(tool,path,id)
-                DO UPDATE SET n=excluded.n,output=excluded.output WHERE (excluded.output,excluded.n)>(output,n)
+                INSERT INTO events(tool,path,id,n,output,day) VALUES(?,?,?,?,?,?) ON CONFLICT(tool,path,id)
+                DO UPDATE SET n=excluded.n,output=excluded.output,day=excluded.day WHERE (excluded.output,excluded.n)>(output,n)
                 """)
             let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
             let end = try stream(handle, from: offset, through: size) { bytes in
@@ -197,7 +261,7 @@ struct TokenUsageIndex: Sendable {
                 for entry in TokenRecord.decode(bytes, tool: tool, day: day) {
                     insert.reset()
                     insert.bind(1, tool.rawValue); insert.bind(2, url.path); insert.bind(3, entry.key)
-                    insert.bind(4, entry.count); insert.bind(5, entry.output)
+                    insert.bind(4, entry.count); insert.bind(5, entry.output); insert.bind(6, entry.day)
                     _ = try insert.step()
                 }
             }

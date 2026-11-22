@@ -39,10 +39,11 @@ struct TokenCodex: Codable {
         guard added.contains(where: { $0 > 0 }) else { return }
         defer { ordinal += 1 }
         guard let stamp = TokenRecord.date(obj["timestamp"]), stamp >= day.start, stamp < day.end else { return }
-        let insert = try db.prepare("INSERT INTO events(tool,path,id,n,output,input,cached,seq) VALUES(?,?,?,?,?,?,?,?)")
+        let insert = try db.prepare("INSERT INTO events(tool,path,id,n,output,input,cached,seq,day) VALUES(?,?,?,?,?,?,?,?,?)")
         insert.bind(1, TokenTool.codex.rawValue); insert.bind(2, file)
         insert.bind(3, TokenRecord.key(rollout, String(ordinal))); insert.bind(4, added.reduce(0, +))
         insert.bind(5, added[2]); insert.bind(6, added[0]); insert.bind(7, added[1]); insert.bind(8, ordinal)
+        insert.bind(9, TokenRecord.localDay(stamp))
         _ = try insert.step()
     }
 

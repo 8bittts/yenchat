@@ -29,6 +29,10 @@ struct TokenRecord {
     let key: String
     let count: Int
     let output: Int
+    let day: Int
+
+    /// The local day an event belongs to, as the epoch second of its midnight.
+    static func localDay(_ stamp: Date) -> Int { Int(Calendar.current.startOfDay(for: stamp).timeIntervalSince1970) }
 
     static func object(_ bytes: Data, containing field: String) -> Object? {
         guard bytes.range(of: Data(field.utf8)) != nil else { return nil }
@@ -73,7 +77,7 @@ struct TokenRecord {
         } ?? number(usage["cache_creation_input_tokens"])
         let output = number(usage["output_tokens"])
         return Self(key: key(id, request), count: writes + number(usage["input_tokens"])
-            + number(usage["cache_read_input_tokens"]) + output, output: output)
+            + number(usage["cache_read_input_tokens"]) + output, output: output, day: localDay(stamp))
     }
 
     private static func grok(_ bytes: Data, day: DateInterval) -> [Self] {
@@ -91,7 +95,8 @@ struct TokenRecord {
         let request = prompt ?? text(params["sessionId"]) ?? id
         func record(_ bag: Object, message: String) -> Self {
             let output = number(bag["outputTokens"]) + number(bag["reasoningTokens"])
-            return Self(key: key(message, request), count: max(number(bag["inputTokens"]), number(bag["cachedReadTokens"])) + output, output: output)
+            return Self(key: key(message, request), count: max(number(bag["inputTokens"]), number(bag["cachedReadTokens"])) + output,
+                        output: output, day: localDay(stamp))
         }
         if let models = usage["modelUsage"] as? Object, !models.isEmpty {
             return models.compactMap { name, raw in (raw as? Object).map { record($0, message: key(id, name.isEmpty ? "grok" : name)) } }
@@ -109,6 +114,6 @@ struct TokenRecord {
               stamp >= day.start, stamp < day.end else { return nil }
         let output = number(fields["tokens.output"]) + number(fields["tokens.reasoning"])
         return Self(key: key(id, field("run") ?? "opencode-log"), count: output + number(fields["tokens.input"])
-            + number(fields["tokens.cache.read"]) + number(fields["tokens.cache.write"]), output: output)
+            + number(fields["tokens.cache.read"]) + number(fields["tokens.cache.write"]), output: output, day: localDay(stamp))
     }
 }
