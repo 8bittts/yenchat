@@ -18,7 +18,8 @@ import Foundation
 /// session ends if no terminal window holds it any more. Ghostty can keep a
 /// closed pane alive long after that, so `SurfaceView.deinit` is only the fast
 /// path (`paneDidClose`). Both are ignored after `applicationWillTerminate`, and
-/// a crash runs neither.
+/// a crash runs neither. A quit inside the undo window ends the panes that
+/// already left (`endDepartedPanes`), because the delayed check would never run.
 ///
 /// Ownership: `prepare` records the copy of the app that shows a pane in
 /// `<UUID>.owner`. The reaper reopens a detached session in a window only for
@@ -361,6 +362,16 @@ enum PersistentSessions {
     /// Grace added to the undo timeout before a departed pane is judged closed.
     static let closeGrace: Duration = .seconds(2)
 
+    /// Panes that left a tree or a closing window and wait for the undo window
+    /// to end. A quit judges them at once (`endDepartedPanes`).
+    private static let departedLock = NSLock()
+    nonisolated(unsafe) private static var departed: Set<UUID> = []
+
+    /// Take a pane out of the waiting set; false when a quit already judged it.
+    nonisolated private static func takeDeparted(_ paneID: UUID) -> Bool {
+        departedLock.withLock { departed.remove(paneID) != nil }
+    }
+
     /// A pane left its split tree or its window closed. Once undo can no longer
     /// bring it back, end its session unless a terminal window holds it again
     /// (an undone close, or a pane moved to another window).
@@ -372,19 +383,29 @@ enum PersistentSessions {
         close: @escaping @MainActor (UUID) -> Void = { paneDidClose($0) }
     ) {
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
+        departedLock.withLock { _ = departed.insert(paneID) }
         let delay = seconds(undoExpiration + closeGrace)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            guard !isTerminating, !isStillPresent(paneID) else { return }
+            guard takeDeparted(paneID), !isTerminating, !isStillPresent(paneID) else { return }
             close(paneID)
         }
     }
 
-    /// Called when the app quits: end the sessions of panes that already left
-    /// their windows, because undo can no longer bring them back.
-    static func endDepartedPanes(
+    /// Called when the app quits, before `markTerminating`: end the sessions of
+    /// panes that already left their windows. Undo can no longer bring them
+    /// back, and a session left running would reopen in a window at the next
+    /// launch. A pane that undo or a move put back in a window keeps its session.
+    @MainActor static func endDepartedPanes(
         isStillPresent: @MainActor (UUID) -> Bool = paneIsInAnyTerminalWindow,
         close: @MainActor (UUID) -> Void = { paneDidClose($0) }
     ) {
+        let waiting = departedLock.withLock {
+            defer { departed.removeAll() }
+            return departed
+        }
+        for paneID in waiting.sorted(by: { $0.uuidString < $1.uuidString }) where !isStillPresent(paneID) {
+            close(paneID)
+        }
     }
 
     /// A terminal window is closing; each of its panes is judged like a pane

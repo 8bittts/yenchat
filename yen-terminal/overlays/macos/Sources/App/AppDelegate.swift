@@ -561,6 +561,9 @@ class AppDelegate: NSObject,
 
     func applicationWillTerminate(_ notification: Notification) {
         DesktopExtras.shared.stop()
+        // A pane the user closed moments ago still waits for its undo window;
+        // end its session now, while a close still counts as a close.
+        PersistentSessions.endDepartedPanes()
         // From here on a pane teardown is the app leaving, so persistent
         // sessions detach instead of ending (PersistentSessions.paneDidClose).
         PersistentSessions.markTerminating()

@@ -2,6 +2,9 @@ import Foundation
 import Testing
 @testable import YEN
 
+// Serialized: the panes waiting for their undo window are process-wide state,
+// and a quit judges all of them at once.
+@Suite(.serialized)
 struct PersistentSessionsTests {
     private let paneID = UUID(uuidString: "6F1D2C3B-0A4E-4F5A-9B8C-1D2E3F4A5B6C")!
     private let parentID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
