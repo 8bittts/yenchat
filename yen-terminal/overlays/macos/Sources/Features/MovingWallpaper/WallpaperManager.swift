@@ -16,6 +16,10 @@ final class WallpaperManager {
     private var isMuted = true
     /// Pause imposed by Low Power Mode or thermal pressure.
     private var systemPaused = false
+    /// Set by `tearDown`, for good. A file panel, a download or a Photos export
+    /// can finish after the switch went off; its result may be saved, but it
+    /// must not put a window back on the desktop.
+    private var isStopped = false
     private var activeSpaceIDs: [CGDirectDisplayID: UInt64] = [:]
     /// YouTube redownloads still outstanding this session, keyed by desktop.
     /// Re-persisted on every save so an unrelated save can't erase them before
@@ -50,6 +54,7 @@ final class WallpaperManager {
     }
 
     func tearDown() {
+        isStopped = true
         cancelAllRequests()
         tearDownWindows()
         if let screenObserver {
@@ -293,7 +298,7 @@ final class WallpaperManager {
     /// Drives the overlay for one YouTube download: a fraction while it runs,
     /// nil once it ends. Centered on the display the download is for.
     private func showDownloadProgress(_ progress: Double?, on displayID: CGDirectDisplayID?) {
-        guard let progress else {
+        guard let progress, !isStopped else {
             loadingOverlay.hide()
             return
         }
@@ -474,7 +479,7 @@ final class WallpaperManager {
     // MARK: - Window Lifecycle
 
     private func rebuildAllWindows() {
-        guard !isPaused else {
+        guard !isStopped, !isPaused else {
             tearDownWindows()
             return
         }
