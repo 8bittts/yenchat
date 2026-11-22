@@ -212,7 +212,8 @@ final class TokenUsageMenu: NSObject {
         }
     }
 
-    /// The analytics view asks for the finished days once; the first read can take half a minute.
+    /// The analytics view asks for the finished days once; the first read of a large history takes
+    /// seconds on one core (`_docs/01-architecture.md` → Optional desktop integrations).
     private func loadHistory() {
         wantsHistory = true
         guard active, historian == nil else { return }

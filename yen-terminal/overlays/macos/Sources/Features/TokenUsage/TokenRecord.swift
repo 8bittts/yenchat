@@ -23,8 +23,8 @@ enum TokenTool: String, CaseIterable, Sendable {
         }
     }
 
-    /// A line over this size is skipped without being held in memory. Usage records are small: on
-    /// 12 GB of real records the largest was 163 KB for Claude Code, whose record carries the reply,
+    /// A line over this size is skipped without being held in memory. Usage records are small: in
+    /// 6.8 GB of real records the largest was 163 KB for Claude Code, whose record carries the reply,
     /// and under 1 KB for Codex and Grok, whose compaction and image records reach many megabytes.
     var recordLimit: Int {
         switch self {

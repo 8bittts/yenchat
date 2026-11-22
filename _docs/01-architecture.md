@@ -143,7 +143,7 @@ Grok uses completed turns, and OpenCode includes all gateways in its store.
 The analytics view reads the 89 finished days before today once, into a scratch index in the temporary folder, and keeps each day’s total per provider in `history.sqlite` beside the day cache.
 A finished day is never read again, so its total survives the removal of its source records.
 Only a gap in the saved days starts a new read, from the first missing day.
-That first read runs on one core: on 12 GB of records with a warm file cache it takes about 10 seconds and peaks near 70 MB, and later reads take under 0.1 seconds.
+That first read runs on one core: of a 12 GB record history, 6.8 GB fell inside the 89 days, and reading it with a warm file cache takes about 10 seconds and peaks near 70 MB; later reads take under 0.1 seconds.
 The scratch index has no secondary index except for Codex, whose corrections look rows up.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
@@ -153,7 +153,7 @@ The retired connection source is listed in `scripts/lib/overlay-data/retired-pat
 A source that was readable and fails one read, such as a locked store, gets one more try after the 8-second debounce; a second failure waits for the next file change, so an absent tool costs no wakeups.
 macOS reports a file change when the writer closes the file, so a tool that kept its record file open would be read again only when it closed it or the panel opened; Claude Code appends and closes for each record.
 Disabling the token menu cancels requests.
-Measured on the release build with one window and 12 GB of records, against the same build with the menu off: the footprint is 36 to 62 MB against 30 MB and peaks at 83 to 93 MB during the first read of the day.
+Measured on the release build with one window and a 12 GB record history, against the same build with the menu off: the footprint is 36 to 62 MB against 30 MB and peaks at 83 to 93 MB during the first read of the day.
 With no record changing the menu uses no measurable CPU time and no idle wakeups, and a refresh holds the main thread for about 2 ms.
 Terminal panes and the renderer do not subscribe to usage updates.
 
