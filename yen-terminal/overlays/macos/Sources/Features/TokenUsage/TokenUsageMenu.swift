@@ -8,7 +8,6 @@ final class TokenUsageMenu: NSObject {
     private var localMonitor: Any?
     private var outsideMonitor: Any?
     private let snapshot = TokenMenuSnapshot()
-    private let connection = TokenPlanConnection()
     private let index: TokenUsageIndex
     private var watcher: TokenSourceWatcher?
     private var changes: [TokenTool: Set<URL>] = [:]
@@ -62,7 +61,6 @@ final class TokenUsageMenu: NSObject {
         watcher = nil
         worker?.cancel()
         historian?.cancel()
-        connection.stop()
         rotation?.cancel()
         delay?.cancel()
         NotificationCenter.default.removeObserver(self)
@@ -85,7 +83,7 @@ final class TokenUsageMenu: NSObject {
         window.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
         window.dismiss = { [weak self] in self?.closePanel() }
         panel = window
-        let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, connection: connection, mark: button.image,
+        let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, mark: button.image,
             heightLimit: (button.window?.screen?.visibleFrame.height ?? 700) - 24,
             cycle: { [weak self] in self?.cycleDisplay() }, refresh: { [weak self] in self?.refreshAll() },
             loadHistory: { [weak self] in self?.loadHistory() })
@@ -180,7 +178,7 @@ final class TokenUsageMenu: NSObject {
         let task = Task.detached(priority: .utility) { [index] in
             let counts = (try? index.read(tools: tools, changes: paths)) ?? [:]
             let now = Date()
-            return TokenMenuReading(counts: counts, sharedPools: TokenLocalPlans.sharedCursorPools(home: index.home, now: now),
+            return TokenMenuReading(counts: counts,
                                     workspace: tools.contains(.openCode) ? TokenLocalPlans.openCodeWorkspace(home: index.home) : nil, plans: [
                 .claude: TokenLocalPlans.claude(home: index.home, now: now),
                 .codex: (try? index.latestCodexPlan()) ?? [],
@@ -195,7 +193,6 @@ final class TokenUsageMenu: NSObject {
             if day == self.displayedDay {
                 var counts = self.snapshot.counts ?? [:]
                 for tool in tools { counts[tool] = result.counts[tool] }
-                self.snapshot.sharedPools = result.sharedPools
                 if tools.contains(.openCode) { self.snapshot.workspace = result.workspace }
                 self.snapshot.plans = result.plans
                 self.snapshot.counts = counts
@@ -237,7 +234,6 @@ final class TokenUsageMenu: NSObject {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 guard !Task.isCancelled, let self else { return }
-                self.connection.refresh()
                 self.meterIndex += 1
                 self.updateTitle()
             }
@@ -260,8 +256,7 @@ final class TokenUsageMenu: NSObject {
         case .limits:
             let now = Date()
             let labels = TokenTool.allCases.flatMap { tool in
-                let meters = snapshot.meters(for: tool, connection: connection)
-                return meters.filter { $0.isCurrent(at: now) }.map { meter in
+                (snapshot.plans[tool] ?? []).filter { $0.isCurrent(at: now) }.map { meter in
                     let name = tool == .grok ? meter.label : tool.rawValue + " " + meter.label
                     return name + " " + (meter.percent / 100).formatted(.percent)
                 }
@@ -288,7 +283,7 @@ private final class TokenPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override func cancelOperation(_ sender: Any?) { dismiss?() }
 
-    /// Match JPtheCat's six-point anchor gap and eight-point visible-display inset.
+    /// A six-point gap below the anchor and an eight-point inset from the visible display edge.
     static func frame(below anchor: CGRect, size: CGSize, visible: CGRect) -> CGRect {
         let safe = visible.insetBy(dx: 8, dy: 8)
         let x = max(safe.minX, min(anchor.midX - size.width / 2, safe.maxX - size.width))
@@ -304,7 +299,6 @@ private struct TokenPanelSize: PreferenceKey {
 
 private struct TokenMenuReading: Sendable {
     let counts: TokenUsageIndex.Counts
-    let sharedPools: [TokenPlanMeter]
     let workspace: String?
     let plans: [TokenTool: [TokenPlanMeter]]
 }
@@ -313,18 +307,16 @@ enum TokenMenuDisplay: String, CaseIterable {
     case total = "Total tokens", provider = "Top provider", limits = "Plan limits", mark = "Icon only"
     static let key = "com.yenchat.yen.tokenUsage.display"
     static let columnsKey = "com.yenchat.yen.tokenUsage.twoColumns"
+
+    /// Reset All Settings forgets the menu bar display and the panel layout.
+    static func reset(defaults: UserDefaults = .standard) {
+        for key in [key, columnsKey] { defaults.removeObject(forKey: key) }
+    }
 }
 
 @MainActor
 final class TokenMenuSnapshot: ObservableObject {
-    @Published var sharedPools: [TokenPlanMeter] = []
     @Published var workspace: String?
-    func meters(for tool: TokenTool, connection: TokenPlanConnection) -> [TokenPlanMeter] {
-        let local = plans[tool] ?? []
-        guard tool == .grok else { return local }
-        return local + (connection.connected ? connection.meters : sharedPools)
-    }
-
     @Published var counts: TokenUsageIndex.Counts?
     /// Tokens for each finished day, oldest first; nil until the analytics view asks for them.
     @Published var history: [TokenTool: [Int]]?

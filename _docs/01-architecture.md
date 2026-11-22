@@ -144,12 +144,8 @@ Only a gap in the saved days starts a new read, from the first missing day.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
-When JPtheCat has an enabled plan cache, YEN can read its local Cursor and Grok Bot readings.
-Once the optional Cursor connection is active, it replaces the JPtheCat readings for Cursor and Grok Bot.
-The optional Cursor connection exchanges a user-supplied API key for a temporary access token on api2.cursor.sh.
-The same host supplies Cursor’s current billing-cycle pools and Grok Bot’s weekly included pool.
-YEN saves only the user-supplied key in its own Keychain item and deletes that item on disconnect.
-A failed Cursor request keeps the last reading, and a rejected key clears it.
+The token menu depends on no other app: it reads no JPtheCat file, holds no credential and opens no network connection, so Cursor and Grok Bot plan pools are not shown.
+The retired connection source is listed in `scripts/lib/overlay-data/retired-paths.tsv`, which removes its copy from an existing build tree.
 Disabling the token menu cancels requests.
 Terminal panes and the renderer do not subscribe to usage updates.
 

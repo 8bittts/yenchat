@@ -44,25 +44,6 @@ struct TokenPlanReading: Codable, Sendable {
 }
 
 enum TokenLocalPlans {
-    /// An existing JPtheCat opt-in can supply the same pools before a YEN connection is configured.
-    static func sharedCursorPools(home: URL, now: Date) -> [TokenPlanMeter] {
-        let root = home.appendingPathComponent("Library/Application Support/JPtheCat")
-        let markers = ["grok-plan-usage.enabled", "cursor-plan-usage.enabled", "grok-bot-plan-usage.enabled"]
-        guard markers.contains(where: { FileManager.default.fileExists(atPath: root.appendingPathComponent($0).path) }),
-              let bytes = try? Data(contentsOf: root.appendingPathComponent("grok-plan-usage.json")),
-              let obj = try? JSONSerialization.jsonObject(with: bytes) as? TokenRecord.Object,
-              let stamp = obj["fetchedAt"] as? Double,
-              let rows = obj["meters"] as? [TokenRecord.Object] else { return [] }
-        let labels = ["cursor_models": "Cursor models", "other_models": "Cursor other models",
-                      "all_models": "Cursor all models", "included_usage": "Cursor included", "grok_bot_weekly": "Grok Bot weekly"]
-        return rows.compactMap { row in
-            guard let key = row["key"] as? String, let label = labels[key] else { return nil }
-            let end = (row["resetsAt"] as? Double).map(Date.init(timeIntervalSince1970:))
-            guard end.map({ $0 > now }) ?? (0...3600).contains(now.timeIntervalSince1970 - stamp) else { return nil }
-            return TokenPlanMeter(label, percent: row["usedPercent"], reset: end)
-        }
-    }
-
     static func openCodeWorkspace(home: URL) -> String? {
         let log = TokenTool.openCode.root(home: home).appendingPathComponent("log/opencode.log")
         guard let file = try? FileHandle(forReadingFrom: log) else { return nil }

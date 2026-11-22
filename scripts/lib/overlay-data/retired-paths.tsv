@@ -31,3 +31,4 @@ git-drawer	ghostty/macos/Sources/Features/GitDrawer/GitDrawerController.swift
 git-drawer	ghostty/macos/Sources/Features/GitDrawer/GitDrawerRepositoryWatcher.swift
 git-drawer	ghostty/macos/Tests/GitDrawer/GitDrawerControllerTests.swift
 git-drawer	ghostty/macos/Tests/App/GitDrawerRoutingTests.swift
+token-plan-connection	ghostty/macos/Sources/Features/TokenUsage/TokenPlanConnection.swift

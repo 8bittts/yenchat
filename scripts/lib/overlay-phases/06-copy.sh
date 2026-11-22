@@ -43,6 +43,7 @@ verify_overlay_patch_targets "$REPO_ROOT/scripts/lib/overlay-patch-targets.txt"
 # in ghostty/macos between builds.
 remove_overlay_retired_files chat
 remove_overlay_retired_files git-drawer
+remove_overlay_retired_files token-plan-connection
 
 # Keep the App Intents permission helper byte-aligned with the overlay source.
 # This file now carries the test-only prompt planning seams that native

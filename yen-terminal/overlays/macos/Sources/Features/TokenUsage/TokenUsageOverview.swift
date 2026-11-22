@@ -16,15 +16,12 @@ enum TokenBarTone {
 
 struct TokenUsageOverview: View {
     @ObservedObject var snapshot: TokenMenuSnapshot
-    @ObservedObject var connection: TokenPlanConnection
     let mark: NSImage?
     let heightLimit: CGFloat
     let cycle: () -> Void
     let refresh: () -> Void
     let loadHistory: () -> Void
-    @State private var showsConnection = false
     @State private var showsAnalytics = false
-    @State private var apiKey = ""
     @AppStorage(TokenMenuDisplay.columnsKey) private var twoColumns = false
     private var counts: TokenUsageIndex.Counts { snapshot.counts ?? [:] }
     private var total: Int { counts.values.reduce(0, +) }
@@ -39,12 +36,6 @@ struct TokenUsageOverview: View {
             .modifier(TokenCardFlip(progress: showsAnalytics ? 1 : 0, back: card(analytics.frame(maxHeight: .infinity, alignment: .top))
                 .allowsHitTesting(showsAnalytics).accessibilityHidden(!showsAnalytics)))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.45), value: showsAnalytics)
-            .task {
-                while !Task.isCancelled {
-                    connection.refresh()
-                    try? await Task.sleep(for: .seconds(60))
-                }
-            }
     }
 
     private func card(_ content: some View) -> some View {
@@ -71,9 +62,8 @@ struct TokenUsageOverview: View {
             header("Token usage") {
                 action(twoColumns ? "rectangle.split.1x2" : "rectangle.split.2x1",
                        twoColumns ? "Use one column" : "Use two columns") { twoColumns.toggle() }
-                action("arrow.clockwise", "Refresh usage") { refresh(); connection.refresh(force: true) }
+                action("arrow.clockwise", "Refresh usage", perform: refresh)
                 action("chart.bar.xaxis", "Show analytics") { showsAnalytics = true; loadHistory() }
-                action("link", "Manage plan connection") { showsConnection.toggle(); apiKey = "" }
             }
             Divider()
             ViewThatFits(in: .vertical) {
@@ -190,7 +180,6 @@ struct TokenUsageOverview: View {
 
     private var bodyContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if showsConnection { connectionForm }
             HStack(alignment: .firstTextBaseline) {
                 Text("Today’s tokens").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
@@ -217,7 +206,7 @@ struct TokenUsageOverview: View {
         let count = counts[tool]
         let share = total > 0 ? Double(count ?? 0) / Double(total) : 0
         let percent = FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0...1))
-        let meters = snapshot.meters(for: tool, connection: connection).filter { $0.isCurrent(at: now) }
+        let meters = (snapshot.plans[tool] ?? []).filter { $0.isCurrent(at: now) }
         return VStack(alignment: .leading, spacing: 5) {
             Divider()
             HStack {
@@ -233,9 +222,6 @@ struct TokenUsageOverview: View {
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }.accessibilityElement(children: .ignore)
                 .accessibilityLabel("Share of counted tokens").accessibilityValue(count == nil || total == 0 ? "Unavailable" : share.formatted(.percent))
-            if tool == .grok && !meters.contains(where: { $0.label.hasPrefix("Grok ") && !$0.label.hasPrefix("Grok Bot") }) {
-                missingPool("Grok subscription", status: "No current reading")
-            }
             ForEach(meters) { meter in
                 HStack(spacing: 8) {
                     link(meter.label, tool).font(.caption).lineLimit(1).frame(width: 116, alignment: .leading)
@@ -245,28 +231,7 @@ struct TokenUsageOverview: View {
                 }.accessibilityElement(children: .combine)
                     .help(meter.reset.map { "Plan usage · resets " + $0.formatted() } ?? "Plan usage")
             }
-            if tool == .grok && !connection.connected && meters.contains(where: { snapshot.sharedPools.contains($0) }) {
-                Text("Cursor plan readings via JPtheCat").font(.caption2).foregroundStyle(.secondary)
-            }
-            if tool == .grok {
-                let status = connection.loading ? "Reading…" : connection.connected ? "No current reading" : "Not connected"
-                if !meters.contains(where: { $0.label.hasPrefix("Cursor ") }) {
-                    missingPool("Cursor billing cycle", status: status)
-                }
-                if !meters.contains(where: { $0.label == "Grok Bot weekly" }) {
-                    missingPool("Grok Bot weekly", status: status)
-                }
-            }
         }
-    }
-
-    private func missingPool(_ label: String, status: String) -> some View {
-        HStack {
-            link(label, .grok)
-            Spacer()
-            Text(status)
-        }.font(.caption).foregroundStyle(.secondary)
-            .accessibilityElement(children: .combine)
     }
 
     /// A provider name or pool label opens the dashboard that owns its numbers.
@@ -274,10 +239,6 @@ struct TokenUsageOverview: View {
         switch tool {
         case .claude: return TokenLinkLabel(title: title, site: "Claude usage", address: "https://claude.ai/settings/usage")
         case .codex: return TokenLinkLabel(title: title, site: "Codex usage", address: "https://chatgpt.com/settings/usage?tab=overview")
-        case .grok where title.hasPrefix("Grok Bot"):
-            return TokenLinkLabel(title: title, site: "the Grok Bot dashboard", address: "https://grok.com/dashboard")
-        case .grok where title.hasPrefix("Cursor"):
-            return TokenLinkLabel(title: title, site: "Cursor spending", address: "https://cursor.com/dashboard/spending")
         case .grok: return TokenLinkLabel(title: title, site: "Grok usage", address: "https://grok.com/?_s=usage")
         case .openCode:
             return TokenLinkLabel(title: title, site: "the OpenCode console",
@@ -302,28 +263,6 @@ struct TokenUsageOverview: View {
     private func action(_ icon: String, _ title: String, perform: @escaping () -> Void) -> some View {
         Button(action: perform) { Image(systemName: icon).frame(width: 22, height: 22) }
             .buttonStyle(.borderless).help(title).accessibilityLabel(title)
-    }
-
-    private var connectionForm: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Cursor & Grok Bot plans").font(.headline)
-            if connection.connected {
-                Button("Disconnect", action: connection.disconnect)
-            } else {
-                Text("Connect a personal Cursor API key to read included plan usage. YEN saves it in your Keychain.")
-                    .font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    SecureField("Cursor API key", text: $apiKey).accessibilityLabel("Cursor API key")
-                    Button("Connect") { connection.connect(apiKey); apiKey = "" }
-                        .disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || connection.loading)
-                }
-                Link("Get a Cursor API key ↗", destination: URL(string: "https://cursor.com/dashboard/api")!)
-                    .font(.caption)
-            }
-            if connection.loading { Text("Reading Cursor plan…").font(.caption) }
-            if let message = connection.message { Text(message).font(.caption) }
-            Divider()
-        }
     }
 }
 

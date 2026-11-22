@@ -145,8 +145,7 @@ It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.
-A source label identifies plan readings supplied by an existing JPtheCat opt-in.
-The connection button accepts a personal Cursor API key for Cursor and Grok Bot plan usage and offers Disconnect.
+Plan readings come only from records the four tools write on the Mac; the menu reads no other app’s data, stores no credential and makes no network request.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.
 Turning the switch off cancels collection and removes the item.
@@ -162,7 +161,7 @@ The wallpaper engine yields while standalone MovingPaper runs.
 MovingPaper shows its own wallpaper whatever YEN's switch says, so a wallpaper that plays with the switch off belongs to MovingPaper or to another YEN process.
 Open YEN at Login remains the single startup control.
 Both features default to off and a successful Reset All Settings switches both off.
-Reset All Settings also removes the saved Cursor key and the token menu’s layout and display choices.
+Reset All Settings also removes the token menu’s layout and display choices (`TokenMenuDisplay.reset`).
 
 ### Settings hitch benchmark
 

@@ -1,100 +1,8 @@
 import Foundation
-import os
 import Testing
 @testable import YEN
 
 struct TokenPlanUsageTests {
-    @Test func sharedPlanReadingsRequireAnOptInAndAnUnexpiredPool() throws {
-        let fm = FileManager.default
-        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? fm.removeItem(at: home) }
-        let directory = home.appendingPathComponent("Library/Application Support/JPtheCat")
-        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let cache = #"{"fetchedAt":1799999900,"meters":[{"key":"all_models","usedPercent":0,"resetsAt":1800000100},{"key":"grok_bot_weekly","usedPercent":85,"resetsAt":1799999999}]}"#
-        try Data(cache.utf8).write(to: directory.appendingPathComponent("grok-plan-usage.json"))
-        #expect(TokenLocalPlans.sharedCursorPools(home: home, now: now).isEmpty)
-        try Data().write(to: directory.appendingPathComponent("cursor-plan-usage.enabled"))
-        let meters = TokenLocalPlans.sharedCursorPools(home: home, now: now)
-        #expect(meters.map(\.label) == ["Cursor all models"])
-        #expect(meters.map(\.percent) == [0])
-    }
-
-    @Test func connectionKeepsThreeIndependentPools() async throws {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let client = TokenPlanClient { request in
-            #expect(request.url?.host == "api2.cursor.sh")
-            #expect(request.httpMethod == "POST")
-            #expect(request.httpBody == Data("{}".utf8))
-            let path = try #require(request.url?.lastPathComponent)
-            let expectedHeader = path == "exchange_user_api_key" ? "Bearer fixture-key" : "Bearer fixture-session"
-            #expect(request.value(forHTTPHeaderField: "Authorization") == expectedHeader)
-            let body: String
-            switch path {
-            case "exchange_user_api_key": body = #"{"accessToken":"fixture-session"}"#
-            case "GetCurrentPeriodUsage":
-                body = #"{"billingCycleEnd":"1900000000000","planUsage":{"autoPercentUsed":0,"apiPercentUsed":42}}"#
-            case "GetSandUsageStatus":
-                body = #"{"hasNonZeroIncludedLimit":true,"usagePercent":81,"nextResetTimestampUtc":"2030-03-17T00:00:00Z"}"#
-            default: throw URLError(.unsupportedURL)
-            }
-            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil))
-            return (Data(body.utf8), response)
-        }
-        let pools = try await client.read(key: "fixture-key")
-        #expect(!pools.partial)
-        #expect(pools.meters.map(\.label) == ["Cursor models", "Cursor other models", "Grok Bot weekly"])
-        #expect(pools.meters.map(\.percent) == [0, 42, 81])
-        #expect(pools.meters.allSatisfy { $0.isCurrent(at: now) })
-        #expect(pools.meters.allSatisfy { !$0.isCurrent(at: Date(timeIntervalSince1970: 2_000_000_000)) })
-    }
-
-    @Test func independentWeeklyResponseSurvivesMonthlyOutage() async throws {
-        let client = TokenPlanClient { request in
-            let exchange = request.url?.lastPathComponent == "exchange_user_api_key"
-            let monthly = request.url?.lastPathComponent == "GetCurrentPeriodUsage"
-            let body = exchange ? #"{"accessToken":"fixture"}"# : #"{"hasNonZeroIncludedLimit":true,"usagePercent":0}"#
-            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: monthly ? 503 : 200, httpVersion: nil, headerFields: nil))
-            return (Data(body.utf8), response)
-        }
-        let pools = try await client.read(key: "fixture-key")
-        #expect(pools.partial)
-        #expect(pools.meters.map(\.label) == ["Grok Bot weekly"])
-        #expect(pools.meters.map(\.percent) == [0])
-    }
-
-    @MainActor @Test func aDroppedRequestKeepsTheLastReadingAndARejectedKeyClearsIt() async throws {
-        enum Reply { case reading, outage, rejected }
-        let reply = OSAllocatedUnfairLock(initialState: Reply.reading)
-        let client = TokenPlanClient { request in
-            let state = reply.withLock { $0 }
-            if state == .outage { throw URLError(.notConnectedToInternet) }
-            let body: String
-            switch request.url?.lastPathComponent {
-            case "exchange_user_api_key": body = #"{"accessToken":"fixture-session"}"#
-            case "GetSandUsageStatus": body = #"{"hasNonZeroIncludedLimit":true,"usagePercent":81}"#
-            default: body = #"{"planUsage":{"totalPercentUsed":12}}"#
-            }
-            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: state == .rejected ? 401 : 200,
-                                                        httpVersion: nil, headerFields: nil))
-            return (Data(body.utf8), response)
-        }
-        let connection = TokenPlanConnection(client: client, savedKey: { "fixture-key" }, connected: true)
-        func refresh(_ next: Reply) async throws {
-            reply.withLock { $0 = next }
-            connection.refresh(force: true)
-            while connection.loading { try await Task.sleep(for: .milliseconds(5)) }
-        }
-        try await refresh(.reading)
-        #expect(connection.meters.map(\.label) == ["Cursor included", "Grok Bot weekly"])
-        // A laptop waking without a network must not blank the bars until the next poll.
-        try await refresh(.outage)
-        #expect(connection.meters.map(\.label) == ["Cursor included", "Grok Bot weekly"])
-        #expect(connection.message != nil)
-        try await refresh(.rejected)
-        #expect(connection.meters.isEmpty)
-    }
-
     @Test func accountQuotaIgnoresAddOnAndRollingZero() throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         func limit(_ id: String, _ offset: Double) -> TokenRecord.Object {
@@ -155,17 +63,16 @@ struct TokenPlanUsageTests {
         }
     }
 
-    @MainActor @Test func resetForgetsTheCursorConnectionAndDisplayChoices() throws {
-        let suite = "token-plan-reset-" + UUID().uuidString
+    @MainActor @Test func resetForgetsTheDisplayChoices() throws {
+        let suite = "token-display-reset-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let keys = ["com.yenchat.yen.tokenUsage.cursorPlan", "com.yenchat.yen.tokenUsage.display", "com.yenchat.yen.tokenUsage.twoColumns"]
+        let keys = [TokenMenuDisplay.key, TokenMenuDisplay.columnsKey]
         for key in keys { defaults.set(true, forKey: key) }
-        // The default remover deletes the test host’s own Keychain item, so the test supplies one.
-        var removals = 0
-        #expect(TokenPlanConnection.reset(defaults: defaults, removeKey: { removals += 1; return true }))
-        #expect(removals == 1)
+        defaults.set(true, forKey: DesktopExtras.usageKey)
+        TokenMenuDisplay.reset(defaults: defaults)
         #expect(keys.allSatisfy { defaults.object(forKey: $0) == nil })
-        #expect(!TokenPlanConnection.reset(defaults: defaults, removeKey: { false }))
+        // The switch itself belongs to the Settings reset, not to the display reset.
+        #expect(defaults.bool(forKey: DesktopExtras.usageKey))
     }
 }
