@@ -227,6 +227,7 @@ open -n -a "$HOME/.local/state/yen/verify/YENVerify.app" --env YEN_CONFIG_PATH="
 - Settings in the copy reads and writes only the scratch config, and its preferences live in the `com.yenchat.yenverify` domain. Restore that domain with `defaults delete` followed by `defaults import`, because import alone merges.
 - [CRITICAL] The copy still shares `~/Library/Application Support/com.yenchat.yen/` with the installed app, because `TerminalBackgroundImageStore.appSupportRootURL` and `ScratchpadStorage.directoryName` are fixed strings. Never use Reset All Settings, the background image buttons or the Scratchpad in the copy; the reset path calls `cleanupManagedImages` on the operator's images. Hash the installed `config.yen`, `backgrounds/` and `scratchpad.txt` before and after the pass.
 - Do not toggle Launch at Login, which registers the scratch bundle as a login item, or pick a notification sound, which plays aloud.
+- Every YEN process owns its own Moving Wallpaper switch: the installed app, each verify copy and the Debug test host read different preference domains. A copy with the switch on covers the operator's desktop while their own Settings show it off. Leave the copy's switch off when the pass ends, delete the `com.yenchat.yen.movingWallpaper.*` keys you wrote, and never write `enabled` again for a copy the operator may have switched off.
 - Launching the copy or activating it with `open -a` takes keyboard focus, and the operator's keystrokes then land in its terminal. Tell the operator before the pass and keep activations few.
 - A launch can put a `UserNotificationCenter` alert and then System Settings in front of the copy. Neither shows in an app-filtered screenshot, so read `lsappinfo front` when input stops landing.
 - Synthetic Escape does not reach the copy: neither a computer-use key press nor `System Events` `key code 53` cancelled the shortcut recorder, whose Esc handling ships and is unit-tested. Judge Esc behavior only from a real key press.
@@ -239,7 +240,7 @@ open -n -a "$HOME/.local/state/yen/verify/YENVerify.app" --env YEN_CONFIG_PATH="
 - A status-item panel can be checked without taking focus: launch with `open -g`, press the menu bar item through the Accessibility API (`AXExtrasMenuBar`, `AXPress`), and capture the panel by window id with `screencapture -x -o -l <id>`.
 - Prove the engine applied the scratch config with a visible canary before judging a config-driven behavior. `working-directory`, `window-theme` and `window-padding-x` from a scratch file have shown no effect in the copy's terminals while Settings read and wrote the same file.
 - The Settings accessibility tree is empty to `System Events`, so drive it from screenshots. Claude Code's computer-use tools accept the copy by bundle identifier and refuse a click that would land on another app's window.
-- Quit the copy through AppleScript (`tell application id "com.yenchat.yenverify" to quit`), never with a signal sent by name.
+- Quit the copy through AppleScript by its path (`tell application "$APP" to quit`), never with a signal sent by name. Every session's copy shares the bundle identifier, so `tell application id` also reaches a copy another session is running; a copy here received a quit its own session never sent.
 
 ## Release Hosting
 

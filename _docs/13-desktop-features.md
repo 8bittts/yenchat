@@ -154,6 +154,7 @@ Playback starts muted and supports pause, sound and per-desktop assignments.
 YEN owns only its background windows and saved selections.
 Turning it off reveals the system wallpaper and keeps assignments for the next enable.
 The wallpaper engine yields while standalone MovingPaper runs.
+MovingPaper shows its own wallpaper whatever YEN's switch says, so a wallpaper that plays with the switch off belongs to MovingPaper or to another YEN process.
 Open YEN at Login remains the single startup control.
 Both features default to off and a successful Reset All Settings switches both off.
 Reset All Settings also removes the saved Cursor key and the token menu’s layout and display choices.

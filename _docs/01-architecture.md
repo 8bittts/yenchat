@@ -160,3 +160,4 @@ GIF frames decode into IOSurfaces on a background task, because the main thread 
 The wallpaper engine suspends occluded playback and responds to power and thermal pressure.
 Its cache, preferences and controls belong to YEN, independent of standalone MovingPaper.
 Reset and disable tear down feature-owned workers, observers and windows.
+Stopping the wallpaper engine is final: after `WallpaperManager.tearDown`, a file choice, download or Photos export that finishes late is saved but cannot rebuild a panel.

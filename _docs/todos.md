@@ -93,6 +93,7 @@ Owner doc: `_docs/04-security.md`.
 In 84 a `runYen` call returned `status: null` at the 5-second test limit; in 88 the `ide-temp` cleanup hook timed out after the test took 28 seconds.
 `tests/100-ide-s3n-benchmark-harness.test.ts` failed the same way at load 14 ("benchmark status reports missing evidence on a fresh state dir": a hook timed out after 7.5 seconds) and passes alone.
 `tests/75-ide-s2-controls.test.ts` failed the same way at load 9 ("merge-readiness reports a no-PR snapshot without inventing a second trust surface": a hook timed out after 8.8 seconds) and passes alone.
+`tests/133-ide-lazy-router.test.ts` failed the same way at load 8 ("replay loads a sufficient module set": a hook timed out after 6.9 seconds) and passes alone.
 `tests/95-ide-s3i-trust-center.test.ts` failed the same way ("trust status keeps expired share inspection read-only": `runYen` returned `status: null` with SIGTERM at the 5-second default); it now carries the 15-second limit its two sibling tests already used, so the item's limit change should cover it rather than repeat it.
 
 - [ ] Reproduce under generated load, then give the spawned CLI calls and the cleanup hook a limit that holds without hiding a real hang.

@@ -18,7 +18,8 @@ Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
 A Debug build beside a scratch home exposes the panel and the Settings switch to Accessibility, so a helper can press them by description without activating the app.
 For native acceptance, check that an appended record changes the menu without opening it.
-Verify that disabling Moving Wallpaper removes its desktop panel and restores the system wallpaper.
+`WallpaperToggleTests` drives the Moving Wallpaper switch with its own preferences and fails when a panel outlives the switch.
+For native acceptance, click the switch in a verify copy and count that process's windows one level above `CGWindowLevelForKey(.desktopWindow)`: one per display when on, none when off.
 
 Native fast tests inspect a temporary snapshot of their Swift source, shortcut docs, and vendored config.
 `scripts/native/source-fixtures.py` verifies file counts and hashes against the current checkout before and after execution.
@@ -50,7 +51,7 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
 - Engine-bound dictation tests use `.enabled(if: DictationTestPermissions.microphoneGranted)`; never `Issue.record`, which marks the test failed.
 - `YEN.xctestplan` sets `YEN_CONFIG_PATH=/tmp/YEN/testing_config.yen` with `working-directory = /tmp/YEN`, so terminal startup does not open a working directory under `~/Documents`.
 - Onboarding and the upstream window preferences read `UserDefaults.yen`, which honors `YEN_USER_DEFAULTS_SUITE` in Debug builds only, so a suite keeps onboarding off in the test host.
-  The session, tab sidebar, token and notification preferences read `UserDefaults.standard`; no suite isolates them, in any build.
+  The session, tab sidebar, token, wallpaper and notification preferences read `UserDefaults.standard`; no suite isolates them, in any build.
 - A `quit` that another session sends by bundle identifier ends the `--fast` test host, which shares `com.yenchat.yen.debug`. The run then prints `Restarting after unexpected exit` and fails the tests that were running. The unified log of the host shows `RECEIVED:(aevt,quit)`; rerun the gate instead of debugging those tests.
 - `AppDelegate` installs the `yen web`, `yen pane` and build-notification observers only outside XCTest; tests drive those receivers directly.
 - Source-scanning suites use the prepared fixture snapshot rather than opening the Documents checkout.
