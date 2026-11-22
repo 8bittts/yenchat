@@ -16,6 +16,12 @@ UUID_PATTERN='^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A
 
 source "${YEN_LIB}/sessions-remote.sh"
 
+# Byte-wise, whatever the caller's locale.
+valid_session_id() {
+    local LC_ALL=C
+    [[ "$1" =~ $UUID_PATTERN ]]
+}
+
 usage() {
     cat << 'EOF'
 Usage:
@@ -77,7 +83,7 @@ session_zmx() {
 
 require_session() {
     local id="$1"
-    [[ "$id" =~ $UUID_PATTERN ]] || usage_error "'$id' is not a session id (run 'yen sessions' to list them)"
+    valid_session_id "$id" || usage_error "'$id' is not a session id (run 'yen sessions' to list them)"
     [[ -S "${SESSIONS_DIR}/${id}" ]] || {
         echo "yen sessions: no session $id" >&2
         exit 1
@@ -153,7 +159,7 @@ list_sessions() {
                 err) state="unreachable" ;;
             esac
         done <<< "$line"
-        [[ "$name" =~ $UUID_PATTERN ]] || continue
+        valid_session_id "$name" || continue
         if [[ -z "$state" ]]; then
             if [[ "$clients" == "0" ]]; then state="detached"; else state="attached"; fi
         fi
@@ -212,7 +218,7 @@ case "$subcommand" in
         [[ ${#positional[@]} -eq 1 ]] || usage_error "attach needs exactly one session id"
         id="${positional[0]}"
         if [[ -n "$host" ]]; then
-            [[ "$id" =~ $UUID_PATTERN ]] || usage_error "'$id' is not a session id (run 'yen sessions list --host $host' to list them)"
+            valid_session_id "$id" || usage_error "'$id' is not a session id (run 'yen sessions list --host $host' to list them)"
             remote_attach "$host" "$id"
         fi
         require_session "$id"

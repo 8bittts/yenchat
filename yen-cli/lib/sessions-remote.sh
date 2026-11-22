@@ -32,7 +32,8 @@ readonly REMOTE_STATUS_NOT_INSTALLED=127
 # [user@]host, where host is a DNS name without a trailing dot, an IPv4 address
 # or an IPv6 address. No leading '-', no spaces, no shell or ssh metacharacters.
 valid_remote_target() {
-    local target="$1" user host label
+    # Byte-wise ranges: under another locale [A-Za-z] can match accented letters.
+    local LC_ALL=C target="$1" user host label
     [[ -n "$target" && ${#target} -le 253 && "$target" != -* ]] || return 1
     host="$target"
     if [[ "$target" == *@* ]]; then
@@ -53,22 +54,31 @@ valid_remote_target() {
 # directory (absolute path or -). Tabs, newlines and other control characters
 # in the directory become '?'.
 porcelain_row() {
-    local directory="${4:--}"
+    local LC_ALL=C directory="${4:--}"
     directory="${directory//[[:cntrl:]]/?}"
+    # C1 controls (U+0080-U+009F) in UTF-8; some terminals act on them.
+    directory="${directory//$'\xc2'[$'\x80'-$'\x9f']/?}"
     printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$directory"
 }
 
 # Reads porcelain on stdin and writes only well-formed rows, re-sanitized.
-# Returns 3 without a version 1 header, 1 when a row was dropped.
+# Lines before the header are skipped, because a peer's login shell can print
+# a banner first; every row after it is strict. Returns 3 without a version 1
+# header, 1 when a row was dropped.
 read_porcelain() {
-    local header line id state started directory rest dropped=0
-    IFS= read -r header || header=""
-    [[ "$header" == "$PORCELAIN_HEADER" ]] || return 3
+    local LC_ALL=C header="" line id state started directory rest dropped=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" == "$PORCELAIN_HEADER" ]]; then
+            header="$line"
+            break
+        fi
+    done
+    [[ -n "$header" ]] || return 3
     printf '%s\n' "$PORCELAIN_HEADER"
     while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -n "$line" ]] || continue
         IFS=$'\t' read -r id state started directory rest <<< "$line"
-        if [[ "$id" =~ $UUID_PATTERN && "$state" =~ ^(attached|detached|unreachable)$ \
+        if valid_session_id "$id" && [[ "$state" =~ ^(attached|detached|unreachable)$ \
             && "$started" =~ ^(-|[0-9]{1,12})$ && -n "$directory" ]]; then
             porcelain_row "$id" "$state" "$started" "$directory"
         else
@@ -79,7 +89,7 @@ read_porcelain() {
 }
 
 # The command line the peer's login shell runs. It is fixed text apart from the
-# validated subcommand words, so the login shell (zsh, bash or fish) only sees
+# validated subcommand words, so the login shell only sees
 # `exec /bin/sh -c '<snippet>' yen-remote <words>`.
 remote_command() {
     local apps='/Applications/YEN.app "$HOME/Applications/YEN.app"'
@@ -87,15 +97,18 @@ remote_command() {
         [[ "$YEN_REMOTE_APP" =~ ^/[A-Za-z0-9._/-]+$ ]] || usage_error "YEN_REMOTE_APP must be an absolute path"
         apps="$YEN_REMOTE_APP"
     fi
-    local snippet='unset YEN_LIB YEN_RESOURCES YEN_CMD_DIR; for a in '"$apps"'; do y="$a/Contents/Resources/bin/yen"; [ -x "$y" ] && exec "$y" sessions "$@"; done; exit '"$REMOTE_STATUS_NOT_INSTALLED"
+    local snippet='unset YEN_LIB YEN_RESOURCES YEN_CMD_DIR ZMX_SESSION; for a in '"$apps"'; do y="$a/Contents/Resources/bin/yen"; [ -x "$y" ] && exec "$y" sessions "$@"; done; exit '"$REMOTE_STATUS_NOT_INSTALLED"
     printf "exec /bin/sh -c '%s' yen-remote %s" "$snippet" "$*"
 }
 
 # Options for every connection: keepalives so a dead link ends ssh instead of
-# hanging, no connection sharing, no forwarding. Host key checking stays as the
-# user configured it; YEN never relaxes it.
+# hanging, no connection sharing, no forwarding, and no RemoteCommand from the
+# user's config, which would make ssh refuse the fixed command. Host key
+# checking stays as the user configured it; YEN never relaxes it. ProxyJump
+# and the rest of the user's config still apply.
 remote_ssh_options() {
     printf '%s\n' \
+        -o RemoteCommand=none \
         -o ConnectTimeout=10 \
         -o ServerAliveInterval=10 \
         -o ServerAliveCountMax=3 \
@@ -108,7 +121,7 @@ remote_ssh_options() {
 
 # Replay ssh's stderr without the peer's control characters.
 print_remote_errors() {
-    LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' "$1" >&2
+    LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' "$1" >&2
 }
 
 # Map ssh's own failure (exit 255) to a remote exit code from its stderr.
@@ -135,9 +148,29 @@ remote_failure_message() {
 }
 
 remote_scratch=""
+remote_child=""
 remote_cleanup() {
+    # Runs from traps under the command's set -e, so no step may fail it.
+    if [[ -n "$remote_child" ]]; then
+        kill -TERM "$remote_child" 2> /dev/null || true
+        wait "$remote_child" 2> /dev/null || true
+        remote_child=""
+    fi
     [[ -n "$remote_scratch" ]] && rm -rf "$remote_scratch"
     remote_scratch=""
+}
+
+# Run a command in the background and wait for it, so a signal trap runs at
+# once and ends it; bash defers a trap until a foreground child exits, which
+# left ssh running after the CLI was stopped. 0<&0 keeps the terminal on stdin,
+# which a background job without job control would lose.
+remote_run() {
+    local status=0
+    "$@" 0<&0 &
+    remote_child=$!
+    wait "$remote_child" || status=$?
+    remote_child=""
+    return "$status"
 }
 
 remote_make_scratch() {
@@ -150,6 +183,9 @@ remote_make_scratch() {
         exit 1
     }
     trap remote_cleanup EXIT
+    trap 'remote_cleanup; exit 130' INT
+    trap 'remote_cleanup; exit 129' HUP
+    trap 'remote_cleanup; exit 143' TERM
 }
 
 # yen sessions list --host <target> [--porcelain]
@@ -157,7 +193,7 @@ remote_list() {
     local target="$1" porcelain="$2" status=0 parsed=0 code=0 line options=()
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
-    "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$(remote_command list --porcelain)" \
+    remote_run "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$(remote_command list --porcelain)" \
         < /dev/null > "$remote_scratch/out" 2> "$remote_scratch/err" || status=$?
 
     if [[ $status -eq 255 ]]; then
@@ -173,8 +209,21 @@ remote_list() {
 
     read_porcelain < "$remote_scratch/out" > "$remote_scratch/rows" || parsed=$?
     if [[ $parsed -eq 3 ]]; then
-        remote_failure_message "$REMOTE_EXIT_TOO_OLD" "$target" >&2
-        exit "$REMOTE_EXIT_TOO_OLD"
+        # No header: a YEN with sessions but without --porcelain rejects the
+        # option with usage status 2, and one from before sessions prints
+        # "Unknown command: sessions" and exits 1. Anything else is a failure
+        # of a current YEN there, such as a damaged install.
+        if [[ $status -eq 2 ]] || { [[ $status -eq 1 ]] && LC_ALL=C grep -q 'Unknown command:.*sessions' "$remote_scratch/out"; }; then
+            remote_failure_message "$REMOTE_EXIT_TOO_OLD" "$target" >&2
+            exit "$REMOTE_EXIT_TOO_OLD"
+        fi
+        if LC_ALL=C grep -qE $'^yen-sessions\t[0-9]+$' "$remote_scratch/out"; then
+            echo "yen sessions: YEN on $target lists sessions in another format version; update YEN on both Macs" >&2
+            exit "$REMOTE_EXIT_TOO_OLD"
+        fi
+        print_remote_errors "$remote_scratch/err"
+        echo "yen sessions: could not list the sessions on $target" >&2
+        exit 1
     fi
     if [[ $porcelain == 1 ]]; then
         cat "$remote_scratch/rows"
@@ -199,16 +248,13 @@ remote_attach() {
     cap="${YEN_SSH_RETRY_MAX_DELAY:-30}"
     [[ "$cap" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_RETRY_MAX_DELAY must be a whole number of seconds"
     remote_make_scratch
-    trap 'remote_cleanup; exit 130' INT
-    trap 'remote_cleanup; exit 129' HUP
-    trap 'remote_cleanup; exit 143' TERM
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
     options+=(-o PermitLocalCommand=yes -o "LocalCommand=/usr/bin/touch $remote_scratch/connected")
 
     while true; do
         rm -f "$remote_scratch/connected"
         status=0
-        "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$(remote_command attach "$id")" \
+        remote_run "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$(remote_command attach "$id")" \
             2> "$remote_scratch/err" || status=$?
         print_remote_errors "$remote_scratch/err"
         if [[ -e "$remote_scratch/connected" ]]; then
@@ -224,7 +270,9 @@ remote_attach() {
                 ;;
             255) ;;
             1)
-                echo "yen sessions: no session $id on $target" >&2
+                # The peer's CLI refused and printed why above. Usually the
+                # session has ended; a damaged YEN there also exits 1.
+                echo "yen sessions: could not attach session $id on $target; it has ended or YEN there could not attach it" >&2
                 exit "$REMOTE_EXIT_NO_SESSION"
                 ;;
             *) exit "$status" ;;
@@ -240,6 +288,6 @@ remote_attach() {
         delay=$((1 << (attempt > 6 ? 6 : attempt - 1)))
         [[ $delay -le $cap ]] || delay="$cap"
         echo "yen sessions: lost the connection to $target; reconnecting in ${delay}s (attempt $attempt, Ctrl-C to stop)" >&2
-        sleep "$delay"
+        remote_run sleep "$delay"
     done
 }

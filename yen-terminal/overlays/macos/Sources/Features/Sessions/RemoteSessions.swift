@@ -57,7 +57,10 @@ enum RemoteSessions {
     /// `[user@]host`: a DNS name without a trailing dot, an IPv4 address or an
     /// IPv6 address. Mirrors `valid_remote_target` in the CLI, which checks again.
     nonisolated static func isValidTarget(_ target: String) -> Bool {
-        guard !target.isEmpty, target.utf8.count <= 253, !target.hasPrefix("-") else { return false }
+        // Printable ASCII only, checked byte-wise: a Character-based regex
+        // could treat a letter with a combining mark as one letter.
+        guard !target.isEmpty, target.utf8.count <= 253, !target.hasPrefix("-"),
+              target.utf8.allSatisfy({ $0 > 0x20 && $0 < 0x7F }) else { return false }
         var host = Substring(target)
         if let at = target.lastIndex(of: "@") {
             let user = target[..<at]

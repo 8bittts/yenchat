@@ -321,7 +321,9 @@ describe("yen sessions --host: failure classes", () => {
 		plan(["1 1"]);
 		const result = sessions(["attach", "--host", "mini", sessionID]);
 		expect(result.status).toBe(EXIT.noSession);
-		expect(result.stderr).toContain(`no session ${sessionID} on mini`);
+		expect(result.stderr).toContain(
+			`could not attach session ${sessionID} on mini`,
+		);
 	});
 });
 
@@ -472,12 +474,13 @@ describe("yen sessions --host: listing", () => {
 });
 
 describe("yen sessions --host: stopping", () => {
-	test.each([
-		["list", "--host", "mini", "--porcelain"],
-		["attach", "--host", "mini", sessionID],
-	])(
+	const commands: Record<string, string[]> = {
+		list: ["list", "--host", "mini", "--porcelain"],
+		attach: ["attach", "--host", "mini", sessionID],
+	};
+	test.each(["list", "attach"])(
 		"SIGTERM to %s ends ssh and removes the temporary directory",
-		async (...args) => {
+		async (command) => {
 			plan(["1 sleep30"]);
 			const scratch = mkdtempSync(join(root, "tmp-"));
 			const environment: NodeJS.ProcessEnv = {
@@ -487,7 +490,7 @@ describe("yen sessions --host: stopping", () => {
 				FAKE_SSH_DIR: sshDir,
 				TMPDIR: scratch,
 			};
-			const cli = Bun.spawn([yen, "sessions", ...args], {
+			const cli = Bun.spawn([yen, "sessions", ...(commands[command] ?? [])], {
 				env: environment,
 				stdin: "ignore",
 				stdout: "ignore",

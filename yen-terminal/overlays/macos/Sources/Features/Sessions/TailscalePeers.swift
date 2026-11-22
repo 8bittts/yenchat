@@ -6,8 +6,8 @@ struct TailscalePeer: Equatable, Sendable, Identifiable {
     let id: String
     /// The peer's host name, stripped of control characters, for labels.
     let displayName: String
-    /// What `ssh` connects to: the MagicDNS name without its trailing dot, or
-    /// the first Tailscale IP when the peer has no usable name. Always passes
+    /// What `ssh` connects to: the MagicDNS name without its trailing dot when
+    /// the tailnet has MagicDNS on, else the first Tailscale IP. Always passes
     /// `RemoteSessions.isValidTarget`.
     let sshTarget: String
     let isOnline: Bool
@@ -38,7 +38,8 @@ enum TailscaleStatus: Equatable, Sendable {
 /// Field names come from Tailscale's `ipn/ipnstate` `Status` and `PeerStatus`,
 /// whose JSON keys are the Go field names (`BackendState`, `Self`, `Peer`,
 /// `HostName`, `DNSName`, `OS`, `UserID`, `TailscaleIPs`, `Online`, `Expired`,
-/// `ShareeNode`). Everything in the output is untrusted input.
+/// `ShareeNode`, and `CurrentTailnet.MagicDNSEnabled`). Everything in the
+/// output is untrusted input.
 enum TailscaleDiscovery {
     /// Test hook: the Tailscale CLI to run instead of the installed one.
     static let binaryEnvironmentKey = "YEN_TAILSCALE_BIN"
@@ -90,11 +91,21 @@ enum TailscaleDiscovery {
         let backendState: String?
         let me: Node?
         let peers: [String: Node]?
+        let tailnet: Tailnet?
 
         enum CodingKeys: String, CodingKey {
             case backendState = "BackendState"
             case me = "Self"
             case peers = "Peer"
+            case tailnet = "CurrentTailnet"
+        }
+    }
+
+    private struct Tailnet: Decodable {
+        let magicDNSEnabled: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case magicDNSEnabled = "MagicDNSEnabled"
         }
     }
 
@@ -135,17 +146,20 @@ enum TailscaleDiscovery {
         default: return .unavailable
         }
         guard let me = status.me, let owner = me.userID else { return .running(peers: []) }
+        // `DNSName` is filled from the netmap even with MagicDNS off, when the
+        // name does not resolve. `CurrentTailnet` is nil when not connected.
+        let namesResolve = status.tailnet?.magicDNSEnabled == true
         let peers = (status.peers ?? [:]).values.compactMap { node -> TailscalePeer? in
             guard node.os == macOS, node.userID == owner, node.sharee != true, node.expired != true,
                   let id = node.id, !id.isEmpty, id != me.id else { return nil }
-            return peer(from: node, id: id)
+            return peer(from: node, id: id, namesResolve: namesResolve)
         }
         return .running(peers: peers.sorted { ($0.displayName.lowercased(), $0.id) < ($1.displayName.lowercased(), $1.id) })
     }
 
-    nonisolated private static func peer(from node: Node, id: String) -> TailscalePeer? {
+    nonisolated private static func peer(from node: Node, id: String, namesResolve: Bool) -> TailscalePeer? {
         var target: String?
-        if var name = node.dnsName, !name.isEmpty {
+        if namesResolve, var name = node.dnsName, !name.isEmpty {
             if name.hasSuffix(".") { name.removeLast() }
             if RemoteSessions.isValidTarget(name) { target = name }
         }

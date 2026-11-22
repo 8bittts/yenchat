@@ -70,30 +70,32 @@ Another Mac's sessions are reached over plain `ssh` to its tailnet name, with YE
 The transport lives only in the CLI (`yen-cli/lib/sessions-remote.sh`); the app runs its bundled CLI and maps the exit code.
 - `yen sessions list --host <target>` and `yen sessions attach --host <target> <id>` run `/usr/bin/ssh [options] -- <target> <command>`, where the command is fixed text: `exec /bin/sh -c '<snippet>' yen-remote <words>`. The snippet runs the first executable `Contents/Resources/bin/yen` under `/Applications/YEN.app` or `$HOME/Applications/YEN.app` with `sessions <words>`, and exits 127 when there is none, because a non-interactive login has no `yen` on `PATH`. Only `/bin/sh` parses the snippet, so the login shell runs one `exec` with a single-quoted argument; `tests/172-cli-sessions-remote.test.ts` runs it under zsh, bash and sh.
 - The peer's own CLI lists and attaches with the zmx build that created each session, and its `attach` refuses an id with no socket, so a remote attach never creates a session.
-- Input is untrusted on both sides. The target must be `[user@]host` with a DNS name (no trailing dot), an IPv4 or an IPv6 address, and never starts with `-`; the id must be a UUID. The CLI checks both before ssh runs, and `RemoteSessions.isValidTarget` mirrors the target rule for the app.
-- Every connection passes `ConnectTimeout=10`, `ServerAliveInterval=10`, `ServerAliveCountMax=3`, `ControlMaster=no`, `ControlPath=none`, `ForwardAgent=no`, `ForwardX11=no` and `ClearAllForwardings=yes`. Host key checking stays as the user configured it: YEN never passes `StrictHostKeyChecking` or a known-hosts file. A listing adds `BatchMode=yes` and `-T`; an attach adds `-t` and may prompt in its pane.
+- Input is untrusted on both sides. The target must be `[user@]host` with a DNS name (no trailing dot), an IPv4 or an IPv6 address, and never starts with `-`; the id must be a UUID. The CLI checks both byte-wise under `LC_ALL=C` before ssh runs, and `RemoteSessions.isValidTarget` mirrors the target rule for the app on printable ASCII bytes.
+- Every connection passes `RemoteCommand=none` (a `RemoteCommand` in the user's config makes ssh refuse a command-line command), `ConnectTimeout=10`, `ServerAliveInterval=10`, `ServerAliveCountMax=3`, `ControlMaster=no`, `ControlPath=none`, `ForwardAgent=no`, `ForwardX11=no` and `ClearAllForwardings=yes`. Host key checking stays as the user configured it: YEN never passes `StrictHostKeyChecking` or a known-hosts file. A listing adds `BatchMode=yes` and `-T`; an attach adds `-t` and may prompt in its pane. The rest of the user's config still applies: the loopback script proves a `ProxyJump`, a `RequestTTY force` and a `LocalForward` that cannot bind leave the listing working.
+- ssh runs in the background of the CLI, which waits for it, so SIGTERM, SIGINT or SIGHUP to the CLI ends ssh and removes the temporary directory at once; bash defers a trap until a foreground child exits.
 - `yen sessions kill` stays local. A remote session ends from a pane attached to it, so nothing ends a peer's session without a person at its shell.
 
 `yen sessions list --porcelain` is the only format the app and `--host` parse.
 The first line is `yen-sessions<TAB>1`; each further line is `<id><TAB><state><TAB><started><TAB><directory>`.
 `state` is `attached`, `detached` or `unreachable`; `started` is Unix seconds or `-`; `directory` is an absolute path or `-`, with every control character, tab and newline replaced by `?`.
 A reader ignores extra trailing fields within version 1, and an incompatible change bumps the number.
-`--host` re-validates every row the peer sends, drops a malformed row and exits 1, and rejects output without the version 1 header as a peer that is too old.
+`--host` skips lines before the header, which a login shell can print, then re-validates every row, drops a malformed one and exits 1.
+Without a version 1 header, the peer is too old (13) when it exited 2 (a YEN with sessions rejecting `--porcelain`), printed `Unknown command: sessions` and exited 1 (a YEN from before sessions), or printed another `yen-sessions` version; any other output is a listing failure (1).
 
 | Exit | `--host` meaning | App state (`RemoteSessionList`) |
 |------|------------------|---------------------------------|
 | 0 | Listed, or the attached session ended or detached normally | `.sessions(_, complete: true)` |
-| 1 | The peer reported a listing error or sent a malformed row | `.sessions(_, complete: false)` |
+| 1 | The peer reported a listing error, sent a malformed row, or failed before its header | `.sessions(_, complete: false)`, or `.failed` without a header |
 | 2 | Usage error: bad target, id or option | `.failed` |
 | 10 | Cannot reach the host: refused, timed out, unknown name, or closed before sign-in | `.unreachable` |
 | 11 | First connection needed: unknown host key under BatchMode, or no key signs in | `.firstConnectionNeeded` |
 | 12 | YEN is not installed on the peer | `.yenNotInstalled` |
 | 13 | The peer's YEN predates `--porcelain` or speaks another version | `.yenTooOld` |
-| 14 | `attach` only: no such session on the peer | not listed |
+| 14 | `attach` only: the peer's CLI refused the attach, almost always because the session ended | not listed |
 | 15 | The host key changed | `.hostKeyChanged` |
 
 `ssh` exits 255 for every failure of its own, so the CLI classifies its stderr: `REMOTE HOST IDENTIFICATION HAS CHANGED` is 15, `Host key verification failed` or `Permission denied` is 11, and anything else is 10.
-Exit 127 from the remote command is 12, and a remote attach that exits 1 is the peer refusing the id, 14.
+Exit 127 from the remote command is 12, and a remote attach that exits 1 is 14. The peer's `yen sessions attach` exits 1 for a missing socket, for a damaged install (`zmx is not available`, a missing `common.sh`), and when its zmx client fails (measured: zmx attach exits 1 on a connect error and 0 when the shell exits, whatever the shell's status); the peer's own message shows in the pane first.
 
 Reconnect lives in `attach --host`.
 ssh runs `LocalCommand` only after it authenticates, so the CLI passes `PermitLocalCommand=yes` with a `LocalCommand` that touches a marker in its private temporary directory; the marker separates a dropped link from a connection that never succeeded, which both exit 255.
@@ -104,7 +106,9 @@ ssh runs `LocalCommand` only after it authenticates, so the CLI passes `PermitLo
 Tailscale discovery is `TailscaleDiscovery` in `Sessions/TailscalePeers.swift`.
 It runs `status --json` off the main thread with a 5-second deadline, from the first executable of `/Applications/Tailscale.app/Contents/MacOS/Tailscale` (with `TAILSCALE_BE_CLI=1`, because the app executable is also the CLI), `/usr/local/bin/tailscale` and `/opt/homebrew/bin/tailscale`.
 It keeps peers whose `OS` is `macOS`, whose `UserID` equals `Self.UserID`, and that are not `ShareeNode` or `Expired`.
-The ssh target is `DNSName` without its trailing dot, else the first valid entry of `TailscaleIPs`; a peer with neither is dropped, and the label is `HostName` without control or format characters.
+The ssh target is `DNSName` without its trailing dot only when `CurrentTailnet.MagicDNSEnabled` is true, because Tailscale fills `DNSName` from the netmap even with MagicDNS off and `CurrentTailnet` is nil when not connected; otherwise it is the first valid entry of `TailscaleIPs`.
+A node started with `--accept-dns=false` still cannot resolve names, and no status field reports that.
+A peer with no valid target is dropped, and the label is `HostName` without control or format characters.
 No Tailscale, a stopped backend and a logged-out node are states (`TailscaleStatus`), not errors; `status --json` prints the state and exits 0 even when stopped.
 The Mac App Store and standalone Tailscale apps cannot be a Tailscale SSH server; only the open-source `tailscaled` build can (Tailscale's macOS variants page).
 So a peer running either app needs an ordinary ssh server, which on macOS is Remote Login, and the tailnet only carries the connection.
