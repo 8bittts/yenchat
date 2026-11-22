@@ -23,15 +23,6 @@ if [ ! -d "$YAZI_CONFIG_FALLBACK" ]; then
 fi
 
 YAZI_CONFIG_HOME="$YAZI_CONFIG_FALLBACK"
-YAZI_BAT_THEME=""
-
-if [ -f "$YAZI_CONFIG_HOME/bat-theme" ]; then
-    YAZI_BAT_THEME="$(head -n 1 "$YAZI_CONFIG_HOME/bat-theme" 2>/dev/null | tr -d '\r')"
-fi
-
 export YAZI_CONFIG_HOME
-if [ -n "$YAZI_BAT_THEME" ]; then
-    export BAT_THEME="$YAZI_BAT_THEME"
-fi
 export PATH="$SCRIPT_DIR:$PATH"
 exec "$SCRIPT_DIR/yazi" "$@"

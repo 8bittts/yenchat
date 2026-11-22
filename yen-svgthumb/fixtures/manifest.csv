@@ -1,24 +1,24 @@
 fixture,category,policy,notes
-basic-icon.svg,icons,strict_compare,Simple icon baseline.
-basic-icon.svgz,compressed,fallback_expected,Native parser currently fails svgz; plugin must fallback to resvg.
-charts-bars.svg,charts,strict_compare,Bar chart style export.
-charts-line-area.svg,charts,strict_compare,Line/area chart with gradients and shadow.
-css-variables.svg,design-export,baseline_limitation,resvg drops :root CSS variable styling; do not count similarity gate against native.
-design-export-badge.svg,design-export,strict_compare,Circular badge export with textPath.
-design-export-hero-banner.svg,design-export,strict_compare,Large hero artboard with blur effects.
-gradient-filter.svg,effects,strict_compare,Gradient and filter primitives.
-huge-canvas.svg,stress,strict_compare,Very large coordinate space.
-icons-sprite-use.svg,icons,strict_compare,Symbol sprite with repeated use references.
+basic-icon.svg,icons,render_ok,Simple icon baseline.
+basic-icon.svgz,compressed,render_ok,Gzip-compressed SVG; must render the same bytes as basic-icon.svg.
+charts-bars.svg,charts,render_ok,Bar chart style export.
+charts-line-area.svg,charts,render_ok,Line/area chart with gradients and shadow.
+css-variables.svg,design-export,render_ok,Styling through :root CSS variables.
+design-export-badge.svg,design-export,render_ok,Circular badge export with textPath.
+design-export-hero-banner.svg,design-export,render_ok,Large hero artboard with blur effects.
+gradient-filter.svg,effects,render_ok,Gradient and filter primitives.
+huge-canvas.svg,stress,render_ok,Very large coordinate space.
+icons-sprite-use.svg,icons,render_ok,Symbol sprite with repeated use references.
 malformed-unclosed.svg,malformed,expected_failure,Malformed XML should fail fast without crash/hang.
-markers-arrows.svg,technical,strict_compare,Marker arrowheads and dashed strokes.
-mask-clip.svg,effects,strict_compare,Clip/mask composition.
-pattern-fill.svg,effects,strict_compare,Pattern fill primitives.
-realworld-og-image.svg,realworld,strict_compare,OG image export style with typography.
-realworld-squiggle.svg,realworld,strict_compare,Illustration-like curves and layering.
-stroke-dashes.svg,technical,strict_compare,Stroke dash rendering.
-technical-flowchart.svg,technical,strict_compare,Flowchart boxes and connectors.
-technical-network-diagram.svg,technical,strict_compare,Network topology visualization.
-text-heavy.svg,text,strict_compare,Text density and paragraph layout.
-text-multilingual.svg,text,strict_compare,Multi-language text lines and symbols.
-transforms.svg,geometry,strict_compare,Transforms matrix handling.
-viewbox-only.svg,geometry,strict_compare,No explicit width/height on root.
+markers-arrows.svg,technical,render_ok,Marker arrowheads and dashed strokes.
+mask-clip.svg,effects,render_ok,Clip/mask composition.
+pattern-fill.svg,effects,render_ok,Pattern fill primitives.
+realworld-og-image.svg,realworld,render_ok,OG image export style with typography.
+realworld-squiggle.svg,realworld,render_ok,Illustration-like curves and layering.
+stroke-dashes.svg,technical,render_ok,Stroke dash rendering.
+technical-flowchart.svg,technical,render_ok,Flowchart boxes and connectors.
+technical-network-diagram.svg,technical,render_ok,Network topology visualization.
+text-heavy.svg,text,render_ok,Text density and paragraph layout.
+text-multilingual.svg,text,render_ok,Multi-language text lines and symbols.
+transforms.svg,geometry,render_ok,Transforms matrix handling.
+viewbox-only.svg,geometry,render_ok,No explicit width/height on root.

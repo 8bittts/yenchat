@@ -4,7 +4,7 @@
 # fd stopped publishing x86_64 macOS release binaries after v10.3.0 (only
 # aarch64-apple-darwin is shipped from v10.4.0 onward). This script compiles fd
 # from source for arm64 and x86_64, then combines them with lipo. Same pattern
-# as 35-vendor-delta.sh and 34-vendor-btop.sh — all three share the
+# as 34-vendor-btop.sh and 48-vendor-zmx.sh — all three share the
 # vendor_source_build() scaffolding in lib/vendor-binary.sh and supply only a
 # tiny build callback.
 #

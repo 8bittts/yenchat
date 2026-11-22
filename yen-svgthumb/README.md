@@ -1,6 +1,7 @@
 # yen-svgthumb
 
-Native macOS SVG thumbnailer for the YEN file browser; the vendored `resvg` remains the fallback for `.svgz` and edge cases.
+Native macOS SVG thumbnailer for the YEN file browser.
+It also inflates gzip-compressed `.svgz` files itself, up to 64 MB of SVG text.
 
 ## Build
 
@@ -16,21 +17,22 @@ cd yen-svgthumb
 ./yen-svgthumb input.svg output.png --max-dimension 2000
 ```
 
-## Evaluate vs resvg
+## Evaluate
 
 ```bash
 ./scripts/30-eval-svgthumb.sh
 ```
 
-Outputs are written to `yen-svgthumb/.eval/`:
-- `results.csv` and `summary.txt`
-- Policy-aware gating via `yen-svgthumb/fixtures/manifest.csv`
+The eval is self-validating; there is no reference renderer.
+Outputs are written to `yen-svgthumb/.eval/`: `results.csv` and `summary.txt`.
+`inspect.swift` reports each render's size and its share of drawn pixels.
 
-Policies:
-- `strict_compare`: must render in both engines and pass similarity gate
-- `baseline_limitation`: known `resvg` baseline mismatch (tracked, excluded from strict pass/fail)
-- `fallback_expected`: native may fail, but fallback preview must succeed via `resvg`
-- `expected_failure`: malformed input should fail fast without crash/hang
+Policies in `yen-svgthumb/fixtures/manifest.csv`:
+- `render_ok`: must exit 0 with a readable PNG whose long edge equals the cap and that is not blank
+- `expected_failure`: malformed input must exit non-zero and write nothing
+
+A `.svgz` fixture must render the same bytes as its `.svg` sibling.
+A fixture missing from the manifest fails the eval.
 
 ## Soak (latency + memory)
 
@@ -44,4 +46,4 @@ Soak outputs:
 
 ## See also
 
-- `yen-pdfthumb/README.md` and `yen-vidthumb/README.md` — sibling PDF/video harnesses. They have no reference renderer (`pdftoppm`/`ffmpeg` were removed), so their evals are self-validating (`render_ok` / `expected_failure`) instead of a similarity compare.
+- `yen-pdfthumb/README.md` and `yen-vidthumb/README.md` — sibling PDF/video harnesses. Their evals are self-validating in the same way (`render_ok` / `expected_failure`).

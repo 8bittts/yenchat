@@ -6,19 +6,7 @@
 #   ghostty_commit
 #   ghostty_version
 #   ghostty_upstream_repo
-#   yazi_version
-#   fd_version
-#   ripgrep_version
-#   fzf_version
-#   zoxide_version
-#   bat_version
-#   jq_version
-#   lazygit_version
-#   delta_version
-#   resvg_version
-#   btop_version
-#   fastfetch_version
-#   zmx_version
+#   <key>_version for every other vendor in scripts/lib/vendor-manifest.sh
 #
 # Usage:
 #   ./scripts/11-sync-vendor-audit.sh
@@ -65,42 +53,26 @@ done
 GHOSTTY_COMMIT=$(baseline_value "upstream_commit" "$REPO_ROOT/yen-terminal/.ghostty-baseline")
 GHOSTTY_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.ghostty-baseline")
 GHOSTTY_UPSTREAM_REPO=$(baseline_value "upstream_repo" "$REPO_ROOT/yen-terminal/.ghostty-baseline")
-YAZI_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.yazi-baseline")
-FD_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.fd-baseline")
-RIPGREP_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.ripgrep-baseline")
-FZF_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.fzf-baseline")
-ZOXIDE_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.zoxide-baseline")
-BAT_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.bat-baseline")
-JQ_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.jq-baseline")
-LAZYGIT_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.lazygit-baseline")
-DELTA_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.delta-baseline")
-RESVG_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.resvg-baseline")
-BTOP_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.btop-baseline")
-FASTFETCH_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.fastfetch-baseline")
-ZMX_VERSION=$(baseline_value "upstream_version" "$REPO_ROOT/yen-terminal/.zmx-baseline")
-
 for required_value in \
 	"$LATEST_SYNC" \
 	"$GHOSTTY_COMMIT" \
 	"$GHOSTTY_VERSION" \
-	"$GHOSTTY_UPSTREAM_REPO" \
-	"$YAZI_VERSION" \
-	"$FD_VERSION" \
-	"$RIPGREP_VERSION" \
-	"$FZF_VERSION" \
-	"$ZOXIDE_VERSION" \
-	"$BAT_VERSION" \
-	"$JQ_VERSION" \
-	"$LAZYGIT_VERSION" \
-	"$DELTA_VERSION" \
-	"$RESVG_VERSION" \
-	"$BTOP_VERSION" \
-	"$FASTFETCH_VERSION" \
-	"$ZMX_VERSION"; do
+	"$GHOSTTY_UPSTREAM_REPO"; do
 	[ -n "$required_value" ] || fail "Baseline metadata contains empty required value"
 done
 
-python3 - <<'PY' "$DOC_PATH" "$LATEST_SYNC" "$GHOSTTY_COMMIT" "$GHOSTTY_VERSION" "$GHOSTTY_UPSTREAM_REPO" "$YAZI_VERSION" "$FD_VERSION" "$RIPGREP_VERSION" "$FZF_VERSION" "$ZOXIDE_VERSION" "$BAT_VERSION" "$JQ_VERSION" "$LAZYGIT_VERSION" "$DELTA_VERSION" "$RESVG_VERSION" "$BTOP_VERSION" "$FASTFETCH_VERSION" "$ZMX_VERSION"
+# One "<key>_version=<value>" pair per binary vendor, in manifest order, so the
+# snapshot keys cannot drift from the roster.
+VERSION_UPDATES=()
+for _vendor_key in $(vendor_manifest_keys); do
+	[ "$_vendor_key" = "ghostty" ] && continue
+	_vendor_version=$(baseline_value "upstream_version" "$(vendor_baseline_path "$REPO_ROOT" "$_vendor_key")")
+	[ -n "$_vendor_version" ] || fail "Baseline metadata contains empty upstream_version: $_vendor_key"
+	VERSION_UPDATES+=("${_vendor_key}_version=${_vendor_version}")
+done
+[ "${#VERSION_UPDATES[@]}" -gt 0 ] || fail "Vendor manifest lists no binary vendors"
+
+python3 - <<'PY' "$DOC_PATH" "$LATEST_SYNC" "$GHOSTTY_COMMIT" "$GHOSTTY_VERSION" "$GHOSTTY_UPSTREAM_REPO" "${VERSION_UPDATES[@]}"
 import re
 import sys
 from pathlib import Path
@@ -111,20 +83,8 @@ updates = [
     ("ghostty_commit", sys.argv[3]),
     ("ghostty_version", sys.argv[4]),
     ("ghostty_upstream_repo", sys.argv[5]),
-    ("yazi_version", sys.argv[6]),
-    ("fd_version", sys.argv[7]),
-    ("ripgrep_version", sys.argv[8]),
-    ("fzf_version", sys.argv[9]),
-    ("zoxide_version", sys.argv[10]),
-    ("bat_version", sys.argv[11]),
-    ("jq_version", sys.argv[12]),
-    ("lazygit_version", sys.argv[13]),
-    ("delta_version", sys.argv[14]),
-    ("resvg_version", sys.argv[15]),
-    ("btop_version", sys.argv[16]),
-    ("fastfetch_version", sys.argv[17]),
-    ("zmx_version", sys.argv[18]),
 ]
+updates += [tuple(pair.split("=", 1)) for pair in sys.argv[6:]]
 
 text = doc_path.read_text()
 for key, value in updates:

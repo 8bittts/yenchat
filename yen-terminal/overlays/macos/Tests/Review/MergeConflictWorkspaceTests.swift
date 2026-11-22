@@ -266,12 +266,7 @@ struct MergeConflictResolutionModelTests {
         runner.recordChoiceHandler = { request in
             auditRecorder.record(request)
         }
-        let model = MergeConflictResolutionModel(
-            runner: runner,
-            renderDiffPreview: { diff in
-                IDEDiffRenderedPreview(text: "rendered\n\(diff)", source: .plain)
-            }
-        )
+        let model = MergeConflictResolutionModel(runner: runner)
 
         model.prepareForPresentation(workingDirectory: "/tmp/repo")
         model.requestLoad()
@@ -290,7 +285,6 @@ struct MergeConflictResolutionModelTests {
         #expect(model.resolutionChoice(for: secondHunk) == .both)
         #expect(model.selectedFileResolvedPreview.contains("ours-a") == true)
         #expect(model.selectedFileResolvedPreview.contains("ours-b\ntheirs-b") == true)
-        await waitForPreview(model, contains: "+theirs-b")
         #expect(model.selectedHunkDiffPreview.contains("+ours-b") == true)
         #expect(model.selectedHunkDiffPreview.contains("+theirs-b") == true)
         #expect(model.statusMessage?.contains("Selected both") == true)
@@ -383,32 +377,25 @@ struct MergeConflictResolutionModelTests {
         #expect(model.snapshot?.repoRoot == "/tmp/repo")
     }
 
-    @Test func chooseResolutionBuildsDeltaBackedPatchPreviewForSelectedHunk() async {
+    @Test func chooseResolutionBuildsUnifiedPatchPreviewForSelectedHunk() async {
         let runner = MergeConflictRunnerStub(
             resolvedRepoRoot: "/tmp/repo",
             snapshot: makeSnapshot(),
             postResolveSnapshot: makeSnapshot()
         )
-        let model = MergeConflictResolutionModel(
-            runner: runner,
-            renderDiffPreview: { diff in
-                IDEDiffRenderedPreview(text: "delta-preview\n\(diff)", source: .delta)
-            }
-        )
+        let model = MergeConflictResolutionModel(runner: runner)
 
         model.prepareForPresentation(workingDirectory: "/tmp/repo")
         model.requestLoad()
         await waitForLoad(model)
 
         #expect(model.selectedHunkDiffPreview == "Choose ours, theirs, or both to preview the patch for src/a.ts:2:1.")
-        #expect(model.selectedHunkDiffPreviewSource == .plain)
 
         model.chooseResolution(.ours)
-        await waitForPreview(model, contains: "delta-preview")
 
-        #expect(model.selectedHunkDiffPreviewSource == .delta)
-        #expect(model.selectedHunkDiffPreview.contains("delta-preview"))
-        #expect(model.selectedHunkDiffPreview.contains("diff --git a/src/a.ts b/src/a.ts"))
+        // The patch starts with the diff header, which is what makes the view
+        // color it as a unified diff.
+        #expect(model.selectedHunkDiffPreview.hasPrefix("diff --git a/src/a.ts b/src/a.ts"))
         #expect(model.selectedHunkDiffPreview.contains("+ours-a"))
         #expect(model.selectedHunkDiffPreview.contains("-<<<<<<< HEAD"))
     }
@@ -757,13 +744,6 @@ struct MergeConflictResolutionModelTests {
     private func waitForChoiceRequests(_ runner: MergeConflictRunnerStub, expectedCount: Int) async {
         for _ in 0..<60 {
             if runner.choiceRequests.count >= expectedCount { return }
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
-    }
-
-    private func waitForPreview(_ model: MergeConflictResolutionModel, contains expectedText: String) async {
-        for _ in 0..<60 {
-            if model.selectedHunkDiffPreview.contains(expectedText) { return }
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
     }

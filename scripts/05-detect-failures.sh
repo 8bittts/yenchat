@@ -645,9 +645,6 @@ else
     # Yazi theme and keymap (YEN customizations)
     [ ! -f "$RESOURCES/yazi-config/theme.toml" ] && fail "Yazi theme.toml not bundled"
     [ ! -f "$RESOURCES/yazi-config/keymap.toml" ] && fail "Yazi keymap.toml not bundled"
-    [ ! -f "$RESOURCES/yazi-config/bat-theme" ] && fail "Yazi bat-theme fallback file not bundled"
-    YAZI_FALLBACK_BAT_THEME="$(head -n 1 "$RESOURCES/yazi-config/bat-theme" 2>/dev/null | tr -d '\r')"
-    [ -z "$YAZI_FALLBACK_BAT_THEME" ] && fail "Yazi bat-theme fallback file is empty"
     if [ -f "$RESOURCES/yazi-config/theme.toml" ]; then
         grep -q '^\[flavor\]' "$RESOURCES/yazi-config/theme.toml" || fail "Yazi theme.toml missing [flavor] block"
     fi
@@ -691,25 +688,14 @@ else
         done
     fi
 
-    # CLI tools (enhance file browser)
+    # CLI tools (file browser search, Git TUI, sessions, thumbnails)
     [ ! -f "$RESOURCES/bin/fd" ] || [ ! -x "$RESOURCES/bin/fd" ] && fail "fd binary not bundled"
     [ ! -f "$RESOURCES/bin/rg" ] || [ ! -x "$RESOURCES/bin/rg" ] && fail "ripgrep binary not bundled"
-    [ ! -f "$RESOURCES/bin/fzf" ] || [ ! -x "$RESOURCES/bin/fzf" ] && fail "fzf binary not bundled"
-    [ ! -f "$RESOURCES/bin/zoxide" ] || [ ! -x "$RESOURCES/bin/zoxide" ] && fail "zoxide binary not bundled"
-    [ ! -f "$RESOURCES/bin/bat" ] || [ ! -x "$RESOURCES/bin/bat" ] && fail "bat binary not bundled"
-    if [ -x "$RESOURCES/bin/bat" ]; then
-        if [ "$YAZI_FALLBACK_BAT_THEME" != "auto" ] && ! "$RESOURCES/bin/bat" --list-themes 2>/dev/null | grep -Fxq "$YAZI_FALLBACK_BAT_THEME"; then
-            fail "Bundled yazi fallback bat-theme '$YAZI_FALLBACK_BAT_THEME' is not available in bundled bat"
-        fi
-    fi
-    [ ! -f "$RESOURCES/bin/jq" ] || [ ! -x "$RESOURCES/bin/jq" ] && fail "jq binary not bundled"
     [ ! -f "$RESOURCES/bin/lazygit" ] || [ ! -x "$RESOURCES/bin/lazygit" ] && fail "lazygit binary not bundled"
-    [ ! -f "$RESOURCES/bin/delta" ] || [ ! -x "$RESOURCES/bin/delta" ] && fail "delta binary not bundled"
     [ ! -f "$RESOURCES/bin/zmx" ] || [ ! -x "$RESOURCES/bin/zmx" ] && fail "zmx binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-vidthumb" ] || [ ! -x "$RESOURCES/bin/yen-vidthumb" ] && fail "yen-vidthumb binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-pdfthumb" ] || [ ! -x "$RESOURCES/bin/yen-pdfthumb" ] && fail "yen-pdfthumb binary not bundled"
     [ ! -f "$RESOURCES/bin/yen-svgthumb" ] || [ ! -x "$RESOURCES/bin/yen-svgthumb" ] && fail "yen-svgthumb binary not bundled"
-    [ ! -f "$RESOURCES/bin/resvg" ] || [ ! -x "$RESOURCES/bin/resvg" ] && fail "resvg binary not bundled"
     [ -e "$RESOURCES/bin/gh" ] && fail "Removed GitHub CLI binary reintroduced at Resources/bin/gh"
     [ -e "$RESOURCES/bin/yen-weather" ] && fail "Deprecated weather helper binary still bundled"
     [ -e "$RESOURCES/bin/yen-weather.entitlements" ] && fail "Deprecated weather helper entitlements still bundled"
@@ -724,14 +710,8 @@ else
     if [ -f "$RESOURCES/bin/yen-svgthumb" ] && ! assert_universal_binary "$RESOURCES/bin/yen-svgthumb"; then
         fail "yen-svgthumb is not a universal binary"
     fi
-    if [ -f "$RESOURCES/bin/resvg" ] && ! assert_universal_binary "$RESOURCES/bin/resvg"; then
-        fail "resvg is not a universal binary"
-    fi
     if [ -f "$RESOURCES/bin/lazygit" ] && ! assert_universal_binary "$RESOURCES/bin/lazygit"; then
         fail "lazygit is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/delta" ] && ! assert_universal_binary "$RESOURCES/bin/delta"; then
-        fail "delta is not a universal binary"
     fi
     if [ -f "$RESOURCES/bin/zmx" ] && ! assert_universal_binary "$RESOURCES/bin/zmx"; then
         fail "zmx is not a universal binary"

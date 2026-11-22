@@ -376,7 +376,7 @@ struct MergeConflictResolutionView: View {
 
                 VSplitView {
                     previewBlock(
-                        title: "\(model.selectedHunkLocation?.target ?? model.selectedFile?.path ?? "Selected Hunk") • \(model.selectedHunkDiffPreviewLabel)",
+                        title: "\(model.selectedHunkLocation?.target ?? model.selectedFile?.path ?? "Selected Hunk") • Patch Preview",
                         lines: model.selectedHunkDiffPreview.split(separator: "\n", omittingEmptySubsequences: false).map(String.init),
                         renderIdentity: previewIdentity(pane: "resolution-patch"),
                         renderingMode: selectedHunkPreviewRenderingMode
@@ -399,11 +399,7 @@ struct MergeConflictResolutionView: View {
     }
 
     private var selectedHunkPreviewRenderingMode: SelectableDiffTextRenderingMode {
-        if model.selectedHunkDiffPreviewSource == .plain,
-           model.selectedHunkDiffPreview.hasPrefix("diff --git ") {
-            return .unifiedDiff
-        }
-        return .plain
+        model.selectedHunkDiffPreview.hasPrefix("diff --git ") ? .unifiedDiff : .plain
     }
 
     private var emptyHunkState: some View {

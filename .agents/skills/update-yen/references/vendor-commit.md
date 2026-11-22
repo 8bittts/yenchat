@@ -30,7 +30,7 @@ On Claude Code the push to `main` needs `dangerouslyDisableSandbox: true` on tha
 
 ## Vendor Summary
 
-Keep a summary for the final `/update-yen` report. All 14 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
+Keep a summary for the final `/update-yen` report. All 8 vendors get a row every run — a vendor missing from the table reads as "not checked". Read the real values from `yen-terminal/.*-baseline`; the versions below are illustrative.
 
 ```
 ## Vendor Summary
@@ -41,13 +41,7 @@ Keep a summary for the final `/update-yen` report. All 14 vendors get a row ever
 | Yazi | Current | v26.8.15 | — |
 | fd | Current | v10.5.0 | — |
 | ripgrep | Current | 15.2.0 | — |
-| fzf | Current | v0.74.3 | — |
-| zoxide | Current | v0.10.0 | — |
-| bat | Current | v0.26.1 | — |
-| jq | Current | jq-1.8.2 | — |
 | lazygit | Current | v0.64.1 | — |
-| delta | Current | 0.19.2 | — |
-| resvg | Current | v0.48.1 | — |
 | btop | Current | v1.4.7 | — |
 | fastfetch | Current | 2.67.1 | — |
 | zmx | Current | v1.0.1 | — |

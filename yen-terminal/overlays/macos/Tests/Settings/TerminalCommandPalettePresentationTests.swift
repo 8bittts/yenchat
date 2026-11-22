@@ -714,9 +714,8 @@ struct TerminalCommandPalettePresentationTests {
         guard blueprints.count == 2 else { return }
         #expect(blueprints[0].description.contains("raw selectable previews"))
         #expect(blueprints[0].searchTags.contains("unified"))
-        #expect(!blueprints[0].searchTags.contains("delta"))
-        #expect(blueprints[1].description.contains("delta-backed previews"))
-        #expect(blueprints[1].searchTags.contains("delta"))
+        #expect(blueprints[1].description.contains("colored patch previews"))
+        #expect(blueprints[1].searchTags.contains("patch"))
     }
 
     @Test func repositoryWorkspaceActionsRecheckTrustAndWorkingDirectoryAtExecutionTime() throws {

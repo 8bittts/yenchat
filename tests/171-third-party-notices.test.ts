@@ -70,7 +70,8 @@ function noticeNameFor(component: string): string {
 describe("third-party notices in the repository", () => {
 	test("every vendored component has a notice that grants a license and names a copyright holder", () => {
 		const components = vendoredComponents();
-		expect(components.length).toBeGreaterThan(10);
+		// Floor against a short listing: the engine plus seven vendored tools.
+		expect(components.length).toBeGreaterThanOrEqual(8);
 		expect(components).toContain("ghostty");
 
 		const problems: string[] = [];

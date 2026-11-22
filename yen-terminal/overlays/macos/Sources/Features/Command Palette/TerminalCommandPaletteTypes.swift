@@ -598,9 +598,9 @@ extension TerminalCommandPaletteView {
         RepositoryWorkspaceActionBlueprint(
             id: "review:merge-conflicts",
             title: "Resolve Merge Conflicts",
-            description: "Open the desktop merge-conflict workspace with semantic hunk jumps and delta-backed previews",
+            description: "Open the desktop merge-conflict workspace with semantic hunk jumps and colored patch previews",
             leadingIcon: "arrow.triangle.merge",
-            searchTags: ["merge", "conflict", "rebase", "resolve", "git", "hunk", "delta", "preview"]
+            searchTags: ["merge", "conflict", "rebase", "resolve", "git", "hunk", "patch", "preview"]
         ),
     ]
 

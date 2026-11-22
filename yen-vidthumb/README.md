@@ -60,5 +60,5 @@ The soak fails unless every scheduled render emits a decodable PNG with complete
 
 ## See also
 
-- `yen-svgthumb/README.md` — sibling SVG harness (similarity compare vs vendored `resvg`).
+- `yen-svgthumb/README.md` — sibling SVG harness (self-validating, with a blank-render check).
 - `yen-pdfthumb/README.md` — sibling PDF harness (same self-validating design).

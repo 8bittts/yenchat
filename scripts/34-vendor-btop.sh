@@ -4,7 +4,7 @@
 # btop does not publish macOS binaries, so this script compiles btop from
 # source for arm64 and x86_64, then combines them with lipo. Shares the
 # vendor_source_build() scaffolding in lib/vendor-binary.sh with 16-vendor-fd.sh
-# and 35-vendor-delta.sh, supplying a CMake-based build callback.
+# and 48-vendor-zmx.sh, supplying a CMake-based build callback.
 #
 # Stores at yen-terminal/customizations/vendor/btop/
 #

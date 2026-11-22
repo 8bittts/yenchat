@@ -61,10 +61,6 @@ const yaziCodeGuardPluginPath = join(
 	repoRoot,
 	"yen-terminal/customizations/yazi-config/plugins/code-guard.yazi/main.lua",
 );
-const yaziBatThemePath = join(
-	repoRoot,
-	"yen-terminal/customizations/yazi-config/bat-theme",
-);
 const yaziInitLuaPath = join(
 	repoRoot,
 	"yen-terminal/customizations/yazi-config/init.lua",
@@ -405,11 +401,9 @@ describe("Yazi edit/reveal wiring", () => {
 		}
 	});
 
-	yaziTest("wires view opener for Enter = colorized read-only", () => {
+	yaziTest("wires view opener for Enter = read-only system pager", () => {
 		const config = readFileSync(yaziConfigPath, "utf8");
-		expect(config).toContain(
-			'view = [{ run = "bat --paging=always --color=always --style=plain -- %s"',
-		);
+		expect(config).toContain('view = [{ run = "less -R -+F -- %s"');
 		expect(config).toContain(
 			'{ mime = "text/*", use = [ "view", "edit", "reveal" ] }',
 		);
@@ -439,13 +433,6 @@ describe("Yazi theme schema compatibility", () => {
 		assertNoLegacyThemeKeys(theme);
 		expect(theme).toHaveProperty("git");
 	});
-
-	yaziTest("bundled bat-theme hint exists and is non-empty", () => {
-		expect(existsSync(yaziBatThemePath)).toBe(true);
-		expect(
-			readFileSync(yaziBatThemePath, "utf8").trim().length,
-		).toBeGreaterThan(0);
-	});
 });
 
 describe("Yazi shell launch parity", () => {
@@ -470,10 +457,9 @@ describe("Yazi shell launch parity", () => {
 		},
 	);
 
-	yaziTest("browse wrapper sets config home, bat theme, and PATH", () => {
+	yaziTest("browse wrapper sets config home and PATH", () => {
 		const browse = readFileSync(browsePath, "utf8");
 		expect(browse).toContain("export YAZI_CONFIG_HOME");
-		expect(browse).toContain("export BAT_THEME=");
 		expect(browse).toContain('export PATH="$SCRIPT_DIR:$PATH"');
 		expect(browse).toContain('exec "$SCRIPT_DIR/yazi" "$@"');
 	});
@@ -552,18 +538,16 @@ describe("Bundled editor handoff resources", () => {
 			for (const binary of [
 				"fd",
 				"rg",
-				"fzf",
-				"zoxide",
-				"bat",
-				"jq",
 				"lazygit",
-				"delta",
 				"btop",
 				"fastfetch",
-				"resvg",
+				"zmx",
 			]) {
 				expect(bundleScript).toContain(`bundle_vendor_bin "$`);
 				expect(bundleScript).toContain(`" "${binary}"`);
+			}
+			for (const retired of ["fzf", "zoxide", "bat", "jq", "delta", "resvg"]) {
+				expect(bundleScript).not.toContain(`" "${retired}"`);
 			}
 			expect(bundleScript).toContain(
 				"ERROR: Yazi companion binary not found at $YAZI_VENDOR_DIR/ya",

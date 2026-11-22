@@ -48,11 +48,11 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 #   $1  TOOL_NAME   command that must be on PATH; prints ERROR and exits 1 if missing.
 #
 # vendor_source_build parameters (positional) — shared scaffolding for the
-# source-compiled vendors (fd, delta, btop) whose upstreams no longer publish
+# source-compiled vendors (fd, btop, zmx) whose upstreams publish no
 # x86_64 macOS release binaries. Downloads the tagged source tarball, runs the
 # same fail-closed source-pin / output-pin / universal validation as
 # vendor_binary, and delegates the actual compile to a caller-supplied callback:
-#   $1  DISPLAY_NAME        e.g. "fd", "delta", "btop" (also the source dir prefix)
+#   $1  DISPLAY_NAME        e.g. "fd", "btop" (also the source dir prefix)
 #   $2  GITHUB_REPO         e.g. "sharkdp/fd"
 #   $3  VENDOR_SUBDIR       vendor dir under yen-terminal/customizations/vendor/
 #   $4  BASELINE_NAME       e.g. ".fd-baseline"
@@ -101,7 +101,7 @@ is_valid_sha256() {
 }
 
 # Fetch the latest published release tag for a GitHub repo. Previously copied
-# byte-identical into the fd/btop/delta source-build scripts.
+# byte-identical into the source-build scripts.
 # Usage: LATEST_TAG="$(vendor_fetch_latest_release_tag "$GITHUB_REPO")" || exit 1
 vendor_fetch_latest_release_tag() {
     local repo="$1"
@@ -807,7 +807,7 @@ require_tool() {
     fi
 }
 
-# Shared source-build scaffolding for fd/delta/btop. See the header comment for
+# Shared source-build scaffolding for fd/btop/zmx. See the header comment for
 # the full parameter list and the BUILD_FN callback contract. Fail-closed by
 # design: every source-pin, output-pin, and universal-arch check aborts the run
 # rather than record a bad baseline.
@@ -1117,7 +1117,7 @@ vendor_source_build() {
 
         # Liveness test BEFORE persisting the baseline — a source-built binary
         # that will not exec means a broken build; fail closed rather than record
-        # a bad baseline. Superset of the per-tool flags (fd/delta: --version;
+        # a bad baseline. Superset of the per-tool flags (fd: --version;
         # btop: --version/-v).
         if "$OUTPUT_BINARY" --version >/dev/null 2>&1 || "$OUTPUT_BINARY" -v >/dev/null 2>&1 || "$OUTPUT_BINARY" -V >/dev/null 2>&1 || "$OUTPUT_BINARY" version >/dev/null 2>&1; then
             echo "  Execution test: passed"
@@ -1143,7 +1143,7 @@ vendor_source_build() {
 
         # Brace-group of echo lines (not a heredoc) so the build_method line is
         # emitted ONLY when BUILD_METHOD is non-empty. Preserves btop's omission
-        # plus fd/delta's inclusion and the exact field set + order.
+        # plus fd's inclusion and the exact field set + order.
         {
             echo "# $DISPLAY_NAME Baseline Tracking"
             echo "upstream_repo=https://github.com/$GITHUB_REPO"

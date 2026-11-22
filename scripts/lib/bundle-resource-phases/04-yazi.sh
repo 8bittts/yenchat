@@ -48,7 +48,6 @@ if [ -d "$YAZI_CONFIG_DIR" ] && [ -f "$YAZI_CONFIG_DIR/yazi.toml" ]; then
     cp -Rp "$YAZI_CONFIG_DIR" "$APP_PATH/Contents/Resources/"
     chmod 644 "$APP_PATH/Contents/Resources/yazi-config/"*.toml || true
     chmod 644 "$APP_PATH/Contents/Resources/yazi-config/"*.lua || true
-    chmod 644 "$APP_PATH/Contents/Resources/yazi-config/bat-theme" 2>/dev/null || true
     # Set permissions on plugin files recursively
     find "$APP_PATH/Contents/Resources/yazi-config/plugins" -name "*.lua" -exec chmod 644 {} \; || true
     # Ensure flavor assets are readable (theme + syntax files + licenses)
@@ -90,11 +89,6 @@ if ! grep -q 'ind-app-title' "$YAZI_INIT_LUA" 2>/dev/null; then
 fi
 if ! grep -q '"YEN' "$YAZI_INIT_LUA" 2>/dev/null; then
     echo "ERROR: yazi-config/init.lua missing YEN branding string"
-    exit 1
-fi
-
-if [ ! -f "$APP_PATH/Contents/Resources/yazi-config/bat-theme" ]; then
-    echo "ERROR: yazi-config missing bat-theme fallback file"
     exit 1
 fi
 

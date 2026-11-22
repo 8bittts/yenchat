@@ -1,5 +1,5 @@
 -- YEN native SVG previewer
--- Uses yen-svgthumb first, then falls back to resvg for unsupported SVG features.
+-- Renders through yen-svgthumb, which also inflates gzip-compressed .svgz files.
 -- Caps native render size to 1400px (<=2MP square) unless overridden by YEN_SVG_MAX_DIMENSION.
 -- Binaries are found via PATH (set by browse wrapper).
 
@@ -51,19 +51,6 @@ local function render_with_native(path, out_path)
     return false, summarize_stderr(child, "yen-svgthumb failed")
 end
 
-local function render_with_resvg(path, out_path)
-    local child = Command("resvg")
-        :arg(path)
-        :arg(tostring(out_path))
-        :stderr(Command.PIPED)
-        :output()
-
-    if child and child.status and child.status.success and has_cached_image(out_path) then
-        return true, nil
-    end
-    return false, summarize_stderr(child, "resvg failed")
-end
-
 local function ensure_rendered(path, out_path)
     if has_cached_image(out_path) then
         return true, nil
@@ -74,12 +61,7 @@ local function ensure_rendered(path, out_path)
         return true, nil
     end
 
-    local resvg_ok, resvg_err = render_with_resvg(path, out_path)
-    if resvg_ok then
-        return true, nil
-    end
-
-    return false, string.format("SVG preview unavailable\nnative: %s\nresvg: %s", native_err, resvg_err)
+    return false, string.format("SVG preview unavailable\n%s", native_err)
 end
 
 function M:peek(job)

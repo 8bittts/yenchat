@@ -145,10 +145,9 @@ describe("vendor process guardrails", () => {
 			".ghostty-baseline",
 			".btop-baseline",
 			".fastfetch-baseline",
-			".resvg-baseline",
+			".lazygit-baseline",
 			".ripgrep-baseline",
 			".yazi-baseline",
-			".zoxide-baseline",
 		]) {
 			const baseline = readFileSync(
 				join(repoRoot, "yen-terminal", name),
@@ -529,7 +528,7 @@ describe("vendor process guardrails", () => {
 	});
 
 	test("source-build no-op path revalidates the pinned output digest before returning current", () => {
-		// The fd/delta/btop source-build scripts share vendor_source_build() in
+		// The fd/btop/zmx source-build scripts share vendor_source_build() in
 		// lib/vendor-binary.sh. Its no-op path must fail closed on a tampered or
 		// stale bundled binary BEFORE printing "Already current" — a guardrail on
 		// ordering, since the message must never precede the digest revalidation.
@@ -792,7 +791,8 @@ describe("unknown-status fail-closed gates", () => {
 				.map((m) => m[1])
 				.filter((v): v is string => v !== undefined),
 		);
-		expect(targets.size).toBeGreaterThan(10);
+		// Floor against a short parse: the roster holds eight vendors.
+		expect(targets.size).toBeGreaterThanOrEqual(8);
 
 		// The case arms list accepted vendors pipe-separated.
 		const armed = new Set<string>();
@@ -911,7 +911,7 @@ describe("vendor manifest is the single roster", () => {
 
 	test("every manifest record resolves to real files", () => {
 		const records = manifest();
-		expect(records.length).toBeGreaterThan(10);
+		expect(records.length).toBeGreaterThanOrEqual(8);
 
 		for (const r of records) {
 			expect(r.key).not.toBe("");

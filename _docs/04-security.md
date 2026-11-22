@@ -29,13 +29,7 @@ ghostty_upstream_repo=https://github.com/ghostty-org/ghostty.git
 yazi_version=v26.9.1
 fd_version=v10.5.2
 ripgrep_version=15.2.0
-fzf_version=v0.75.0
-zoxide_version=v0.10.0
-bat_version=v0.26.1
-jq_version=jq-1.8.2
 lazygit_version=v0.66.3
-delta_version=0.21.2
-resvg_version=v0.50.0
 btop_version=v1.4.8
 fastfetch_version=2.71.0
 zmx_version=v1.0.1
@@ -215,7 +209,7 @@ The notices cover the engine and the vendored tools, not the libraries those pro
   `14-vendor.sh` compares the recorded id with `48-vendor-zmx.sh --print-input-id`, because the zmx tag alone stays current across an engine bump; `tests/119-vendor-process-guardrails.test.ts` fails when the committed id drifts from the tree.
   An edit to one of those inputs outside a vendor run lands with its own rebuild: `VENDOR_LATEST_TAG=<pinned tag> ./scripts/48-vendor-zmx.sh` keeps the zmx version and rewrites only `build_input_id` and `output_sha256` in `.zmx-baseline`.
   After a pull that changes the zmx pin, the integrity gate refuses the old local binary until `./scripts/48-vendor-zmx.sh --force` rebuilds it; the build reproduces the pinned digest.
-- **Source-built Rust vendors.** `fd` and `delta` dropped Intel macOS assets, so `scripts/16-vendor-fd.sh` and `scripts/35-vendor-delta.sh` cross-compile both slices and `lipo` them. If upstream restores `x86_64-apple-darwin` assets, return them to the `vendor-binary.sh` wrapper pattern and drop their `14-vendor.sh` prefetch entries.
+- **Source-built Rust vendor.** `fd` dropped its Intel macOS asset, so `scripts/16-vendor-fd.sh` cross-compiles both slices and `lipo`s them. If upstream restores the `x86_64-apple-darwin` asset, return it to the `vendor-binary.sh` wrapper pattern and drop its `14-vendor.sh` prefetch entry.
 
 ### Fail-Closed Gate Contracts (Do Not Regress)
 
@@ -266,25 +260,24 @@ One row per binary, name unquoted: `12-verify-vendor-audit.sh` matches `| <name>
 | lazygit | Git TUI | Interactive UX; about 41 MiB in the bundle and 16 MiB in the DMG, kept deliberately |
 | yazi | File browser | Interactive UX |
 | ya | Yazi companion | Paired with yazi |
-| bat | Syntax-highlighting pager | Pager UX |
-| delta | Git diff renderer | Syntax-aware diffs; no top-level YEN alias |
-| fzf | Fuzzy finder | Interactive UX |
-| rg | Content search | `.gitignore`-aware regex |
-| fd | File finder | `.gitignore`-aware search |
-| zoxide | Directory jumper | Frecency |
-| jq | JSON processor | Yazi calls it directly |
+| rg | Content search | Yazi runs it for content search; `.gitignore`-aware regex |
+| fd | File finder | Yazi runs it for name search; `.gitignore`-aware search |
 | btop | System monitor | Interactive UX |
 | fastfetch | System info | Output parity |
 | zmx | Session persistence | No macOS framework keeps a PTY and its screen state alive after the app exits; built against the vendored engine |
-| resvg | SVG fallback | `.svgz` and CSS-variable edge cases |
-| yen-svgthumb | SVG thumbnails | Native (AppKit) |
+| yen-svgthumb | SVG thumbnails, including gzip-compressed `.svgz` | Native (AppKit, Compression) |
 | yen-vidthumb | Video thumbnails | Native (AVFoundation) |
 | yen-pdfthumb | PDF thumbnails | Native (PDFKit) |
 
 Wrapper scripts `browse`, `yen`, `yen-quicklook` and `yen-yazi-edit` also ship here.
 The artifact fingerprint gate force-scans the bundled shell CLI at `Contents/Resources/bin/yen` even though it is not Mach-O.
 `lazygit` ships unmodified; YEN behavior comes from `yen-terminal/customizations/lazygit/config.yml` and the `yengit`, `gitlazy` and `gityen` wrappers, and bundling fails if the retired in-binary patch marker reappears.
-`lazygit` and `delta` resolve the bundled binary and fall back to the system copy only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
+`lazygit` resolves the bundled binary and falls back to the system copy only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
+
+Deliberately not bundled: `bat`, `delta`, `fzf`, `jq`, `resvg` and `zoxide`, because nothing in YEN fails without them.
+Text files open in the system `less`, diffs render as plain or natively colored text, and `yen-svgthumb` inflates `.svgz` itself.
+Yazi runs `fzf` and `zoxide` for `z` and `Z` only when the user has them on `PATH`; YEN does not feed the `zoxide` database, so a bundled copy finds no history on a clean Mac.
+Bundle one of them only with a caller inside YEN that fails without it.
 
 ## Optional local usage and wallpaper sources
 

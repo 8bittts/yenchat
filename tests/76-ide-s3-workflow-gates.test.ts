@@ -130,7 +130,7 @@ exit 1
 	};
 }
 
-function createYenResourcesSandbox(deltaScript = "") {
+function createYenResourcesSandbox() {
 	const root = ideTemp("yen-ide-s3-resources-");
 	mkdirSync(join(root, "bin"), { recursive: true });
 	mkdirSync(join(root, "commands", "core"), { recursive: true });
@@ -140,12 +140,6 @@ function createYenResourcesSandbox(deltaScript = "") {
 		join(root, "commands", "core", "ide"),
 	);
 	chmodSync(join(root, "commands", "core", "ide"), 0o755);
-
-	if (deltaScript) {
-		const deltaPath = join(root, "bin", "delta");
-		writeFileSync(deltaPath, deltaScript, "utf8");
-		chmodSync(deltaPath, 0o755);
-	}
 
 	return { root };
 }
@@ -370,12 +364,9 @@ describe("IDE S3 workflow controls", () => {
 		);
 	});
 
-	test("pr-review uses the shared delta renderer contract when explicit fallback is enabled", () => {
+	test("pr-review renders a focused file diff when explicit fallback is enabled", () => {
 		const mock = createGhMockSandbox();
-		const resources = createYenResourcesSandbox(`#!/bin/bash
-printf "[delta-renderer] %s\\n" "$*"
-cat
-`);
+		const resources = createYenResourcesSandbox();
 
 		const res = runYen(["ide", "pr-review", "123", "--file", "src/a.ts"], {
 			PATH: `${mock.binDir}:${process.env.PATH ?? ""}`,
@@ -384,7 +375,6 @@ cat
 		});
 		const output = `${res.stdout ?? ""}\n${res.stderr ?? ""}`;
 		expect(res.status).toBe(0);
-		expect(output).toContain("[delta-renderer] --paging=never");
 		expect(output).toContain("Focused diff: src/a.ts");
 		expect(output).toContain("+newTop");
 	});
@@ -562,12 +552,9 @@ cat
 		expect(output).not.toContain("src/b.ts:2:1");
 	});
 
-	test("pr-review renders a focused semantic hunk through delta", () => {
+	test("pr-review renders a focused semantic hunk as a plain diff", () => {
 		const mock = createGhMockSandbox();
-		const resources = createYenResourcesSandbox(`#!/bin/bash
-printf "[delta-renderer] %s\\n" "$*"
-cat
-`);
+		const resources = createYenResourcesSandbox();
 
 		const res = runYen(["ide", "pr-review", "123", "--hunk", "src/a.ts:12"], {
 			PATH: `${mock.binDir}:${process.env.PATH ?? ""}`,
@@ -576,7 +563,6 @@ cat
 		});
 		const output = `${res.stdout ?? ""}\n${res.stderr ?? ""}`;
 		expect(res.status).toBe(0);
-		expect(output).toContain("[delta-renderer] --paging=never");
 		expect(output).toContain("Focused hunk: src/a.ts:12:1");
 		expect(output).toContain("+newBottom");
 		expect(output).not.toContain("+newTop");

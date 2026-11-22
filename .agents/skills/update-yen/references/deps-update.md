@@ -93,7 +93,7 @@ Run the repo `AGENTS.md` Required Gates, with the full output in a file:
 ( bun run check:full > "$T/yen-deps-gates.out" 2>&1; echo "exit=$?" >> "$T/yen-deps-gates.out" )
 ```
 
-- The vendored `Config.zig` and bundled `jq` must exist first; a missing vendor tree is not a verified run, and `YEN_ALLOW_MISSING_VENDOR_TREE` is never set here.
+- The vendored `Config.zig` and `zmx` must exist first; a missing vendor tree is not a verified run, and `YEN_ALLOW_MISSING_VENDOR_TREE` is never set here.
 - A web build that passes locally but fails on Vercel is reproduced with Vercel's build-adapter layout (`_docs/09-quality.md`). Fix the build script; never pin `next` to avoid it.
 - The generated CSP hash manifest is specific to the `next` version, so commit the one the final build writes.
 - On a failure, baseline it: stash the update, run the failing gate at HEAD, then pop. The same failure at HEAD is pre-existing; report it and keep the update.

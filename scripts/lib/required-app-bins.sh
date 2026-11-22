@@ -8,19 +8,13 @@ set_required_app_bins() {
         "ya"
         "fd"
         "rg"
-        "fzf"
-        "zoxide"
-        "bat"
-        "jq"
         "lazygit"
-        "delta"
         "btop"
         "fastfetch"
         "zmx"
         "yen-vidthumb"
         "yen-pdfthumb"
         "yen-svgthumb"
-        "resvg"
     )
 }
 

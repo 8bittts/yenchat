@@ -45,9 +45,11 @@ max_width = 2000
 max_height = 2000
 
 [opener]
-# Colorized read-only file viewer for Enter/open on text-like files.
-# Keeps syntax visible even when $EDITOR falls back to plain vi.
-view = [{ run = "bat --paging=always --color=always --style=plain -- %s", block = true, desc = "View (bat)", for = "unix" }]
+# Read-only file viewer for Enter/open on text-like files: the system pager,
+# so a stray keypress cannot edit the file. `-+F` keeps a short file on screen
+# even when the user's LESS sets quit-if-one-screen; the preview pane carries
+# the syntax colors.
+view = [{ run = "less -R -+F -- %s", block = true, desc = "View (less)", for = "unix" }]
 
 # Explicit editor opener used by bulk create/rename flows and open-with.
 # Wrapper keeps EDITOR behavior but can enforce compatibility flags per editor.
@@ -58,7 +60,7 @@ extract = [{ run = "ya pub extract-native --list %s", desc = "Extract here (nati
 
 [open]
 # Keep default open behavior for non-text files, but make text opens
-# colorized/read-only by default while preserving edit/reveal choices.
+# read-only by default while preserving edit/reveal choices.
 prepend_rules = [
     # Yazi internal temp files used by bulk create/rename must open in editor.
     { url = "bulk-create.txt", use = "edit" },

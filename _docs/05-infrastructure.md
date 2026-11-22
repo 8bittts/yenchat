@@ -71,7 +71,7 @@ Both refresh an ad-hoc signature so `open yen-terminal/ghostty/zig-out/YEN.app` 
 A fresh git worktree has no `yen-terminal/ghostty/`, because it is gitignored and regenerated.
 To run `xcodebuild` there without a Zig build, copy the canonical tree in as real files: `yen-terminal/ghostty/` without `.zig-cache`, `.yen-zig-global-cache`, `zig-out` and `macos/build`, then `zig-out/` without `YEN.app`.
 Without `zig-out/share`, the build fails on missing `terminfo`, `zsh` and `yen` folder references.
-The unit suite also needs the ignored `src/config/Config.zig`, `macos/YEN.xcodeproj`, each synchronized-group source folder, and the bundled `jq`.
+The unit suite also needs the ignored `src/config/Config.zig`, `macos/YEN.xcodeproj`, each synchronized-group source folder, and the vendored `zmx` (`tests/164`, `tests/165`).
 Copy those prerequisites into a fresh worktree before starting the suite.
 
 ## Overlay Rules

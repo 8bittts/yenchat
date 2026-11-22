@@ -44,8 +44,8 @@ Write aliases as `primary (alias1, alias2)` in every help table and list.
 Integrated shells wrap `btop`, `monitor`, `resources`, `fastfetch`, `fetch`, `bios`, `browse`, `files`, `fm`, `yengit`, `lazygit`, `gitlazy` and `gityen` so they reach YEN, not a system binary.
 The retired names `chat`, `mail`, `email` and `calendar` print a retirement error; `cal` and `top` stay system commands.
 
-`yengit` uses bundled `lazygit` with bundled `delta` as pager; `yen ide pr-review` and the merge-conflict preview use bundled `delta`; the desktop PR Review renders raw diffs.
-Dev mode uses `customizations/vendor/{lazygit,delta}`; a system copy is used only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
+`yengit` uses bundled `lazygit`; `yengit review` and `yen ide pr-review` print plain unified diffs through `less` on a terminal; the desktop PR Review and merge-conflict previews color raw diffs natively.
+Dev mode uses `customizations/vendor/lazygit`; a system copy is used only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
 
 `yen update` verifies `version.json` against `version.sig` with an OpenSSL 3 binary that supports raw Ed25519 (Homebrew, MacPorts, or `YEN_UPDATE_OPENSSL_BIN`); Sparkle still installs.
 `yen +edit-config` opens `~/Library/Application Support/com.yenchat.yen/config.yen`; what lives there versus `UserDefaults` is in `_docs/13-desktop-features.md` → Settings.
@@ -203,4 +203,4 @@ They probe read-only over `ssh` plus remote `python3`, report `executionLocation
 6. To publish, add it to `CommandsSection` in `app/docs/docs-client.tsx` and to `public/llms.txt`, then set Public to Yes.
 
 [CRITICAL] A binary that is not registered in the CLI is invisible: `yen help` is how users find commands.
-Helpers that are not user-facing, such as `delta`, need only the inventory and gate entries in `_docs/04-security.md`.
+Helpers that are not user-facing, such as `zmx`, need only the inventory and gate entries in `_docs/04-security.md`.

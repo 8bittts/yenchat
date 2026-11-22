@@ -1,10 +1,8 @@
 #!/bin/bash
-# Shared git-review tooling helpers for bundled lazygit/delta resolution.
+# Shared git-review tooling helpers for bundled lazygit resolution.
 
 YEN_GIT_REVIEW_LAZYGIT_BIN="${YEN_RESOURCES}/bin/lazygit"
 YEN_GIT_REVIEW_DEV_LAZYGIT_BIN="${YEN_RESOURCES}/../yen-terminal/customizations/vendor/lazygit/lazygit"
-YEN_GIT_REVIEW_DELTA_BIN="${YEN_RESOURCES}/bin/delta"
-YEN_GIT_REVIEW_DEV_DELTA_BIN="${YEN_RESOURCES}/../yen-terminal/customizations/vendor/delta/delta"
 YEN_GIT_REVIEW_LAZYGIT_CONFIG="${YEN_RESOURCES}/yen/lazygit/config.yml"
 
 if [[ ! -f "${YEN_GIT_REVIEW_LAZYGIT_CONFIG}" ]]; then
@@ -44,13 +42,6 @@ yen_git_review_resolve_lazygit_binary() {
         "lazygit"
 }
 
-yen_git_review_resolve_delta_binary() {
-    yen_git_review_resolve_binary \
-        "${YEN_GIT_REVIEW_DELTA_BIN}" \
-        "${YEN_GIT_REVIEW_DEV_DELTA_BIN}" \
-        "delta"
-}
-
 yen_git_review_build_lazygit_config_files_arg() {
     local lazygit_exec="$1"
     local config_files=""
@@ -83,16 +74,6 @@ yen_git_review_run_lazygit() {
 }
 
 yen_git_review_render_diff_stream() {
-    local delta_exec=""
-    if delta_exec=$(yen_git_review_resolve_delta_binary 2>/dev/null); then
-        local paging_mode="never"
-        if [[ -t 1 ]]; then
-            paging_mode="always"
-        fi
-        "${delta_exec}" --paging="${paging_mode}"
-        return $?
-    fi
-
     if [[ -t 1 ]] && command -v less >/dev/null 2>&1; then
         less -R
         return $?

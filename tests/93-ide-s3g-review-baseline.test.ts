@@ -74,17 +74,6 @@ function createYenResourcesSandbox() {
 	);
 	chmodSync(join(root, "commands", "core", "yengit"), 0o755);
 
-	const deltaPath = join(root, "bin", "delta");
-	writeFileSync(
-		deltaPath,
-		`#!/bin/bash
-printf "[delta-local] %s\\n" "$*"
-cat
-`,
-		"utf8",
-	);
-	chmodSync(deltaPath, 0o755);
-
 	return root;
 }
 
@@ -167,13 +156,13 @@ describe("Git review baseline upgrade", () => {
 		expect(output).toContain("src/a.ts:12:1");
 	});
 
-	test("yengit review renders one focused semantic hunk through bundled delta", () => {
+	test("yengit review renders one focused semantic hunk as a plain diff", () => {
 		const repoDir = createReviewRepo();
 		const res = runYengitReview(repoDir, ["--hunk", "src/a.ts:12"]);
 		const output = `${res.stdout ?? ""}\n${res.stderr ?? ""}`;
 		expect(res.status).toBe(0);
-		expect(output).toContain("[delta-local] --paging=never");
 		expect(output).toContain("Focused hunk: src/a.ts:12:1");
+		expect(output).toContain("@@ ");
 		expect(output).toContain("line 12 updated");
 		expect(output).not.toContain("line 1 updated");
 	});

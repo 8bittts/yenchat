@@ -1,4 +1,5 @@
 import AppKit
+import Compression
 import Foundation
 
 @main
@@ -45,11 +46,34 @@ enum SVGThumb {
         }
 
         let sourceURL = URL(fileURLWithPath: sourcePath)
-        guard let image = NSImage(contentsOf: sourceURL) else {
+        // An `.svgz` file is a gzip member around the SVG text. AppKit reads
+        // only the plain form, so inflate it here and parse the bytes.
+        var inflatedSVG: Data?
+        if let handle = try? FileHandle(forReadingFrom: sourceURL) {
+            let magic = (try? handle.read(upToCount: 2)) ?? Data()
+            try? handle.close()
+            if magic.elementsEqual([0x1F, 0x8B]) {
+                guard let compressed = try? Data(contentsOf: sourceURL),
+                      let inflated = gunzip(compressed) else {
+                    fail("failed to decompress SVGZ: \(sourcePath)")
+                }
+                inflatedSVG = inflated
+            }
+        }
+
+        let parsedImage: NSImage?
+        if let inflatedSVG {
+            parsedImage = NSImage(data: inflatedSVG)
+        } else {
+            parsedImage = NSImage(contentsOf: sourceURL)
+        }
+        guard let image = parsedImage else {
             fail("failed to parse SVG: \(sourcePath)")
         }
 
-        let sourceSize = resolveSourceSize(image: image, sourceURL: sourceURL)
+        let sourceText = inflatedSVG.map { String(decoding: $0, as: UTF8.self) }
+            ?? (try? String(contentsOf: sourceURL, encoding: .utf8))
+        let sourceSize = resolveSourceSize(image: image, sourceText: sourceText)
         let targetSize = scaledSize(from: sourceSize, maxDimension: maxDimension)
         guard let pngData = rasterize(image: image, targetSize: targetSize) else {
             fail("failed to rasterize SVG")
@@ -58,7 +82,77 @@ enum SVGThumb {
         ThumbCommon.writeOutput(pngData, to: outputPath)
     }
 
-    static func resolveSourceSize(image: NSImage, sourceURL: URL) -> CGSize {
+    /// Largest SVG text an `.svgz` file may inflate to. DEFLATE can expand
+    /// about a thousandfold, so the cap bounds memory for a hostile file.
+    static let maxInflatedBytes = 64 * 1024 * 1024
+
+    /// Inflates one gzip member (RFC 1952). Returns nil for a malformed
+    /// header, a truncated stream, or output above `limit`.
+    static func gunzip(_ data: Data, limit: Int = maxInflatedBytes) -> Data? {
+        let bytes = [UInt8](data)
+        // 10-byte header, at least one DEFLATE byte, 8-byte trailer.
+        guard bytes.count > 18, bytes[0] == 0x1F, bytes[1] == 0x8B, bytes[2] == 8 else {
+            return nil
+        }
+        let flags = bytes[3]
+        var offset = 10
+        if flags & 0x04 != 0 { // FEXTRA: two-byte little-endian length, then payload
+            guard offset + 2 <= bytes.count else { return nil }
+            offset += 2 + Int(bytes[offset]) + (Int(bytes[offset + 1]) << 8)
+        }
+        for flag: UInt8 in [0x08, 0x10] where flags & flag != 0 { // FNAME, FCOMMENT
+            guard offset < bytes.count,
+                  let end = bytes[offset...].firstIndex(of: 0) else { return nil }
+            offset = end + 1
+        }
+        if flags & 0x02 != 0 { // FHCRC
+            offset += 2
+        }
+        guard offset < bytes.count - 8 else { return nil }
+        return inflate(Array(bytes[offset..<(bytes.count - 8)]), limit: limit)
+    }
+
+    /// Inflates a raw DEFLATE stream in bounded chunks.
+    static func inflate(_ deflated: [UInt8], limit: Int) -> Data? {
+        let stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
+        defer { stream.deallocate() }
+        guard compression_stream_init(stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
+            return nil
+        }
+        defer { compression_stream_destroy(stream) }
+
+        let chunkSize = 64 * 1024
+        var chunk = [UInt8](repeating: 0, count: chunkSize)
+        var output = Data()
+        return deflated.withUnsafeBufferPointer { source -> Data? in
+            guard let sourceBase = source.baseAddress else { return nil }
+            stream.pointee.src_ptr = sourceBase
+            stream.pointee.src_size = source.count
+            while true {
+                let (status, produced): (compression_status, Int) = chunk.withUnsafeMutableBufferPointer { destination in
+                    guard let destinationBase = destination.baseAddress else {
+                        return (COMPRESSION_STATUS_ERROR, 0)
+                    }
+                    stream.pointee.dst_ptr = destinationBase
+                    stream.pointee.dst_size = chunkSize
+                    let status = compression_stream_process(stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
+                    return (status, chunkSize - stream.pointee.dst_size)
+                }
+                guard status != COMPRESSION_STATUS_ERROR else { return nil }
+                output.append(contentsOf: chunk[0..<produced])
+                guard output.count <= limit else { return nil }
+                if status == COMPRESSION_STATUS_END {
+                    return output
+                }
+                // No output and no input left means the stream stops short.
+                if produced == 0, stream.pointee.src_size == 0 {
+                    return nil
+                }
+            }
+        }
+    }
+
+    static func resolveSourceSize(image: NSImage, sourceText: String?) -> CGSize {
         if let size = normalized(size: image.size) {
             return size
         }
@@ -73,7 +167,7 @@ enum SVGThumb {
             }
         }
 
-        if let raw = try? String(contentsOf: sourceURL, encoding: .utf8),
+        if let raw = sourceText,
            let tagRange = raw.range(of: "<svg[^>]*>", options: .regularExpression) {
             let header = String(raw[tagRange])
             if let viewBoxSize = parseViewBox(from: header),

@@ -141,9 +141,9 @@ function TerminalIDESection() {
 					Pane requires a second invocation to confirm closing other panes.
 				</li>
 				<li>
-					<strong>Bundled tools:</strong> fd, rg, fzf, zoxide, bat, jq, and
-					other terminal helpers. IDE integrations can require additional tools;
-					see{" "}
+					<strong>Bundled tools:</strong> fd and rg for file-browser search,
+					lazygit, btop, and fastfetch. IDE integrations can require additional
+					tools; see{" "}
 					<a href="#ide-workflows" className="link-brand underline">
 						IDE Workflows
 					</a>
@@ -946,7 +946,7 @@ function FileBrowserSection() {
 					<code className="inline-code-brand">browse</code> command opens the
 					same browser without changing the shell directory. Press{" "}
 					<code className="inline-code-brand">Enter</code> on a code file for a
-					colorized read-only preview, or{" "}
+					read-only view in the system pager, or{" "}
 					<code className="inline-code-brand">O</code> for open-with.
 				</p>
 			</div>
@@ -986,15 +986,15 @@ function FileBrowserSection() {
 							</td>
 						</tr>
 						<tr className="border-b border-border-light">
-							<td className="align-top py-2 pl-4 pr-4">
-								Search and fuzzy find
-							</td>
+							<td className="align-top py-2 pl-4 pr-4">Search</td>
 							<td className="align-top py-2 pr-4 text-left">
 								<code className="inline-code-brand">/</code> to find in the
-								current directory, <code className="inline-code-brand">z</code>{" "}
-								for fuzzy file / directory search, and{" "}
-								<code className="inline-code-brand">Z</code> for frequent
-								directories
+								current directory, <code className="inline-code-brand">s</code>{" "}
+								to search by name, and{" "}
+								<code className="inline-code-brand">S</code> to search file
+								contents. <code className="inline-code-brand">z</code> and{" "}
+								<code className="inline-code-brand">Z</code> use fzf and zoxide
+								when you have them installed
 							</td>
 						</tr>
 						<tr className="border-b border-border-light">

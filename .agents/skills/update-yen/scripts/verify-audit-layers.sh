@@ -62,17 +62,17 @@ echo "=== Audit Layer Verification: ${vendor} ==="
 # Vendor type. The accepted list must stay in step with the targets
 # 14-vendor.sh accepts; tests/119 asserts that parity, because a vendor missing
 # here fails with "Unknown vendor" and looks like a tooling bug rather than the
-# missing-coverage it actually is (delta was absent for exactly that reason).
+# missing-coverage it actually is.
 case "$vendor" in
     ghostty)
         vendor_type="source"
         required_layer_ids="1 2 3 4 5 6"
         ;;
-    btop|fd|delta|zmx)
+    btop|fd|zmx)
         vendor_type="source-built"
         required_layer_ids="3 4 5 6"
         ;;
-    yazi|ripgrep|fzf|zoxide|bat|jq|lazygit|resvg|fastfetch)
+    yazi|ripgrep|lazygit|fastfetch)
         vendor_type="binary"
         required_layer_ids="3 4 5 6"
         ;;

@@ -1,5 +1,10 @@
 #!/bin/bash
-# Evaluate native yen-svgthumb output against vendored resvg.
+# Evaluate native yen-svgthumb output. Self-validating: there is no reference
+# renderer to diff against. Each fixture asserts its manifest policy:
+#   render_ok         exits 0, writes a readable PNG whose long edge equals the
+#                     cap, and draws at least one pixel (a blank render fails)
+#   expected_failure  exits non-zero and writes no output
+# A `.svgz` fixture with a `.svg` sibling must also render the same bytes.
 #
 # Usage:
 #   ./scripts/30-eval-svgthumb.sh
@@ -7,7 +12,6 @@
 #
 # Env:
 #   MAX_DIMENSION=2000      # Thumbnail longest edge in pixels
-#   SIMILARITY_PASS=0.95    # Pass threshold for strict similarity fixtures
 #   REBUILD=1               # Rebuild yen-svgthumb before evaluation (default: 1)
 #   MANIFEST_FILE=...       # Fixture metadata CSV (default: <fixture-dir>/manifest.csv)
 
@@ -16,33 +20,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "Usage: ./scripts/30-eval-svgthumb.sh [fixture-dir]"
+    exit 0
+fi
+
 FIXTURE_DIR="${1:-$REPO_ROOT/yen-svgthumb/fixtures}"
 EVAL_DIR="$REPO_ROOT/yen-svgthumb/.eval"
 
 MAX_DIMENSION="${MAX_DIMENSION:-2000}"
-SIMILARITY_PASS="${SIMILARITY_PASS:-0.95}"
 REBUILD="${REBUILD:-1}"
 MANIFEST_FILE="${MANIFEST_FILE:-$FIXTURE_DIR/manifest.csv}"
 
 NATIVE_DIR="$REPO_ROOT/yen-svgthumb"
 NATIVE_BIN="$NATIVE_DIR/yen-svgthumb"
-COMPARE_SRC="$NATIVE_DIR/compare.swift"
-RESVG_BIN="$REPO_ROOT/yen-terminal/customizations/vendor/resvg/resvg"
-
-png_dimensions() {
-    local image_path="$1"
-    local width
-    local height
-
-    width="$(sips -g pixelWidth "$image_path" 2>/dev/null | awk '/pixelWidth/ {print $2}')"
-    height="$(sips -g pixelHeight "$image_path" 2>/dev/null | awk '/pixelHeight/ {print $2}')"
-
-    if [ -z "$width" ] || [ -z "$height" ]; then
-        return 1
-    fi
-
-    echo "$width,$height"
-}
+INSPECT_SRC="$NATIVE_DIR/inspect.swift"
 
 manifest_field() {
     local fixture="$1"
@@ -51,16 +43,16 @@ manifest_field() {
         'NR > 1 && $1 == target {print $idx; exit}' "$MANIFEST_FILE"
 }
 
-float_ge() {
-    local lhs="$1"
-    local rhs="$2"
-    awk -v a="$lhs" -v b="$rhs" 'BEGIN { exit !((a + 0) >= (b + 0)) }'
+within_tolerance() {
+    local value="$1"
+    local target="$2"
+    local tolerance="$3"
+    local diff=$((value - target))
+    if [ "$diff" -lt 0 ]; then
+        diff=$((-diff))
+    fi
+    [ "$diff" -le "$tolerance" ]
 }
-
-if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
-    echo "Usage: ./scripts/30-eval-svgthumb.sh [fixture-dir]"
-    exit 0
-fi
 
 if [ ! -d "$FIXTURE_DIR" ]; then
     echo "ERROR: Fixture directory not found: $FIXTURE_DIR"
@@ -72,24 +64,13 @@ if [ ! -f "$MANIFEST_FILE" ]; then
     exit 1
 fi
 
-if [ ! -f "$COMPARE_SRC" ]; then
-    echo "ERROR: Comparator source missing: $COMPARE_SRC"
-    exit 1
-fi
-
-if [ ! -x "$RESVG_BIN" ]; then
-    echo "ERROR: resvg binary missing: $RESVG_BIN"
-    echo "Run: ./scripts/14-vendor.sh resvg"
+if [ ! -f "$INSPECT_SRC" ]; then
+    echo "ERROR: Inspector source missing: $INSPECT_SRC"
     exit 1
 fi
 
 if ! command -v swiftc >/dev/null 2>&1; then
     echo "ERROR: swiftc not found"
-    exit 1
-fi
-
-if ! command -v sips >/dev/null 2>&1; then
-    echo "ERROR: sips not found (required for PNG dimension checks)"
     exit 1
 fi
 
@@ -101,158 +82,163 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-COMPARE_BIN="$TMP_DIR/svg-compare"
-echo "Building comparator..."
-swiftc -O -parse-as-library -framework AppKit -o "$COMPARE_BIN" "$COMPARE_SRC"
+INSPECT_BIN="$TMP_DIR/svg-inspect"
+echo "Building inspector..."
+swiftc -O -parse-as-library -framework AppKit -o "$INSPECT_BIN" "$INSPECT_SRC"
 
-mkdir -p "$EVAL_DIR/resvg" "$EVAL_DIR/native" "$EVAL_DIR/logs"
+rm -rf "$EVAL_DIR/png" "$EVAL_DIR/logs"
+mkdir -p "$EVAL_DIR/png" "$EVAL_DIR/logs"
 RESULTS_CSV="$EVAL_DIR/results.csv"
 
 cat >"$RESULTS_CSV" <<'EOF'
-fixture,category,policy,resvg_status,native_status,similarity,mae,resvg_width,resvg_height,native_width,native_height
+fixture,category,policy,width,height,max_edge,drawn_fraction,status
 EOF
 
 fixture_total=0
-both_ok=0
-resvg_failures=0
-native_failures=0
-strict_total=0
-strict_pass=0
-strict_fail=0
-baseline_total=0
-baseline_fail=0
-fallback_total=0
-fallback_pass=0
-fallback_fail=0
-fallback_triggered=0
+render_ok_total=0
+render_ok_pass=0
+render_ok_fail=0
 expected_failure_total=0
 expected_failure_pass=0
 expected_failure_fail=0
+compressed_total=0
+compressed_fail=0
 unknown_policy_total=0
-p0_regressions=0
+unlisted_total=0
+
+: >"$TMP_DIR/lines.txt"
 
 while IFS= read -r fixture; do
     [ -z "$fixture" ] && continue
     fixture_total=$((fixture_total + 1))
 
     rel="${fixture#$FIXTURE_DIR/}"
-    if [ "$rel" = "manifest.csv" ]; then
-        continue
-    fi
-
     category="$(manifest_field "$rel" 2)"
     policy="$(manifest_field "$rel" 3)"
-    if [ -z "$category" ]; then
-        category="unclassified"
-    fi
+
+    slug="$(echo "$rel" | tr '/ ' '__' | tr -cd '[:alnum:]_.-')"
+    out_png="$EVAL_DIR/png/$slug.png"
+    log="$EVAL_DIR/logs/$slug.log"
+
+    width=""
+    height=""
+    max_edge=""
+    drawn=""
+    status="PASS"
+    reason=""
+
+    # A fixture the manifest does not list has no declared outcome.
     if [ -z "$policy" ]; then
-        policy="strict_compare"
-    fi
-
-    stem="${rel%.*}"
-    slug="$(echo "$stem" | tr '/ ' '__')"
-
-    resvg_out="$EVAL_DIR/resvg/$stem.png"
-    native_out="$EVAL_DIR/native/$stem.png"
-    mkdir -p "$(dirname "$resvg_out")" "$(dirname "$native_out")"
-
-    resvg_status="ok"
-    native_status="ok"
-    similarity=""
-    mae=""
-    resvg_width=""
-    resvg_height=""
-    native_width=""
-    native_height=""
-
-    if ! "$NATIVE_BIN" "$fixture" "$native_out" --max-dimension "$MAX_DIMENSION" > /dev/null 2>"$EVAL_DIR/logs/$slug.native.log"; then
-        native_status="fail"
-        native_failures=$((native_failures + 1))
-    fi
-
-    if [ "$native_status" = "ok" ]; then
-        dims="$(png_dimensions "$native_out" || true)"
-        if [ -n "$dims" ]; then
-            native_width="$(echo "$dims" | cut -d',' -f1)"
-            native_height="$(echo "$dims" | cut -d',' -f2)"
-            if ! "$RESVG_BIN" --width "$native_width" --height "$native_height" "$fixture" "$resvg_out" > /dev/null 2>"$EVAL_DIR/logs/$slug.resvg.log"; then
-                resvg_status="fail"
-                resvg_failures=$((resvg_failures + 1))
-            fi
-        else
-            native_status="fail"
-            native_failures=$((native_failures + 1))
-        fi
-    fi
-
-    if [ "$native_status" = "fail" ] && [ "$resvg_status" = "ok" ]; then
-        if ! "$RESVG_BIN" "$fixture" "$resvg_out" > /dev/null 2>"$EVAL_DIR/logs/$slug.resvg.log"; then
-            resvg_status="fail"
-            resvg_failures=$((resvg_failures + 1))
-        fi
-    fi
-
-    if [ "$resvg_status" = "ok" ] && [ "$native_status" = "ok" ]; then
-        compare_csv="$("$COMPARE_BIN" "$resvg_out" "$native_out" 2>/dev/null || true)"
-        if [ -n "$compare_csv" ]; then
-            similarity="$(echo "$compare_csv" | cut -d',' -f1)"
-            mae="$(echo "$compare_csv" | cut -d',' -f2)"
-            resvg_width="$(echo "$compare_csv" | cut -d',' -f3)"
-            resvg_height="$(echo "$compare_csv" | cut -d',' -f4)"
-            native_width="$(echo "$compare_csv" | cut -d',' -f5)"
-            native_height="$(echo "$compare_csv" | cut -d',' -f6)"
-            both_ok=$((both_ok + 1))
-        fi
+        unlisted_total=$((unlisted_total + 1))
+        policy="unlisted"
+        status="FAIL"
+        reason="fixture missing from the manifest"
     fi
 
     case "$policy" in
-        strict_compare)
-            strict_total=$((strict_total + 1))
-            if [ "$resvg_status" = "ok" ] && [ "$native_status" = "ok" ] && [ -n "$similarity" ] && float_ge "$similarity" "$SIMILARITY_PASS"; then
-                strict_pass=$((strict_pass + 1))
+        render_ok)
+            render_ok_total=$((render_ok_total + 1))
+
+            if ! "$NATIVE_BIN" "$fixture" "$out_png" --max-dimension "$MAX_DIMENSION" >/dev/null 2>"$log"; then
+                status="FAIL"
+                reason="render exited non-zero"
+            fi
+
+            if [ "$status" = "PASS" ] && [ ! -s "$out_png" ]; then
+                status="FAIL"
+                reason="output PNG empty or missing"
+            fi
+
+            if [ "$status" = "PASS" ]; then
+                inspect_csv="$("$INSPECT_BIN" "$out_png" 2>>"$log" || true)"
+                if [ -z "$inspect_csv" ]; then
+                    status="FAIL"
+                    reason="output PNG is not readable"
+                else
+                    width="$(echo "$inspect_csv" | cut -d',' -f1)"
+                    height="$(echo "$inspect_csv" | cut -d',' -f2)"
+                    drawn="$(echo "$inspect_csv" | cut -d',' -f3)"
+                    if [ "$width" -ge "$height" ]; then
+                        max_edge="$width"
+                    else
+                        max_edge="$height"
+                    fi
+                fi
+            fi
+
+            if [ "$status" = "PASS" ] && ! within_tolerance "$max_edge" "$MAX_DIMENSION" 2; then
+                status="FAIL"
+                reason="max edge $max_edge not within +-2 of $MAX_DIMENSION"
+            fi
+
+            if [ "$status" = "PASS" ] && ! awk -v d="$drawn" 'BEGIN { exit !((d + 0) > 0) }'; then
+                status="FAIL"
+                reason="render is blank (no drawn pixels)"
+            fi
+
+            # A gzip-compressed fixture must match its plain sibling exactly.
+            case "$rel" in
+                *.svgz)
+                    sibling="${fixture%.svgz}.svg"
+                    if [ -f "$sibling" ]; then
+                        compressed_total=$((compressed_total + 1))
+                        sibling_png="$TMP_DIR/$slug.sibling.png"
+                        if [ "$status" = "PASS" ]; then
+                            if ! "$NATIVE_BIN" "$sibling" "$sibling_png" --max-dimension "$MAX_DIMENSION" >/dev/null 2>>"$log" \
+                                || ! cmp -s "$out_png" "$sibling_png"; then
+                                status="FAIL"
+                                reason="compressed render differs from $(basename "$sibling")"
+                                compressed_fail=$((compressed_fail + 1))
+                            fi
+                        else
+                            compressed_fail=$((compressed_fail + 1))
+                        fi
+                    fi
+                    ;;
+            esac
+
+            if [ "$status" = "PASS" ]; then
+                render_ok_pass=$((render_ok_pass + 1))
             else
-                strict_fail=$((strict_fail + 1))
-            fi
-            if [ "$native_status" = "fail" ] && [ "$resvg_status" = "ok" ]; then
-                p0_regressions=$((p0_regressions + 1))
-            fi
-            ;;
-        baseline_limitation)
-            baseline_total=$((baseline_total + 1))
-            if [ "$resvg_status" = "ok" ] && [ "$native_status" = "ok" ]; then
-                :
-            else
-                baseline_fail=$((baseline_fail + 1))
-                p0_regressions=$((p0_regressions + 1))
-            fi
-            ;;
-        fallback_expected)
-            fallback_total=$((fallback_total + 1))
-            if [ "$resvg_status" = "ok" ]; then
-                fallback_pass=$((fallback_pass + 1))
-            else
-                fallback_fail=$((fallback_fail + 1))
-                p0_regressions=$((p0_regressions + 1))
-            fi
-            if [ "$native_status" = "fail" ] && [ "$resvg_status" = "ok" ]; then
-                fallback_triggered=$((fallback_triggered + 1))
+                render_ok_fail=$((render_ok_fail + 1))
             fi
             ;;
         expected_failure)
             expected_failure_total=$((expected_failure_total + 1))
-            if [ "$native_status" = "fail" ]; then
+
+            if "$NATIVE_BIN" "$fixture" "$out_png" --max-dimension "$MAX_DIMENSION" >/dev/null 2>"$log"; then
+                status="FAIL"
+                reason="expected_failure fixture rendered successfully"
+            elif [ -e "$out_png" ]; then
+                status="FAIL"
+                reason="expected_failure fixture left an output file"
+            fi
+
+            if [ "$status" = "PASS" ]; then
                 expected_failure_pass=$((expected_failure_pass + 1))
             else
                 expected_failure_fail=$((expected_failure_fail + 1))
-                p0_regressions=$((p0_regressions + 1))
             fi
+            ;;
+        unlisted)
             ;;
         *)
             unknown_policy_total=$((unknown_policy_total + 1))
+            status="FAIL"
+            reason="unknown policy: $policy"
             ;;
     esac
 
-    echo "$rel,$category,$policy,$resvg_status,$native_status,$similarity,$mae,$resvg_width,$resvg_height,$native_width,$native_height" >>"$RESULTS_CSV"
+    echo "$rel,$category,$policy,$width,$height,$max_edge,$drawn,$status" >>"$RESULTS_CSV"
+
+    line="$rel [$category/$policy] $status"
+    if [ "$policy" = "render_ok" ] && [ -n "$width" ]; then
+        line="$line dims=${width}x${height} drawn=$drawn"
+    fi
+    if [ "$status" = "FAIL" ]; then
+        line="$line -- $reason"
+    fi
+    echo "$line" >>"$TMP_DIR/lines.txt"
 done < <(find "$FIXTURE_DIR" -type f \( -name "*.svg" -o -name "*.svgz" \) | sort)
 
 if [ "$fixture_total" -eq 0 ]; then
@@ -260,71 +246,57 @@ if [ "$fixture_total" -eq 0 ]; then
     exit 1
 fi
 
-avg_similarity_all="$(awk -F, 'NR>1 && $6 != "" {sum += $6; count += 1} END {if (count == 0) {printf "0.0000"} else {printf "%.4f", sum / count}}' "$RESULTS_CSV")"
-strict_similarity_avg="$(awk -F, 'NR>1 && $3 == "strict_compare" && $6 != "" {sum += $6; count += 1} END {if (count == 0) {printf "0.0000"} else {printf "%.4f", sum / count}}' "$RESULTS_CSV")"
-strict_similarity_samples="$(awk -F, 'NR>1 && $3 == "strict_compare" && $6 != "" {count += 1} END {print count + 0}' "$RESULTS_CSV")"
 corpus_gate="FAIL"
-similarity_gate="FAIL"
-p0_gate="FAIL"
-strict_gate="FAIL"
+render_gate="FAIL"
+failure_gate="FAIL"
+compressed_gate="FAIL"
 overall_gate="FAIL"
 
 if [ "$fixture_total" -ge 20 ]; then
     corpus_gate="PASS"
 fi
-
-if float_ge "$strict_similarity_avg" "$SIMILARITY_PASS"; then
-    similarity_gate="PASS"
+if [ "$render_ok_fail" -eq 0 ] && [ "$render_ok_total" -gt 0 ]; then
+    render_gate="PASS"
+fi
+if [ "$expected_failure_fail" -eq 0 ] && [ "$expected_failure_total" -gt 0 ]; then
+    failure_gate="PASS"
+fi
+if [ "$compressed_fail" -eq 0 ] && [ "$compressed_total" -gt 0 ]; then
+    compressed_gate="PASS"
 fi
 
-if [ "$p0_regressions" -eq 0 ]; then
-    p0_gate="PASS"
-fi
-
-if [ "$strict_fail" -eq 0 ] && [ "$strict_total" -gt 0 ]; then
-    strict_gate="PASS"
-fi
-
-if [ "$corpus_gate" = "PASS" ] && [ "$similarity_gate" = "PASS" ] && [ "$p0_gate" = "PASS" ] && [ "$strict_gate" = "PASS" ]; then
+if [ "$corpus_gate" = "PASS" ] && [ "$render_gate" = "PASS" ] && \
+   [ "$failure_gate" = "PASS" ] && [ "$compressed_gate" = "PASS" ] && \
+   [ "$unknown_policy_total" -eq 0 ] && [ "$unlisted_total" -eq 0 ]; then
     overall_gate="PASS"
 fi
 
 SUMMARY_TXT="$EVAL_DIR/summary.txt"
 {
-    echo "SVG Native Evaluation"
+    echo "SVG Native Evaluation (self-validating)"
     echo "Fixture directory: $FIXTURE_DIR"
     echo "Fixture manifest: $MANIFEST_FILE"
+    echo "Max dimension: $MAX_DIMENSION"
     echo "Fixtures total: $fixture_total"
-    echo "Both rendered: $both_ok"
-    echo "resvg failures: $resvg_failures"
-    echo "native failures: $native_failures"
-    echo "Similarity pass gate: $SIMILARITY_PASS"
-    echo "Similarity avg (all comparable): $avg_similarity_all"
-    echo "Similarity avg (strict_compare): $strict_similarity_avg"
-    echo "Similarity samples (strict_compare): $strict_similarity_samples"
-    echo "Strict fixtures: $strict_total"
-    echo "Strict pass: $strict_pass"
-    echo "Strict fail: $strict_fail"
-    echo "Baseline limitation fixtures: $baseline_total"
-    echo "Baseline limitation failures: $baseline_fail"
-    echo "Fallback-expected fixtures: $fallback_total"
-    echo "Fallback-expected pass: $fallback_pass"
-    echo "Fallback-expected fail: $fallback_fail"
-    echo "Fallback triggered (native fail -> resvg ok): $fallback_triggered"
-    echo "Expected-failure fixtures: $expected_failure_total"
-    echo "Expected-failure pass: $expected_failure_pass"
-    echo "Expected-failure fail: $expected_failure_fail"
+    echo
+    echo "Per fixture:"
+    cat "$TMP_DIR/lines.txt"
+    echo
+    echo "render_ok fixtures: $render_ok_total (pass $render_ok_pass / fail $render_ok_fail)"
+    echo "expected_failure fixtures: $expected_failure_total (pass $expected_failure_pass / fail $expected_failure_fail)"
+    echo "Compressed fixtures with a plain sibling: $compressed_total (fail $compressed_fail)"
     echo "Unknown policy fixtures: $unknown_policy_total"
-    echo "P0 regressions: $p0_regressions"
+    echo "Fixtures missing from the manifest: $unlisted_total"
     echo "Gate corpus>=20: $corpus_gate"
-    echo "Gate strict similarity avg>=${SIMILARITY_PASS}: $similarity_gate"
-    echo "Gate strict per-fixture pass: $strict_gate"
-    echo "Gate p0 regressions==0: $p0_gate"
+    echo "Gate render_ok all pass: $render_gate"
+    echo "Gate expected_failure all fail-closed: $failure_gate"
+    echo "Gate compressed matches plain: $compressed_gate"
     echo "Success gate (ship/no-ship): $overall_gate"
     echo "Results CSV: $RESULTS_CSV"
-    echo
-    echo "Lowest similarity fixtures:"
-    awk -F, 'NR>1 && $6 != "" {printf "%s,%s,%s\n", $1, $6, $3}' "$RESULTS_CSV" | sort -t, -k2,2n | head -8
 } >"$SUMMARY_TXT"
 
 cat "$SUMMARY_TXT"
+
+if [ "$overall_gate" != "PASS" ]; then
+    exit 1
+fi

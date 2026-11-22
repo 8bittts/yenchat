@@ -34,7 +34,7 @@ An installed `.version` that differs from the baseline requires a verified downl
 Check mode reports the required download without modifying files.
 A digest mismatch at the same version remains an integrity failure, even with `--force`.
 
-Each manifest record names a thin wrapper in `scripts/` over `scripts/lib/vendor-binary.sh` (or a source-build script for fd, btop, delta). It downloads or builds a universal binary, verifies `lipo -archs` and exec-liveness, installs it under `yen-terminal/customizations/vendor/<key>/`, and writes `yen-terminal/.<key>-baseline` plus `.version`.
+Each manifest record names a thin wrapper in `scripts/` over `scripts/lib/vendor-binary.sh` (or a source-build script for fd, btop, zmx). It downloads or builds a universal binary, verifies `lipo -archs` and exec-liveness, installs it under `yen-terminal/customizations/vendor/<key>/`, and writes `yen-terminal/.<key>-baseline` plus `.version`.
 
 ## When the Update Fails
 

@@ -17,7 +17,7 @@
 # checkmark and the same exit 0, and both callers' evals scored the skip a pass.
 #
 # Deliberately NOT on this roster, and why:
-#   35-vendor-delta.sh   — a vendor BUILD wrapper, not a gate. It delegates to
+#   34-vendor-btop.sh    — a vendor BUILD wrapper, not a gate. It delegates to
 #                          vendor_source_build() in scripts/lib/vendor-binary.sh,
 #                          which owns the pass/fail semantics. Wrapping it would
 #                          put a receipt on the caller while the decision stays

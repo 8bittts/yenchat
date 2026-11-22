@@ -41,19 +41,13 @@ Run repo scripts by absolute path; never rely on `cd`.
 | Yazi      | Binary (pre-built)    | `.yazi-baseline`      | `15-vendor-yazi.sh`      |
 | fd        | Binary (source-built) | `.fd-baseline`        | `16-vendor-fd.sh`        |
 | ripgrep   | Binary (pre-built)    | `.ripgrep-baseline`   | `17-vendor-ripgrep.sh`   |
-| fzf       | Binary (pre-built)    | `.fzf-baseline`       | `18-vendor-fzf.sh`       |
-| zoxide    | Binary (pre-built)    | `.zoxide-baseline`    | `19-vendor-zoxide.sh`    |
-| bat       | Binary (pre-built)    | `.bat-baseline`       | `20-vendor-bat.sh`       |
-| jq        | Binary (pre-built)    | `.jq-baseline`        | `21-vendor-jq.sh`        |
 | lazygit   | Binary (pre-built)    | `.lazygit-baseline`   | `32-vendor-lazygit.sh`   |
-| delta     | Binary (source-built) | `.delta-baseline`     | `35-vendor-delta.sh`     |
-| resvg     | Binary (pre-built)    | `.resvg-baseline`     | `29-vendor-resvg.sh`     |
 | btop      | Binary (source-built) | `.btop-baseline`      | `34-vendor-btop.sh`      |
 | fastfetch | Binary (pre-built)    | `.fastfetch-baseline` | `33-vendor-fastfetch.sh` |
 | zmx       | Binary (source-built) | `.zmx-baseline`       | `48-vendor-zmx.sh`       |
 
 Baselines are git-tracked; vendor artifacts are gitignored.
-Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`; `fd`, `btop` and `delta` build both slices from source through `vendor_source_build()` (Cargo or CMake, then `lipo`) because upstream ships no Intel asset; `zmx` builds the same way with Zig against the vendored engine (`_docs/04-security.md`).
+Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`; `fd` and `btop` build both slices from source through `vendor_source_build()` (Cargo or CMake, then `lipo`) because upstream ships no Intel asset; `zmx` builds the same way with Zig against the vendored engine (`_docs/04-security.md`).
 
 ### Verification Pipeline (vendor-binary.sh)
 
@@ -68,7 +62,7 @@ Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendo
 
 ### Adding a Vendor
 
-Reference: `scripts/35-vendor-delta.sh` and the commit that registered it.
+Reference: `scripts/17-vendor-ripgrep.sh` for a pre-built vendor and `scripts/34-vendor-btop.sh` for a source build.
 
 1. Create `scripts/NN-vendor-<name>.sh` (next free number) over `vendor_binary()`, or a source build when upstream ships no Intel asset.
 2. Append one record to `scripts/lib/vendor-manifest.sh` (`key|type|title|subtitle|repo|binary|script|companion|require_companion`); `14-vendor.sh`, `11-sync-vendor-audit.sh` and `12-verify-vendor-audit.sh` iterate it.
@@ -107,7 +101,7 @@ It also runs the DMG layout gate (`YEN_DMG_LAYOUT_GATE_MODE`, default `enforce`)
 | `native/01-macos-smoke.sh`                                                                 | Native build and test loops (`_docs/05-infrastructure.md` → Local Build Loops)                                                                                                                                                          |
 | `native/source-fixtures.py`                                                                | Byte-verified native source-test inputs outside protected folders (`_docs/09-quality.md`)                                                                                                                                               |
 | `native/02-dictation-live-matrix.sh`                                                       | Dictation live matrix capture and report (`_docs/09-quality.md`)                                                                                                                                                                        |
-| `30-eval-svgthumb.sh`, `31-soak-svgthumb.sh`                                               | Native SVG thumbnails versus `resvg`: fidelity, latency, memory                                                                                                                                                                         |
+| `30-eval-svgthumb.sh`, `31-soak-svgthumb.sh`                                               | Self-validating eval and fail-closed soak for the SVG helper                                                                                                                                                                            |
 | `36-eval-pdfthumb.sh`, `37-soak-pdfthumb.sh`, `38-eval-vidthumb.sh`, `39-soak-vidthumb.sh` | Self-validating evals and fail-closed soaks for the PDF and video helpers                                                                                                                                                               |
 | `44-build-web-csp.ts`                                                                      | Web build with converged CSP hashes (`bun run build`)                                                                                                                                                                                   |
 | `46-scan-bundle-leaks.ts`                                                                  | Last step of `bun run build`: byte-scans browser artifacts for every server credential value in raw, JSON, RSC, JS-escape, HTML-entity, URI and base64 forms; reports names and paths only; fails on zero credentials or zero artifacts |

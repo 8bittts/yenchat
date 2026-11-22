@@ -12,7 +12,6 @@
 #   ./scripts/14-vendor.sh ghostty      # Update only Ghostty
 #   ./scripts/14-vendor.sh yazi         # Update only Yazi
 #   ./scripts/14-vendor.sh lazygit      # Update only lazygit
-#   ./scripts/14-vendor.sh delta        # Update only delta
 #   ./scripts/14-vendor.sh yazi --force # Update only Yazi (force)
 
 set -e
@@ -108,11 +107,9 @@ for arg in "$@"; do
             echo "  ./scripts/14-vendor.sh --check      # Check only"
             echo "  GITHUB_TOKEN=ghp_xxx ./scripts/14-vendor.sh --check"
             echo "  ./scripts/14-vendor.sh lazygit      # Update lazygit only"
-            echo "  ./scripts/14-vendor.sh delta        # Update delta only"
             echo "  ./scripts/14-vendor.sh btop         # Update btop only"
             echo "  ./scripts/14-vendor.sh zmx          # Rebuild zmx against the vendored engine"
             echo "  ./scripts/14-vendor.sh fastfetch    # Update fastfetch only"
-            echo "  ./scripts/14-vendor.sh resvg        # Update resvg only"
             echo "  ./scripts/14-vendor.sh yazi --force  # Force update Yazi"
             echo ""
             exit 0

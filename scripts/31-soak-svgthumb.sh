@@ -1,5 +1,5 @@
 #!/bin/bash
-# Soak-test SVG preview rendering using native-first + resvg fallback path.
+# Soak-test native SVG preview rendering: results, latency and memory.
 #
 # Usage:
 #   ./scripts/31-soak-svgthumb.sh
@@ -29,7 +29,6 @@ MEMORY_DRIFT_MAX_PCT="${MEMORY_DRIFT_MAX_PCT:-10}"
 
 NATIVE_DIR="$REPO_ROOT/yen-svgthumb"
 NATIVE_BIN="$NATIVE_DIR/yen-svgthumb"
-RESVG_BIN="$REPO_ROOT/yen-terminal/customizations/vendor/resvg/resvg"
 
 manifest_field() {
     local fixture="$1"
@@ -59,12 +58,6 @@ if [ ! -f "$MANIFEST_FILE" ]; then
     exit 1
 fi
 
-if [ ! -x "$RESVG_BIN" ]; then
-    echo "ERROR: resvg binary missing: $RESVG_BIN"
-    echo "Run: ./scripts/14-vendor.sh resvg"
-    exit 1
-fi
-
 if [ ! -x "/usr/bin/time" ]; then
     echo "ERROR: /usr/bin/time not found"
     exit 1
@@ -84,39 +77,12 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-RUNNER="$TMP_DIR/render-with-fallback.sh"
-cat >"$RUNNER" <<'RUNNER_EOF'
-#!/bin/bash
-set -euo pipefail
-native_bin="$1"
-resvg_bin="$2"
-input="$3"
-out="$4"
-max_dimension="$5"
-
-mkdir -p "$(dirname "$out")"
-
-if "$native_bin" "$input" "$out" --max-dimension "$max_dimension" >/dev/null 2>&1; then
-    echo "native"
-    exit 0
-fi
-
-if "$resvg_bin" "$input" "$out" >/dev/null 2>&1; then
-    echo "resvg"
-    exit 0
-fi
-
-echo "fail"
-exit 1
-RUNNER_EOF
-chmod 755 "$RUNNER"
-
 mkdir -p "$EVAL_DIR"
 SOAK_CSV="$EVAL_DIR/soak.csv"
 SOAK_SUMMARY="$EVAL_DIR/soak-summary.txt"
 
 cat >"$SOAK_CSV" <<'CSV_EOF'
-run,fixture,policy,status,path_used,elapsed_ms,max_rss_bytes,peak_mem_bytes
+run,fixture,policy,status,elapsed_ms,max_rss_bytes,peak_mem_bytes
 CSV_EOF
 
 run_id=0
@@ -133,31 +99,26 @@ while [ "$run_id" -lt "$ROUNDS" ]; do
 
         policy="$(manifest_field "$rel" 3)"
         if [ -z "$policy" ]; then
-            policy="strict_compare"
+            policy="unlisted"
         fi
 
         slug="$(echo "$rel" | tr '/ ' '__' | tr -cd '[:alnum:]_.-')"
         out_path="$TMP_DIR/out/round-$round/$slug.png"
-        stdout_path="$TMP_DIR/stdout-$round-$slug.txt"
         time_log="$TMP_DIR/time-$round-$slug.log"
 
         set +e
-        /usr/bin/time -l "$RUNNER" "$NATIVE_BIN" "$RESVG_BIN" "$fixture" "$out_path" "$MAX_DIMENSION" >"$stdout_path" 2>"$time_log"
+        /usr/bin/time -l "$NATIVE_BIN" "$fixture" "$out_path" --max-dimension "$MAX_DIMENSION" >/dev/null 2>"$time_log"
         status_code=$?
         set -e
 
-        if [ "$status_code" -eq 0 ]; then
+        # A zero exit with no image is a failed render, not a pass.
+        if [ "$status_code" -eq 0 ] && [ -s "$out_path" ]; then
             status="ok"
         else
             status="fail"
         fi
 
-        path_used="$(tr -d '\r\n' < "$stdout_path" || true)"
-        if [ -z "$path_used" ]; then
-            path_used="unknown"
-        fi
-
-        elapsed_s="$(awk 'NR == 1 {print $1}' "$time_log")"
+        elapsed_s="$(awk '$2 == "real" {print $1; exit}' "$time_log")"
         elapsed_ms=""
         if [ -n "$elapsed_s" ]; then
             elapsed_ms="$(awk -v s="$elapsed_s" 'BEGIN {printf "%.2f", s * 1000}')"
@@ -166,7 +127,7 @@ while [ "$run_id" -lt "$ROUNDS" ]; do
         max_rss="$(awk '/maximum resident set size/ {print $1; exit}' "$time_log")"
         peak_mem="$(awk '/peak memory footprint/ {print $1; exit}' "$time_log")"
 
-        echo "$round,$rel,$policy,$status,$path_used,$elapsed_ms,$max_rss,$peak_mem" >>"$SOAK_CSV"
+        echo "$round,$rel,$policy,$status,$elapsed_ms,$max_rss,$peak_mem" >>"$SOAK_CSV"
     done < <(find "$FIXTURE_DIR" -type f \( -name "*.svg" -o -name "*.svgz" \) | sort)
 
     run_id=$round
@@ -174,11 +135,9 @@ done
 
 success_count="$(awk -F, 'NR > 1 && $4 == "ok" {count += 1} END {print count + 0}' "$SOAK_CSV")"
 fail_count="$(awk -F, 'NR > 1 && $4 == "fail" {count += 1} END {print count + 0}' "$SOAK_CSV")"
-native_count="$(awk -F, 'NR > 1 && $5 == "native" {count += 1} END {print count + 0}' "$SOAK_CSV")"
-fallback_count="$(awk -F, 'NR > 1 && $5 == "resvg" {count += 1} END {print count + 0}' "$SOAK_CSV")"
 
 latency_file="$TMP_DIR/latencies.txt"
-awk -F, 'NR > 1 && $4 == "ok" && $6 != "" {print $6}' "$SOAK_CSV" | sort -n >"$latency_file"
+awk -F, 'NR > 1 && $4 == "ok" && $5 != "" {print $5}' "$SOAK_CSV" | sort -n >"$latency_file"
 latency_samples="$(wc -l <"$latency_file" | tr -d '[:space:]')"
 
 p95_ms="0.00"
@@ -202,8 +161,8 @@ fi
 first_avg_rss="0"
 last_avg_rss="0"
 if [ "$success_count" -gt 0 ]; then
-    first_avg_rss="$(awk -F, -v n="$window" 'NR > 1 && $4 == "ok" {count += 1; if (count <= n) sum += $7} END {if (count == 0) {print 0} else {d = (count < n ? count : n); printf "%.0f", sum / d}}' "$SOAK_CSV")"
-    last_avg_rss="$(awk -F, -v n="$window" 'NR > 1 && $4 == "ok" {vals[++count] = $7} END {if (count == 0) {print 0; exit} start = count - n + 1; if (start < 1) start = 1; for (i = start; i <= count; i++) sum += vals[i]; printf "%.0f", sum / (count - start + 1)}' "$SOAK_CSV")"
+    first_avg_rss="$(awk -F, -v n="$window" 'NR > 1 && $4 == "ok" {count += 1; if (count <= n) sum += $6} END {if (count == 0) {print 0} else {d = (count < n ? count : n); printf "%.0f", sum / d}}' "$SOAK_CSV")"
+    last_avg_rss="$(awk -F, -v n="$window" 'NR > 1 && $4 == "ok" {vals[++count] = $6} END {if (count == 0) {print 0; exit} start = count - n + 1; if (start < 1) start = 1; for (i = start; i <= count; i++) sum += vals[i]; printf "%.0f", sum / (count - start + 1)}' "$SOAK_CSV")"
 fi
 
 rss_drift_pct="0.00"
@@ -211,20 +170,20 @@ if [ "$first_avg_rss" -gt 0 ]; then
     rss_drift_pct="$(awk -v a="$first_avg_rss" -v b="$last_avg_rss" 'BEGIN {printf "%.2f", ((b - a) / a) * 100}')"
 fi
 
-# Native-path gate. The resvg fallback launders native failure: with the
-# yen-svgthumb binary dead, every fixture still renders through resvg and the
-# latency/memory gates stay green. The manifest declares per-fixture policy, so
-# hold the strict_compare fixtures to the native path and let the
-# fallback_expected / expected_failure / baseline_limitation fixtures behave as
-# documented.
-strict_total="$(awk -F, 'NR > 1 && $3 == "strict_compare" {count += 1} END {print count + 0}' "$SOAK_CSV")"
-strict_native_ok="$(awk -F, 'NR > 1 && $3 == "strict_compare" && $4 == "ok" && $5 == "native" {count += 1} END {print count + 0}' "$SOAK_CSV")"
+# Policy gate. The manifest declares each fixture's outcome: every render_ok
+# run must succeed and every expected_failure run must fail. A fixture with any
+# other policy has no declared outcome and fails the gate.
+render_ok_total="$(awk -F, 'NR > 1 && $3 == "render_ok" {count += 1} END {print count + 0}' "$SOAK_CSV")"
+render_ok_pass="$(awk -F, 'NR > 1 && $3 == "render_ok" && $4 == "ok" {count += 1} END {print count + 0}' "$SOAK_CSV")"
+expected_failure_total="$(awk -F, 'NR > 1 && $3 == "expected_failure" {count += 1} END {print count + 0}' "$SOAK_CSV")"
+expected_failure_pass="$(awk -F, 'NR > 1 && $3 == "expected_failure" && $4 == "fail" {count += 1} END {print count + 0}' "$SOAK_CSV")"
+undeclared_total="$(awk -F, 'NR > 1 && $3 != "render_ok" && $3 != "expected_failure" {count += 1} END {print count + 0}' "$SOAK_CSV")"
 total_runs="$((success_count + fail_count))"
 expected_runs="$((fixture_count * ROUNDS))"
 
 latency_gate="FAIL"
 memory_gate="FAIL"
-native_gate="FAIL"
+policy_gate="FAIL"
 result_gate="FAIL"
 
 # Fail closed on an empty or short scan set: no fixtures rendered must never
@@ -233,8 +192,9 @@ if [ "$fixture_count" -gt 0 ] && [ "$total_runs" -eq "$expected_runs" ] && [ "$t
     result_gate="PASS"
 fi
 
-if [ "$strict_total" -gt 0 ] && [ "$strict_native_ok" -eq "$strict_total" ]; then
-    native_gate="PASS"
+if [ "$render_ok_total" -gt 0 ] && [ "$render_ok_pass" -eq "$render_ok_total" ] && \
+   [ "$expected_failure_pass" -eq "$expected_failure_total" ] && [ "$undeclared_total" -eq 0 ]; then
+    policy_gate="PASS"
 fi
 
 if float_le "$p95_ms" "$P95_TARGET_MS"; then
@@ -256,10 +216,10 @@ fi
     echo "Render/result gate: $result_gate"
     echo "Runs successful: $success_count"
     echo "Runs failed: $fail_count"
-    echo "Native renders: $native_count"
-    echo "Fallback renders (resvg): $fallback_count"
-    echo "strict_compare native renders: $strict_native_ok / $strict_total"
-    echo "Native path gate (all strict_compare native): $native_gate"
+    echo "render_ok runs rendered: $render_ok_pass / $render_ok_total"
+    echo "expected_failure runs failed closed: $expected_failure_pass / $expected_failure_total"
+    echo "Runs with no declared policy: $undeclared_total"
+    echo "Policy gate: $policy_gate"
     echo "Latency samples: $latency_samples"
     echo "p95 latency ms: $p95_ms"
     echo "Latency gate (p95 <= ${P95_TARGET_MS}ms): $latency_gate"
@@ -275,7 +235,7 @@ cat "$SOAK_SUMMARY"
 
 # Mirror the pdf/video soaks: compute gates AND act on them. Without this the
 # script printed FAIL and still exited 0.
-if [ "$result_gate" != "PASS" ] || [ "$native_gate" != "PASS" ] || \
+if [ "$result_gate" != "PASS" ] || [ "$policy_gate" != "PASS" ] || \
    [ "$latency_gate" != "PASS" ] || [ "$memory_gate" != "PASS" ]; then
     exit 1
 fi

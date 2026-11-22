@@ -49,22 +49,6 @@ bundle_vendor_bin "$FD_VENDOR_DIR" "fd" "fd" "ERROR: fd binary not found — req
 RG_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/ripgrep"
 bundle_vendor_bin "$RG_VENDOR_DIR" "rg" "rg" "ERROR: ripgrep binary not found — required for file browser grep" "ripgrep"
 
-# fzf (fuzzy finder for yazi)
-FZF_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/fzf"
-bundle_vendor_bin "$FZF_VENDOR_DIR" "fzf" "fzf" "ERROR: fzf binary not found — required for file browser fuzzy find"
-
-# zoxide (smart directory jump for yazi)
-ZOXIDE_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/zoxide"
-bundle_vendor_bin "$ZOXIDE_VENDOR_DIR" "zoxide" "zoxide" "ERROR: zoxide binary not found — required for file browser smart jump"
-
-# bat (syntax highlighting for yazi previews)
-BAT_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/bat"
-bundle_vendor_bin "$BAT_VENDOR_DIR" "bat" "bat" "ERROR: bat binary not found — required for file browser code preview"
-
-# jq (JSON formatting for yazi previews)
-JQ_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/jq"
-bundle_vendor_bin "$JQ_VENDOR_DIR" "jq" "jq" "ERROR: jq binary not found — required for file browser JSON preview"
-
 # lazygit (git TUI)
 LAZYGIT_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/lazygit"
 bundle_vendor_bin "$LAZYGIT_VENDOR_DIR" "lazygit" "lazygit" "ERROR: lazygit binary not found — required for git TUI workflow"
@@ -74,10 +58,6 @@ if LC_ALL=C grep -aFq "YEN loves:" "$APP_PATH/Contents/Resources/bin/lazygit"; t
     exit 1
 fi
 echo "    Verified lazygit is pure vendor (no patch marker)"
-
-# delta (git diff renderer)
-DELTA_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/delta"
-bundle_vendor_bin "$DELTA_VENDOR_DIR" "delta" "delta" "ERROR: delta binary not found — required for bundled git diff rendering"
 
 # zmx (session persistence for terminal panes)
 ZMX_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/zmx"
@@ -120,7 +100,7 @@ build_and_bundle_thumb() {
 build_and_bundle_thumb yen-vidthumb
 # yen-pdfthumb (native macOS PDF thumbnailer — replaces pdftoppm)
 build_and_bundle_thumb yen-pdfthumb
-# yen-svgthumb (native macOS SVG thumbnailer; resvg fallback remains for parity gaps)
+# yen-svgthumb (native macOS SVG thumbnailer)
 build_and_bundle_thumb yen-svgthumb
 
 # Remove legacy weather-helper artifacts during incremental/local builds.
@@ -137,9 +117,5 @@ rm -f "$APP_PATH/Contents/Resources/bin/calendar" 2>/dev/null || true
 
 # Native archive previews/extract use macOS bsdtar (libarchive) via Yazi plugins.
 # No vendored 7zip binary is bundled.
-
-# resvg (SVG previews for yazi)
-RESVG_VENDOR_DIR="$CUSTOMIZATIONS_DIR/vendor/resvg"
-bundle_vendor_bin "$RESVG_VENDOR_DIR" "resvg" "resvg" "ERROR: resvg binary not found — required for file browser SVG previews"
 
 : # Keep optional final checks from becoming a failed source command.

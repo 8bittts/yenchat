@@ -77,7 +77,7 @@ bunx react-doctor@latest . --verbose --scope changed --base main
 `lint`, `lint:fix` and the other script names carry the fleet meanings in `8leeai/_docs/13-starter-kit.md` → Script vocabulary.
 `.githooks/commit-msg` refuses AI attribution; `bun install` wires it through `prepare` (`scripts/setup-hooks.ts`), and `tests/156-commit-msg-hook.test.ts` proves it.
 Verify a native UI finding or fix in a running re-identified `zig-out` copy before reporting it; a code read, a unit test or an offscreen render is not evidence that a control renders or responds ([_docs/09-quality.md](_docs/09-quality.md) → Native Test Suite).
-The vendored `Config.zig` and bundled `jq` must exist before the full test suite.
+The vendored `Config.zig` and `zmx` must exist before the full test suite.
 Do not acknowledge a missing vendor tree as a successful verification run.
 A `/update-yen` vendor-phase Zig toolchain preflight failure means Ghostty raised `.minimum_zig_version`; install the required toolchain instead of setting `YEN_VENDOR_SKIP_TOOLCHAIN_PREFLIGHT=1`.
 
@@ -127,5 +127,5 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Isolate browser preview state | `yen-terminal/overlays/macos/Tests/Browser/WebPreviewRepresentableTests.swift` |
 | Use the shared web design system and verify layouts at desktop and mobile widths | `tests/55-web-ui-dom.test.tsx` checks shared shell behavior. Visual verification requires a browser. |
 | Regenerate public release notes when they change | `scripts/gen-release-notes.ts` generates the public data. Invocation is manual. |
-| Run the declared gates before commit with the bundled jq and the required Zig toolchain | `package.json` defines the lanes and `scripts/lib/zig-toolchain.sh` checks the compiler. Precommit invocation is manual. |
+| Run the declared gates before commit with the vendored zmx and the required Zig toolchain | `package.json` defines the lanes and `scripts/lib/zig-toolchain.sh` checks the compiler. Precommit invocation is manual. |
 | Verify the serving commit and run live checks after promotion | `tests/10-production.prod.ts` checks live routes. The ship workflow verifies the serving commit. |

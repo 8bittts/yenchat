@@ -551,7 +551,6 @@ final class MergeConflictResolutionModel: ObservableObject {
     @Published private(set) var statusMessage: String?
     @Published private(set) var errorMessage: String?
     @Published private(set) var selectedHunkDiffPreview: String = "Select a conflicted hunk to preview its patch."
-    @Published private(set) var selectedHunkDiffPreviewSource: IDEDiffPreviewSource = .plain
     @Published var pendingResolutionConfirmation: MergeConflictResolutionConfirmation?
     @Published var selectedFilePath: String? {
         didSet {
@@ -566,39 +565,28 @@ final class MergeConflictResolutionModel: ObservableObject {
     }
 
     private let runner: any MergeConflictRunning
-    private let renderDiffPreview: @Sendable (String) async -> IDEDiffRenderedPreview
     private let openInEditor: @MainActor (IDESemanticLocation) async -> String?
     private let choiceAuditQueue = MergeConflictChoiceAuditQueue()
     private var workingDirectory: String?
     private var loadTask: Task<Void, Never>?
     private var applyTask: Task<Void, Never>?
-    private var previewTask: Task<Void, Never>?
     private var loadTaskGeneration = 0
     private var applyTaskGeneration = 0
-    private var previewTaskGeneration = 0
     private var choiceAuditGeneration = 0
     private var editorOpenGeneration = 0
     private var choicesByHunkID: [String: MergeConflictResolutionChoice] = [:]
-    private var renderedPreviewCache: [String: IDEDiffRenderedPreview] = [:]
-    private var renderedPreviewCacheOrder: [String] = []
-    private static let renderedPreviewCacheLimit = 64
 
     init(
         runner: any MergeConflictRunning = MergeConflictShellClient(),
-        openInEditor: @escaping @MainActor (IDESemanticLocation) async -> String? = { await IDEEditorNavigator.open($0) },
-        renderDiffPreview: @escaping @Sendable (String) async -> IDEDiffRenderedPreview = {
-            await IDEDiffPreviewRenderer.renderAsync(diff: $0)
-        }
+        openInEditor: @escaping @MainActor (IDESemanticLocation) async -> String? = { await IDEEditorNavigator.open($0) }
     ) {
         self.runner = runner
         self.openInEditor = openInEditor
-        self.renderDiffPreview = renderDiffPreview
     }
 
     deinit {
         loadTask?.cancel()
         applyTask?.cancel()
-        previewTask?.cancel()
     }
 
     var selectedFile: MergeConflictFileSnapshot? {
@@ -658,10 +646,6 @@ final class MergeConflictResolutionModel: ObservableObject {
         return MergeConflictParser.resolvedContent(for: selectedFile, choices: choicesByHunkID)
     }
 
-    var selectedHunkDiffPreviewLabel: String {
-        selectedHunkDiffPreviewSource.label
-    }
-
     var selectedFileStatusSummary: String {
         guard let selectedFile else {
             return "No conflicted file selected."
@@ -686,17 +670,11 @@ final class MergeConflictResolutionModel: ObservableObject {
         if normalized != self.workingDirectory {
             cancelLoading()
             cancelApplying()
-            previewTask?.cancel()
-            previewTask = nil
-            previewTaskGeneration += 1
             snapshot = nil
             selectedFilePath = nil
             selectedHunkID = nil
             choicesByHunkID = [:]
-            renderedPreviewCache = [:]
-            renderedPreviewCacheOrder = []
             selectedHunkDiffPreview = "Select a conflicted hunk to preview its patch."
-            selectedHunkDiffPreviewSource = .plain
             statusMessage = nil
             errorMessage = nil
             pendingResolutionConfirmation = nil
@@ -709,22 +687,16 @@ final class MergeConflictResolutionModel: ObservableObject {
     }
 
     /// Drop every retained conflict payload so the process-lifetime singleton
-    /// controller does not keep a repo's full conflict snapshot plus up to 64
-    /// rendered previews resident after the workspace window closes.
+    /// controller does not keep a repo's full conflict snapshot resident after
+    /// the workspace window closes.
     func releaseHeldState() {
         cancelLoading()
         cancelApplying()
-        previewTask?.cancel()
-        previewTask = nil
-        previewTaskGeneration += 1
         snapshot = nil
         selectedFilePath = nil
         selectedHunkID = nil
         choicesByHunkID = [:]
-        renderedPreviewCache = [:]
-        renderedPreviewCacheOrder = []
         selectedHunkDiffPreview = "Select a conflicted hunk to preview its patch."
-        selectedHunkDiffPreviewSource = .plain
         statusMessage = nil
         errorMessage = nil
         pendingResolutionConfirmation = nil
@@ -1057,21 +1029,13 @@ final class MergeConflictResolutionModel: ObservableObject {
     }
 
     private func syncSelectedHunkPreview() {
-        // Invalidate any in-flight render so a stale delta result can't clobber a
-        // newer selection (or a placeholder set by the guards below).
-        previewTaskGeneration += 1
-        previewTask?.cancel()
-        previewTask = nil
-
         guard let selectedFile, let selectedHunk else {
             selectedHunkDiffPreview = "Select a conflicted hunk to preview its patch."
-            selectedHunkDiffPreviewSource = .plain
             return
         }
 
         guard let choice = choicesByHunkID[selectedHunk.id] else {
             selectedHunkDiffPreview = "Choose ours, theirs, or both to preview the patch for \(selectedHunkLocation?.target ?? selectedFile.path)."
-            selectedHunkDiffPreviewSource = .plain
             return
         }
 
@@ -1092,46 +1056,7 @@ final class MergeConflictResolutionModel: ObservableObject {
             newLines: resolvedLines
         )
 
-        // `delta` output is deterministic per diff, so a re-visited hunk/choice
-        // renders synchronously from the cache with no subprocess.
-        if let cached = renderedPreviewCache[syntheticDiff] {
-            selectedHunkDiffPreview = cached.text
-            selectedHunkDiffPreviewSource = cached.source
-            return
-        }
-
-        // Show the raw patch instantly, then upgrade to the delta-rendered preview
-        // once the off-main render completes. The subprocess now runs off the main
-        // actor (IDEBlockingProcessRunner), so selecting a hunk never blocks the UI.
         selectedHunkDiffPreview = syntheticDiff
-        selectedHunkDiffPreviewSource = .plain
-
-        let taskGeneration = previewTaskGeneration
-        let render = renderDiffPreview
-        previewTask = Task { [weak self] in
-            let rendered = await render(syntheticDiff)
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                guard let self, self.previewTaskGeneration == taskGeneration else { return }
-                self.insertRenderedPreview(rendered, for: syntheticDiff)
-                self.selectedHunkDiffPreview = rendered.text
-                self.selectedHunkDiffPreviewSource = rendered.source
-                self.previewTask = nil
-            }
-        }
-    }
-
-    /// Memoizes a rendered hunk preview by its exact diff string so navigating back
-    /// to an already-rendered hunk/choice reuses the result instead of re-spawning
-    /// `delta`. Bounded to avoid unbounded growth across a long session.
-    private func insertRenderedPreview(_ rendered: IDEDiffRenderedPreview, for syntheticDiff: String) {
-        guard renderedPreviewCache[syntheticDiff] == nil else { return }
-        renderedPreviewCache[syntheticDiff] = rendered
-        renderedPreviewCacheOrder.append(syntheticDiff)
-        if renderedPreviewCacheOrder.count > Self.renderedPreviewCacheLimit {
-            let evicted = renderedPreviewCacheOrder.removeFirst()
-            renderedPreviewCache.removeValue(forKey: evicted)
-        }
     }
 }
 #endif

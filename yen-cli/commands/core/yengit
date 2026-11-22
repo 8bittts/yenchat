@@ -14,7 +14,7 @@ Options:
   --base <ref>            Review changes from <ref>...HEAD
   --file <path>           Focus the diff on one repo-relative file
   --list-hunks            Print deterministic hunk targets for the selected diff
-  --hunk <path:line[:col]> Render one semantic hunk target with delta
+  --hunk <path:line[:col]> Render one semantic hunk target
   --help                  Show this help
 
 Notes:
