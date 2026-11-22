@@ -56,7 +56,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 - [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
 - [ ] Lower the cost of the first analytics read: a standalone harness took 29 s and peaked at 195 MB resident on 6.2 GB of Claude Code records, with Codex rollouts alone at 107 MB and a 97 MB scan database in the temporary folder; later reads took under 0.1 s.
 - [ ] Validate day rollover, locked databases, concurrent provider writes and repeated toggles in the release candidate.
-- [ ] Connect a real personal Cursor API key in a signed build and confirm both Cursor pools, the Grok Bot pool and Disconnect; only mocked responses and a rejected key have run.
 
 ### Experimental moving wallpaper
 
