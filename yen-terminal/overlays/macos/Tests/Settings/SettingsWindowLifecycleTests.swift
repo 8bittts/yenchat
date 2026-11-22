@@ -994,6 +994,57 @@ struct SettingsWindowLifecycleTests {
     }
 
 
+    @Test func externalConfigReloadKeepsAPendingRealTimeEdit() throws {
+        // The debounced write reads the controller's values when it fires. An
+        // external reload inside that window re-read them from disk, so the write
+        // stored the old value and the edit was lost.
+        let controller = SettingsController.shared
+        let originalCopyOnSelect = controller.copyOnSelect
+        let originalThemeReloadHook = controller.testThemeNameOnConfigReload
+        let tempRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let configURL = tempRoot.appendingPathComponent("config.yen", isDirectory: false)
+
+        SettingsController._testSetConfigPathOverride(configURL.path)
+        reset(controller)
+        defer {
+            controller.testThemeNameOnConfigReload = originalThemeReloadHook
+            controller.copyOnSelect = originalCopyOnSelect
+            SettingsController._testSetConfigPathOverride(nil)
+            try? FileManager.default.removeItem(at: tempRoot)
+            reset(controller)
+        }
+
+        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        let baselineConfig = "copy-on-select = \(originalCopyOnSelect ? "both" : "false")\n"
+        try baselineConfig.write(to: configURL, atomically: true, encoding: .utf8)
+        controller.applyConfigContentsForTesting(baselineConfig)
+        let selectedTheme = controller.selectedTheme
+        controller.testThemeNameOnConfigReload = { selectedTheme }
+
+        controller.show(pane: .general)
+        waitForSettingsBootstrapToFinish(controller)
+
+        controller.copyOnSelect = !originalCopyOnSelect
+        #expect(controller._testHasPendingRealTimeConfigSync)
+
+        // Another writer changes a key Settings does not manage, and the app
+        // reloads its config before the debounce ends.
+        let externalLine = "mouse-hide-while-typing = true"
+        let onDisk = try String(contentsOf: configURL, encoding: .utf8)
+        try (onDisk + externalLine + "\n").write(to: configURL, atomically: true, encoding: .utf8)
+        NotificationCenter.default.post(name: .yenConfigDidReload, object: nil)
+
+        // The edit is on disk before the re-read, so the re-read returns it and
+        // no later write can replace it.
+        #expect(controller.copyOnSelect == !originalCopyOnSelect)
+        #expect(!controller._testHasPendingRealTimeConfigSync)
+
+        let contents = try String(contentsOf: configURL, encoding: .utf8)
+        #expect(contents.contains("copy-on-select = \((!originalCopyOnSelect) ? "both" : "false")"))
+        #expect(contents.contains(externalLine))
+    }
+
     @Test func rapidThemePreviewDoesNotSpamTheStatusNotice() throws {
         let controller = SettingsController.shared
         let originalSelectedTheme = controller.selectedTheme
