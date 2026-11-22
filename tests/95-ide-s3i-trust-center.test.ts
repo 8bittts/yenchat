@@ -342,57 +342,61 @@ describe("IDE S3I workspace trust center", () => {
 		{ timeout: 15_000 },
 	);
 
-	test("trust status keeps expired share inspection read-only", () => {
-		const stateDir = ideTemp("yen-ide-trust-share-readonly-");
-		const project = ideTemp("yen-ide-trust-share-project-");
-		const root = realpathSync(project);
-		const env = { YEN_IDE_STATE_DIR: stateDir };
-		const hash = projectHash(root);
-		const shareProjectDir = join(stateDir, "share", hash);
-		const shareStateFile = join(shareProjectDir, "state.env");
-		const originalState = [
-			"status=running",
-			`root=${root}`,
-			"transport=upterm",
-			"mode=read-only",
-			"host_identity=tester@host",
-			`repo_label=${project.split("/").pop() ?? "repo"}`,
-			"session_id=share-test",
-			"started_at=2026-03-20T00:00:00Z",
-			"expires_at=2026-03-20T00:00:00Z",
-			"expires_epoch=1",
-			"auth_mode=passphrase",
-			"share_token=token-should-hide",
-			"transport_status=running",
-			"last_error=",
-			"revoked_at=",
-			"expired_at=",
-			"ttl_seconds=3600",
-			"cli=",
-			"web_url=",
-			"",
-		].join("\n");
+	test(
+		"trust status keeps expired share inspection read-only",
+		() => {
+			const stateDir = ideTemp("yen-ide-trust-share-readonly-");
+			const project = ideTemp("yen-ide-trust-share-project-");
+			const root = realpathSync(project);
+			const env = { YEN_IDE_STATE_DIR: stateDir };
+			const hash = projectHash(root);
+			const shareProjectDir = join(stateDir, "share", hash);
+			const shareStateFile = join(shareProjectDir, "state.env");
+			const originalState = [
+				"status=running",
+				`root=${root}`,
+				"transport=upterm",
+				"mode=read-only",
+				"host_identity=tester@host",
+				`repo_label=${project.split("/").pop() ?? "repo"}`,
+				"session_id=share-test",
+				"started_at=2026-03-20T00:00:00Z",
+				"expires_at=2026-03-20T00:00:00Z",
+				"expires_epoch=1",
+				"auth_mode=passphrase",
+				"share_token=token-should-hide",
+				"transport_status=running",
+				"last_error=",
+				"revoked_at=",
+				"expired_at=",
+				"ttl_seconds=3600",
+				"cli=",
+				"web_url=",
+				"",
+			].join("\n");
 
-		mkdirSync(shareProjectDir, { recursive: true });
-		writeFileSync(shareStateFile, originalState, "utf8");
+			mkdirSync(shareProjectDir, { recursive: true });
+			writeFileSync(shareStateFile, originalState, "utf8");
 
-		const beforeTimeline = existsSync(join(stateDir, "timeline.log"))
-			? readFileSync(join(stateDir, "timeline.log"), "utf8")
-			: "";
-		const status = runYen(
-			["ide", "trust", "status", "--project", project, "--format", "json"],
-			env,
-			project,
-		);
-		expect(status.status).toBe(0);
-		const payload = JSON.parse(status.stdout ?? "{}");
-		expect(payload.capabilities.share.state).toBe("expired");
-		expect(payload.capabilities.share.active).toBe(false);
-		expect(payload.capabilities.share.shareToken).toBe("");
-		expect(readFileSync(shareStateFile, "utf8")).toBe(originalState);
-		const afterTimeline = existsSync(join(stateDir, "timeline.log"))
-			? readFileSync(join(stateDir, "timeline.log"), "utf8")
-			: "";
-		expect(afterTimeline).toBe(beforeTimeline);
-	});
+			const beforeTimeline = existsSync(join(stateDir, "timeline.log"))
+				? readFileSync(join(stateDir, "timeline.log"), "utf8")
+				: "";
+			const status = runYen(
+				["ide", "trust", "status", "--project", project, "--format", "json"],
+				env,
+				project,
+			);
+			expect(status.status).toBe(0);
+			const payload = JSON.parse(status.stdout ?? "{}");
+			expect(payload.capabilities.share.state).toBe("expired");
+			expect(payload.capabilities.share.active).toBe(false);
+			expect(payload.capabilities.share.shareToken).toBe("");
+			expect(readFileSync(shareStateFile, "utf8")).toBe(originalState);
+			const afterTimeline = existsSync(join(stateDir, "timeline.log"))
+				? readFileSync(join(stateDir, "timeline.log"), "utf8")
+				: "";
+			expect(afterTimeline).toBe(beforeTimeline);
+		},
+		{ timeout: 15_000 },
+	);
 });
