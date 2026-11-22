@@ -4,7 +4,9 @@
 //! The macOS app marks a pane by setting YEN_PERSISTENT_SESSION=<pane UUID> in
 //! the surface environment. Exec.zig calls `wrapFromEnv` after shell
 //! integration has rewritten the command for the real shell, so integration
-//! still applies to the shell zmx starts. The marker never reaches the child.
+//! still applies to the shell zmx starts. The marker never reaches the child,
+//! and neither does a `ZMX_SESSION` the app inherited from the pane that
+//! launched it, which zmx would read as a nested attach and refuse.
 //!
 //! This file depends only on `std`, so `zig test` runs it standalone; the
 //! command union is taken as `anytype` with the engine's `shell`/`direct` shape.
@@ -52,7 +54,8 @@ pub fn Prepared(comptime Command: type) type {
 
 /// Returns `command` wrapped in `zmx attach <name>` when the environment marks
 /// the pane as persistent and the bundled zmx exists; otherwise `command`
-/// unchanged. Always removes the marker from `env`.
+/// unchanged. Always removes the marker and an inherited `ZMX_SESSION` from
+/// `env`: a pane is never inside the session the app was launched from.
 pub fn prepare(
     alloc: Allocator,
     io: std.Io,
@@ -61,6 +64,7 @@ pub fn prepare(
     resources_dir: ?[]const u8,
 ) !Prepared(@TypeOf(command)) {
     const unchanged: Prepared(@TypeOf(command)) = .{ .command = command };
+    _ = env.orderedRemove(inherited_session_key);
     const recorded: ?[]const u8 = if (env.get(zmx_key)) |v| try alloc.dupe(u8, v) else null;
     _ = env.orderedRemove(zmx_key);
     const raw = env.get(env_key) orelse return unchanged;

@@ -43,6 +43,7 @@ A persistent pane runs inside the bundled zmx (`Contents/Resources/bin/zmx`, ven
 Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSessions`. It is on by default only in the release app (`com.yenchat.yen`), so the Debug build, its test host and the verify copy never start sessions in the user's state directory unless the preference is set.
 - The app only marks a pane. `PersistentSessions.prepare` sets `YEN_PERSISTENT_SESSION=<pane UUID>`, `ZMX_DIR=~/.local/state/yen/zmx` and `ZMX_DIR_MODE=0700`, and always overwrites or removes an inherited marker, because a split or tab inherits its parent's environment.
 - The engine wraps the final command in `src/termio/yen_session.zig` after shell integration, as `zmx attach <UUID> /bin/bash --noprofile --norc -c 'exec -l <shell>'`, so integration and login semantics apply to the shell zmx starts; the marker never reaches the child.
+  The engine also drops an inherited `ZMX_SESSION` from every pane, because an app launched from a persistent pane inherits that pane's value and zmx refuses an attach under it as nested.
 - A restored pane keeps its UUID, so restore reattaches to the same session and zmx replays the screen and scrollback.
 - A pane with an explicit command (AppleScript, palette actions, file openers) stays ephemeral, and so does a pane whose socket path would pass 103 bytes.
 - zmx stores local diagnostic logs under `<ZMX_DIR>/logs`.
