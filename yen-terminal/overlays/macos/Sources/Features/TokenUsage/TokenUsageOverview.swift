@@ -1,6 +1,13 @@
 import AppKit
 import SwiftUI
 
+/// Bar colors for the providers after the brand-colored first one, as sRGB components.
+enum TokenBarTone {
+    static func neutrals(dark: Bool) -> [[Double]] {
+        [[0.78, 0.73, 0.65], [0.66, 0.70, 0.76], [0.54, 0.62, 0.57]]
+    }
+}
+
 struct TokenUsageOverview: View {
     @ObservedObject var snapshot: TokenMenuSnapshot
     @ObservedObject var connection: TokenPlanConnection
@@ -13,8 +20,10 @@ struct TokenUsageOverview: View {
     @AppStorage("com.yenchat.yen.tokenUsage.twoColumns") private var twoColumns = false
     private var counts: TokenUsageIndex.Counts { snapshot.counts ?? [:] }
     private var total: Int { counts.values.reduce(0, +) }
-    private let tones: [Color] = [.yenBrand, Color(red: 0.78, green: 0.73, blue: 0.65),
-                                   Color(red: 0.66, green: 0.70, blue: 0.76), Color(red: 0.54, green: 0.62, blue: 0.57)]
+    @Environment(\.colorScheme) private var scheme
+    private var tones: [Color] {
+        [.yenBrand] + TokenBarTone.neutrals(dark: scheme == .dark).map { Color(red: $0[0], green: $0[1], blue: $0[2]) }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {

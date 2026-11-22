@@ -73,4 +73,18 @@ struct TokenPlanUsageTests {
         #expect(try #require(TokenPlanReading.codex(limit("codex", 610), at: next)).isRollingPlaceholder(after: first))
         #expect(try !#require(TokenPlanReading.codex(limit("codex", 600), at: next)).isRollingPlaceholder(after: first))
     }
+
+    @Test func barTonesStayVisibleOnLightAndDarkPanels() {
+        func luminance(_ rgb: [Double]) -> Double {
+            let linear = rgb.map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+        }
+        // The panel draws on the window background: white in light themes, near black in dark ones.
+        for (dark, background) in [(false, [1.0, 1.0, 1.0]), (true, [0.157, 0.157, 0.157])] {
+            for tone in TokenBarTone.neutrals(dark: dark) {
+                let pair = [luminance(tone), luminance(background)].sorted()
+                #expect((pair[1] + 0.05) / (pair[0] + 0.05) >= 3, "tone \(tone) on a \(dark ? "dark" : "light") panel")
+            }
+        }
+    }
 }
