@@ -2,9 +2,9 @@ Ghostty Source Code (Vendored for YEN)
 =====================================
 
 Vendored from: https://github.com/ghostty-org/ghostty
-Version: 9ad3c422222e45b32c5f9ab9f4cd32e0e3694ef7
-Commit: 9ad3c422222e45b32c5f9ab9f4cd32e0e3694ef7
-Vendored Date: 2026-11-20
+Version: 6d244209978e599277904ff3ced7b8a2ebcc528d
+Commit: 6d244209978e599277904ff3ced7b8a2ebcc528d
+Vendored Date: 2026-11-21
 License: MIT
 
 Structure
@@ -17,4 +17,4 @@ Building
 --------
 cd yen-terminal && ./customizations/build-release.sh
 
-Updated: 2026-11-20 to 9ad3c422222e45b32c5f9ab9f4cd32e0e3694ef7 (9ad3c422222e45b32c5f9ab9f4cd32e0e3694ef7)
+Updated: 2026-11-21 to 6d244209978e599277904ff3ced7b8a2ebcc528d (6d244209978e599277904ff3ced7b8a2ebcc528d)
