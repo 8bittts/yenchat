@@ -450,9 +450,9 @@ else
     if [ ! -f "$MAIN_BINARY" ]; then
         fail "Main binary not found at Contents/MacOS/yen"
     else
-        ARCHS="$(lipo -archs "$MAIN_BINARY" 2>/dev/null || true)"
-        echo "$ARCHS" | grep -qw "arm64" || fail "Main binary missing arm64 slice"
-        echo "$ARCHS" | grep -qw "x86_64" || fail "Main binary missing x86_64 slice"
+        if ! bash "$REPO_ROOT/scripts/lib/verify-macos-floor.sh" "$BUILT_APP"; then
+            fail "Packaged executable architecture, platform, or macOS deployment target is invalid"
+        fi
     fi
 
     # Info.plist checks

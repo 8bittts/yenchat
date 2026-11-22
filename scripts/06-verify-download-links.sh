@@ -38,55 +38,12 @@ echo "  Current version: ${VERSION}"
 echo ""
 
 VERIFICATION_FAILED=0
-HOME_CLIENT_ASSERTIONS=0
 gate_begin 06-verify-download-links
-
-# Verify app/home-client.tsx uses correct patterns
-HOME_CLIENT="$REPO_ROOT/app/home-client.tsx"
-if [ ! -f "$HOME_CLIENT" ]; then
-    echo "ERROR: app/home-client.tsx not found"
-    gate_unit_skipped home-client-links "app/home-client.tsx not found"
-    gate_unit_skipped version-json-url "not reached"
-    gate_end 1
-fi
-
-# Check for the /download redirect route (DMG hosted on GitHub Releases).
-# The constant must be the /download URL, or the hero check below proves nothing.
-DOWNLOAD_CTA="$REPO_ROOT/lib/analytics/download-cta.ts"
-if grep -q 'href={DOWNLOAD_HREF}' "$HOME_CLIENT" && \
-   grep -q 'export const DOWNLOAD_HREF = "/download";' "$DOWNLOAD_CTA"; then
-    HOME_CLIENT_ASSERTIONS=$((HOME_CLIENT_ASSERTIONS + 1))
-    echo "OK: app/home-client.tsx: DMG link uses the /download redirect"
+if (cd "$REPO_ROOT" && bun scripts/verify-home-downloads.tsx); then
+    gate_unit_ran home-client-links "rendered_versions=2"
 else
-    echo "ERROR: app/home-client.tsx: DMG link does not use the /download route"
-    echo "  Expected pattern: href={DOWNLOAD_HREF} with DOWNLOAD_HREF in lib/analytics/download-cta.ts"
+    gate_unit_ran home-client-links "rendered link verification failed"
     VERIFICATION_FAILED=1
-fi
-
-# Check for dynamic SHA256 link pattern (sha256 file still in git)
-if grep -q 'getVersionFilename(version)' "$HOME_CLIENT" && \
-   grep -q 'href={\`/stable/yen-\${versionFilename}\.dmg\.sha256\`}' "$HOME_CLIENT"; then
-    HOME_CLIENT_ASSERTIONS=$((HOME_CLIENT_ASSERTIONS + 1))
-    echo "OK: app/home-client.tsx: SHA256 link is dynamic"
-else
-    echo "ERROR: app/home-client.tsx: SHA256 link is not dynamic"
-    echo "  Expected pattern: shared version filename helper + dynamic checksum href"
-    VERIFICATION_FAILED=1
-fi
-
-# Check that HomeClient receives version prop
-if grep -q 'HomeClientProps' "$HOME_CLIENT" && grep -q 'version: string' "$HOME_CLIENT"; then
-    HOME_CLIENT_ASSERTIONS=$((HOME_CLIENT_ASSERTIONS + 1))
-    echo "OK: app/home-client.tsx: HomeClient receives version prop"
-else
-    echo "ERROR: app/home-client.tsx: HomeClient missing version prop"
-    VERIFICATION_FAILED=1
-fi
-
-if [ "$HOME_CLIENT_ASSERTIONS" -gt 0 ]; then
-    gate_unit_ran home-client-links "asserted=$HOME_CLIENT_ASSERTIONS/3"
-else
-    gate_unit_skipped home-client-links "no assertion passed"
 fi
 
 # Verify version.json has a GitHub Releases URL

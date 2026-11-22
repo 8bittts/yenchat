@@ -84,7 +84,7 @@ The public release notes voice (blog.yen.chat/releases) comes from the hand-cura
 - Update `_docs/05-infrastructure.md` (desktop build workflow / overlay rules)
 - Update `_docs/04-security.md` (vendor overlap + bundled inventory)
 - Update `_docs/12-commands.md` and `_docs/13-desktop-features.md` when command surfaces or UX changed
-- Update user-facing docs at yen.chat/docs when public behavior changed
+- Update the field guide at yen.chat/#guide when public behavior changes
 - Update `scripts/04-verify-branding.sh` and matching doc check counts when new release checks are added
 
 Skip only the feature-docs subsection for a bugfix-only release; the release-notes subsection is never skipped.
@@ -102,7 +102,8 @@ gh api repos/8bittts/yenchat/commits/$S/status --jq '[.statuses[] | "\(.context)
 
 Poll until `Vercel=success`; `pending` is a build still running, and `failure` or `error` stops the release for a build-log review. A cancelled build (the `ignoreCommand` saw a HEAD without `[deploy]`) shows no `Vercel=success` for that SHA and needs an empty `[deploy]` commit.
 Check the weekly story at `https://blog.yen.chat/releases` and the version at `/stable/version.json`.
-Check that `/stable/appcast.xml` and `/docs` return 200.
+Check that `/stable/appcast.xml` and the homepage return 200.
+Verify that the homepage contains the field guide and the legacy `/docs` URL redirects there.
 A GET to `/download` returns a 302 whose Location matches the GitHub asset URL in the manifest.
 The route records no download.
 

@@ -203,15 +203,10 @@ if [ -x "$GENAPPCAST_TOOL" ] && [ -n "$DELTA_SCRATCH" ] && [ -d "$DELTA_SCRATCH"
             -o "$DELTA_APPCAST_OUT" \
             "$DELTA_ARCHIVES" 2>&1); then
 
-            if [ -f "$DELTA_APPCAST_OUT" ] && grep -q 'sparkle:deltas' "$DELTA_APPCAST_OUT"; then
-                DELTA_FRAGMENT=$(awk '/<sparkle:deltas>/,/<\/sparkle:deltas>/' "$DELTA_APPCAST_OUT")
-            fi
+            DELTA_FRAGMENT=$(python3 "$REPO_ROOT/scripts/lib/select-release-deltas.py" \
+                "$DELTA_APPCAST_OUT" "$VERSION_INT" "$DELTA_ARCHIVES" "$RELEASE_DIR")
+            echo "  Delta(s) generated for build $VERSION_INT: $(find "$RELEASE_DIR" -maxdepth 1 -name '*.delta' | wc -l | tr -d ' ')"
 
-            if [ -n "$DELTA_FRAGMENT" ]; then
-                mkdir -p "$RELEASE_DIR"
-                find "$DELTA_ARCHIVES" -maxdepth 1 -name '*.delta' -exec mv {} "$RELEASE_DIR/" \;
-                echo "  Delta(s) generated: $(find "$RELEASE_DIR" -maxdepth 1 -name '*.delta' | wc -l | tr -d ' ')"
-            fi
         else
             echo "  WARNING: delta generation failed (non-fatal, shipping full-DMG-only): $GENAPPCAST_OUTPUT"
         fi

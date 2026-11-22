@@ -72,6 +72,7 @@ Step 5's universal build compiles both architectures, so there is no separate x8
 **Release notes are a required part of the release phase, not optional docs.** Step 8 prepares the version's factual line in `RELEASE_COPY` for the public SEO gate.
 Step 11 creates or refreshes the current Monday-start `RELEASE_WEEK_COPY` story in `lib/release-notes/release-notes-copy.ts`. The weekly story must establish the meaningful theme, name the most important concrete improvements, and close on why the updates are better to use or worth downloading; do not concatenate every build into a feature inventory. It must be broken into blank-line-separated paragraphs (a literal `\n\n` in the string, rendered one `<p>` each — 2-3 paragraphs for a substantial week, 1-2 for a thin one) and written so the reader wants to try it: lead with the change a person would feel, in the second person, preferring one concrete detail over a category.
 Step 11 then runs `scripts/gen-release-notes.ts` + `bun run build` and ships `docs: publish v<version> release notes [deploy]` as a short follow-up commit. Release evals therefore use Git history filtering to validate the newest matching versioned release commit, not `HEAD`. See `references/zip-release.md` Step 11 and `_docs/10-gtm.md` -> "Release Notes".
+Verify the published manual on the homepage and the permanent redirect from the former docs route.
 
 ## Vendor Roster
 

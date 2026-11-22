@@ -35,7 +35,7 @@ YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the deci
 - `_docs/todos.md` is the only backlog; no TODOs live anywhere else.
 - State each constraint once, in its owner doc, and cite it elsewhere.
 - Reference docs carry no history: no changelogs, dated receipts or review notes. Git history and commit messages hold them, and blog.yen.chat/releases is the customer-facing history.
-- Update public `/docs`, `public/llms.txt`, and the owning internal document when a public feature contract changes.
+- Update the public manual at `/#guide`, `public/llms.txt`, and the owning internal document when a public feature contract changes.
 - Update privacy and terms when a service, data flow, license, or provider changes.
 
 For design or redesign work, read `_docs/02-design-system.md` first for the public design system.
@@ -54,7 +54,7 @@ Then read the affected surface owner from `_docs/00-docs-map.md`, with `_docs/02
 - Use the tokens and shared utilities in `app/globals.css`.
 - Reuse `PageShell`, `DocPageShell`, `DocSection`, shared header, and shared footer.
 - Every indexable page needs a canonical URL, contextual Open Graph metadata, contextual Twitter metadata, and `index,follow` robots directives.
-- Keep `/library` noindex and outside public discovery.
+- Keep the former `/library` URL redirected and outside public discovery.
 - Route blog.yen.chat only in `proxy.ts` (`lib/http/blog-host.ts`); a `next.config.ts` host rewrite would serve the static blog pages a nonce CSP and break hydration ([_docs/10-gtm.md](_docs/10-gtm.md#blog-blogyenchat)).
 - Regenerate release notes with `bun scripts/gen-release-notes.ts` after editing release copy or version history.
 - Run `bun run seo:source-check` after changing public comparison claims.

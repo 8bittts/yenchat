@@ -402,6 +402,39 @@ exit "$ISSUES"
 		expect(ghosttyScript).not.toContain("local existing_cmd");
 	});
 
+	test("a feed with two macOS floors stages only the requested build’s signed patch", () => {
+		const scratch = mkdtempSync(join(tmpdir(), "yen-multiple-builds-"));
+		try {
+			const dest = join(scratch, "staged");
+			mkdirSync(dest);
+			const item = (target: string) =>
+				`<item><sparkle:version>${target}</sparkle:version><sparkle:deltas><enclosure url="https://example.com/YEN${target}-1280.delta" sparkle:deltaFrom="1280" length="1" sparkle:edSignature="signature-${target}" /></sparkle:deltas></item>`;
+			const feed = join(scratch, "feed.xml");
+			writeFileSync(
+				feed,
+				`<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel>${item("1283")}${item("1284")}</channel></rss>`,
+			);
+			writeFileSync(join(scratch, "YEN1284-1280.delta"), "x");
+			writeFileSync(join(scratch, "YEN1283-1280.delta"), "y");
+			const run = spawnSync(
+				"python3",
+				[
+					join(repoRoot, "scripts/lib/select-release-deltas.py"),
+					feed,
+					"1284",
+					scratch,
+					dest,
+				],
+				{ encoding: "utf8" },
+			);
+			expect(run.status, run.stderr).toBe(0);
+			expect(readdirSync(dest)).toEqual(["YEN1284-1280.delta"]);
+			expect(run.stdout).toContain('sparkle:edSignature="signature-1284"');
+			expect(run.stdout).not.toContain("1283");
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
 	test("each Sparkle item offers only patches that produce its build", () => {
 		const xml = readFileSync(
 			join(repoRoot, "public/stable/appcast.xml"),

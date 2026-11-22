@@ -248,7 +248,8 @@ Sparkle alone decides between its full dialog (first sighting of a version) and 
 
 Delta updates: `generate-appcast.sh` downloads the DMGs of up to five prior GitHub Releases, runs the vendored `generate_appcast` in a scratch directory, and splices only `<sparkle:deltas>` into YEN's hand-built appcast item.
 Every delta step is non-fatal and falls back to a full-DMG update.
-Each release's deltas are assets of that release, so a new appcast never points at an earlier release's deltas.
+Sparkle may emit multiple items when the minimum macOS version changes.
+Select only the item matching the target build and copy its signed patches into the release directory.
 `scripts/manual/17-verify-sparkle-delta-dryrun.sh` re-proves the mechanics with no writes.
 `appcast.xml` generation fails closed on an invalid `minOS`, and `05-detect-failures.sh` verifies `sparkle:edSignature` against the DMG.
 
