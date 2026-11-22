@@ -26,6 +26,8 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - Public counts come from manifests or scripts (the curated theme manifest for themes), never from old copy; never advertise retired custom sounds or sound packs.
 - Historical public assets such as `public/skills.md` may stay reachable but are labeled historical.
 - Performance claims: the upstream engine's "about 100x faster than Terminal.app" is its own qualitative claim with no published method; the measured comparison is one workload in its devlog 006 (73 ms versus iTerm2's 470 ms). Never present either as YEN's benchmark, and never call YEN "fastest".
+- The site deploys ahead of the desktop app, so the manual, `public/llms.txt` and a blog update note describe what the shipped build does: `public/stable/version.json` names it.
+  Write a desktop change that has not shipped as "Starting in YEN <next version>", and keep the current behavior beside it until that build is out.
 - Verify source before editing a public surface, and the live `https://yen.chat` response after deploying.
 - A copy correction must also check `public/llms.txt` and `app/manifest.ts`; these independent surfaces can retain the same stale claim.
 - Social previews use the Phosphor homepage, privacy receipt, journal masthead, and release log.
