@@ -624,9 +624,9 @@ function AgentTokenUsageSection() {
 			<figure>
 				<Image
 					src="/doc-images/agent-token-usage.png"
-					alt="Example token menu with 10,000 daily tokens, inline provider counts and separate Grok, Cursor and Grok Bot plan bars."
+					alt="Example token menu with 10,000 daily tokens, inline provider counts and a plan bar under each tool that recorded one."
 					width={730}
-					height={920}
+					height={812}
 					sizes="(max-width: 360px) 100vw, 320px"
 					className="h-auto w-full max-w-xs"
 				/>
@@ -658,11 +658,10 @@ function AgentTokenUsageSection() {
 				</li>
 			</ul>
 			<p className="text-body">
-				Plan bars show the percentage used in each named pool. For Cursor and
-				Grok Bot, open the connection button and enter a personal Cursor API
-				key, or use existing local plan readings from JPtheCat. Disconnect there
-				to remove the key from your Mac’s Keychain. Claude, Codex, and Grok
-				Build show current plan readings when their local tools record them.
+				Plan bars show the percentage used in each named pool. Claude, Codex,
+				and Grok Build show current plan readings when their local tools record
+				them. YEN reads no other app’s data and makes no network request for
+				these numbers.
 			</p>
 			<p className="text-body">
 				An asterisk marks a partial total. Unavailable means the source could
