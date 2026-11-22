@@ -50,6 +50,8 @@ For `micro` it adds `-ruler false -softwrap true -wordwrap true` so copy-on-sele
 | `svg-native.yazi` | SVG thumbnails through `yen-svgthumb`, which inflates `.svgz` itself (64 MB cap) | A failed render logs `ya.err` and shows an error widget |
 
 Each plugin keeps upstream's `peek`/`preload`/`seek` shape and changes only its backend; `image_quality` is unapplied because the helpers emit PNG.
+The SVG rules sit above the archive rules in `prepend_previewers`, because a `.svgz` file has the mime type `application/gzip` and the first matching rule wins.
+`fs.cha` takes a `Url`: a plugin that passes a string or a `Path` raises a Lua error in the preview pane, so wrap the path as `Url(tostring(path))`.
 The archive plugin intentionally omits upstream's compressed-tar re-entry and size column, which `bsdtar` cannot list cheaply.
 
 ## Known Limitations
@@ -73,4 +75,5 @@ The `/update-yen` vendor phase carries the Yazi checks in `.agents/skills/update
 - `theme.toml` still matches the schema (`[tabs]`, `[indicator]`, `[cmp]`, `[icon].{prepend,append}_globs`, `filetype.rules` with `url`); `tests/35-yazi-config.test.ts` guards it.
 - Flavor fields still validate.
 - `init.lua` still receives `ind-app-title`.
+- Every preview type still renders in a running copy: text, JSON, SVG, `.svgz`, PDF, video, `.zip` and `.tar.gz`. A Lua stub cannot show a changed Yazi API; `tests/35-yazi-config.test.ts` rejects only the argument types already known to fail.
 - A native `<S-Enter>` binding does not collide with YEN's Shift + Enter mapping (`\r`).

@@ -64,7 +64,8 @@ local function file_stats(path)
 end
 
 local function cache_stamp(path, cha)
-    local attrs = cha or fs.cha(path)
+    -- fs.cha takes a Url; Yazi raises on a string or a Path.
+    local attrs = cha or fs.cha(Url(tostring(path)))
     if not attrs then
         return nil
     end

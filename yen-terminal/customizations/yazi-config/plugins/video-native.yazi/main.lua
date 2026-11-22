@@ -13,7 +13,8 @@ local duration_order = {}
 local DURATION_CACHE_LIMIT = 512
 
 local function path_stamp(path)
-    local attrs = fs and fs.cha and fs.cha(path) or nil
+    -- fs.cha takes a Url; Yazi raises on a string or a Path.
+    local attrs = fs and fs.cha and fs.cha(Url(tostring(path))) or nil
     local mtime = attrs and (attrs.mtime or attrs.mtime_sec or attrs.modified or attrs.change_time) or ""
     local len = attrs and attrs.len or ""
     local mode = attrs and attrs.mode or ""

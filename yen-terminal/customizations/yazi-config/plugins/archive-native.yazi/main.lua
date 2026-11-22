@@ -163,7 +163,8 @@ function M.list_archive(path)
 end
 
 local function archive_list_stamp(path)
-    local cha = fs and fs.cha and fs.cha(path) or nil
+    -- fs.cha takes a Url; Yazi raises on a string or a Path.
+    local cha = fs and fs.cha and fs.cha(Url(tostring(path))) or nil
     local mtime = cha and (cha.mtime or cha.mtime_sec or cha.modified or cha.change_time) or ""
     local len = cha and cha.len or ""
     local mode = cha and cha.mode or ""
@@ -222,7 +223,8 @@ function M:peek(job)
         left[#left] = ui.Line {
             string.rep(" │", f.depth),
             left[#left],
-            ui.truncate(f.path.name, {
+            -- `name` is nil for some paths; upstream falls back the same way.
+            ui.truncate(f.path.name or tostring(f.path), {
                 rtl = true,
                 max = math.max(0, job.area.w - ui.width(left[#left])),
             }),

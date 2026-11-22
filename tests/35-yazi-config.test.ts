@@ -831,7 +831,11 @@ ui = {
   Line = function(parts)
     return parts
   end,
+  -- Yazi's ui.truncate raises on nil, as it did for a path with no name.
   truncate = function(value, _)
+    if type(value) ~= "string" then
+      error("bad argument #1: error converting Lua " .. type(value) .. " to string")
+    end
     return value
   end,
   width = function(_)
@@ -858,6 +862,8 @@ plugin.list_archive_cached = function(_)
   for i = 1, 20 do
     files[i] = { path = { name = "file" .. i }, depth = 0, is_dir = false }
   end
+  -- A path whose name Yazi reports as nil still needs a row label.
+  files[12].path = setmetatable({}, { __tostring = function() return "nameless12" end })
   return files, nil
 end
 
@@ -875,6 +881,9 @@ if #captured.items ~= 5 then
 end
 if captured.items[1][3] ~= "file11" or captured.items[5][3] ~= "file15" then
   error("expected preview slice to start at file11 and end at file15")
+end
+if captured.items[2][3] ~= "nameless12" then
+  error("expected a nameless path to fall back to its full text, got " .. tostring(captured.items[2][3]))
 end
 `);
 
