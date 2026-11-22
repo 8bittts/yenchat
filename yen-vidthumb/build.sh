@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build yen-vidthumb as universal binary (arm64 + x86_64)
+# Build yen-vidthumb as an arm64 binary
 #
 # Usage: ./build.sh
 #
-# Output: ./yen-vidthumb (universal binary)
+# Output: ./yen-vidthumb (arm64)
 
 set -e
 

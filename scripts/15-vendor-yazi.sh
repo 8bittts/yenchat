@@ -1,8 +1,8 @@
 #!/bin/bash
-# Vendor Yazi Binary (Universal)
+# Vendor Yazi Binary (arm64)
 #
-# Downloads both arm64 and x86_64 Yazi release binaries and creates
-# universal binaries using the shared vendor library.
+# Downloads the arm64 Yazi release archive and installs `yazi` and its `ya`
+# companion using the shared vendor library.
 # Stores at yen-terminal/customizations/vendor/yazi/
 #
 # Usage: ./scripts/15-vendor-yazi.sh
@@ -29,7 +29,6 @@ vendor_binary \
     "yazi" \
     ".yazi-baseline" \
     "yazi-aarch64-apple-darwin.zip" \
-    "yazi-x86_64-apple-darwin.zip" \
     "$FORCE" \
     "zip" \
     "yazi" \

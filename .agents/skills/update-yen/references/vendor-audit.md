@@ -108,7 +108,7 @@ Re-run `bun test tests/45-overlay-patching.test.ts` afterwards, and run `bun run
 ## Binary and Source-Built Vendors (Layers 3-6)
 
 - **Yazi:** `for f in $HOME/Documents/yenchat/yen-terminal/customizations/yazi-config/plugins/*/*.lua; do luac -p "$f"; done`; `bun test tests/35-yazi-config.test.ts`; `$HOME/Documents/yenchat/yen-terminal/customizations/vendor/yazi/yazi --version`; `yazi` and `ya` update together; if upstream adds a native `<S-Enter>` binding, re-evaluate YEN's terminal-level Shift+Enter mapping.
-- **CLI tools (fd, ripgrep, lazygit, btop, fastfetch, zmx):** flags used by Yazi and shell scripts still valid; output formats consumed by YEN unchanged; `lipo -archs` lists both arm64 and x86_64 (the scripts enforce it); lazygit stays a pure vendor with `customizations/lazygit/config.yml` intact.
+- **CLI tools (fd, ripgrep, lazygit, btop, fastfetch, zmx):** flags used by Yazi and shell scripts still valid; output formats consumed by YEN unchanged; `lipo -archs` prints exactly `arm64` (the scripts enforce it); lazygit stays a pure vendor with `customizations/lazygit/config.yml` intact.
 - Read the upstream release notes for the new version and record the impact in the audit log.
 
 ## Eval Checks

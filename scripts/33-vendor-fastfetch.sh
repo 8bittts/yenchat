@@ -1,10 +1,10 @@
 #!/bin/bash
-# Vendor fastfetch Binary (Universal)
+# Vendor fastfetch Binary (arm64)
 #
-# Downloads fastfetch's macOS release archive and installs a universal
-# binary using the shared vendor library. Upstream 2.70+ ships one
-# pre-merged fastfetch-macos-universal asset instead of per-arch assets,
-# so both asset patterns below name it (see vendor-binary.sh).
+# Downloads fastfetch's macOS release archive and installs its arm64 slice
+# using the shared vendor library. Upstream 2.70+ ships one pre-merged
+# fastfetch-macos-universal asset and no per-arch assets, so the asset pattern
+# names it and vendor_install_arm64 drops the other slice (see vendor-binary.sh).
 #
 # Stores at yen-terminal/customizations/vendor/fastfetch/
 #
@@ -28,7 +28,6 @@ vendor_binary \
     "fastfetch" \
     "fastfetch" \
     ".fastfetch-baseline" \
-    "fastfetch-macos-universal.tar.gz" \
     "fastfetch-macos-universal.tar.gz" \
     "$FORCE" \
     "tar.gz" \

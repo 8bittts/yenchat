@@ -209,7 +209,10 @@ The notices cover the engine and the vendored tools, not the libraries those pro
   `14-vendor.sh` compares the recorded id with `48-vendor-zmx.sh --print-input-id`, because the zmx tag alone stays current across an engine bump; `tests/119-vendor-process-guardrails.test.ts` fails when the committed id drifts from the tree.
   An edit to one of those inputs outside a vendor run lands with its own rebuild: `VENDOR_LATEST_TAG=<pinned tag> ./scripts/48-vendor-zmx.sh` keeps the zmx version and rewrites only `build_input_id` and `output_sha256` in `.zmx-baseline`.
   After a pull that changes the zmx pin, the integrity gate refuses the old local binary until `./scripts/48-vendor-zmx.sh --force` rebuilds it; the build reproduces the pinned digest.
-- **Source-built Rust vendor.** `fd` dropped its Intel macOS asset, so `scripts/16-vendor-fd.sh` cross-compiles both slices and `lipo`s them. If upstream restores the `x86_64-apple-darwin` asset, return it to the `vendor-binary.sh` wrapper pattern and drop its `14-vendor.sh` prefetch entry.
+- **arm64-only vendors.** YEN requires macOS 27, which runs only on Apple silicon, so every vendored binary and thumbnail helper holds the arm64 slice and nothing else.
+  A baseline records `architecture=arm64`, and an output pin binds only a baseline with that value, so a baseline from the universal era does not fail a correct reinstall.
+  `14-vendor.sh` still fails closed on a digest mismatch at the same version, so after a pull that changes a pin, reinstall with the vendor script and `--force`; the reinstall must reproduce the pinned digest.
+  `fastfetch` ships one universal asset; `vendor_install_arm64` keeps its arm64 slice, which carries its own signature.
 
 ### Fail-Closed Gate Contracts (Do Not Regress)
 
@@ -229,7 +232,7 @@ Contracts the receipts do not cover by themselves:
 | Overlay pairs tripwire | `.overlay-upstream-pairs.txt` is generated from a pristine upstream tarball, never from `yen-terminal/ghostty/`. A missing path is not waivable; a changed hash is, with `YEN_VENDOR_ACCEPT_OVERLAY_CONTENT_DRIFT=1` after review | `tests/45` |
 | `patch_file` | Fails on a missing target; `--optional` is the only opt-out. `verify_overlay_patch_targets` (`scripts/lib/overlay-patch-preflight.sh`) checks every target in `scripts/lib/overlay-patch-targets.txt` before any patch applies and reports all missing ones in one run | `tests/45` |
 | `scripts/lib/ghostty-paths.sh` | Declares every upstream path the branding gate guards, literal or indirect; an empty manifest returns non-zero | `tests/123` |
-| Universal binaries | `assert_universal_binary` checks `lipo -archs` for both slices before any baseline write; `file \| grep universal` passes arm64+arm64e | `tests/123` |
+| arm64-only binaries | `assert_arm64_only_binary` requires `lipo -archs` to print exactly `arm64`, before any baseline write and for every required bundled binary in `05` and `12`; `file \| grep arm64` passes a fat binary | `tests/123`, `tests/162` |
 | `14-vendor.sh` | UNKNOWN upstream status is its own non-zero outcome; override `YEN_VENDOR_ALLOW_UNKNOWN_STATUS=1` | `tests/119` |
 | `05-detect-failures.sh` | Refuses non-`enforce` security modes unless `YEN_ALLOW_GATE_DOWNGRADE=1` | `tests/120` |
 | `13-scan-artifact-fingerprints.sh` | Fails on an empty scan set or a missing `file` binary | `tests/123` |
@@ -257,7 +260,7 @@ One row per binary, name unquoted: `12-verify-vendor-audit.sh` matches `| <name>
 
 | Binary | Purpose | Why not native |
 |--------|---------|----------------|
-| lazygit | Git TUI | Interactive UX; about 41 MiB in the bundle and 16 MiB in the DMG, kept deliberately |
+| lazygit | Git TUI | Interactive UX; about 19 MiB in the bundle, the largest binary with `yazi` (18 MiB), kept deliberately |
 | yazi | File browser | Interactive UX |
 | ya | Yazi companion | Paired with yazi |
 | rg | Content search | Yazi runs it for content search; `.gitignore`-aware regex |
@@ -273,6 +276,8 @@ Wrapper scripts `browse`, `yen`, `yen-quicklook` and `yen-yazi-edit` also ship h
 The artifact fingerprint gate force-scans the bundled shell CLI at `Contents/Resources/bin/yen` even though it is not Mach-O.
 `lazygit` ships unmodified; YEN behavior comes from `yen-terminal/customizations/lazygit/config.yml` and the `yengit`, `gitlazy` and `gityen` wrappers, and bundling fails if the retired in-binary patch marker reappears.
 `lazygit` resolves the bundled binary and falls back to the system copy only with `YEN_ALLOW_SYSTEM_BIN_FALLBACK=1`.
+
+`Resources/bin` holds about 57 MiB: eight arm64-only vendored binaries and three native helpers.
 
 Deliberately not bundled: `bat`, `delta`, `fzf`, `jq`, `resvg` and `zoxide`, because nothing in YEN fails without them.
 Text files open in the system `less`, diffs render as plain or natively colored text, and `yen-svgthumb` inflates `.svgz` itself.

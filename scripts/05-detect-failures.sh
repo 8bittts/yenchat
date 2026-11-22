@@ -447,7 +447,7 @@ else
     INFO_PLIST="$BUILT_APP/Contents/Info.plist"
     RESOURCES="$BUILT_APP/Contents/Resources"
 
-    # Main binary exists and is universal (arm64 + x86_64)
+    # Main binary exists and meets the architecture, platform and macOS floor
     MAIN_BINARY="$BUILT_APP/Contents/MacOS/yen"
     if [ ! -f "$MAIN_BINARY" ]; then
         fail "Main binary not found at Contents/MacOS/yen"
@@ -578,12 +578,6 @@ else
     # File browser bundled and executable
     [ ! -f "$RESOURCES/bin/yazi" ] || [ ! -x "$RESOURCES/bin/yazi" ] && fail "File browser binary not bundled"
     [ ! -f "$RESOURCES/bin/ya" ] || [ ! -x "$RESOURCES/bin/ya" ] && fail "File browser companion (ya) not bundled"
-    if [ -f "$RESOURCES/bin/yazi" ] && ! assert_universal_binary "$RESOURCES/bin/yazi"; then
-        fail "File browser (yazi) is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/ya" ] && ! assert_universal_binary "$RESOURCES/bin/ya"; then
-        fail "File browser companion (ya) is not a universal binary"
-    fi
     if [ -f "$RESOURCES/bin/yazi" ] && [ -x "$RESOURCES/bin/yazi" ]; then
         YAZI_VERSION_OUTPUT="$("$RESOURCES/bin/yazi" --version 2>/dev/null || true)"
         if [ -z "$YAZI_EXPECTED_VERSION" ]; then
@@ -701,21 +695,21 @@ else
     [ -e "$RESOURCES/bin/yen-weather.entitlements" ] && fail "Deprecated weather helper entitlements still bundled"
     [ -e "$RESOURCES/bin/yen-weather.app" ] && fail "Deprecated weather helper app bundle still bundled"
     command -v bsdtar >/dev/null 2>&1 || fail "bsdtar not available (required for native archive preview/extract)"
-    if [ -f "$RESOURCES/bin/yen-vidthumb" ] && ! assert_universal_binary "$RESOURCES/bin/yen-vidthumb"; then
-        fail "yen-vidthumb is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/yen-pdfthumb" ] && ! assert_universal_binary "$RESOURCES/bin/yen-pdfthumb"; then
-        fail "yen-pdfthumb is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/yen-svgthumb" ] && ! assert_universal_binary "$RESOURCES/bin/yen-svgthumb"; then
-        fail "yen-svgthumb is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/lazygit" ] && ! assert_universal_binary "$RESOURCES/bin/lazygit"; then
-        fail "lazygit is not a universal binary"
-    fi
-    if [ -f "$RESOURCES/bin/zmx" ] && ! assert_universal_binary "$RESOURCES/bin/zmx"; then
-        fail "zmx is not a universal binary"
-    fi
+    # Every bundled Mach-O is arm64-only: YEN requires macOS 27, which runs only
+    # on Apple silicon, so another slice is dead weight in the bundle.
+    set_required_app_bins
+    ARM64_ONLY_BINS=0
+    for bin_name in "${REQUIRED_APP_BINS[@]}"; do
+        BIN_PATH="$RESOURCES/bin/$(required_app_bin_path "$bin_name")"
+        [ -f "$BIN_PATH" ] || continue
+        if assert_arm64_only_binary "$BIN_PATH"; then
+            ARM64_ONLY_BINS=$((ARM64_ONLY_BINS + 1))
+        else
+            fail "$bin_name is not an arm64-only binary (archs: $(lipo -archs "$BIN_PATH" 2>/dev/null || echo unknown))"
+        fi
+    done
+    [ "$ARM64_ONLY_BINS" -eq "${#REQUIRED_APP_BINS[@]}" ] || \
+        fail "arm64-only check covered $ARM64_ONLY_BINS of ${#REQUIRED_APP_BINS[@]} required bundled binaries"
     # Shell integration — all files at Resources/yen/shell-integration/
     SHELL_ZSH="$RESOURCES/yen/shell-integration/zsh/.zshenv"
     SHELL_BASH="$RESOURCES/yen/shell-integration/bash/yen.bash"

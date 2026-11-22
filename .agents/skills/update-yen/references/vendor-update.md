@@ -31,10 +31,11 @@ Skipped download when already at the upstream commit (`SKIP_DOWNLOAD=1`); there 
 ### Non-Ghostty Vendors
 
 An installed `.version` that differs from the baseline requires a verified download of the baseline version.
+After a pull that changes a pin at the same version, reinstall with the vendor script and `--force`; the result must reproduce the pinned digest.
 Check mode reports the required download without modifying files.
 A digest mismatch at the same version remains an integrity failure, even with `--force`.
 
-Each manifest record names a thin wrapper in `scripts/` over `scripts/lib/vendor-binary.sh` (or a source-build script for fd, btop, zmx). It downloads or builds a universal binary, verifies `lipo -archs` and exec-liveness, installs it under `yen-terminal/customizations/vendor/<key>/`, and writes `yen-terminal/.<key>-baseline` plus `.version`.
+Each manifest record names a thin wrapper in `scripts/` over `scripts/lib/vendor-binary.sh` (or a source-build script for btop, zmx). It downloads or builds an arm64-only binary, verifies `lipo -archs` and exec-liveness, installs it under `yen-terminal/customizations/vendor/<key>/`, and writes `yen-terminal/.<key>-baseline` plus `.version`.
 
 ## When the Update Fails
 

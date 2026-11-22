@@ -43,7 +43,7 @@ _YEN_VENDOR_MANIFEST_LOADED=1
 YEN_VENDOR_MANIFEST=(
     "ghostty|source|Ghostty|Terminal Engine||||||"
     "yazi|binary|Yazi|File Manager|sxyazi/yazi|yazi|15-vendor-yazi.sh|ya|true"
-    "fd|source-built|fd|File Finder|sharkdp/fd|fd|16-vendor-fd.sh||false"
+    "fd|binary|fd|File Finder|sharkdp/fd|fd|16-vendor-fd.sh||false"
     "ripgrep|binary|ripgrep|Content Search|BurntSushi/ripgrep|rg|17-vendor-ripgrep.sh||false"
     "lazygit|binary|lazygit|Git TUI|jesseduffield/lazygit|lazygit|32-vendor-lazygit.sh||false"
     "btop|source-built|btop|System Monitor|aristocratos/btop|btop|34-vendor-btop.sh||false"

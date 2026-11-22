@@ -29,7 +29,7 @@ bash $HOME/Documents/yenchat/scripts/05-detect-failures.sh
 ```
 
 7 verification categories:
-1. **Build Artifacts** — app exists, universal main binary (arm64 + x86_64), CLI and bundled file-browser tools exist, static config/flavors are valid, shell integration is present, legacy upstream-named shell/theme files are absent, release DMG/checksum/appcast/version signature exist, and DMG contract/trust/layout gates pass.
+1. **Build Artifacts** — app exists, the main binary meets the architecture and macOS floor, the CLI and bundled tools exist and are arm64-only, static config/flavors are valid, shell integration is present, legacy upstream-named shell/theme files are absent, release DMG/checksum/appcast/version signature exist, and DMG contract/trust/layout gates pass.
 2. **Security** — hardened runtime, timestamp, Sparkle signed, app signature valid, `audio-input` entitlement present, and required bundled Mach-O binaries pass `codesign --verify --strict`.
 3. **Critical Files** — key metadata and runtime files exist and are non-empty.
 4. **Consistency** — download links match version metadata, and `appcast.xml` is well-formed with visible `xmllint` errors on failure.

@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build yen-svgthumb as universal binary (arm64 + x86_64)
+# Build yen-svgthumb as an arm64 binary
 #
 # Usage: ./build.sh
 #
-# Output: ./yen-svgthumb (universal binary)
+# Output: ./yen-svgthumb (arm64)
 
 set -e
 

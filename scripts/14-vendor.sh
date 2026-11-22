@@ -23,6 +23,7 @@ source "$REPO_ROOT/scripts/lib/python-utils.sh"
 source "$REPO_ROOT/scripts/lib/workflow-lock.sh"
 source "$REPO_ROOT/scripts/lib/upstream.sh"
 source "$REPO_ROOT/scripts/lib/vendor-manifest.sh"
+source "$REPO_ROOT/scripts/lib/signature-utils.sh"
 source "$REPO_ROOT/scripts/lib/zig-toolchain.sh"
 source "$REPO_ROOT/scripts/lib/release-vendor-window.sh"
 init_shared_workflow_lock "$REPO_ROOT"
@@ -76,8 +77,8 @@ for arg in "$@"; do
             echo ""
             echo "Vendors:"
             # Generated from the manifest. The hand-maintained list this
-            # replaced had already drifted: fd and btop are source-built, not
-            # binary vendors, but were labelled "(binary vendor)".
+            # replaced had already drifted: source-built vendors were labelled
+            # "(binary vendor)".
             for help_key in $(vendor_manifest_keys); do
                 printf '  %-10s %s (%s)\n' \
                     "$help_key" \
@@ -469,9 +470,7 @@ validate_binary_vendor_provenance_metadata() {
     local actual_companion_sha
     local provenance_method
     local source_sha_arm64
-    local source_sha_x86_64
     local api_sha_arm64
-    local api_sha_x86_64
     local source_commit
 
     if [ ! -f "$baseline_file" ]; then
@@ -482,11 +481,8 @@ validate_binary_vendor_provenance_metadata() {
     case "$provenance_method" in
         github-release-asset-digests)
             source_sha_arm64=$(baseline_value "source_sha256_arm64" "$baseline_file")
-            source_sha_x86_64=$(baseline_value "source_sha256_x86_64" "$baseline_file")
             api_sha_arm64=$(baseline_value "source_api_sha256_arm64" "$baseline_file")
-            api_sha_x86_64=$(baseline_value "source_api_sha256_x86_64" "$baseline_file")
-            if ! is_valid_sha256 "$api_sha_arm64" || ! is_valid_sha256 "$api_sha_x86_64" || \
-               [ "$api_sha_arm64" != "$source_sha_arm64" ] || [ "$api_sha_x86_64" != "$source_sha_x86_64" ]; then
+            if ! is_valid_sha256 "$api_sha_arm64" || [ "$api_sha_arm64" != "$source_sha_arm64" ]; then
                 echo "  ! GitHub release-asset digest metadata is missing or mismatched"
                 return 1
             fi
@@ -516,6 +512,7 @@ validate_binary_vendor_provenance_metadata() {
         echo "  ! Baseline provenance digest mismatch for $key"
         echo "    expected output_sha256: $expected_output_sha"
         echo "    actual output_sha256:   $actual_output_sha"
+        echo "    If a pulled baseline changed the pin, reinstall with the vendor script and --force."
         return 1
     fi
 
@@ -769,16 +766,6 @@ handle_latest_tag_unavailable() {
     record_unknown_status
 }
 
-is_universal_binary() {
-    local binary_path="$1"
-
-    if [ ! -f "$binary_path" ]; then
-        return 1
-    fi
-
-    file "$binary_path" | grep -q "universal"
-}
-
 process_binary_vendor() {
     local index="$1"
     local key="$2"
@@ -873,6 +860,19 @@ process_binary_vendor() {
         return
     fi
 
+    # The digests above match the baseline, so a slice besides arm64 here means
+    # the baseline itself pins a binary YEN must not ship. Fail closed.
+    local arch_checked_path
+    for arch_checked_path in "$binary_path" "$companion_path"; do
+        [ -n "$arch_checked_path" ] && [ -f "$arch_checked_path" ] || continue
+        if ! assert_arm64_only_binary "$arch_checked_path"; then
+            echo "  ! Pinned binary is not arm64-only: $arch_checked_path (archs: $(lipo -archs "$arch_checked_path" 2>/dev/null || echo unknown))"
+            echo "    Reinstall it: $script_path --force"
+            ERROR_COUNT=$((ERROR_COUNT + 1))
+            return
+        fi
+    done
+
     local latest="$latest_tag_override"
     if [ -z "$latest" ]; then
         if load_vendor_status_prefetch "$key"; then
@@ -896,7 +896,7 @@ process_binary_vendor() {
         update_reason="Update available: $current -> $latest"
     else
         local needs_rebuild=false
-        local rebuild_reason="Rebuild required for local universal binaries"
+        local rebuild_reason="Rebuild required"
 
         if [ "$key" = "lazygit" ]; then
             local lazygit_config="$REPO_ROOT/yen-terminal/customizations/lazygit/config.yml"
@@ -905,11 +905,6 @@ process_binary_vendor() {
                 ERROR_COUNT=$((ERROR_COUNT + 1))
                 return
             fi
-        fi
-
-        if ! is_universal_binary "$binary_path"; then
-            echo "  Current version exists but binary is non-universal. Rebuilding..."
-            needs_rebuild=true
         fi
 
         # A vendor built from more than its source tarball (zmx compiles the
@@ -929,18 +924,6 @@ process_binary_vendor() {
                 echo "  Build inputs changed ($recorded_input_id -> $current_input_id). Rebuilding..."
                 needs_rebuild=true
                 rebuild_reason="Rebuild required: build inputs changed"
-            fi
-        fi
-
-        if [ -n "$companion_path" ]; then
-            if [ -f "$companion_path" ]; then
-                if ! is_universal_binary "$companion_path"; then
-                    echo "  Current version exists but companion is non-universal. Rebuilding..."
-                    needs_rebuild=true
-                fi
-            elif [ "$require_companion" = true ]; then
-                echo "  Current version exists but required companion is missing. Rebuilding..."
-                needs_rebuild=true
             fi
         fi
 

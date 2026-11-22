@@ -1,10 +1,10 @@
 #!/bin/bash
-# Vendor btop Binary (Universal)
+# Vendor btop Binary (arm64)
 #
 # btop does not publish macOS binaries, so this script compiles btop from
-# source for arm64 and x86_64, then combines them with lipo. Shares the
-# vendor_source_build() scaffolding in lib/vendor-binary.sh with 16-vendor-fd.sh
-# and 48-vendor-zmx.sh, supplying a CMake-based build callback.
+# source for arm64. Shares the vendor_source_build() scaffolding in
+# lib/vendor-binary.sh with 48-vendor-zmx.sh, supplying a CMake-based build
+# callback.
 #
 # Stores at yen-terminal/customizations/vendor/btop/
 #
@@ -57,16 +57,12 @@ build_arch_binary() {
     local source_dir="$1"
     local arch="$2"
     local build_dir="$3"
-    # Upstream gates Apple Silicon GPU (IOReport) code on CMAKE_SYSTEM_PROCESSOR,
-    # which stays the arm64 host when cross-building x86_64; disable it there.
-    local gpu="ON"
-    [ "$arch" = "x86_64" ] && gpu="OFF"
 
     echo "  Configuring $arch build..." >&2
     cmake -S "$source_dir" -B "$build_dir" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_OSX_ARCHITECTURES="$arch" \
-        -DBTOP_GPU="$gpu" >&2
+        -DBTOP_GPU=ON >&2
 
     echo "  Building $arch binary..." >&2
     cmake --build "$build_dir" --config Release --target btop >&2
@@ -74,17 +70,14 @@ build_arch_binary() {
     find_btop_binary "$build_dir"
 }
 
-# Build callback: compile arm64 + x86_64 via CMake, print the two binary paths
-# to STDOUT (arm64 first, x86_64 second), all progress to STDERR. See the
-# BUILD_FN contract in lib/vendor-binary.sh.
+# Build callback: compile arm64 via CMake and print the binary path to STDOUT,
+# all progress to STDERR. See the BUILD_FN contract in lib/vendor-binary.sh.
 build_btop() {
     local source_dir="$1"
     local temp_dir="$2"
-    local arm64 x86
+    local arm64
     arm64=$(build_arch_binary "$source_dir" "arm64" "$temp_dir/build-arm64") || return 1
-    x86=$(build_arch_binary "$source_dir" "x86_64" "$temp_dir/build-x86_64") || return 1
     echo "$arm64"
-    echo "$x86"
 }
 
 vendor_source_build "btop" "aristocratos/btop" "btop" ".btop-baseline" "btop" build_btop "$FORCE" ""

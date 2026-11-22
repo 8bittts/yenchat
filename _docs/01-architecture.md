@@ -14,7 +14,7 @@ Each component builds and ships independently; never mix concerns between them.
 | Upstream engine | `yen-terminal/ghostty/` | Generated upstream mirror: rendering, input, config system | `04-security`, `05-infrastructure` |
 | Native customizations | `yen-terminal/overlays/`, `yen-terminal/customizations/`, `scripts/lib/patches/` | Branding, overlays, source patches, shell integration, bundled resources | `13-desktop-features`, `05-infrastructure` |
 | CLI | `yen-cli/` | The `yen` command, bundled at `Contents/Resources/bin/yen` | `12-commands` |
-| Native helpers | `yen-vidthumb/`, `yen-pdfthumb/`, `yen-svgthumb/` | Universal Swift thumbnailers built from source for file-browser previews | `14-file-browser` |
+| Native helpers | `yen-vidthumb/`, `yen-pdfthumb/`, `yen-svgthumb/` | arm64 Swift thumbnailers built from source for file-browser previews | `14-file-browser` |
 
 Hard boundaries:
 

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Vendor lazygit Binary (Universal)
+# Vendor lazygit Binary (arm64)
 #
-# Downloads arm64 and x86_64 lazygit release archives and lipos them into a
-# universal binary. Pure vendor — no modifications are applied to the binary;
+# Downloads the arm64 lazygit release archive and installs the binary.
+# Pure vendor — no modifications are applied to the binary;
 # YEN behavior is layered via config overrides
 # (yen-terminal/customizations/lazygit/config.yml) and alias wrappers only.
 #
@@ -29,7 +29,6 @@ vendor_binary \
     "lazygit" \
     ".lazygit-baseline" \
     "lazygit_{VNUM}_darwin_arm64.tar.gz" \
-    "lazygit_{VNUM}_darwin_x86_64.tar.gz" \
     "$FORCE" \
     "tar.gz" \
     "lazygit" \

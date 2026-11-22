@@ -2,11 +2,11 @@
 upstream_repo=https://github.com/neurosnap/zmx
 upstream_version=v1.0.1
 last_sync=2026-11-06
-architecture=universal (arm64 + x86_64)
+architecture=arm64
 build_method=zig build against the vendored engine
-build_input_id=engine-6d244209978e-c31cbc7458df20fb
+build_input_id=engine-6d244209978e-615d57facff46c93
 source_archive_url=https://github.com/neurosnap/zmx/archive/a35f00a2118b15a5e9d522a43035c8d7487df9b7.tar.gz
 source_commit=a35f00a2118b15a5e9d522a43035c8d7487df9b7
 source_tarball_sha256=0ae85204aaab966566d3a5cb4c1aaa7067b6345ae92f44a8f225d2495263d0bc
-output_sha256=0fe3b7c56c39e330e3522f80127536701c6d56ffcbcad9065e49772585ccda76
+output_sha256=0e71a9e32f0be6653403f02c5816aac9195d72d4937aa6c78f6687cdb794c011
 provenance_verification=github-commit-bound-archive

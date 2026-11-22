@@ -2,8 +2,9 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 # Shared Vendor Binary Library
 #
-# Provides vendor_binary() for downloading, verifying, and creating
-# universal binaries from GitHub releases.
+# Provides vendor_binary() for downloading, verifying, and installing arm64
+# binaries from GitHub releases. YEN requires macOS 27, which runs only on Apple
+# silicon, so no vendored binary carries another architecture.
 #
 # Requires bash 3.x compatibility (macOS ships with bash 3.2).
 #
@@ -13,20 +14,18 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 #   $3  BINARY_NAME                      default binary name
 #   $4  VENDOR_SUBDIR                    e.g. "fd", "ripgrep"
 #   $5  BASELINE_NAME                    e.g. ".fd-baseline"
-#   $6  ASSET_ARM64_PATTERN              e.g. "fd-{VERSION}-aarch64-apple-darwin.tar.gz"
-#   $7  ASSET_X86_64_PATTERN             e.g. "fd-{VERSION}-x86_64-apple-darwin.tar.gz"
-#       Pass the same pattern for $6 and $7 when upstream ships one
-#       pre-merged universal asset (fastfetch 2.70+): it is installed
-#       directly instead of lipo-merged, and the lipo -archs gate below
-#       still verifies both slices are present.
-#   $8  FORCE                            true/false (optional, default false)
-#   $9  MODE                             tar.gz|zip|direct (optional, default tar.gz)
-#   $10 ARCHIVE_BINARY_NAME              binary name inside extracted assets (optional)
-#   $11 OUTPUT_BINARY_NAME               output file name in vendor dir (optional)
+#   $6  ASSET_PATTERN                    e.g. "fd-{VERSION}-aarch64-apple-darwin.tar.gz"
+#       Name the arm64 asset. When upstream ships only one universal asset
+#       (fastfetch 2.70+), name that: vendor_install_arm64 keeps its arm64
+#       slice and drops the rest.
+#   $7  FORCE                            true/false (optional, default false)
+#   $8  MODE                             tar.gz|zip|direct (optional, default tar.gz)
+#   $9  ARCHIVE_BINARY_NAME              binary name inside the extracted asset (optional)
+#   $10 OUTPUT_BINARY_NAME               output file name in vendor dir (optional)
 #
 # Companion binary (yazi's `ya`) is configured via environment variables set as
 # prefix assignments on the vendor_binary call (scoped to that call only):
-#   VENDOR_COMPANION_ARCHIVE_BINARY_NAME  optional companion binary inside assets
+#   VENDOR_COMPANION_ARCHIVE_BINARY_NAME  optional companion binary inside the asset
 #   VENDOR_COMPANION_OUTPUT_BINARY_NAME   optional companion output file name
 #       (defaults to VENDOR_COMPANION_ARCHIVE_BINARY_NAME)
 #   VENDOR_REQUIRE_COMPANION              true/false (optional, default false)
@@ -48,14 +47,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 #   $1  TOOL_NAME   command that must be on PATH; prints ERROR and exits 1 if missing.
 #
 # vendor_source_build parameters (positional) — shared scaffolding for the
-# source-compiled vendors (fd, btop, zmx) whose upstreams publish no
-# x86_64 macOS release binaries. Downloads the tagged source tarball, runs the
-# same fail-closed source-pin / output-pin / universal validation as
-# vendor_binary, and delegates the actual compile to a caller-supplied callback:
-#   $1  DISPLAY_NAME        e.g. "fd", "btop" (also the source dir prefix)
-#   $2  GITHUB_REPO         e.g. "sharkdp/fd"
+# source-compiled vendors (btop, zmx), which have no usable upstream macOS
+# release binary. Downloads the tagged source tarball, runs the same fail-closed
+# source-pin / output-pin / architecture validation as vendor_binary, and
+# delegates the actual compile to a caller-supplied callback:
+#   $1  DISPLAY_NAME        e.g. "btop" (also the source dir prefix)
+#   $2  GITHUB_REPO         e.g. "aristocratos/btop"
 #   $3  VENDOR_SUBDIR       vendor dir under yen-terminal/customizations/vendor/
-#   $4  BASELINE_NAME       e.g. ".fd-baseline"
+#   $4  BASELINE_NAME       e.g. ".btop-baseline"
 #   $5  OUTPUT_BINARY_NAME  output file name written into the vendor dir
 #   $6  BUILD_FN            name of the build callback function (see contract)
 #   $7  FORCE               true/false (optional, default false)
@@ -69,13 +68,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vendor-manifest.sh"
 #       re-records the pin, because new inputs legitimately change the output.
 #
 # BUILD_FN contract: invoked as `"$BUILD_FN" "$SOURCE_DIR" "$TEMP_DIR"`. It must
-# build both architectures and print EXACTLY two lines to STDOUT — line 1 the
-# arm64 binary path, line 2 the x86_64 binary path — with ALL progress routed to
-# STDERR (>&2). It must return non-zero on build failure. vendor_source_build
-# then validates existence, per-arch `file` architecture, universal lipo output,
-# the pinned output digest, and a --version/-v/-V/version liveness check before
-# persisting .version and the baseline.
+# build the arm64 binary and print EXACTLY one line to STDOUT, the path of that
+# binary, with ALL progress routed to STDERR (>&2). It must return non-zero on
+# build failure. vendor_source_build then validates existence, the arm64-only
+# architecture, the pinned output digest, and a --version/-v/-V/version liveness
+# check before persisting .version and the baseline.
 
+# shellcheck source=scripts/lib/signature-utils.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/signature-utils.sh"
 # shellcheck source=scripts/lib/version-utils.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/version-utils.sh"
 
@@ -252,18 +252,44 @@ vendor_fail_or_bypass_integrity() {
     return 1
 }
 
+# Baseline `architecture=` value every vendored binary records. An output pin
+# is compared only against a baseline that recorded the same architecture, so a
+# baseline written for another slice set never fails a correct reinstall.
+YEN_VENDOR_ARCHITECTURE="arm64"
+
+# vendor_install_arm64 <source> <dest> — install the arm64 form of a binary.
+# A thin arm64 file is copied. A fat file that holds an arm64 slice (upstream
+# ships fastfetch only as a universal asset) is thinned with `lipo -thin`, which
+# keeps that slice's own code signature. Anything else fails.
+vendor_install_arm64() {
+    local source_path="$1"
+    local dest_path="$2"
+    local archs
+
+    archs=$(lipo -archs "$source_path" 2>/dev/null || echo "")
+    if [ "$archs" = "arm64" ]; then
+        cp "$source_path" "$dest_path" || return 1
+    elif echo " $archs " | grep -q " arm64 "; then
+        lipo -thin arm64 -output "$dest_path" "$source_path" || return 1
+    else
+        echo "  ERROR: no arm64 slice in $(basename "$source_path") (archs: ${archs:-none})"
+        echo "  $(file "$source_path")"
+        return 1
+    fi
+    chmod 755 "$dest_path"
+}
+
 vendor_binary() {
     local DISPLAY_NAME="$1"
     local GITHUB_REPO="$2"
     local BINARY_NAME="$3"
     local VENDOR_SUBDIR="$4"
     local BASELINE_NAME="$5"
-    local ASSET_ARM64_PATTERN="$6"
-    local ASSET_X86_64_PATTERN="$7"
-    local FORCE="${8:-false}"
-    local MODE="${9:-tar.gz}"
-    local ARCHIVE_BINARY_NAME="${10:-$BINARY_NAME}"
-    local OUTPUT_BINARY_NAME="${11:-$BINARY_NAME}"
+    local ASSET_PATTERN="$6"
+    local FORCE="${7:-false}"
+    local MODE="${8:-tar.gz}"
+    local ARCHIVE_BINARY_NAME="${9:-$BINARY_NAME}"
+    local OUTPUT_BINARY_NAME="${10:-$BINARY_NAME}"
     local COMPANION_ARCHIVE_BINARY_NAME="${VENDOR_COMPANION_ARCHIVE_BINARY_NAME:-}"
     local COMPANION_OUTPUT_BINARY_NAME="${VENDOR_COMPANION_OUTPUT_BINARY_NAME:-$COMPANION_ARCHIVE_BINARY_NAME}"
     local REQUIRE_COMPANION="${VENDOR_REQUIRE_COMPANION:-false}"
@@ -275,7 +301,7 @@ vendor_binary() {
     local BASELINE_FILE="$REPO_ROOT/yen-terminal/$BASELINE_NAME"
 
     echo ""
-    echo "Vendor $DISPLAY_NAME (Universal Binary)"
+    echo "Vendor $DISPLAY_NAME ($YEN_VENDOR_ARCHITECTURE)"
 
     if [ "$MODE" != "tar.gz" ] && [ "$MODE" != "zip" ] && [ "$MODE" != "direct" ]; then
         echo "  ERROR: Unsupported mode '$MODE'"
@@ -333,20 +359,26 @@ vendor_binary() {
     fi
 
     local BASELINE_PIN_VERSION=""
-    local BASELINE_PIN_ASSET_ARM64=""
-    local BASELINE_PIN_ASSET_X86_64=""
-    local BASELINE_PIN_SHA256_ARM64=""
-    local BASELINE_PIN_SHA256_X86_64=""
+    local BASELINE_PIN_ARCHITECTURE=""
+    local BASELINE_PIN_ASSET=""
+    local BASELINE_PIN_SHA256=""
     local BASELINE_PIN_OUTPUT_SHA256=""
     local BASELINE_PIN_COMPANION_SHA256=""
     if [ -f "$BASELINE_FILE" ]; then
         BASELINE_PIN_VERSION=$(baseline_value "upstream_version" "$BASELINE_FILE")
-        BASELINE_PIN_ASSET_ARM64=$(baseline_value "source_asset_arm64" "$BASELINE_FILE")
-        BASELINE_PIN_ASSET_X86_64=$(baseline_value "source_asset_x86_64" "$BASELINE_FILE")
-        BASELINE_PIN_SHA256_ARM64=$(baseline_value "source_sha256_arm64" "$BASELINE_FILE")
-        BASELINE_PIN_SHA256_X86_64=$(baseline_value "source_sha256_x86_64" "$BASELINE_FILE")
+        BASELINE_PIN_ARCHITECTURE=$(baseline_value "architecture" "$BASELINE_FILE")
+        BASELINE_PIN_ASSET=$(baseline_value "source_asset_arm64" "$BASELINE_FILE")
+        BASELINE_PIN_SHA256=$(baseline_value "source_sha256_arm64" "$BASELINE_FILE")
         BASELINE_PIN_OUTPUT_SHA256=$(baseline_value "output_sha256" "$BASELINE_FILE")
         BASELINE_PIN_COMPANION_SHA256=$(baseline_value "companion_output_sha256" "$BASELINE_FILE")
+    fi
+
+    # The output pins assert a reproducible reinstall of the SAME upstream tag
+    # in the SAME architecture. A version bump, or a baseline that recorded
+    # another slice set, has no comparable pin.
+    local OUTPUT_PIN_APPLIES=false
+    if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && [ "$BASELINE_PIN_ARCHITECTURE" = "$YEN_VENDOR_ARCHITECTURE" ]; then
+        OUTPUT_PIN_APPLIES=true
     fi
 
     local PRIMARY_OUTPUT_PATH="$VENDOR_DIR/$OUTPUT_BINARY_NAME"
@@ -356,33 +388,19 @@ vendor_binary() {
     fi
 
     if [ "$FORCE" = false ] && [ "$CURRENT_VERSION" = "$LATEST_TAG" ] && [ -f "$PRIMARY_OUTPUT_PATH" ]; then
-        # lipo -archs is authoritative; `file | grep universal` also passes for an
-        # arm64+arm64e fat binary that LACKS x86_64. Only treat as "already current
-        # and universal" when both required arches are present (matches vendor_source_build).
-        local PRIMARY_OUTPUT_ARCHS
-        PRIMARY_OUTPUT_ARCHS=$(lipo -archs "$PRIMARY_OUTPUT_PATH" 2>/dev/null || echo "")
-        if echo " $PRIMARY_OUTPUT_ARCHS " | grep -q " arm64 " && echo " $PRIMARY_OUTPUT_ARCHS " | grep -q " x86_64 "; then
-            if [ -z "$COMPANION_OUTPUT_PATH" ]; then
-                echo "  Already current ($CURRENT_VERSION) and universal. Use --force to re-download."
+        # Only an arm64-only binary counts as current: an installed universal
+        # binary from an older baseline is replaced, not kept.
+        if assert_arm64_only_binary "$PRIMARY_OUTPUT_PATH"; then
+            if [ -z "$COMPANION_OUTPUT_PATH" ] || assert_arm64_only_binary "$COMPANION_OUTPUT_PATH"; then
+                echo "  Already current ($CURRENT_VERSION) and $YEN_VENDOR_ARCHITECTURE-only. Use --force to re-download."
                 echo ""
                 echo "Done."
                 return 0
             fi
 
-            local COMPANION_OUTPUT_ARCHS
-            COMPANION_OUTPUT_ARCHS=$(lipo -archs "$COMPANION_OUTPUT_PATH" 2>/dev/null || echo "")
-            if [ -f "$COMPANION_OUTPUT_PATH" ] &&
-                echo " $COMPANION_OUTPUT_ARCHS " | grep -q " arm64 " &&
-                echo " $COMPANION_OUTPUT_ARCHS " | grep -q " x86_64 "; then
-                echo "  Already current ($CURRENT_VERSION) and universal. Use --force to re-download."
-                echo ""
-                echo "Done."
-                return 0
-            fi
-
-            echo "  Current version exists but companion is missing or non-universal. Rebuilding..."
+            echo "  Current version exists but companion is missing or not $YEN_VENDOR_ARCHITECTURE-only. Reinstalling..."
         else
-            echo "  Current version exists but is not universal. Rebuilding..."
+            echo "  Current version exists but is not $YEN_VENDOR_ARCHITECTURE-only. Reinstalling..."
         fi
     fi
 
@@ -413,47 +431,30 @@ vendor_binary() {
 
     while :; do
         local VERSION_NUM="${LATEST_TAG#v}"
-        local ASSET_ARM64="${ASSET_ARM64_PATTERN//\{VERSION\}/$LATEST_TAG}"
-        ASSET_ARM64="${ASSET_ARM64//\{VNUM\}/$VERSION_NUM}"
-        local ASSET_X86_64="${ASSET_X86_64_PATTERN//\{VERSION\}/$LATEST_TAG}"
-        ASSET_X86_64="${ASSET_X86_64//\{VNUM\}/$VERSION_NUM}"
+        local ASSET="${ASSET_PATTERN//\{VERSION\}/$LATEST_TAG}"
+        ASSET="${ASSET//\{VNUM\}/$VERSION_NUM}"
 
-        local ARM64_DOWNLOAD_PATH="$TEMP_DIR/$ASSET_ARM64"
-        local X86_64_DOWNLOAD_PATH="$TEMP_DIR/$ASSET_X86_64"
+        local DOWNLOAD_PATH="$TEMP_DIR/$ASSET"
 
-        echo "  Downloading arm64..."
-        local DOWNLOAD_URL_ARM64="https://github.com/$GITHUB_REPO/releases/download/$LATEST_TAG/$ASSET_ARM64"
-        if ! curl --retry 3 --retry-delay 1 --max-time 120 --connect-timeout 10 -sfL -o "$ARM64_DOWNLOAD_PATH" "$DOWNLOAD_URL_ARM64"; then
-            echo "  ERROR: arm64 download failed for asset: $ASSET_ARM64"
-            echo "  URL: $DOWNLOAD_URL_ARM64"
+        echo "  Downloading $ASSET..."
+        local DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$LATEST_TAG/$ASSET"
+        if ! curl --retry 3 --retry-delay 1 --max-time 120 --connect-timeout 10 -sfL -o "$DOWNLOAD_PATH" "$DOWNLOAD_URL"; then
+            echo "  ERROR: download failed for asset: $ASSET"
+            echo "  URL: $DOWNLOAD_URL"
             echo "  Hint: release assets may have been renamed or removed upstream"
             STATUS=1
             break
         fi
 
-        echo "  Downloading x86_64..."
-        local DOWNLOAD_URL_X86_64="https://github.com/$GITHUB_REPO/releases/download/$LATEST_TAG/$ASSET_X86_64"
-        if ! curl --retry 3 --retry-delay 1 --max-time 120 --connect-timeout 10 -sfL -o "$X86_64_DOWNLOAD_PATH" "$DOWNLOAD_URL_X86_64"; then
-            echo "  ERROR: x86_64 download failed for asset: $ASSET_X86_64"
-            echo "  URL: $DOWNLOAD_URL_X86_64"
-            echo "  Hint: release assets may have been renamed or removed upstream"
+        if [ ! -s "$DOWNLOAD_PATH" ]; then
+            echo "  ERROR: Downloaded file is empty"
             STATUS=1
             break
         fi
 
-        if [ ! -s "$ARM64_DOWNLOAD_PATH" ] || [ ! -s "$X86_64_DOWNLOAD_PATH" ]; then
-            echo "  ERROR: Downloaded files are empty"
-            STATUS=1
-            break
-        fi
-
-        local ARM64_SHA256
-        local X86_SHA256
-        ARM64_SHA256=$(get_sha256 "$ARM64_DOWNLOAD_PATH")
-        X86_SHA256=$(get_sha256 "$X86_64_DOWNLOAD_PATH")
-        echo "  Computing SHA256 checksums..."
-        echo "    arm64:  $ARM64_SHA256"
-        echo "    x86_64: $X86_SHA256"
+        local ASSET_SHA256
+        ASSET_SHA256=$(get_sha256 "$DOWNLOAD_PATH")
+        echo "  Asset SHA256: $ASSET_SHA256"
 
         local CHECKSUM_FILE=""
         local CHECKSUM_NAME=""
@@ -467,8 +468,7 @@ vendor_binary() {
         local OUTPUT_VERIFICATION="verified"
         local INTEGRITY_CONTEXT="$DISPLAY_NAME:$LATEST_TAG"
         local INTEGRITY_DETAIL=""
-        local API_SHA256_ARM64=""
-        local API_SHA256_X86_64=""
+        local API_SHA256=""
         local CHECKSUM_CANDIDATES=(
             "checksums.txt"
             "SHA256SUMS"
@@ -490,10 +490,9 @@ vendor_binary() {
             fi
         done
 
-        API_SHA256_ARM64="$(vendor_release_asset_sha256 "$GITHUB_REPO" "$LATEST_TAG" "$ASSET_ARM64" || true)"
-        API_SHA256_X86_64="$(vendor_release_asset_sha256 "$GITHUB_REPO" "$LATEST_TAG" "$ASSET_X86_64" || true)"
-        if is_valid_sha256 "$API_SHA256_ARM64" && is_valid_sha256 "$API_SHA256_X86_64"; then
-            if [ "$API_SHA256_ARM64" != "$ARM64_SHA256" ] || [ "$API_SHA256_X86_64" != "$X86_SHA256" ]; then
+        API_SHA256="$(vendor_release_asset_sha256 "$GITHUB_REPO" "$LATEST_TAG" "$ASSET" || true)"
+        if is_valid_sha256 "$API_SHA256"; then
+            if [ "$API_SHA256" != "$ASSET_SHA256" ]; then
                 if ! vendor_fail_or_bypass_integrity \
                     "$REPO_ROOT" "$INTEGRITY_CONTEXT" \
                     "GitHub release-asset digest mismatch"; then
@@ -510,11 +509,10 @@ vendor_binary() {
         fi
 
         if [ "$PROVENANCE_VERIFIED" != true ] && [ -n "$CHECKSUM_FILE" ]; then
-            if grep -Fq "$ASSET_ARM64" "$CHECKSUM_FILE" && grep -Fq "$ASSET_X86_64" "$CHECKSUM_FILE"; then
+            if grep -Fq "$ASSET" "$CHECKSUM_FILE"; then
                 CHECKSUM_TARGETS_FOUND=true
                 echo "  Verifying against published checksums..."
-                awk -v arm64="$ASSET_ARM64" -v x86="$ASSET_X86_64" \
-                    'index($0, arm64) > 0 || index($0, x86) > 0' \
+                awk -v asset="$ASSET" 'index($0, asset) > 0' \
                     "$CHECKSUM_FILE" > "$TEMP_DIR/verify.txt"
                 if CHECKSUM_VERIFY_ERROR=$(cd "$TEMP_DIR" && shasum -a 256 -c "verify.txt" 2>&1); then
                     PROVENANCE_VERIFIED=true
@@ -526,21 +524,18 @@ vendor_binary() {
                     CHECKSUM_VERIFY_ERROR=$(echo "$CHECKSUM_VERIFY_ERROR" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g' | cut -c1-200)
                 fi
             else
-                echo "  WARNING: Published checksum file found but missing one or both target assets"
+                echo "  WARNING: Published checksum file found but missing the target asset"
             fi
         fi
 
         if [ "$PROVENANCE_VERIFIED" != true ]; then
             if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && \
-               [ "$BASELINE_PIN_ASSET_ARM64" = "$ASSET_ARM64" ] && \
-               [ "$BASELINE_PIN_ASSET_X86_64" = "$ASSET_X86_64" ] && \
-               is_valid_sha256 "$BASELINE_PIN_SHA256_ARM64" && \
-               is_valid_sha256 "$BASELINE_PIN_SHA256_X86_64" && \
-               [ "$BASELINE_PIN_SHA256_ARM64" = "$ARM64_SHA256" ] && \
-               [ "$BASELINE_PIN_SHA256_X86_64" = "$X86_SHA256" ]; then
+               [ "$BASELINE_PIN_ASSET" = "$ASSET" ] && \
+               is_valid_sha256 "$BASELINE_PIN_SHA256" && \
+               [ "$BASELINE_PIN_SHA256" = "$ASSET_SHA256" ]; then
                 PROVENANCE_VERIFIED=true
                 PROVENANCE_METHOD="baseline-pinned"
-                echo "  Baseline pinned digests matched"
+                echo "  Baseline pinned digest matched"
             fi
         fi
 
@@ -548,7 +543,7 @@ vendor_binary() {
             if [ -n "$CHECKSUM_FILE" ] && [ "$CHECKSUM_TARGETS_FOUND" = true ] && [ -n "$CHECKSUM_VERIFY_ERROR" ]; then
                 INTEGRITY_DETAIL="published checksum mismatch ($CHECKSUM_VERIFY_ERROR)"
             elif [ -n "$CHECKSUM_FILE" ] && [ "$CHECKSUM_TARGETS_FOUND" != true ]; then
-                INTEGRITY_DETAIL="published checksum file missing target assets (${CHECKSUM_NAME_USED:-unknown})"
+                INTEGRITY_DETAIL="published checksum file missing the target asset (${CHECKSUM_NAME_USED:-unknown})"
             elif [ -n "$CHECKSUM_FILE" ]; then
                 INTEGRITY_DETAIL="published checksum verification unavailable (${CHECKSUM_NAME_USED:-unknown})"
             elif [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ]; then
@@ -565,110 +560,62 @@ vendor_binary() {
         fi
 
         echo "  Extracting..."
-        mkdir -p "$TEMP_DIR/arm64" "$TEMP_DIR/x86_64"
+        mkdir -p "$TEMP_DIR/extracted"
 
         if [ "$MODE" = "tar.gz" ]; then
-            if ! tar -xzf "$ARM64_DOWNLOAD_PATH" -C "$TEMP_DIR/arm64"; then
-                echo "  ERROR: Failed to extract arm64 archive"
-                STATUS=1
-                break
-            fi
-            if ! tar -xzf "$X86_64_DOWNLOAD_PATH" -C "$TEMP_DIR/x86_64"; then
-                echo "  ERROR: Failed to extract x86_64 archive"
+            if ! tar -xzf "$DOWNLOAD_PATH" -C "$TEMP_DIR/extracted"; then
+                echo "  ERROR: Failed to extract archive"
                 STATUS=1
                 break
             fi
         elif [ "$MODE" = "zip" ]; then
-            if ! unzip -q -o "$ARM64_DOWNLOAD_PATH" -d "$TEMP_DIR/arm64"; then
-                echo "  ERROR: Failed to extract arm64 zip"
-                STATUS=1
-                break
-            fi
-            if ! unzip -q -o "$X86_64_DOWNLOAD_PATH" -d "$TEMP_DIR/x86_64"; then
-                echo "  ERROR: Failed to extract x86_64 zip"
+            if ! unzip -q -o "$DOWNLOAD_PATH" -d "$TEMP_DIR/extracted"; then
+                echo "  ERROR: Failed to extract zip"
                 STATUS=1
                 break
             fi
         else
-            cp "$ARM64_DOWNLOAD_PATH" "$TEMP_DIR/arm64/$ARCHIVE_BINARY_NAME"
-            cp "$X86_64_DOWNLOAD_PATH" "$TEMP_DIR/x86_64/$ARCHIVE_BINARY_NAME"
-            chmod 755 "$TEMP_DIR/arm64/$ARCHIVE_BINARY_NAME" "$TEMP_DIR/x86_64/$ARCHIVE_BINARY_NAME"
+            cp "$DOWNLOAD_PATH" "$TEMP_DIR/extracted/$ARCHIVE_BINARY_NAME"
+            chmod 755 "$TEMP_DIR/extracted/$ARCHIVE_BINARY_NAME"
         fi
 
-        local PRIMARY_ARM64
-        local PRIMARY_X86_64
-        PRIMARY_ARM64=$(find "$TEMP_DIR/arm64" -name "$ARCHIVE_BINARY_NAME" -type f | head -1)
-        PRIMARY_X86_64=$(find "$TEMP_DIR/x86_64" -name "$ARCHIVE_BINARY_NAME" -type f | head -1)
+        local PRIMARY_SOURCE
+        PRIMARY_SOURCE=$(find "$TEMP_DIR/extracted" -name "$ARCHIVE_BINARY_NAME" -type f | head -1)
 
-        if [ -z "$PRIMARY_ARM64" ] || [ -z "$PRIMARY_X86_64" ]; then
-            echo "  ERROR: $ARCHIVE_BINARY_NAME not found in downloaded assets"
+        if [ -z "$PRIMARY_SOURCE" ]; then
+            echo "  ERROR: $ARCHIVE_BINARY_NAME not found in the downloaded asset"
             echo "  Hint: archive structure or binary names may have changed upstream"
             STATUS=1
             break
         fi
 
-        echo "  Validating architectures..."
-        if ! file "$PRIMARY_ARM64" | grep -q "arm64"; then
-            echo "  ERROR: arm64 binary is not actually arm64 architecture"
-            echo "  $(file "$PRIMARY_ARM64")"
-            STATUS=1
-            break
-        fi
-        if ! file "$PRIMARY_X86_64" | grep -q "x86_64"; then
-            echo "  ERROR: x86_64 binary is not actually x86_64 architecture"
-            echo "  $(file "$PRIMARY_X86_64")"
-            STATUS=1
-            break
-        fi
-
-        echo "  Creating universal binary..."
+        echo "  Installing the $YEN_VENDOR_ARCHITECTURE binary..."
         mkdir -p "$VENDOR_DIR"
 
-        if [ "$ASSET_ARM64" = "$ASSET_X86_64" ]; then
-            # One pre-merged universal asset for both patterns: both
-            # extractions hold the same fat binary and lipo -create rejects
-            # fat inputs, so install it directly.
-            if ! cp "$PRIMARY_ARM64" "$PRIMARY_OUTPUT_PATH"; then
-                echo "  ERROR: Failed to install universal $OUTPUT_BINARY_NAME"
-                STATUS=1
-                break
-            fi
-        elif ! lipo -create -output "$PRIMARY_OUTPUT_PATH" "$PRIMARY_ARM64" "$PRIMARY_X86_64"; then
-            echo "  ERROR: Failed to create universal $OUTPUT_BINARY_NAME"
+        if ! vendor_install_arm64 "$PRIMARY_SOURCE" "$PRIMARY_OUTPUT_PATH"; then
+            echo "  ERROR: Failed to install $OUTPUT_BINARY_NAME"
             STATUS=1
             break
         fi
-        chmod 755 "$PRIMARY_OUTPUT_PATH"
 
         if [ -n "$COMPANION_ARCHIVE_BINARY_NAME" ]; then
-            local COMPANION_ARM64
-            local COMPANION_X86_64
-            COMPANION_ARM64=$(find "$TEMP_DIR/arm64" -name "$COMPANION_ARCHIVE_BINARY_NAME" -type f | head -1)
-            COMPANION_X86_64=$(find "$TEMP_DIR/x86_64" -name "$COMPANION_ARCHIVE_BINARY_NAME" -type f | head -1)
+            local COMPANION_SOURCE
+            COMPANION_SOURCE=$(find "$TEMP_DIR/extracted" -name "$COMPANION_ARCHIVE_BINARY_NAME" -type f | head -1)
 
-            if [ -n "$COMPANION_ARM64" ] && [ -n "$COMPANION_X86_64" ]; then
-                if [ "$ASSET_ARM64" = "$ASSET_X86_64" ]; then
-                    # Same pre-merged universal asset as the primary above.
-                    if ! cp "$COMPANION_ARM64" "$COMPANION_OUTPUT_PATH"; then
-                        echo "  ERROR: Failed to install universal $COMPANION_OUTPUT_BINARY_NAME"
-                        STATUS=1
-                        break
-                    fi
-                elif ! lipo -create -output "$COMPANION_OUTPUT_PATH" "$COMPANION_ARM64" "$COMPANION_X86_64"; then
-                    echo "  ERROR: Failed to create universal $COMPANION_OUTPUT_BINARY_NAME"
+            if [ -n "$COMPANION_SOURCE" ]; then
+                if ! vendor_install_arm64 "$COMPANION_SOURCE" "$COMPANION_OUTPUT_PATH"; then
+                    echo "  ERROR: Failed to install $COMPANION_OUTPUT_BINARY_NAME"
                     STATUS=1
                     break
                 fi
-                chmod 755 "$COMPANION_OUTPUT_PATH"
-                echo "  Created universal companion binary: $COMPANION_OUTPUT_BINARY_NAME"
+                echo "  Installed companion binary: $COMPANION_OUTPUT_BINARY_NAME"
             else
                 if [ "$REQUIRE_COMPANION" = true ]; then
-                    echo "  ERROR: Companion binary $COMPANION_ARCHIVE_BINARY_NAME missing from one or both archives"
-                    echo "  Hint: one architecture asset may be missing the companion executable"
+                    echo "  ERROR: Companion binary $COMPANION_ARCHIVE_BINARY_NAME missing from the asset"
                     STATUS=1
                     break
                 fi
-                echo "  Companion binary $COMPANION_ARCHIVE_BINARY_NAME not found in both archives; skipping"
+                echo "  Companion binary $COMPANION_ARCHIVE_BINARY_NAME not found in the asset; skipping"
             fi
         fi
 
@@ -679,12 +626,12 @@ vendor_binary() {
             COMPANION_OUTPUT_SHA256=$(get_sha256 "$COMPANION_OUTPUT_PATH")
         fi
 
-        if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && is_valid_sha256 "$BASELINE_PIN_OUTPUT_SHA256"; then
+        if [ "$OUTPUT_PIN_APPLIES" = true ] && is_valid_sha256 "$BASELINE_PIN_OUTPUT_SHA256"; then
             if [ "$PRIMARY_OUTPUT_SHA256" != "$BASELINE_PIN_OUTPUT_SHA256" ]; then
                 if ! vendor_fail_or_bypass_integrity \
                     "$REPO_ROOT" \
                     "$INTEGRITY_CONTEXT" \
-                    "universal output digest mismatch vs baseline pin"; then
+                    "output digest mismatch vs baseline pin"; then
                     STATUS=1
                     break
                 fi
@@ -692,11 +639,10 @@ vendor_binary() {
             fi
         fi
 
-        # Same version guard as the primary output above: the companion pin only
-        # asserts a reproducible rebuild of the SAME upstream tag. Without the
-        # version check every legitimate version bump trips the gate and has to
-        # be waved through with an integrity override.
-        if [ "$REQUIRE_COMPANION" = true ] && [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && is_valid_sha256 "$BASELINE_PIN_COMPANION_SHA256"; then
+        # Same guard as the primary output above: without it every legitimate
+        # version bump trips the gate and has to be waved through with an
+        # integrity override.
+        if [ "$REQUIRE_COMPANION" = true ] && [ "$OUTPUT_PIN_APPLIES" = true ] && is_valid_sha256 "$BASELINE_PIN_COMPANION_SHA256"; then
             if [ "$COMPANION_OUTPUT_SHA256" != "$BASELINE_PIN_COMPANION_SHA256" ]; then
                 if ! vendor_fail_or_bypass_integrity \
                     "$REPO_ROOT" \
@@ -709,14 +655,17 @@ vendor_binary() {
             fi
         fi
 
-        # Verify the universal binary is genuinely arm64+x86_64 BEFORE persisting
-        # the baseline/.version, so a failed run never leaves a baseline asserting
-        # success. lipo -archs is authoritative; `file | grep universal` passes for
-        # arm64+arm64e fat binaries that lack x86_64.
-        OUTPUT_ARCHS=$(lipo -archs "$PRIMARY_OUTPUT_PATH" 2>/dev/null || echo "")
-        if ! echo " $OUTPUT_ARCHS " | grep -q " arm64 " || ! echo " $OUTPUT_ARCHS " | grep -q " x86_64 "; then
-            echo "  ERROR: output is not a universal arm64+x86_64 binary (archs: ${OUTPUT_ARCHS:-none})"
+        # Verify the installed binary is arm64-only BEFORE persisting the
+        # baseline/.version, so a failed run never leaves a baseline asserting
+        # success.
+        if ! assert_arm64_only_binary "$PRIMARY_OUTPUT_PATH"; then
+            echo "  ERROR: output is not an $YEN_VENDOR_ARCHITECTURE-only binary (archs: $(lipo -archs "$PRIMARY_OUTPUT_PATH" 2>/dev/null || echo none))"
             echo "  $(file "$PRIMARY_OUTPUT_PATH")"
+            STATUS=1
+            break
+        fi
+        if [ -n "$COMPANION_OUTPUT_PATH" ] && [ -f "$COMPANION_OUTPUT_PATH" ] && ! assert_arm64_only_binary "$COMPANION_OUTPUT_PATH"; then
+            echo "  ERROR: companion is not an $YEN_VENDOR_ARCHITECTURE-only binary (archs: $(lipo -archs "$COMPANION_OUTPUT_PATH" 2>/dev/null || echo none))"
             STATUS=1
             break
         fi
@@ -754,13 +703,10 @@ vendor_binary() {
 upstream_repo=https://github.com/$GITHUB_REPO
 upstream_version=$LATEST_TAG
 last_sync=$LAST_SYNC
-architecture=universal (arm64 + x86_64)
-source_asset_arm64=$ASSET_ARM64
-source_asset_x86_64=$ASSET_X86_64
-source_sha256_arm64=$ARM64_SHA256
-source_sha256_x86_64=$X86_SHA256
-source_api_sha256_arm64=${API_SHA256_ARM64:-none}
-source_api_sha256_x86_64=${API_SHA256_X86_64:-none}
+architecture=$YEN_VENDOR_ARCHITECTURE
+source_asset_arm64=$ASSET
+source_sha256_arm64=$ASSET_SHA256
+source_api_sha256_arm64=${API_SHA256:-none}
 source_checksums_file=${CHECKSUM_NAME_USED:-none}
 source_checksums_sha256=${CHECKSUM_FILE_SHA256:-none}
 provenance_verification=$PROVENANCE_METHOD
@@ -807,9 +753,9 @@ require_tool() {
     fi
 }
 
-# Shared source-build scaffolding for fd/btop/zmx. See the header comment for
+# Shared source-build scaffolding for btop/zmx. See the header comment for
 # the full parameter list and the BUILD_FN callback contract. Fail-closed by
-# design: every source-pin, output-pin, and universal-arch check aborts the run
+# design: every source-pin, output-pin, and architecture check aborts the run
 # rather than record a bad baseline.
 vendor_source_build() {
     local DISPLAY_NAME="$1"
@@ -829,7 +775,7 @@ vendor_source_build() {
     local OUTPUT_BINARY="$VENDOR_DIR/$OUTPUT_BINARY_NAME"
 
     echo ""
-    echo "Vendor $DISPLAY_NAME (Universal Binary — Source Build)"
+    echo "Vendor $DISPLAY_NAME ($YEN_VENDOR_ARCHITECTURE — Source Build)"
 
     local LATEST_TAG
     LATEST_TAG="${VENDOR_LATEST_TAG:-}"
@@ -853,6 +799,7 @@ vendor_source_build() {
     fi
 
     local BASELINE_PIN_VERSION=""
+    local BASELINE_PIN_ARCHITECTURE=""
     local BASELINE_PIN_SOURCE_SHA256=""
     local BASELINE_PIN_OUTPUT_SHA256=""
     if [ -f "$BASELINE_FILE" ]; then
@@ -862,6 +809,7 @@ vendor_source_build() {
         # historical "" fallback (downstream integrity gates emit their own clear
         # messages on empty pins) exactly as under plain `set -e`.
         BASELINE_PIN_VERSION=$(baseline_value "upstream_version" "$BASELINE_FILE") || true
+        BASELINE_PIN_ARCHITECTURE=$(baseline_value "architecture" "$BASELINE_FILE") || true
         BASELINE_PIN_SOURCE_SHA256=$(baseline_value "source_tarball_sha256" "$BASELINE_FILE") || true
         BASELINE_PIN_OUTPUT_SHA256=$(baseline_value "output_sha256" "$BASELINE_FILE") || true
     fi
@@ -874,8 +822,12 @@ vendor_source_build() {
     if [ -n "$BUILD_INPUT_ID" ] && [ -f "$BASELINE_FILE" ]; then
         BASELINE_PIN_INPUT_ID=$(baseline_value "build_input_id" "$BASELINE_FILE") || true
     fi
+    # The output pin asserts a reproducible rebuild of the same tag, from the
+    # same build inputs, in the same architecture. A baseline that recorded
+    # another slice set has no comparable pin.
     local OUTPUT_PIN_APPLIES=false
-    if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && [ "$BASELINE_PIN_INPUT_ID" = "$BUILD_INPUT_ID" ]; then
+    if [ "$BASELINE_PIN_VERSION" = "$LATEST_TAG" ] && [ "$BASELINE_PIN_INPUT_ID" = "$BUILD_INPUT_ID" ] && \
+       [ "$BASELINE_PIN_ARCHITECTURE" = "$YEN_VENDOR_ARCHITECTURE" ]; then
         OUTPUT_PIN_APPLIES=true
     fi
     if [ -n "$BUILD_INPUT_ID" ] && [ "$BASELINE_PIN_INPUT_ID" != "$BUILD_INPUT_ID" ]; then
@@ -883,18 +835,15 @@ vendor_source_build() {
         FORCE=true
     fi
 
-    # No-op path: current + universal. Revalidate the pinned output digest of the
+    # No-op path: current + arm64-only. Revalidate the pinned output digest of the
     # bundled binary BEFORE declaring it current, so a tampered/stale artifact
     # fails closed instead of silently passing (three fail-closed branches; keep
     # this revalidation BEFORE the "Already current" message — a guardrail test
     # asserts that ordering).
     if [ "$FORCE" = false ] && [ "$CURRENT_VERSION" = "$LATEST_TAG" ] && [ -f "$OUTPUT_BINARY" ]; then
-        # lipo -archs is authoritative; `file | grep universal` also passes for an
-        # arm64+arm64e fat binary that LACKS x86_64. Only treat the bundled artifact
-        # as "current and universal" when its slice set contains BOTH required archs.
-        local NOOP_OUTPUT_ARCHS
-        NOOP_OUTPUT_ARCHS=$(lipo -archs "$OUTPUT_BINARY" 2>/dev/null || echo "")
-        if echo " $NOOP_OUTPUT_ARCHS " | grep -q " arm64 " && echo " $NOOP_OUTPUT_ARCHS " | grep -q " x86_64 "; then
+        # Only an arm64-only binary counts as current: an installed universal
+        # binary from an older baseline is rebuilt, not kept.
+        if assert_arm64_only_binary "$OUTPUT_BINARY"; then
             if [ "$BASELINE_PIN_VERSION" != "$LATEST_TAG" ]; then
                 if ! vendor_fail_or_bypass_integrity \
                     "$REPO_ROOT" \
@@ -928,12 +877,12 @@ vendor_source_build() {
                 fi
             fi
 
-            echo "  Already current ($CURRENT_VERSION) and universal. Use --force to rebuild."
+            echo "  Already current ($CURRENT_VERSION) and $YEN_VENDOR_ARCHITECTURE-only. Use --force to rebuild."
             echo ""
             echo "Done."
             return 0
         fi
-        echo "  Current version exists but is not universal. Rebuilding..."
+        echo "  Current version exists but is not $YEN_VENDOR_ARCHITECTURE-only. Rebuilding..."
     fi
 
     if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" != "$LATEST_TAG" ]; then
@@ -1035,56 +984,32 @@ vendor_source_build() {
         # prior binary passing the checks below.
         local BUILD_OUT
         if ! BUILD_OUT=$("$BUILD_FN" "$SOURCE_DIR" "$TEMP_DIR"); then
-            echo "ERROR: One or both architecture builds failed"
+            echo "ERROR: The $YEN_VENDOR_ARCHITECTURE build failed"
             STATUS=1
             break
         fi
 
-        local ARM64_BINARY X86_64_BINARY
-        ARM64_BINARY=$(echo "$BUILD_OUT" | sed -n '1p')
-        X86_64_BINARY=$(echo "$BUILD_OUT" | sed -n '2p')
+        local BUILT_BINARY
+        BUILT_BINARY=$(echo "$BUILD_OUT" | sed -n '1p')
 
-        if [ -z "$ARM64_BINARY" ] || [ ! -f "$ARM64_BINARY" ]; then
-            echo "ERROR: arm64 $DISPLAY_NAME binary not found after build"
-            STATUS=1
-            break
-        fi
-        if [ -z "$X86_64_BINARY" ] || [ ! -f "$X86_64_BINARY" ]; then
-            echo "ERROR: x86_64 $DISPLAY_NAME binary not found after build"
+        if [ -z "$BUILT_BINARY" ] || [ ! -f "$BUILT_BINARY" ]; then
+            echo "ERROR: $DISPLAY_NAME binary not found after build"
             STATUS=1
             break
         fi
 
-        if ! file "$ARM64_BINARY" | grep -q "arm64"; then
-            echo "ERROR: arm64 build output is not arm64"
-            echo "  $(file "$ARM64_BINARY")"
-            STATUS=1
-            break
-        fi
-        if ! file "$X86_64_BINARY" | grep -q "x86_64"; then
-            echo "ERROR: x86_64 build output is not x86_64"
-            echo "  $(file "$X86_64_BINARY")"
-            STATUS=1
-            break
-        fi
-
-        echo "  Creating universal binary..."
+        echo "  Installing the $YEN_VENDOR_ARCHITECTURE binary..."
         mkdir -p "$VENDOR_DIR"
-        if ! lipo -create -output "$OUTPUT_BINARY" "$ARM64_BINARY" "$X86_64_BINARY"; then
-            echo "ERROR: Failed to create universal $OUTPUT_BINARY_NAME"
+        if ! vendor_install_arm64 "$BUILT_BINARY" "$OUTPUT_BINARY"; then
+            echo "ERROR: Failed to install $OUTPUT_BINARY_NAME"
             STATUS=1
             break
         fi
-        chmod 755 "$OUTPUT_BINARY"
 
-        # Verify the universal binary is genuinely arm64+x86_64 BEFORE persisting
-        # the baseline/.version. lipo -archs is authoritative; `file | grep universal`
-        # also passes for an arm64+arm64e fat binary that LACKS x86_64. Assert the
-        # slice set contains BOTH required archs (order-independent, fail-closed).
-        local OUTPUT_ARCHS
-        OUTPUT_ARCHS=$(lipo -archs "$OUTPUT_BINARY" 2>/dev/null || echo "")
-        if ! echo " $OUTPUT_ARCHS " | grep -q " arm64 " || ! echo " $OUTPUT_ARCHS " | grep -q " x86_64 "; then
-            echo "ERROR: output is not a universal arm64+x86_64 binary (archs: ${OUTPUT_ARCHS:-none})"
+        # Verify the installed binary is arm64-only BEFORE persisting the
+        # baseline/.version (fail-closed).
+        if ! assert_arm64_only_binary "$OUTPUT_BINARY"; then
+            echo "ERROR: output is not an $YEN_VENDOR_ARCHITECTURE-only binary (archs: $(lipo -archs "$OUTPUT_BINARY" 2>/dev/null || echo none))"
             echo "  $(file "$OUTPUT_BINARY")"
             STATUS=1
             break
@@ -1117,8 +1042,7 @@ vendor_source_build() {
 
         # Liveness test BEFORE persisting the baseline — a source-built binary
         # that will not exec means a broken build; fail closed rather than record
-        # a bad baseline. Superset of the per-tool flags (fd: --version;
-        # btop: --version/-v).
+        # a bad baseline. Superset of the per-tool flags (btop: --version/-v).
         if "$OUTPUT_BINARY" --version >/dev/null 2>&1 || "$OUTPUT_BINARY" -v >/dev/null 2>&1 || "$OUTPUT_BINARY" -V >/dev/null 2>&1 || "$OUTPUT_BINARY" version >/dev/null 2>&1; then
             echo "  Execution test: passed"
         else
@@ -1143,13 +1067,13 @@ vendor_source_build() {
 
         # Brace-group of echo lines (not a heredoc) so the build_method line is
         # emitted ONLY when BUILD_METHOD is non-empty. Preserves btop's omission
-        # plus fd's inclusion and the exact field set + order.
+        # and the exact field set + order.
         {
             echo "# $DISPLAY_NAME Baseline Tracking"
             echo "upstream_repo=https://github.com/$GITHUB_REPO"
             echo "upstream_version=$LATEST_TAG"
             echo "last_sync=$LAST_SYNC"
-            echo "architecture=universal (arm64 + x86_64)"
+            echo "architecture=$YEN_VENDOR_ARCHITECTURE"
             if [ -n "$BUILD_METHOD" ]; then
                 echo "build_method=$BUILD_METHOD"
             fi

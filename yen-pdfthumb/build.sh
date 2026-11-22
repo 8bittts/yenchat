@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build yen-pdfthumb as universal binary (arm64 + x86_64)
+# Build yen-pdfthumb as an arm64 binary
 #
 # Usage: ./build.sh
 #
-# Output: ./yen-pdfthumb (universal binary)
+# Output: ./yen-pdfthumb (arm64)
 
 set -e
 

@@ -178,10 +178,10 @@ if [ -n "$APP_PATH" ]; then
         app_bin_path=$(required_app_bin_path "$app_bin")
         [ -f "$BIN_DIR/$app_bin_path" ] || fail "Bundled app missing binary: $app_bin_path"
         [ -x "$BIN_DIR/$app_bin_path" ] || fail "Bundled app binary is not executable: $app_bin_path"
-        # lipo -archs, not `file | grep universal` — the latter also passes an
-        # arm64+arm64e fat binary with no x86_64 slice at all.
-        assert_universal_binary "$BIN_DIR/$app_bin_path" \
-            || fail "Bundled app binary is not universal (needs arm64 + x86_64): $app_bin"
+        # lipo -archs, not `file | grep arm64` — the latter also passes a fat
+        # binary that carries another slice beside arm64.
+        assert_arm64_only_binary "$BIN_DIR/$app_bin_path" \
+            || fail "Bundled app binary is not arm64-only: $app_bin"
         APP_BINS_VERIFIED=$((APP_BINS_VERIFIED + 1))
     done
     gate_unit_ran app-bundle "verified_bins=$APP_BINS_VERIFIED/${#REQUIRED_APP_BINS[@]}"

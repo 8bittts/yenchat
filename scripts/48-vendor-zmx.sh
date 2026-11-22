@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vendor zmx Binary (Universal, built against YEN's vendored engine)
+# Vendor zmx Binary (arm64, built against YEN's vendored engine)
 #
 # zmx keeps each terminal pane's process alive in its own daemon and replays the
 # screen on reattach (_docs/00-foundation.md -> Decisions). It renders that
@@ -198,10 +198,10 @@ build_arch_binary() {
     echo "$prefix/bin/zmx"
 }
 
-# Build callback (see the BUILD_FN contract in lib/vendor-binary.sh): arm64 path
-# first, x86_64 second on STDOUT; all progress on STDERR.
+# Build callback (see the BUILD_FN contract in lib/vendor-binary.sh): the arm64
+# binary path on STDOUT; all progress on STDERR.
 build_zmx() {
-    local source_dir="$1" temp_dir="$2" arm64 x86
+    local source_dir="$1" temp_dir="$2" arm64
     if ! mkdir "$ZMX_BUILD_LOCK" 2>/dev/null; then
         echo "ERROR: another zmx build holds $ZMX_BUILD_LOCK; remove it only if no build is running" >&2
         return 1
@@ -215,18 +215,14 @@ build_zmx() {
     rm -rf "$ZMX_BUILD_ROOT/yen-engine/.zig-cache" "$ZMX_BUILD_ROOT/yen-engine/zig-out" "$ZMX_BUILD_ROOT/yen-engine/macos/build"
     patch_zmx_source "$ZMX_BUILD_ROOT" || return 1
     build_arch_binary "$ZMX_BUILD_ROOT" "aarch64-macos" "$ZMX_BUILD_ROOT/out-arm64" >/dev/null || return 1
-    build_arch_binary "$ZMX_BUILD_ROOT" "x86_64-macos" "$ZMX_BUILD_ROOT/out-x86_64" >/dev/null || return 1
     mkdir -p "$temp_dir/out" || return 1
     cp "$ZMX_BUILD_ROOT/out-arm64/bin/zmx" "$temp_dir/out/zmx-arm64" || return 1
-    cp "$ZMX_BUILD_ROOT/out-x86_64/bin/zmx" "$temp_dir/out/zmx-x86_64" || return 1
     arm64="$temp_dir/out/zmx-arm64"
-    x86="$temp_dir/out/zmx-x86_64"
-    if strings "$arm64" "$x86" | grep -qi "ghostty"; then
+    if strings "$arm64" | grep -qi "ghostty"; then
         echo "ERROR: zmx build still carries the upstream engine name" >&2
         return 1
     fi
     echo "$arm64"
-    echo "$x86"
 }
 
 VENDOR_BUILD_INPUT_ID="$ENGINE_ID" \

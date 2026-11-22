@@ -54,7 +54,6 @@ The archive plugin intentionally omits upstream's compressed-tar re-entry and si
 
 ## Known Limitations
 
-- Fast mouse scrolling while the `less` view is open can print raw SGR mouse sequences, because the pager child does not take part in mouse tracking. It is upstream behavior; scroll with `j` and `k`.
 - Encrypted archive extraction is blocked: `bsdtar` takes passphrases only as arguments, visible in `ps`. `YEN_ALLOW_INSECURE_ARCHIVE_PASSPHRASE=1` opts in.
 - `qlmanage` can abort on audio and video, so `yen-quicklook` sends `public.movie`, `public.video` and `public.audio` to `open`.
 

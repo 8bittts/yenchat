@@ -903,8 +903,8 @@ describe("post-build gate cannot exit 0 without completing", () => {
 
 // ---------------------------------------------------------------------------
 // Remaining fail-opens from the audit: empty scan sets, unverified signatures,
-// unasserted frameworks, and a universality predicate the repo's own code
-// documents as insufficient.
+// unasserted frameworks, and an architecture predicate that a fat binary
+// could satisfy.
 // ---------------------------------------------------------------------------
 describe("release gate completeness", () => {
 	const fingerprintPath = join(
@@ -972,32 +972,77 @@ describe("release gate completeness", () => {
 		);
 	});
 
-	test("universality uses lipo -archs everywhere, not file | grep universal", () => {
-		const helper = readFileSync(sigUtils, "utf8");
-		expect(helper).toContain("assert_universal_binary()");
-		expect(helper).toContain("lipo -archs");
-		expect(helper).toMatch(/grep -q " arm64 "/);
-		expect(helper).toMatch(/grep -q " x86_64 "/);
-
+	test("the bundle gates check architecture through the shared arm64-only assertion", () => {
 		for (const rel of [
 			"scripts/05-detect-failures.sh",
 			"scripts/12-verify-vendor-audit.sh",
+			"scripts/14-vendor.sh",
+			"scripts/lib/vendor-binary.sh",
 		]) {
 			const s = readFileSync(join(repoRoot, rel), "utf8");
-			expect(s).toContain("assert_universal_binary");
-			expect(s).not.toMatch(/file "[^"]+" \| grep -q "universal"/);
-			expect(s).not.toMatch(/grep -q "universal"/);
+			expect(s).toContain("assert_arm64_only_binary");
+			expect(s).not.toContain("assert_universal_binary");
+			// `file | grep` passes a fat binary that carries arm64 beside
+			// another slice, so no gate may fall back to it.
+			expect(s).not.toMatch(/file "[^"]+" \| grep -q "(universal|arm64)"/);
 		}
 	});
 
-	test("assert_universal_binary rejects arm64e-only fat binaries", () => {
-		// /bin/ls is x86_64 + arm64e — no arm64 slice. `file | grep universal`
-		// passes it; the sound check must not.
-		const probe = `source ${sigUtils}
-assert_universal_binary /bin/ls && echo WEAK || echo STRONG`;
-		const res = spawnSync("bash", ["-c", probe], { encoding: "utf8" });
-		expect(res.stdout.trim()).toBe("STRONG");
-	});
+	test.skipIf(process.platform !== "darwin")(
+		"assert_arm64_only_binary accepts a thin arm64 binary and rejects every other shape",
+		() => {
+			// YEN requires macOS 27, which runs only on Apple silicon, so a
+			// bundled binary may hold the arm64 slice and nothing else.
+			const dir = mkdtempSync(join(tmpdir(), "yen-arm64-only-"));
+			try {
+				const compile = (name: string, arch: string) => {
+					const out = join(dir, name);
+					const res = spawnSync(
+						"xcrun",
+						["clang", "-arch", arch, "-x", "c", "-", "-o", out],
+						{ input: "int main(void) { return 0; }", encoding: "utf8" },
+					);
+					expect(res.status, res.stderr).toBe(0);
+					return out;
+				};
+				const thin = compile("thin-arm64", "arm64");
+				const intel = compile("thin-x86_64", "x86_64");
+				const fat = join(dir, "fat");
+				const lipo = spawnSync(
+					"lipo",
+					["-create", thin, intel, "-output", fat],
+					{ encoding: "utf8" },
+				);
+				expect(lipo.status, lipo.stderr).toBe(0);
+				const text = join(dir, "script.sh");
+				writeFileSync(text, "#!/bin/sh\n", "utf8");
+
+				const verdict = (path: string) =>
+					spawnSync(
+						"bash",
+						[
+							"-c",
+							'source "$1"; assert_arm64_only_binary "$2" && echo ACCEPT || echo REJECT',
+							"bash",
+							sigUtils,
+							path,
+						],
+						{ encoding: "utf8" },
+					).stdout.trim();
+
+				expect(verdict(thin)).toBe("ACCEPT");
+				expect(verdict(fat)).toBe("REJECT");
+				expect(verdict(intel)).toBe("REJECT");
+				// /bin/ls is x86_64 + arm64e: a fat system binary with no
+				// plain arm64 slice.
+				expect(verdict("/bin/ls")).toBe("REJECT");
+				expect(verdict(text)).toBe("REJECT");
+				expect(verdict(join(dir, "missing"))).toBe("REJECT");
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		},
+	);
 
 	test("parity snapshot refuses a non-vendor-run as a baseline", () => {
 		const s = readFileSync(parityPath, "utf8");

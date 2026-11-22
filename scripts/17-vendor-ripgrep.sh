@@ -1,8 +1,8 @@
 #!/bin/bash
-# Vendor ripgrep Binary (Universal)
+# Vendor ripgrep Binary (arm64)
 #
-# Downloads both arm64 and x86_64 ripgrep release binaries and creates
-# a universal binary using lipo. Stores at yen-terminal/customizations/vendor/ripgrep/
+# Downloads the arm64 ripgrep release archive and installs `rg`.
+# Stores at yen-terminal/customizations/vendor/ripgrep/
 #
 # ripgrep (rg) is a fast content search tool used by yazi for grep within files.
 #
@@ -27,5 +27,4 @@ vendor_binary \
     "ripgrep" \
     ".ripgrep-baseline" \
     "ripgrep-{VERSION}-aarch64-apple-darwin.tar.gz" \
-    "ripgrep-{VERSION}-x86_64-apple-darwin.tar.gz" \
     "$FORCE"

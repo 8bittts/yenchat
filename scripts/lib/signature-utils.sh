@@ -190,21 +190,16 @@ verify_signed_file_with_signature_file() {
     verify_signed_file_with_public_key "$payload_path" "$signature_body" "$public_key_b64"
 }
 
-# assert_universal_binary <path> — 0 when the file is a fat binary containing
-# BOTH arm64 and x86_64, non-zero otherwise (including a missing file).
+# assert_arm64_only_binary <path> — 0 when the file is a Mach-O binary whose
+# only architecture is arm64, non-zero otherwise (including a missing file).
 #
-# `file <path> | grep -q universal` is NOT sufficient and was used at ten sites:
-# it also passes an arm64+arm64e fat binary that lacks x86_64 entirely, which
-# would ship an app that cannot run on Intel. scripts/lib/vendor-binary.sh:310
-# already documents this and uses `lipo -archs`; this is that check, shared.
-assert_universal_binary() {
+# YEN requires macOS 27, which runs only on Apple silicon, so any other slice in
+# the bundle is dead weight that still has to be signed, scanned and shipped.
+# `lipo -archs` is authoritative: `file <path> | grep -q arm64` also passes a
+# fat binary that carries x86_64 or arm64e beside arm64.
+assert_arm64_only_binary() {
     local binary_path="$1"
-    local archs=""
 
     [ -f "$binary_path" ] || return 1
-    archs=$(lipo -archs "$binary_path" 2>/dev/null || echo "")
-    [ -n "$archs" ] || return 1
-    echo " $archs " | grep -q " arm64 " || return 1
-    echo " $archs " | grep -q " x86_64 " || return 1
-    return 0
+    [ "$(lipo -archs "$binary_path" 2>/dev/null || echo "")" = "arm64" ]
 }

@@ -39,7 +39,7 @@ Run repo scripts by absolute path; never rely on `cd`.
 | --------- | --------------------- | --------------------- | ------------------------ |
 | Ghostty   | Source (Zig)          | `.ghostty-baseline`   | `10-update-ghostty.sh`   |
 | Yazi      | Binary (pre-built)    | `.yazi-baseline`      | `15-vendor-yazi.sh`      |
-| fd        | Binary (source-built) | `.fd-baseline`        | `16-vendor-fd.sh`        |
+| fd        | Binary (pre-built)    | `.fd-baseline`        | `16-vendor-fd.sh`        |
 | ripgrep   | Binary (pre-built)    | `.ripgrep-baseline`   | `17-vendor-ripgrep.sh`   |
 | lazygit   | Binary (pre-built)    | `.lazygit-baseline`   | `32-vendor-lazygit.sh`   |
 | btop      | Binary (source-built) | `.btop-baseline`      | `34-vendor-btop.sh`      |
@@ -47,15 +47,17 @@ Run repo scripts by absolute path; never rely on `cd`.
 | zmx       | Binary (source-built) | `.zmx-baseline`       | `48-vendor-zmx.sh`       |
 
 Baselines are git-tracked; vendor artifacts are gitignored.
-Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`; `fd` and `btop` build both slices from source through `vendor_source_build()` (Cargo or CMake, then `lipo`) because upstream ships no Intel asset; `zmx` builds the same way with Zig against the vendored engine (`_docs/04-security.md`).
+Every vendored binary is arm64-only, because YEN requires macOS 27 and that runs only on Apple silicon.
+Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendor-binary.sh`, which downloads the arm64 asset; `fastfetch` ships one universal asset, so its arm64 slice is kept and the rest dropped.
+`btop` builds from source through `vendor_source_build()` (CMake) because upstream ships no macOS binary; `zmx` builds the same way with Zig against the vendored engine (`_docs/04-security.md`).
 
 ### Verification Pipeline (vendor-binary.sh)
 
 | Stage        | Check                                                                                                                                | Severity                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | Download     | Published checksum verification (8 filename patterns tried, including underscore variants) plus GitHub release-asset digest metadata | Fatal on mismatch; trust-on-first-use is recorded when upstream publishes no checksum |
-| Pre-lipo     | Each asset has the architecture it claims                                                                                            | Fatal                                                                                 |
-| Post-lipo    | `assert_universal_binary` (`lipo -archs` lists arm64 and x86_64)                                                                     | Fatal                                                                                 |
+| Install      | `vendor_install_arm64` copies a thin arm64 binary or keeps the arm64 slice of a fat one; no arm64 slice fails                        | Fatal                                                                                 |
+| Post-install | `assert_arm64_only_binary` (`lipo -archs` prints exactly `arm64`), before any baseline write                                         | Fatal                                                                                 |
 | Post-create  | `--version`, `-V` or `version` answers                                                                                               | Fatal                                                                                 |
 | No-op run    | Source-built vendors revalidate the bundled output against `output_sha256`                                                           | Fatal                                                                                 |
 | Orchestrator | Baseline has `upstream_version=` before any read                                                                                     | Fatal                                                                                 |
@@ -64,7 +66,7 @@ Pre-built vendors are thin wrappers over `vendor_binary()` in `scripts/lib/vendo
 
 Reference: `scripts/17-vendor-ripgrep.sh` for a pre-built vendor and `scripts/34-vendor-btop.sh` for a source build.
 
-1. Create `scripts/NN-vendor-<name>.sh` (next free number) over `vendor_binary()`, or a source build when upstream ships no Intel asset.
+1. Create `scripts/NN-vendor-<name>.sh` (next free number) over `vendor_binary()`, or a source build when upstream ships no macOS arm64 asset.
 2. Append one record to `scripts/lib/vendor-manifest.sh` (`key|type|title|subtitle|repo|binary|script|companion|require_companion`); `14-vendor.sh`, `11-sync-vendor-audit.sh` and `12-verify-vendor-audit.sh` iterate it.
 3. Never hand-write the baseline; the first run writes it with the integrity fields the gates read back.
 4. Wire `.gitignore`, `bundle-yen-resources.sh`, `finalize-build.sh` signing, `05-detect-failures.sh`, `scripts/lib/required-app-bins.sh`, the `13-scan-artifact-fingerprints.sh` scope, shell-integration `PATH`, this table, and `_docs/04-security.md`.
@@ -83,7 +85,7 @@ The regression unit runs `tests/35`, `45` and `51` plus the guardrail suites.
 
 Post-build checks in seven categories:
 
-1. Artifacts: universal main binary, plist keys, bundled CLI, DMG and checksum, signed metadata, shell integration; DMG URL and SHA-256 parity, `hdiutil verify`, `spctl` and `stapler validate`.
+1. Artifacts: main binary architecture and macOS floor, arm64-only bundled binaries, plist keys, bundled CLI, DMG and checksum, signed metadata, shell integration; DMG URL and SHA-256 parity, `hdiutil verify`, `spctl` and `stapler validate`.
    The built binary must resolve `copy-on-select = true` to `both`, and the bundle must hold every tracked license notice unchanged.
 2. Security: hardened runtime, timestamps, Sparkle and app signatures, `codesign --verify --strict` on every required `Resources/bin` binary, and the audio-input entitlement.
 3. Critical files present and non-empty.
@@ -154,7 +156,7 @@ Their orchestrators and shared-state contracts are described in `_docs/05-infras
 | `verify-signed-file.sh`, `zip-notify.sh`                                                                                                            | Signature check on a release file; `/update-yen` milestone notifications                                                             |
 | `web-build-id.ts`                                                                                                                                   | Content-derived Next build ID for `next.config.ts`                                                                                   |
 | `version-utils.sh`                                                                                                                                  | The only source of derived version values                                                                                            |
-| `signing-constants.sh`, `signature-utils.sh`, `release-constants.sh`, `mount-utils.sh`                                                              | Signing identity, Ed25519 and universal-binary checks, release URLs, stale DMG mounts                                                |
+| `signing-constants.sh`, `signature-utils.sh`, `release-constants.sh`, `mount-utils.sh`                                                              | Signing identity, Ed25519 and arm64-only checks, release URLs, stale DMG mounts                                                      |
 | `json-utils.py`, `python-utils.sh`, `yen-cli-resolve.sh`, `build-thumb.sh`                                                                          | JSON edits, Python discovery, `yen` CLI resolution, thumbnail helper builds                                                          |
 | `fingerprint-allowlist.txt`, `artifact-url-domain-allowlist.txt`, `non-concurrency-warning-allowlist.txt`, `privileged-action-surface-baseline.txt` | Gate allowlists and baselines                                                                                                        |
 

@@ -528,13 +528,13 @@ describe("vendor process guardrails", () => {
 	});
 
 	test("source-build no-op path revalidates the pinned output digest before returning current", () => {
-		// The fd/btop/zmx source-build scripts share vendor_source_build() in
+		// The btop/zmx source-build scripts share vendor_source_build() in
 		// lib/vendor-binary.sh. Its no-op path must fail closed on a tampered or
 		// stale bundled binary BEFORE printing "Already current" — a guardrail on
 		// ordering, since the message must never precede the digest revalidation.
 		const fullHelper = readFileSync(vendorBinaryHelperPath, "utf8");
 		// Scope to vendor_source_build(): vendor_binary() also prints an "Already
-		// current ... and universal" line, so an unscoped indexOf would compare
+		// current ... and arm64-only" line, so an unscoped indexOf would compare
 		// against the wrong function.
 		const fnStart = fullHelper.indexOf("vendor_source_build() {");
 		expect(fnStart).toBeGreaterThanOrEqual(0);
@@ -546,7 +546,7 @@ describe("vendor process guardrails", () => {
 			"missing baseline output_sha256 for current version",
 		);
 		const currentExitIndex = script.indexOf(
-			"Already current ($CURRENT_VERSION) and universal",
+			"Already current ($CURRENT_VERSION) and $YEN_VENDOR_ARCHITECTURE-only",
 		);
 
 		expect(digestMismatchIndex).toBeGreaterThanOrEqual(0);
