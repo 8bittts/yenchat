@@ -252,7 +252,8 @@ struct SettingsStudioPreviewOutline: View {
                 radius: appearance.windowBorderRadius,
                 chromeMode: .native,
                 isFocused: true,
-                useDashedUnfocusedStyle: false
+                useDashedUnfocusedStyle: false,
+                effects: appearance.windowBorderEffects
             )
             .paneBorder(framed: framed)
             .padding(framed ? YENDesignTokens.paneInset : 0)

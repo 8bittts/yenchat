@@ -117,6 +117,9 @@ enum SettingsConfigurationReset {
         defaults.set(normalizedState.colorMode.rawValue, forKey: WindowBorderPreferences.colorModePreferenceKey)
         defaults.set(normalizedState.focusedPalette.rawValue, forKey: WindowBorderPreferences.focusedPalettePreferenceKey)
         defaults.set(normalizedState.unfocusedPalette.rawValue, forKey: WindowBorderPreferences.unfocusedPalettePreferenceKey)
+        defaults.set(normalizedState.effects.sparkEnabled, forKey: WindowBorderPreferences.sparkPreferenceKey)
+        defaults.set(normalizedState.effects.auraEnabled, forKey: WindowBorderPreferences.auraPreferenceKey)
+        defaults.set(normalizedState.effects.auraColorHex, forKey: WindowBorderPreferences.auraColorPreferenceKey)
     }
 
     static func resetNotificationPreferencesToDefaults() {

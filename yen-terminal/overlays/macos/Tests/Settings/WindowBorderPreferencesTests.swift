@@ -78,6 +78,78 @@ struct WindowBorderPreferencesTests {
         }
     }
 
+    @Test func borderEffectsAreOffByDefaultWithABrandOrangeAura() {
+        withIsolatedWindowBorderPreferences {
+            WindowBorderPreferences.registerDefaults()
+            let effects = WindowBorderPreferences.state().effects
+
+            #expect(!effects.sparkEnabled)
+            #expect(!effects.auraEnabled)
+            #expect(effects.auraColorHex == "#FF5100")
+            #expect(effects == WindowBorderEffects.none)
+        }
+    }
+
+    @Test func auraColorIsStoredAsCapitalHexAndFallsBackWhenItIsNotAColor() {
+        #expect(WindowBorderPreferences.normalizedAuraColorHex("#22c55e") == "#22C55E")
+        #expect(WindowBorderPreferences.normalizedAuraColorHex("0ea5e9") == "#0EA5E9")
+        #expect(WindowBorderPreferences.normalizedAuraColorHex(" #6366F1 ") == "#6366F1")
+        for invalid in ["", "#12345", "#1234567", "#GGGGGG", "orange"] {
+            #expect(WindowBorderPreferences.normalizedAuraColorHex(invalid) == "#FF5100")
+        }
+
+        #expect(WindowBorderPreferences.auraColorHex(from: Color(red: 0, green: 0.5, blue: 1)) == "#0080FF")
+        #expect(WindowBorderPreferences.auraColorHex(from: Color(red: 1, green: 1, blue: 1, opacity: 0.2)) == "#FFFFFF")
+
+        withIsolatedWindowBorderPreferences {
+            UserDefaults.standard.set("not-a-color", forKey: WindowBorderPreferences.auraColorPreferenceKey)
+            #expect(WindowBorderPreferences.state().effects.auraColorHex == "#FF5100")
+        }
+    }
+
+    @Test func borderEffectsRoundTripThroughTheControllerAndDefaults() {
+        withIsolatedWindowBorderPreferences {
+            let defaults = UserDefaults.standard
+            let controller = SettingsController.shared
+            controller.loadWindowBorderPreferences()
+            #expect(controller.windowBorderEffects == WindowBorderEffects.none)
+
+            controller.windowBorderSparkEnabled = true
+            controller.windowBorderAuraEnabled = true
+            controller.windowBorderAuraColorHex = "#22c55e"
+
+            #expect(controller.windowBorderAuraColorHex == "#22C55E")
+            #expect(defaults.bool(forKey: WindowBorderPreferences.sparkPreferenceKey))
+            #expect(defaults.bool(forKey: WindowBorderPreferences.auraPreferenceKey))
+            #expect(defaults.string(forKey: WindowBorderPreferences.auraColorPreferenceKey) == "#22C55E")
+
+            defaults.set(false, forKey: WindowBorderPreferences.sparkPreferenceKey)
+            defaults.set("#0EA5E9", forKey: WindowBorderPreferences.auraColorPreferenceKey)
+            controller.loadWindowBorderPreferences()
+
+            #expect(controller.windowBorderEffects == WindowBorderEffects(
+                sparkEnabled: false,
+                auraEnabled: true,
+                auraColorHex: "#0EA5E9"
+            ))
+        }
+    }
+
+    @Test func aResetRollbackRestoresBorderEffects() {
+        withIsolatedWindowBorderPreferences {
+            var state = WindowBorderPreferences.defaultState
+            state.effects = WindowBorderEffects(sparkEnabled: true, auraEnabled: true, auraColorHex: "#6366f1")
+
+            SettingsConfigurationReset.storeWindowBorderState(state)
+
+            #expect(WindowBorderPreferences.state().effects == WindowBorderEffects(
+                sparkEnabled: true,
+                auraEnabled: true,
+                auraColorHex: "#6366F1"
+            ))
+        }
+    }
+
     @Test func windowBorderClampingHelpersHonorBounds() {
         #expect(WindowBorderPreferences.clampedWidth(-10) == WindowBorderPreferences.widthRange.lowerBound)
         #expect(WindowBorderPreferences.clampedWidth(999) == WindowBorderPreferences.widthRange.upperBound)
@@ -733,6 +805,9 @@ struct WindowBorderPreferencesTests {
             WindowBorderPreferences.colorModePreferenceKey,
             WindowBorderPreferences.focusedPalettePreferenceKey,
             WindowBorderPreferences.unfocusedPalettePreferenceKey,
+            WindowBorderPreferences.sparkPreferenceKey,
+            WindowBorderPreferences.auraPreferenceKey,
+            WindowBorderPreferences.auraColorPreferenceKey,
         ]
 
         var originalValues: [String: Any] = [:]

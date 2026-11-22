@@ -14,6 +14,9 @@ struct WindowBorderOverlay: View {
 
     // A terminal that meets the window edge must follow AppKit's clipping mask.
     var minimumCornerRadius: CGFloat = 0
+    var effects: WindowBorderEffects = .none
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var strokeModel: WindowBorderStrokeModel {
         WindowBorderRenderingPolicy.strokeModel(
@@ -57,9 +60,29 @@ struct WindowBorderOverlay: View {
         return border.padding(edgeGap(framed: framed))
     }
 
+    /// The spark is the outline's own color, lifted most of the way to white.
+    static func sparkColor(for gradient: WindowBorderGradient) -> NSColor {
+        let start = NSColor(gradient.startColor).usingColorSpace(.sRGB) ?? .white
+        let end = NSColor(gradient.endColor).usingColorSpace(.sRGB) ?? .white
+        let middle = start.blended(withFraction: 0.5, of: end) ?? start
+        return (middle.blended(withFraction: 0.8, of: .white) ?? .white).withAlphaComponent(1)
+    }
+
     var body: some View {
-        RoundedRectangle(cornerRadius: max(minimumCornerRadius, strokeModel.cornerRadius), style: .continuous)
-            .inset(by: strokeModel.inset)
+        let stroke = strokeModel
+        let cornerRadius = max(minimumCornerRadius, stroke.cornerRadius)
+        let plan = WindowBorderRenderingPolicy.effectPlan(
+            effects: effects,
+            isFocused: isFocused,
+            reduceMotion: reduceMotion
+        )
+        let geometry = WindowBorderEffectGeometry(
+            cornerRadius: cornerRadius,
+            inset: stroke.inset,
+            lineWidth: stroke.lineWidth
+        )
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .inset(by: stroke.inset)
             .stroke(
                 LinearGradient(
                     colors: [gradient.startColor, gradient.endColor],
@@ -68,5 +91,19 @@ struct WindowBorderOverlay: View {
                 ),
                 style: strokeStyle
             )
+            .background {
+                if plan.showsAura {
+                    WindowBorderAuraView(
+                        geometry: geometry,
+                        color: NSColor(effects.auraColor),
+                        pulses: plan.auraPulses
+                    )
+                }
+            }
+            .overlay {
+                if plan.showsSpark {
+                    WindowBorderSparkView(geometry: geometry, color: Self.sparkColor(for: gradient))
+                }
+            }
     }
 }

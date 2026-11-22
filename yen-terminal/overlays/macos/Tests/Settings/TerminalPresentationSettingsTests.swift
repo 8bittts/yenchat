@@ -176,6 +176,40 @@ struct TerminalPresentationSettingsTests {
         #expect(emissionCount == 1)
     }
 
+    @Test func republishesWhenABorderEffectChanges() {
+        let controller = SettingsController.shared
+        reset(controller)
+        let originalEffects = controller.windowBorderEffects
+        defer {
+            controller.windowBorderSparkEnabled = originalEffects.sparkEnabled
+            controller.windowBorderAuraEnabled = originalEffects.auraEnabled
+            controller.windowBorderAuraColorHex = originalEffects.auraColorHex
+            reset(controller)
+        }
+
+        controller.windowBorderSparkEnabled = false
+        controller.windowBorderAuraEnabled = false
+        controller.windowBorderAuraColorHex = "#FF5100"
+        let observer = TerminalPresentationSettings(settingsController: controller)
+        var emissionCount = 0
+        let cancellable = observer.objectWillChange.sink {
+            emissionCount += 1
+        }
+        defer { cancellable.cancel() }
+
+        controller.windowBorderSparkEnabled = true
+        controller.windowBorderAuraEnabled = true
+        controller.windowBorderAuraColorHex = "#22C55E"
+        drainMainRunLoop()
+
+        #expect(observer.snapshot.windowBorderEffects == WindowBorderEffects(
+            sparkEnabled: true,
+            auraEnabled: true,
+            auraColorHex: "#22C55E"
+        ))
+        #expect(emissionCount >= 1)
+    }
+
     @Test func splitPaneLabelObserverIgnoresIrrelevantSettingsChanges() {
         let controller = SettingsController.shared
         reset(controller)

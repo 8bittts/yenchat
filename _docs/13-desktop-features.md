@@ -70,6 +70,7 @@ The default pane is Appearance; every pane has a command palette deep link.
 
 - Padding is one stepper (step 2) that writes both `window-padding-x` and `window-padding-y`.
 - Border shows On, Color (Theme writes Match Theme, Accent writes manual), Outline (Window or Focused Pane, writes the scope) and Weight (Thin 1, Regular 2, Thick 4); a stored width snaps to the nearest weight.
+- Below Weight, Spark and Aura are switches, and Aura Color is a color well that shows only while Aura is on; the color is stored as `#RRGGBB` and an invalid stored value falls back to the brand orange.
 - `SettingsAppearancePane.borderRows` lists the child rows, and `SettingsPaneTests` fails when one goes missing.
 - Scope and palettes are also reachable from the command palette's Window Border actions; radius has no control and keeps its stored value.
 - Tab Sidebar is one pop-up: Off clears the enabled flag, Floating is transient mode, Docked is persistent mode.
@@ -372,6 +373,12 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - Hidden in fullscreen and Quick Terminal; focused styling requires `NSApp.isActive`.
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
 - Differentiate Without Color dashes the unfocused border, and the palette's Window Border actions link to the system setting.
+- Spark and Aura are optional effects on the focused outline, and they can be on together; an unfocused window draws the plain outline. `WindowBorderRenderingPolicy.effectPlan` owns the choice.
+- The spark is a light with a fading tail that follows the stroke at the chosen weight. It moves at one speed on any outline, and a lap takes 3 to 12 seconds (`WindowBorderRenderingPolicy.sparkModel`).
+- The aura is a glow in the picked color around the stroke, and it pulses between two opacities (`WindowBorderRenderingPolicy.auraModel`).
+- Reduce Motion hides the spark and holds the aura still; the Settings hints say so.
+- Both effects are Core Animation layers in `WindowBorderEffectsView.swift`, so the render server animates them and the app does no per-frame work. Keep them out of SwiftUI timelines and animatable shapes, which would redraw on the main thread at display rate above a terminal.
+- The aura is one small image stretched between its corners, so a resize moves a layer frame and redraws nothing; the spark keeps its place on the outline when the outline changes size.
 
 **Permission onboarding.** First activation shows live status for Accessibility, Microphone and Speech Recognition with Grant buttons.
 "Skip for Now" or closing is stored as dismissal and "Get Started" as completion; recovery stays in Settings > Dictation > Permissions.

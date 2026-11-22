@@ -42,6 +42,7 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
             let windowBorderRadius: Double
             let windowBorderColorMode: WindowBorderColorMode
             let windowBorderFocusedGradient: WindowBorderGradient
+            let windowBorderEffects: WindowBorderEffects
             let windowBorderMatchThemeStatusMessage: String
             let windowBorderMatchThemeUsesManualFallback: Bool
 
@@ -101,6 +102,7 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
                     windowBorderRadius: controller.windowBorderRadius,
                     windowBorderColorMode: controller.windowBorderColorMode,
                     windowBorderFocusedGradient: controller.windowBorderFocusedGradient,
+                    windowBorderEffects: controller.windowBorderEffects,
                     windowBorderMatchThemeStatusMessage: controller.windowBorderMatchThemeStatusMessage,
                     windowBorderMatchThemeUsesManualFallback: controller.windowBorderMatchThemeUsesManualFallback
                 )
@@ -193,6 +195,18 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
 
     func setWindowBorderColorMode(_ value: WindowBorderColorMode) {
         controller.windowBorderColorMode = value
+    }
+
+    func setWindowBorderSparkEnabled(_ value: Bool) {
+        controller.windowBorderSparkEnabled = value
+    }
+
+    func setWindowBorderAuraEnabled(_ value: Bool) {
+        controller.windowBorderAuraEnabled = value
+    }
+
+    func setWindowBorderAuraColor(_ value: Color) {
+        controller.windowBorderAuraColorHex = WindowBorderPreferences.auraColorHex(from: value)
     }
 
 }

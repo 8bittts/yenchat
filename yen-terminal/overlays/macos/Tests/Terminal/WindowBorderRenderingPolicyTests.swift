@@ -431,6 +431,153 @@ struct WindowBorderRenderingPolicyTests {
         )
     }
 
+    // MARK: Effects
+
+    private let bothEffects = WindowBorderEffects(sparkEnabled: true, auraEnabled: true, auraColorHex: "#22C55E")
+
+    @Test func effectsMarkOnlyTheFocusedOutline() {
+        #expect(
+            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, reduceMotion: false)
+                == WindowBorderEffectPlan(showsSpark: true, showsAura: true, auraPulses: true)
+        )
+        #expect(
+            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: false, reduceMotion: false)
+                == WindowBorderEffectPlan(showsSpark: false, showsAura: false, auraPulses: false)
+        )
+        #expect(
+            WindowBorderRenderingPolicy.effectPlan(effects: .none, isFocused: true, reduceMotion: false)
+                == WindowBorderEffectPlan(showsSpark: false, showsAura: false, auraPulses: false)
+        )
+        let sparkOnly = WindowBorderEffects(sparkEnabled: true, auraEnabled: false, auraColorHex: "#22C55E")
+        #expect(
+            WindowBorderRenderingPolicy.effectPlan(effects: sparkOnly, isFocused: true, reduceMotion: false)
+                == WindowBorderEffectPlan(showsSpark: true, showsAura: false, auraPulses: false)
+        )
+    }
+
+    @Test func reduceMotionHidesTheSparkAndHoldsTheAuraStill() {
+        #expect(
+            WindowBorderRenderingPolicy.effectPlan(effects: bothEffects, isFocused: true, reduceMotion: true)
+                == WindowBorderEffectPlan(showsSpark: false, showsAura: true, auraPulses: false)
+        )
+    }
+
+    @Test func sparkKeepsOneSpeedBetweenItsLapLimits() throws {
+        // 340 points a second: a 2040 point outline takes six seconds.
+        let window = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2))
+        #expect(abs(window.lapDuration - 6) < 0.0001)
+        // Segments sit three points apart, so each one trails the next by 3/340 of a second.
+        #expect(abs(window.segmentDelay - 3.0 / 340.0) < 0.0001)
+
+        let smallPane = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 300, lineWidth: 2))
+        #expect(smallPane.lapDuration == 3)
+        #expect(smallPane.tailLength <= 300 / 4)
+
+        let largeWindow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 10_000, lineWidth: 2))
+        #expect(largeWindow.lapDuration == 12)
+        // The tail is whole segments, so it stops within one segment of its 160 point limit.
+        #expect(largeWindow.tailLength <= 160)
+        #expect(largeWindow.tailLength > 160 - WindowBorderRenderingPolicy.sparkSegmentSpacing)
+
+        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: 0, lineWidth: 2) == nil)
+        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: .infinity, lineWidth: 2) == nil)
+    }
+
+    @Test func sparkTailHasNoGapsOrBandsAtAnyWeight() throws {
+        let spacing = WindowBorderRenderingPolicy.sparkSegmentSpacing
+        for weight in SettingsBorderWeight.allCases {
+            let model = try #require(
+                WindowBorderRenderingPolicy.sparkModel(perimeter: 2400, lineWidth: CGFloat(weight.rawValue))
+            )
+            // A segment longer than the spacing leaves no gap, and a whole
+            // multiple of it covers every point the same number of times.
+            #expect(model.segmentLength > spacing)
+            #expect(model.segmentLength.truncatingRemainder(dividingBy: spacing) == 0)
+        }
+    }
+
+    @Test func pathMetricsMeasureLengthAndDirection() {
+        let clockwise = CGMutablePath()
+        clockwise.move(to: CGPoint(x: 0, y: 0))
+        clockwise.addLine(to: CGPoint(x: 100, y: 0))
+        clockwise.addLine(to: CGPoint(x: 100, y: 50))
+        clockwise.addLine(to: CGPoint(x: 0, y: 50))
+        clockwise.closeSubpath()
+        let forward = WindowBorderRenderingPolicy.pathMetrics(of: clockwise)
+        #expect(abs(forward.perimeter - 300) < 0.001)
+        #expect(abs(forward.signedArea - 5000) < 0.001)
+
+        let counterclockwise = CGMutablePath()
+        counterclockwise.move(to: CGPoint(x: 0, y: 0))
+        counterclockwise.addLine(to: CGPoint(x: 0, y: 50))
+        counterclockwise.addLine(to: CGPoint(x: 100, y: 50))
+        counterclockwise.addLine(to: CGPoint(x: 100, y: 0))
+        counterclockwise.closeSubpath()
+        #expect(abs(WindowBorderRenderingPolicy.pathMetrics(of: counterclockwise).signedArea + 5000) < 0.001)
+
+        // A rounded outline is shorter than the rectangle around it and longer than the circle inside it.
+        let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
+        let rounded = WindowBorderRenderingPolicy.pathMetrics(of: geometry.path(in: CGRect(x: 0, y: 0, width: 202, height: 102)))
+        #expect(rounded.perimeter < 600)
+        #expect(rounded.perimeter > 2 * .pi * 50)
+    }
+
+    @MainActor
+    @Test func sparkTravelsOnlyWhileItsViewIsInAWindowAndMatchesTheWeight() {
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let view = WindowBorderSparkLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 2, lineWidth: 4)
+
+        view.configure(geometry: geometry, color: .white)
+        #expect(!view.isTraveling)
+
+        window.contentView?.addSubview(view)
+        view.configure(geometry: geometry, color: .white)
+        #expect(view.isTraveling)
+        #expect(view.segmentSizeForTesting.height == 4)
+        #expect(view.segmentCountForTesting > 1)
+
+        view.configure(geometry: WindowBorderEffectGeometry(cornerRadius: 10, inset: 0.5, lineWidth: 1), color: .white)
+        #expect(view.isTraveling)
+        #expect(view.segmentSizeForTesting.height == 1)
+
+        view.removeFromSuperview()
+        #expect(!view.isTraveling)
+    }
+
+    @MainActor
+    @Test func auraGlowsWhenHeldAndPulsesOnlyWhenAsked() {
+        let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let view = WindowBorderAuraLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        window.contentView?.addSubview(view)
+        let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
+
+        view.configure(geometry: geometry, color: .systemGreen, pulses: false)
+        #expect(view.hasGlowForTesting)
+        #expect(!view.isPulsing)
+
+        view.configure(geometry: geometry, color: .systemGreen, pulses: true)
+        #expect(view.isPulsing)
+
+        view.configure(geometry: geometry, color: .systemGreen, pulses: false)
+        #expect(view.hasGlowForTesting)
+        #expect(!view.isPulsing)
+    }
+
+    @MainActor
+    @Test func effectLayersNeverTakeAClick() {
+        let spark = WindowBorderSparkLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        let aura = WindowBorderAuraLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        #expect(spark.hitTest(NSPoint(x: 200, y: 1)) == nil)
+        #expect(aura.hitTest(NSPoint(x: 200, y: 1)) == nil)
+    }
+
     private func rgbaTuple(_ color: Color) -> (Int, Int, Int, Int) {
         let nsColor = NSColor(color).usingColorSpace(.deviceRGB) ?? NSColor.black
         return (

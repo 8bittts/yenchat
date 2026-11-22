@@ -181,7 +181,8 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
             chromeMode: windowBorderChromeMode,
             isFocused: windowIsFocused,
             useDashedUnfocusedStyle: useDashedUnfocusedStyle,
-            minimumCornerRadius: nativeCornerRadius
+            minimumCornerRadius: nativeCornerRadius,
+            effects: settingsSnapshot.windowBorderEffects
         )
     }
 

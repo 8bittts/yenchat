@@ -223,6 +223,10 @@ enum SettingsBorderRow: CaseIterable, Identifiable {
     case color
     case scope
     case weight
+    case spark
+    case aura
+    /// Shown only while the aura is on.
+    case auraColor
 
     var id: Self { self }
 }
@@ -240,9 +244,24 @@ struct SettingsAppearancePane: View {
         scope == .window ? "Outlines the window." : "Outlines the focused pane."
     }
 
-    static func borderRows(enabled: Bool) -> [SettingsBorderRow] {
-        enabled ? SettingsBorderRow.allCases : []
+    static func borderRows(enabled: Bool, auraEnabled: Bool) -> [SettingsBorderRow] {
+        guard enabled else { return [] }
+        return SettingsBorderRow.allCases.filter { $0 != .auraColor || auraEnabled }
     }
+
+    static func sparkHint(reduceMotion: Bool) -> String {
+        reduceMotion
+            ? "Reduce Motion is on, so the light is hidden."
+            : "A light travels around the outline."
+    }
+
+    static func auraHint(reduceMotion: Bool) -> String {
+        reduceMotion
+            ? "Reduce Motion is on, so the glow holds still."
+            : "A soft glow pulses around the outline."
+    }
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let font = store.snapshot.font
@@ -383,7 +402,12 @@ struct SettingsAppearancePane: View {
                     )
                 }
 
-                ForEach(Self.borderRows(enabled: appearance.windowBorderEnabled)) { row in
+                ForEach(
+                    Self.borderRows(
+                        enabled: appearance.windowBorderEnabled,
+                        auraEnabled: appearance.windowBorderEffects.auraEnabled
+                    )
+                ) { row in
                     borderRow(row, appearance: appearance)
                 }
             } header: {
@@ -451,6 +475,45 @@ struct SettingsAppearancePane: View {
             }
             .pickerStyle(.segmented)
             .accessibilityLabel("Border Weight")
+        case .spark:
+            Toggle(
+                isOn: Binding(
+                    get: { appearance.windowBorderEffects.sparkEnabled },
+                    set: { store.setWindowBorderSparkEnabled($0) }
+                )
+            ) {
+                SettingsStudioLabel(
+                    title: "Spark",
+                    hint: Self.sparkHint(reduceMotion: reduceMotion),
+                    isChild: true
+                )
+            }
+            .accessibilityLabel("Border Spark")
+        case .aura:
+            Toggle(
+                isOn: Binding(
+                    get: { appearance.windowBorderEffects.auraEnabled },
+                    set: { store.setWindowBorderAuraEnabled($0) }
+                )
+            ) {
+                SettingsStudioLabel(
+                    title: "Aura",
+                    hint: Self.auraHint(reduceMotion: reduceMotion),
+                    isChild: true
+                )
+            }
+            .accessibilityLabel("Border Aura")
+        case .auraColor:
+            ColorPicker(
+                selection: Binding(
+                    get: { appearance.windowBorderEffects.auraColor },
+                    set: { store.setWindowBorderAuraColor($0) }
+                ),
+                supportsOpacity: false
+            ) {
+                SettingsStudioLabel(title: "Aura Color", isChild: true)
+            }
+            .accessibilityLabel("Border Aura Color")
         }
     }
 }

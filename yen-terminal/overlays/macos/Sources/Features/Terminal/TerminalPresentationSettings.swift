@@ -14,6 +14,7 @@ final class TerminalPresentationSettings: ObservableObject {
         let windowBorderRadius: Double
         let windowBorderFocusedGradient: WindowBorderGradient
         let windowBorderUnfocusedGradient: WindowBorderGradient
+        var windowBorderEffects: WindowBorderEffects = .none
 
         @MainActor
         static func capture(from settingsController: SettingsController) -> Snapshot {
@@ -27,7 +28,8 @@ final class TerminalPresentationSettings: ObservableObject {
                 windowBorderWidth: settingsController.windowBorderWidth,
                 windowBorderRadius: settingsController.windowBorderRadius,
                 windowBorderFocusedGradient: settingsController.windowBorderFocusedGradient,
-                windowBorderUnfocusedGradient: settingsController.windowBorderUnfocusedGradient
+                windowBorderUnfocusedGradient: settingsController.windowBorderUnfocusedGradient,
+                windowBorderEffects: settingsController.windowBorderEffects
             )
         }
     }

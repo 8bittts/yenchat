@@ -475,6 +475,57 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
             notifyGeneralSettingsObservers()
         }
     }
+    @Published var windowBorderSparkEnabled: Bool = WindowBorderPreferences.defaultState.effects.sparkEnabled {
+        didSet {
+            guard windowBorderSparkEnabled != oldValue else { return }
+            if !suppressWindowBorderPersistence {
+                UserDefaults.standard.set(
+                    windowBorderSparkEnabled,
+                    forKey: WindowBorderPreferences.sparkPreferenceKey
+                )
+            }
+            notifyTerminalPresentationObservers()
+            notifyGeneralSettingsObservers()
+        }
+    }
+    @Published var windowBorderAuraEnabled: Bool = WindowBorderPreferences.defaultState.effects.auraEnabled {
+        didSet {
+            guard windowBorderAuraEnabled != oldValue else { return }
+            if !suppressWindowBorderPersistence {
+                UserDefaults.standard.set(
+                    windowBorderAuraEnabled,
+                    forKey: WindowBorderPreferences.auraPreferenceKey
+                )
+            }
+            notifyTerminalPresentationObservers()
+            notifyGeneralSettingsObservers()
+        }
+    }
+    @Published var windowBorderAuraColorHex: String = WindowBorderPreferences.defaultState.effects.auraColorHex {
+        didSet {
+            if canonicalizeIfNeeded(
+                \.windowBorderAuraColorHex,
+                normalize: WindowBorderPreferences.normalizedAuraColorHex
+            ) { return }
+            guard windowBorderAuraColorHex != oldValue else { return }
+            if !suppressWindowBorderPersistence {
+                UserDefaults.standard.set(
+                    windowBorderAuraColorHex,
+                    forKey: WindowBorderPreferences.auraColorPreferenceKey
+                )
+            }
+            notifyTerminalPresentationObservers()
+            notifyGeneralSettingsObservers()
+        }
+    }
+    var windowBorderEffects: WindowBorderEffects {
+        WindowBorderEffects(
+            sparkEnabled: windowBorderSparkEnabled,
+            auraEnabled: windowBorderAuraEnabled,
+            auraColorHex: windowBorderAuraColorHex
+        )
+    }
+
     var windowBorderFocusedGradient: WindowBorderGradient {
         windowBorderGradient(isFocused: true)
     }
@@ -2806,6 +2857,9 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
         windowBorderColorMode = state.colorMode
         windowBorderFocusedPalette = state.focusedPalette
         windowBorderUnfocusedPalette = state.unfocusedPalette
+        windowBorderSparkEnabled = state.effects.sparkEnabled
+        windowBorderAuraEnabled = state.effects.auraEnabled
+        windowBorderAuraColorHex = state.effects.auraColorHex
         if state.colorMode == .matchTheme {
             refreshResolvedActiveThemeInfo()
         }

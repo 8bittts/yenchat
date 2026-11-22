@@ -305,6 +305,26 @@ struct WindowBorderGradient: Equatable {
     }
 }
 
+/// The animated effects an outline can carry on top of its stroke.
+struct WindowBorderEffects: Equatable {
+    /// A light that travels around the outline.
+    var sparkEnabled: Bool
+    /// A glow in `auraColorHex` that pulses around the outline.
+    var auraEnabled: Bool
+    /// `#RRGGBB`, in sRGB.
+    var auraColorHex: String
+
+    static let none = WindowBorderEffects(
+        sparkEnabled: false,
+        auraEnabled: false,
+        auraColorHex: WindowBorderPreferences.defaultAuraColorHex
+    )
+
+    var auraColor: Color {
+        Color(hex: auraColorHex) ?? .yenBrand
+    }
+}
+
 struct WindowBorderPreferenceState: Equatable {
     var enabled: Bool
     var scope: WindowBorderScope
@@ -313,6 +333,7 @@ struct WindowBorderPreferenceState: Equatable {
     var colorMode: WindowBorderColorMode
     var focusedPalette: WindowBorderPalette
     var unfocusedPalette: WindowBorderPalette
+    var effects: WindowBorderEffects = .none
 }
 
 enum WindowBorderPreferences {
@@ -323,6 +344,11 @@ enum WindowBorderPreferences {
     static let colorModePreferenceKey = "com.yenchat.yen.windowBorder.colorMode"
     static let focusedPalettePreferenceKey = "com.yenchat.yen.windowBorder.focusedPalette"
     static let unfocusedPalettePreferenceKey = "com.yenchat.yen.windowBorder.unfocusedPalette"
+    static let sparkPreferenceKey = "com.yenchat.yen.windowBorder.spark"
+    static let auraPreferenceKey = "com.yenchat.yen.windowBorder.aura"
+    static let auraColorPreferenceKey = "com.yenchat.yen.windowBorder.auraColor"
+    /// The brand orange, `Color.yenBrand`.
+    static let defaultAuraColorHex = "#FF5100"
     static let widthRange: ClosedRange<Double> = 1.0...8.0
     static let radiusRange: ClosedRange<Double> = 1.0...24.0
     static let widthStep = 0.5
@@ -347,6 +373,9 @@ enum WindowBorderPreferences {
             colorModePreferenceKey: defaultState.colorMode.rawValue,
             focusedPalettePreferenceKey: defaultState.focusedPalette.rawValue,
             unfocusedPalettePreferenceKey: defaultState.unfocusedPalette.rawValue,
+            sparkPreferenceKey: defaultState.effects.sparkEnabled,
+            auraPreferenceKey: defaultState.effects.auraEnabled,
+            auraColorPreferenceKey: defaultState.effects.auraColorHex,
         ])
     }
 
@@ -362,7 +391,36 @@ enum WindowBorderPreferences {
             radius: normalizedRadius(defaults.double(forKey: radiusPreferenceKey)),
             colorMode: WindowBorderColorMode.normalized(rawValue: colorModeRaw, fallback: defaultState.colorMode),
             focusedPalette: WindowBorderPalette.normalized(rawValue: focusedRaw, fallback: defaultState.focusedPalette),
-            unfocusedPalette: WindowBorderPalette.normalized(rawValue: unfocusedRaw, fallback: defaultState.unfocusedPalette)
+            unfocusedPalette: WindowBorderPalette.normalized(rawValue: unfocusedRaw, fallback: defaultState.unfocusedPalette),
+            effects: WindowBorderEffects(
+                sparkEnabled: defaults.bool(forKey: sparkPreferenceKey),
+                auraEnabled: defaults.bool(forKey: auraPreferenceKey),
+                auraColorHex: normalizedAuraColorHex(defaults.string(forKey: auraColorPreferenceKey) ?? "")
+            )
+        )
+    }
+
+    /// `#RRGGBB` in capitals, or the default when the value is not a color.
+    static func normalizedAuraColorHex(_ value: String) -> String {
+        var digits = value.trimmingCharacters(in: .whitespaces)
+        if digits.hasPrefix("#") {
+            digits.removeFirst()
+        }
+        guard digits.count == 6, digits.allSatisfy(\.isHexDigit) else { return defaultAuraColorHex }
+        return "#" + digits.uppercased()
+    }
+
+    /// The sRGB `#RRGGBB` value of a picked color; opacity is dropped.
+    static func auraColorHex(from color: Color) -> String {
+        guard let rgb = NSColor(color).usingColorSpace(.sRGB) else { return defaultAuraColorHex }
+        func channel(_ value: CGFloat) -> Int {
+            Int((min(max(value, 0), 1) * 255).rounded())
+        }
+        return String(
+            format: "#%02X%02X%02X",
+            channel(rgb.redComponent),
+            channel(rgb.greenComponent),
+            channel(rgb.blueComponent)
         )
     }
 
@@ -400,7 +458,12 @@ enum WindowBorderPreferences {
             radius: normalizedRadius(state.radius),
             colorMode: state.colorMode,
             focusedPalette: state.focusedPalette,
-            unfocusedPalette: state.unfocusedPalette
+            unfocusedPalette: state.unfocusedPalette,
+            effects: WindowBorderEffects(
+                sparkEnabled: state.effects.sparkEnabled,
+                auraEnabled: state.effects.auraEnabled,
+                auraColorHex: normalizedAuraColorHex(state.effects.auraColorHex)
+            )
         )
     }
 

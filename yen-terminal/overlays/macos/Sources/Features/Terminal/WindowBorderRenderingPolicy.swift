@@ -24,6 +24,38 @@ struct WindowBorderStrokeModel {
     let dashPattern: [CGFloat]
 }
 
+/// Which effects an outline draws right now.
+struct WindowBorderEffectPlan: Equatable {
+    let showsSpark: Bool
+    let showsAura: Bool
+    let auraPulses: Bool
+}
+
+/// The spark: a head and a fading tail of short segments that follow the outline.
+struct WindowBorderSparkModel: Equatable {
+    /// Seconds for one lap.
+    let lapDuration: Double
+    let segmentLength: CGFloat
+    let segmentCount: Int
+    /// Seconds between one segment and the next one behind it.
+    let segmentDelay: Double
+    let headGlowDiameter: CGFloat
+
+    var tailLength: CGFloat {
+        CGFloat(segmentCount) * WindowBorderRenderingPolicy.sparkSegmentSpacing
+    }
+}
+
+/// The aura: a blurred stroke in one color, held or pulsing.
+struct WindowBorderAuraModel: Equatable {
+    let blurRadius: CGFloat
+    let restingOpacity: Float
+    let pulseLowOpacity: Float
+    let pulseHighOpacity: Float
+    /// Seconds from the low opacity to the high one.
+    let pulseHalfPeriod: Double
+}
+
 enum WindowBorderRenderingPolicy {
     static func chromeMode(titlebarStyle: YEN.Config.MacOSTitlebarStyle, hasWindowDecorations: Bool) -> WindowBorderChromeMode {
         guard hasWindowDecorations else { return .decorationNone }
@@ -137,6 +169,88 @@ enum WindowBorderRenderingPolicy {
                 useDashedUnfocusedStyle: useDashedUnfocusedStyle
             )
         )
+    }
+
+    // MARK: Effects
+
+    /// Effects mark the focused outline only, so background windows stay still.
+    /// Reduce Motion hides the spark and holds the aura at one opacity.
+    static func effectPlan(
+        effects: WindowBorderEffects,
+        isFocused: Bool,
+        reduceMotion: Bool
+    ) -> WindowBorderEffectPlan {
+        WindowBorderEffectPlan(
+            showsSpark: isFocused && effects.sparkEnabled && !reduceMotion,
+            showsAura: isFocused && effects.auraEnabled,
+            auraPulses: isFocused && effects.auraEnabled && !reduceMotion
+        )
+    }
+
+    /// Points along the outline between one spark segment and the next.
+    static let sparkSegmentSpacing: CGFloat = 3
+    static let sparkSpeed: CGFloat = 340
+    static let sparkLapDurationRange: ClosedRange<Double> = 3...12
+    static let sparkTailLengthRange: ClosedRange<CGFloat> = 48...160
+
+    /// The spark keeps one speed on any outline, within a lap time that never
+    /// races around a small pane or crawls around a large window.
+    static func sparkModel(perimeter: CGFloat, lineWidth: CGFloat) -> WindowBorderSparkModel? {
+        guard perimeter.isFinite, perimeter > 0, lineWidth > 0 else { return nil }
+        let lapDuration = min(
+            max(Double(perimeter / sparkSpeed), sparkLapDurationRange.lowerBound),
+            sparkLapDurationRange.upperBound
+        )
+        let wantedTail = min(max(perimeter * 0.07, sparkTailLengthRange.lowerBound), sparkTailLengthRange.upperBound)
+        // A tail never covers more than a quarter of the outline.
+        let tailLength = min(wantedTail, perimeter / 4)
+        let segmentCount = max(Int((tailLength / sparkSegmentSpacing).rounded(.down)), 1)
+        return WindowBorderSparkModel(
+            lapDuration: lapDuration,
+            // Two segments cover every point, so the tail has no gaps and no bands.
+            segmentLength: sparkSegmentSpacing * 2,
+            segmentCount: segmentCount,
+            segmentDelay: lapDuration * Double(sparkSegmentSpacing / perimeter),
+            headGlowDiameter: max(lineWidth * 5, 8)
+        )
+    }
+
+    static func auraModel(lineWidth: CGFloat) -> WindowBorderAuraModel {
+        WindowBorderAuraModel(
+            blurRadius: 6 + lineWidth * 2,
+            restingOpacity: 0.8,
+            pulseLowOpacity: 0.5,
+            pulseHighOpacity: 1,
+            pulseHalfPeriod: 1.8
+        )
+    }
+
+    /// The length of a closed path and its signed area. The area is positive
+    /// when the path runs clockwise in a coordinate space whose y axis points down.
+    static func pathMetrics(of path: CGPath) -> (perimeter: CGFloat, signedArea: CGFloat) {
+        var perimeter: CGFloat = 0
+        var doubledArea: CGFloat = 0
+        var start = CGPoint.zero
+        var previous = CGPoint.zero
+        func addLine(to point: CGPoint) {
+            perimeter += hypot(point.x - previous.x, point.y - previous.y)
+            doubledArea += previous.x * point.y - point.x * previous.y
+            previous = point
+        }
+        path.flattened(threshold: 0.25).applyWithBlock { element in
+            switch element.pointee.type {
+            case .moveToPoint:
+                start = element.pointee.points[0]
+                previous = start
+            case .addLineToPoint:
+                addLine(to: element.pointee.points[0])
+            case .closeSubpath:
+                addLine(to: start)
+            default:
+                break
+            }
+        }
+        return (perimeter, doubledArea / 2)
     }
 
     static func focusedSplitBorderFrame(

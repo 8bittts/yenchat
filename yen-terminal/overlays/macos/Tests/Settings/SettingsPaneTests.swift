@@ -52,10 +52,27 @@ struct SettingsPaneTests {
     }
 
     @Test func borderSectionOffersScopeWhenTheBorderIsOn() {
-        #expect(SettingsAppearancePane.borderRows(enabled: true) == [.color, .scope, .weight])
-        #expect(SettingsAppearancePane.borderRows(enabled: false).isEmpty)
+        #expect(
+            SettingsAppearancePane.borderRows(enabled: true, auraEnabled: false)
+                == [.color, .scope, .weight, .spark, .aura]
+        )
+        #expect(SettingsAppearancePane.borderRows(enabled: false, auraEnabled: false).isEmpty)
         #expect(SettingsBorderScopeChoice.allCases.map(\.scope) == [.window, .focusedSplit])
         #expect(SettingsBorderScopeChoice.allCases.map(\.title) == ["Window", "Focused Pane"])
+    }
+
+    @Test func borderEffectsSitBelowWeightAndTheAuraOwnsItsColorRow() {
+        let rows = SettingsAppearancePane.borderRows(enabled: true, auraEnabled: true)
+        #expect(rows == [.color, .scope, .weight, .spark, .aura, .auraColor])
+        // A hidden border hides its effects, whatever they are set to.
+        #expect(SettingsAppearancePane.borderRows(enabled: false, auraEnabled: true).isEmpty)
+    }
+
+    @Test func borderEffectHintsSayWhatReduceMotionDoes() {
+        #expect(SettingsAppearancePane.sparkHint(reduceMotion: false) == "A light travels around the outline.")
+        #expect(SettingsAppearancePane.sparkHint(reduceMotion: true) == "Reduce Motion is on, so the light is hidden.")
+        #expect(SettingsAppearancePane.auraHint(reduceMotion: false) == "A soft glow pulses around the outline.")
+        #expect(SettingsAppearancePane.auraHint(reduceMotion: true) == "Reduce Motion is on, so the glow holds still.")
     }
 
     @Test func alertSoundShowsNoneWheneverTheStreamIsSilent() {
