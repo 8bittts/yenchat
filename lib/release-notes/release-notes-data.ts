@@ -14,9 +14,13 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",
 		"summary": "Split a terminal and the top of the pane stays level. Horizontal tabs grow left from a fixed + button on the right. Choose Comfortable for a gutter between panes or Compact for a thin divider. Even a thick outline leaves room for the first and last characters on each row.\n\nPress Cmd + Shift + J to open a note in the center of your terminal. Drag its title bar to move it or resize it from an edge. YEN remembers the size when you reopen it. The bottom Git drawer and its shortcut have been removed. Run yengit for local changes, or open PR Review from the command palette for a pull request.\n\nYou can also leave a dev server running when you quit YEN and return to its shell, screen, and scrollback. Close its pane when you want to end the session.\n\nIn General settings, turn on Show Token Usage to see today’s local counts for Claude Code, Codex, Grok Build and OpenCode. On macOS 27 or later, Moving Wallpaper can play a video behind your desktop icons. YEN 1.283 is the last release for Macs running macOS 13 through 26.",
-		"builds": 10,
-		"latestVersion": "1.283",
+		"builds": 11,
+		"latestVersion": "1.284",
 		"versions": [
+			{
+				"version": "1.284",
+				"shippedOn": "2026-11-22"
+			},
 			{
 				"version": "1.283",
 				"shippedOn": "2026-11-21"

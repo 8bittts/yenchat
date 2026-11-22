@@ -12,6 +12,11 @@ const releaseNotes = "https://blog.yen.chat/releases";
 const repository = "https://github.com/8bittts/yenchat";
 const milestones = [
 	[
+		"1.284",
+		"Older agent sessions count, too.",
+		"The menu bar can read OpenCode’s older session counters when assistant usage is missing. This release requires Apple silicon and macOS 27.",
+	],
+	[
 		"1.283",
 		"Today’s agent usage, one click away.",
 		"An optional menu bar counter reads local agent records. Moving Wallpaper brings video behind the desktop icons on macOS 27.",

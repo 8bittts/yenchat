@@ -61,8 +61,8 @@ No terminal content is sent to YEN.
 
 ## Requirements
 
-- Builds after 1.283 require macOS 27.0 or later on Apple silicon.
-- YEN 1.283 supports macOS 13.0 and later.
+- YEN 1.284 requires macOS 27.0 or later on Apple silicon.
+- For Intel Macs or macOS 13 through 26, download [YEN 1.283](https://github.com/8bittts/yenchat/releases/tag/v1.283).
 - Accessibility, Microphone, and Speech Recognition permissions for dictation.
 
 When SpeechAnalyzer is unavailable, YEN requests on-device recognition when Apple reports support.

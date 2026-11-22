@@ -5,10 +5,10 @@
         <description>YEN Terminal updates via Sparkle.</description>
         <language>en</language>
         <item>
-            <title>YEN 1.283</title>
+            <title>YEN 1.284</title>
             <link>https://yen.chat</link>
-            <sparkle:version>1283</sparkle:version>
-            <sparkle:shortVersionString>1.283</sparkle:shortVersionString>
+            <sparkle:version>1284</sparkle:version>
+            <sparkle:shortVersionString>1.284</sparkle:shortVersionString>
             <description><![CDATA[
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 12px; }
@@ -17,24 +17,24 @@
                     .tech { background: #f5f5f5; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
                     .tech strong { color: #333; }
                 </style>
-                <h2>YEN 1.283</h2>
-                <p class="quip">Right-aligned tabs and a floating scratchpad</p>
+                <h2>YEN 1.284</h2>
+                <p class="quip">Agent counts and screenshots on macOS 27</p>
                 <p class="tech"><strong>Full release notes:</strong> <a href="https://blog.yen.chat/releases">blog.yen.chat/releases</a></p>
             ]]></description>
-            <pubDate>Sat, 21 Nov 2026 09:27:21 -0800</pubDate>
+            <pubDate>Sat, 21 Nov 2026 18:34:22 -0800</pubDate>
             <enclosure
-                url="https://github.com/8bittts/yenchat/releases/download/v1.283/yen-1283.dmg"
-                length="116350887"
+                url="https://github.com/8bittts/yenchat/releases/download/v1.284/yen-1284.dmg"
+                length="105361108"
                 type="application/x-apple-diskimage"
-                sparkle:edSignature="XAce14ea6YNcIqc4XOwu4T24Y9u7FK70U2Nv4Iyd0B9FZAaeaJvqPEw5lsI3PG6qqbeSLRHGpbjnDSBbW99EDQ==" />
-            <sparkle:deltas>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.283/YEN1283-1282.delta" sparkle:deltaFrom="1282" length="3101306" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="u4HCHYpmfcneXlPqMGpRP35dvtf8orrzhRMyg09ocTH96wsmw2yuE4TC90dkzX2Lf1CEro1IkwYvMBH3wQnrBw=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.283/YEN1283-1281.delta" sparkle:deltaFrom="1281" length="3190854" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="CLNfxvCWmYxRGBmX683tJ9Ohg0XL9BDbH0HORDRrHDP79fFlXR0Ru2raySyPYFgx/IbJW6wLrmRzykPhHgNuDg=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.283/YEN1283-1280.delta" sparkle:deltaFrom="1280" length="3212082" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="D473bauU7bdvgHhas1eN2ubBqLqAkcZdEqmnZtnDu7Kdrnrjf2Yb64BoHClQHkKkDtHEvmOqbEPi7OjQ4AnqCA=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.283/YEN1283-1279.delta" sparkle:deltaFrom="1279" length="3228230" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="qw2cyJnQ7U9kmtz6qIWZbs2ITUx/sX4ur60uGki4hlCbZlBG7CYo6re9L44yfcmBJF+tNToE0rTQo+8h5THLCw=="/>
-                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.283/YEN1283-1278.delta" sparkle:deltaFrom="1278" length="3370086" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="aVbzGBdhHeXRIfhzeHO/CIYUXf6usiJYYmF7oJKlPNTiE9XwVpjiF1kDMXYcJuqkzgB2DeQRT5S5cXRZ/VJqCA=="/>
+                sparkle:edSignature="ZREYxjcLyTqYSP7aURZ0ZNYTBdyqmJFsEdJIC738p1tEwkNZ/Haf533ITjahXE48GEOHcETomy6W8LrSu6zjBg==" />
+<sparkle:deltas xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.284/YEN1284-1283.delta" sparkle:deltaFrom="1283" length="1952106" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="g7bGWGBMH2clT2ZIv4PatdP6fmYL3so0iDBUnV4jf/t407wvgcxnM71NxxcQYjuqzCIQz2L8ZskWYRR5WcmPCg==" />
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.284/YEN1284-1282.delta" sparkle:deltaFrom="1282" length="2230646" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="1dX3PR0AwsEWa6cvWUK69n8SoK9CTnDLFLSShBp819zTRoE3+C3jqGdDL1DToOGKJpDyv0ISEDxD+cCGvLzBAg==" />
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.284/YEN1284-1281.delta" sparkle:deltaFrom="1281" length="2261382" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vBHgF2hWLPKbJNd3Qfc7YS+S2g2jpZeTAgbCDYwWA/yk60lsNLfEDroItUC4H8Ma0elW+AJKE+rxjgCCAQW+AA==" />
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.284/YEN1284-1280.delta" sparkle:deltaFrom="1280" length="2285362" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="5uZ3c49AliBGhutoPKXAbWXSIHGc43hGLmAhIUHZxJxM6LV8CfiFWmO83tbT0T9VpDv3+v/Kuc+kSQGxOXozAw==" />
+                <enclosure url="https://github.com/8bittts/yenchat/releases/download/v1.284/YEN1284-1279.delta" sparkle:deltaFrom="1279" length="2268742" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="5gQROo++N0EvlfA29woSBELyyod/XRLlwLhdpjE59dOPXR9V74SNDS26A+SytfwjcZwB5CgWDNBlqkhVAEKVDQ==" />
             </sparkle:deltas>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
         </item>
     </channel>
 </rss>

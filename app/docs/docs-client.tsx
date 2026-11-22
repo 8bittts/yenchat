@@ -87,12 +87,19 @@ function GetStartedSection() {
 				</table>
 			</TerminalPanel>
 			<p id="requirements" className="text-body">
-				Builds after 1.283 require macOS 27.0 or later on Apple silicon. YEN
-				1.283 supports macOS 13.0 and later. In 1.283, YEN’s actions in Apple
-				Shortcuts require macOS 14 or later. On macOS 13 through 15, dictation
-				uses the legacy recognizer and dictation translation is unavailable. No
-				YEN account is required. Dictation needs Accessibility, Microphone, and
-				Speech Recognition permissions; see{" "}
+				YEN 1.284 requires macOS 27.0 or later on Apple silicon. For an Intel
+				Mac or macOS 13 through 26, download{" "}
+				<a
+					className="link-brand underline"
+					href="https://github.com/8bittts/yenchat/releases/tag/v1.283"
+				>
+					YEN 1.283
+				</a>
+				. In 1.283, YEN’s actions in Apple Shortcuts require macOS 14 or later.
+				On macOS 13 through 15, dictation uses the legacy recognizer and
+				dictation translation is unavailable. No YEN account is required.
+				Dictation needs Accessibility, Microphone, and Speech Recognition
+				permissions; see{" "}
 				<a href="#voice-dictation" className="link-brand underline">
 					dictation setup
 				</a>
@@ -604,8 +611,8 @@ function AgentTokenUsageSection() {
 		<DocSection id="agent-token-usage" title="Agent token usage">
 			<p className="text-body">
 				This experiment shows how many tokens your local coding agents used
-				today. In YEN 1.283, open Settings → General → Menu Bar and turn on Show
-				Token Usage. The switch is off by default.
+				today. Open Settings → General → Menu Bar and turn on Show Token Usage.
+				The switch is off by default.
 			</p>
 			<p className="text-body">
 				Click the YEN icon in the macOS menu bar for a breakdown by tool. Expand
@@ -623,8 +630,8 @@ function AgentTokenUsageSection() {
 					className="h-auto w-full max-w-xs"
 				/>
 				<figcaption className="media-caption">
-					The example and counting rules below apply to source builds after YEN
-					1.283.
+					In YEN 1.284, expand a tool to see its exact count and share of
+					today’s total.
 				</figcaption>
 			</figure>
 			<ul className="list-disc space-y-2 pl-5 text-body">
@@ -743,10 +750,10 @@ function SettingsSection() {
 				Experimental moving wallpaper
 			</h3>
 			<p className="text-body">
-				In YEN 1.283 on macOS 27 or later, open General, then Experimental. Turn
-				on Moving Wallpaper and click Wallpaper Controls. Choose a video or GIF,
-				paste a YouTube link, pick a video from Photos, or shuffle from Photos.
-				Use Wallpaper per Desktop to choose separate assignments. The same menu
+				On macOS 27 or later, open General, then Experimental. Turn on Moving
+				Wallpaper and click Wallpaper Controls. Choose a video or GIF, paste a
+				YouTube link, pick a video from Photos, or shuffle from Photos. Use
+				Wallpaper per Desktop to choose separate assignments. The same menu
 				controls pause, sound, and removal.
 			</p>
 			<p className="text-body">

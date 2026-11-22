@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.284":
+		"Your daily OpenCode total can include older session records. Screenshots of newly opened windows use the window’s dimensions when macOS has not yet reported its frame. This release requires Apple silicon and macOS 27 or later.",
 	"1.283":
 		"Horizontal tabs grow left from the right edge. Each pane keeps room for text inside its rounded outline. The scratchpad opens in the center of the window and remembers its size. The bottom Git drawer and its shortcut have been removed. Run yengit for local changes or open PR Review from the command palette. General settings also include an experimental menu for local agent token counts. On macOS 27 or later, you can also enable moving wallpapers. YEN 1.283 is the last release for Macs running macOS 13 through 26.",
 	"1.282":
