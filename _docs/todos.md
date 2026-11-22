@@ -62,12 +62,6 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
 
-### Third-party notices in the app bundle
-
-Owner doc: `_docs/04-security.md`.
-
-- [ ] Ship the MIT notices for Ghostty and the bundled tools inside `YEN.app`, because MIT requires the notice in every copy; reconcile it with the fingerprint gates, which reject the upstream name in the bundle.
-
 ### A lint test times out on a loaded machine
 
 `tests/125-lint-swift-view-modifiers.test.ts` failed once in a full `bun test` run while the load average was 11: its second full scan of the overlay sources timed out at the 5-second default while the first passed.

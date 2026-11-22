@@ -18,6 +18,7 @@ source "$REPO_ROOT/scripts/lib/signing-constants.sh"
 source "$REPO_ROOT/scripts/lib/signature-utils.sh"
 source "$REPO_ROOT/scripts/lib/release-constants.sh"
 source "$REPO_ROOT/scripts/lib/copy-on-select-compat.sh"
+source "$REPO_ROOT/scripts/lib/third-party-notices.sh"
 ## privileged-surface-utils.sh — no longer needed here (promoted to 03-verify-components.sh)
 
 FAILED=0
@@ -564,6 +565,12 @@ else
     [ ! -f "$RESOURCES/bin/yen" ] || [ ! -x "$RESOURCES/bin/yen" ] && fail "CLI not bundled"
     [ ! -f "$RESOURCES/lib/common.sh" ] && fail "CLI lib/common.sh missing"
     [ ! -d "$RESOURCES/commands" ] && fail "CLI commands directory missing"
+
+    # Third-party license notices: every vendored component has one, and the
+    # app carries each of them unchanged.
+    while IFS= read -r notice_issue; do
+        [ -n "$notice_issue" ] && fail "$notice_issue"
+    done < <(third_party_notices_source_issues "$REPO_ROOT"; third_party_notices_bundle_issues "$REPO_ROOT" "$BUILT_APP")
 
     # version.json bundled (for welcome banner)
     [ ! -f "$RESOURCES/yen/version.json" ] && fail "Bundled version.json missing at yen/version.json"

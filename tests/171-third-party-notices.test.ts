@@ -281,7 +281,7 @@ describe("third-party notices and the fingerprint gate", () => {
 			);
 
 			const result = scan(appPath);
-			expect(result.status).toBe(1);
+			expect(result.status).toBe(2);
 			expect(result.stdout).toContain("path:ghostty|");
 			expect(result.stdout).toContain("Notices/Ghostty.txt");
 		}));

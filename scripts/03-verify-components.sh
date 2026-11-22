@@ -13,6 +13,7 @@ cd "$REPO_ROOT"
 # Source shared utilities
 source "$REPO_ROOT/scripts/lib/version-utils.sh"
 source "$REPO_ROOT/scripts/lib/privileged-surface-utils.sh"
+source "$REPO_ROOT/scripts/lib/third-party-notices.sh"
 source "$REPO_ROOT/scripts/lib/non-concurrency-utils.sh"
 source "$REPO_ROOT/scripts/lib/gate-receipt.sh"
 
@@ -369,7 +370,17 @@ if [ -f "$YAZI_EDIT_WRAPPER" ]; then
         fail "Yazi editor wrapper missing micro wordwrap flag"
 fi
 
-gate_unit_ran terminal-prereqs "wrappers=$WRAPPERS_SCANNED"
+# Third-party license notices: MIT and Apache-2.0 require their notice in every
+# copy, so each vendored component needs one the bundle phase can ship.
+NOTICE_ISSUES="$(third_party_notices_source_issues "$REPO_ROOT" || true)"
+if [ -n "$NOTICE_ISSUES" ]; then
+    while IFS= read -r notice_issue; do
+        [ -n "$notice_issue" ] && fail "$notice_issue"
+    done <<< "$NOTICE_ISSUES"
+fi
+NOTICES_EXPECTED="$(third_party_expected_notices "$REPO_ROOT" | grep -c . || true)"
+
+gate_unit_ran terminal-prereqs "wrappers=$WRAPPERS_SCANNED notices=$NOTICES_EXPECTED"
 
 # ============================================================================
 # Check 5: Native Helper Sources

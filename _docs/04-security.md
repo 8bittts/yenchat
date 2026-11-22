@@ -185,6 +185,17 @@ Allowlist entries are category- and path-scoped, and use `[0-9]+` for offsets so
 
 A new Go binary built on `tcell` or Bubble Tea will need its own entry.
 
+### Third-Party License Notices
+
+MIT and Apache-2.0 require their notice in every copy, so `YEN.app` carries one text file per bundled third-party component in `Contents/Resources/Notices/`.
+The sources are `yen-terminal/customizations/notices/*.txt`, each the upstream license file at the vendored version under a name and URL header.
+The vendor baselines are the list of components: `yen-terminal/.<name>-baseline` requires `<name>.txt`, and a new vendored tool fails the build until its notice exists.
+The engine's notice is `TerminalEngine.txt`, because the fingerprint gate rejects the upstream name in a bundle path and in the code signature's resource list.
+Its text names the upstream project and copyright holder, as MIT requires; the gate reads paths, Mach-O payloads, the bundled shell CLI and locale catalogs, so a text notice passes without an allowlist entry.
+`scripts/lib/third-party-notices.sh` owns both checks: `03-verify-components.sh` requires a notice for every baseline in its terminal structure unit, and `05-detect-failures.sh` requires each tracked notice in the built app, byte for byte.
+`tests/171-third-party-notices.test.ts` proves both checks fail closed and that a notice file named after the upstream engine still fails the scan.
+The notices cover the engine and the vendored tools, not the libraries those projects link.
+
 ### High-Priority Watch Items
 
 - **Targets.** YEN is macOS-only; upstream deleted the iOS target. DockTilePlugin is the only embedded target; a new upstream target needs signing in `finalize-build.sh`.
@@ -228,6 +239,7 @@ Contracts the receipts do not cover by themselves:
 | `14-vendor.sh` | UNKNOWN upstream status is its own non-zero outcome; override `YEN_VENDOR_ALLOW_UNKNOWN_STATUS=1` | `tests/119` |
 | `05-detect-failures.sh` | Refuses non-`enforce` security modes unless `YEN_ALLOW_GATE_DOWNGRADE=1` | `tests/120` |
 | `13-scan-artifact-fingerprints.sh` | Fails on an empty scan set or a missing `file` binary | `tests/123` |
+| `scripts/lib/third-party-notices.sh` | Fails when it finds no vendor baseline or no tracked notice, and when a notice is missing, empty or altered in the bundle | `tests/171` |
 | Appcast | `sparkle:edSignature` is verified against the DMG; a missing `Sparkle.framework` fails | `tests/123` |
 | `apply-overlays.sh` | Prints `Overlays applied (N patched, M idempotent skips)` from one tally; `build-release.sh` fails if the line is absent | `tests/45` |
 | Source-built no-op | `vendor-binary.sh` prints `Output digest revalidated against baseline pin` before `Already current` | `tests/119` |
@@ -281,4 +293,4 @@ Its cache holds record identifiers, source paths, read positions and counts.
 The desktop wallpaper picker grants access to selected media, while random Photos selection requests library permission.
 YouTube playback fetches its downloader from a pinned GitHub release and verifies its SHA-256 before execution.
 Only a chosen YouTube video or restoration of that choice can start a media download.
-The app bundles the MIT notices for the adapted JP the Cat readers and MovingPaper engine.
+The app bundles the MIT notices for the adapted JP the Cat readers and MovingPaper engine, beside the notices that Third-Party License Notices describes.
