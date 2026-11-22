@@ -153,9 +153,9 @@ The retired connection source is listed in `scripts/lib/overlay-data/retired-pat
 A source that was readable and fails one read, such as a locked store, gets one more try after the 8-second debounce; a second failure waits for the next file change, so an absent tool costs no wakeups.
 macOS reports a file change when the writer closes the file, so a tool that kept its record file open would be read again only when it closed it or the panel opened; Claude Code appends and closes for each record.
 Disabling the token menu cancels requests.
-Measured on the release build with one window and a 12 GB record history, against the same build with the menu off: the footprint is 36 to 62 MB against 30 MB and peaks at 83 to 93 MB during the first read of the day.
+Measured on the release build with no terminal window open and a 12 GB record history, against the same build with the menu off: the footprint is 36 to 62 MB against 30 MB and peaks at 83 to 93 MB during the first read of the day.
 With no record changing the menu uses no measurable CPU time and no idle wakeups, and a refresh holds the main thread for about 2 ms.
-Typing is not measurably slower with the menu on: key-to-frame latency averaged 18.7 ms against 18.4 ms off, a difference inside the 1 ms spread between identical runs.
+Typing is not measurably slower with the menu on: key-to-frame latency averaged 18.7 ms against 18.4 ms off, and ten identical runs with the menu off ranged from 17.9 to 19.8 ms.
 While the first analytics read runs, the average rises by about 2 ms and the slowest keys are unchanged.
 Terminal panes and the renderer do not subscribe to usage updates.
 
