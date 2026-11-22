@@ -389,6 +389,8 @@ enum PersistentSessions {
         isStillPresent: @escaping @MainActor (UUID) -> Bool = paneIsInAnyTerminalWindow,
         close: @escaping @MainActor (UUID) -> Void = { paneDidClose($0) }
     ) {
+        // A remote pane has no local session; forget its identity once gone.
+        RemotePanes.paneLeftTree(paneID, after: undoExpiration + closeGrace, isStillPresent: isStillPresent)
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
         departedLock.withLock { _ = departed.insert(paneID) }
         let delay = seconds(undoExpiration + closeGrace)

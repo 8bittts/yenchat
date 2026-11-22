@@ -71,7 +71,8 @@ struct RemotePanesTests {
         withFakeCLI { RemotePanes.prepare(&config, paneID: paneID) }
 
         #expect(config.command?.contains(expectedCommand) == true)
-        #expect(config.waitAfterCommand)
+        // The wrapper decides what a pane does when its client ends.
+        #expect(!config.waitAfterCommand)
         #expect(config.environmentVariables[RemotePanes.markerEnvironmentKey] == nil)
         #expect(RemotePanes.identity(for: paneID) == identity)
     }
@@ -121,7 +122,7 @@ struct RemotePanesTests {
                 RemotePanes.prepare(&during, paneID: paneID)
             }
         }
-        #expect(during.command?.contains(expectedCommand) == true)
+        #expect(during.command?.contains("'\(Self.fakeCLI)' 'sessions' 'attach' '--host' 'studio.example.invalid' '--retry-unreachable' '\(sessionID.uuidString)'") == true)
         #expect(RemotePanes.identity(for: paneID) == identity)
 
         // The same pane UUID created later is a new local pane.
@@ -191,7 +192,12 @@ struct RemotePanesTests {
         let surface = try #require(controller.surfaceTree.first)
         let other = try #require(RemotePaneIdentity(displayName: "Elsewhere", sshTarget: "STUDIO.example.invalid", sessionID: sessionID))
 
-        #expect(RemotePanes.existingPane(for: other, in: [controller]) === surface)
+        var found: YEN.SurfaceView?
+        for _ in 0..<60 where found == nil {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            found = RemotePanes.existingPane(for: other, in: [controller])
+        }
+        #expect(found === surface)
         let unrelated = try #require(RemotePaneIdentity(displayName: "Studio", sshTarget: "studio.example.invalid", sessionID: UUID()))
         #expect(RemotePanes.existingPane(for: unrelated, in: [controller]) == nil)
     }
@@ -302,7 +308,9 @@ struct RemotePanesTests {
             return process
         }
         // A parent whose child carries the id, like login -> sh -> CLI.
-        let parent = try spawn(["-c", "/bin/sh -c 'sleep 30' attach \(id) & wait"])
+        // `; :` keeps sh from replacing itself with sleep, as the wrapper and
+        // the CLI never do.
+        let parent = try spawn(["-c", "/bin/sh -c 'sleep 30; :' attach \(id) & wait"])
         let unrelated = try spawn(["-c", "sleep 30"])
         defer {
             for process in [parent, unrelated] { process.terminate() }

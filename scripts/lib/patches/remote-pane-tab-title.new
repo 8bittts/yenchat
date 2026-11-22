@@ -1,2 +1,1 @@
-    private func computeTitle(title: String, bell: Bool) -> String {
-        var result = RemotePanes.tabTitle(title, for: focusedSurface)
+                .map { [weak self, weak titleSurface] in guard let self else { return "" }; return self.computeTitle(title: RemotePanes.tabTitle($0, for: titleSurface, in: self), bell: $1) }

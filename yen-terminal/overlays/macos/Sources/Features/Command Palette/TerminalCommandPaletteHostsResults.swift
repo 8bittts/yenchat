@@ -11,17 +11,35 @@ enum RemoteHostsPaletteAction: Equatable {
     /// Type a command at the prompt of the terminal the palette opened over,
     /// without running it.
     case insertCommand(String)
-    /// Reopen the palette with the Hosts query.
+    /// Reopen the palette with the query `hosts`, which starts discovery.
     case showHosts
 }
 
-/// When the palette query asks for Hosts. Stub.
+/// When the palette query asks for Hosts: some word of the query (letters and
+/// digits only) is at least three characters long and starts one of `tags`.
+/// "hos", "Hosts: mini", "ssh" and "tail" match; "localhost", "sshd" and
+/// "remove" do not. Discovery runs only while this holds.
 enum RemoteHostsIntent {
     static let tags = ["hosts", "remote", "ssh", "tailscale"]
     static let minimumWordLength = 3
 
     static func matches(_ query: String) -> Bool {
-        true
+        query.lowercased()
+            .split { !($0.isLetter || $0.isNumber) }
+            .contains { word in word.count >= minimumWordLength && tags.contains { $0.hasPrefix(word) } }
+    }
+}
+
+/// The query a palette opened by the static Hosts row starts with.
+@MainActor
+enum RemoteHostsPaletteSeed {
+    private static var pending: String?
+
+    static func set(_ query: String) { pending = query }
+
+    static func take() -> String? {
+        defer { pending = nil }
+        return pending
     }
 }
 
@@ -87,20 +105,28 @@ enum RemoteHostsPaletteRows {
         id: "hosts:show",
         title: titlePrefix + "Show Sessions on Your Other Macs",
         subtitle: nil,
-        description: "List your other Macs on Tailscale and their sessions; or type hosts",
+        description: "List your other Macs on Tailscale and their sessions",
         leadingIcon: "network",
         searchTags: baseTags,
         action: .showHosts
     )
 
-    /// The Hosts rows for a palette query. Stub.
+    /// The Hosts rows for a palette query. With Hosts intent: every row for the
+    /// store's state. Without it: the static row, plus the rows of the last
+    /// discovery for a non-empty query, so a typed peer name still finds them;
+    /// none of this starts discovery.
     static func catalogEntries(
         query: String,
         snapshot: RemoteHostsStore.Snapshot,
         isOpenHere: (RemotePaneIdentity) -> Bool,
         now: Date = Date()
     ) -> [RemoteHostsPaletteEntry] {
-        entries(snapshot: snapshot, isOpenHere: isOpenHere, now: now)
+        if RemoteHostsIntent.matches(query) {
+            return entries(snapshot: snapshot, isOpenHere: isOpenHere, now: now)
+        }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, snapshot.status != nil else { return [staticRow] }
+        return [staticRow] + entries(snapshot: snapshot, isOpenHere: isOpenHere, now: now)
     }
 
     static func peerRows(

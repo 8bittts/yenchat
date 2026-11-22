@@ -1058,7 +1058,7 @@ ${patchBlock}`;
 			// The label comes from the pane the title came from, and from the
 			// focused or last title pane under a typed tab title.
 			expect(controller).toContain(
-				"self?.computeTitle(title: RemotePanes.tabTitle($0, for: titleSurface, in: self), bell: $1)",
+				"return self.computeTitle(title: RemotePanes.tabTitle($0, for: titleSurface, in: self), bell: $1)",
 			);
 			expect(controller).toContain(
 				"                title: RemotePanes.tabTitle(titleOverride, in: self),",

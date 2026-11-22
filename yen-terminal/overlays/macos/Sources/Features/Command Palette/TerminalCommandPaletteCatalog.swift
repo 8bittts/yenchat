@@ -333,7 +333,13 @@ extension TerminalCommandPaletteView {
         case .refresh:
             hostsStore.refresh()
         case .showHosts:
-            break
+            // Selecting a row always closes the palette; reopen it on the
+            // Hosts query once this one is gone.
+            guard let controller = activeTerminalController else { return }
+            DispatchQueue.main.async {
+                RemoteHostsPaletteSeed.set(RemoteHostsIntent.tags[0])
+                controller.commandPaletteIsShowing = true
+            }
         case .insertCommand(let command):
             // The command is for this Mac; never type it into a remote shell.
             guard surfaceView.remotePaneIdentity == nil else { return }

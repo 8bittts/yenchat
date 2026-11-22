@@ -35,6 +35,10 @@ Usage:
 Options:
   --porcelain     Stable tab-separated output for scripts
   --host <host>   [user@]host to reach with ssh; YEN must be installed there
+  --retry-unreachable
+                  attach --host only: keep retrying a host that cannot be
+                  reached from the first attempt (YEN passes it for a pane
+                  restored at launch, before the network is up)
 
 Notes:
   A session keeps a pane's shell running when YEN quits; reopening the window
@@ -184,7 +188,7 @@ show_sessions() {
 }
 
 # Parse --host and --porcelain for list and attach; the rest are positional.
-host="" porcelain=0 positional=()
+host="" porcelain=0 retry_unreachable=0 positional=()
 parse_options() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -196,6 +200,7 @@ parse_options() {
                 shift 2
                 ;;
             --porcelain) porcelain=1; shift ;;
+            --retry-unreachable) retry_unreachable=1; shift ;;
             --) shift; positional+=("$@"); return 0 ;;
             -*) usage_error "unknown option '$1'" ;;
             *) positional+=("$1"); shift ;;
@@ -209,6 +214,7 @@ case "$subcommand" in
     list | ls)
         parse_options "$@"
         [[ ${#positional[@]} -eq 0 ]] || usage_error "list takes no arguments"
+        [[ $retry_unreachable == 0 ]] || usage_error "list does not take --retry-unreachable"
         [[ -z "$host" ]] || remote_list "$host" "$porcelain"
         show_sessions "$porcelain"
         ;;
@@ -217,9 +223,10 @@ case "$subcommand" in
         [[ $porcelain == 0 ]] || usage_error "attach does not take --porcelain"
         [[ ${#positional[@]} -eq 1 ]] || usage_error "attach needs exactly one session id"
         id="${positional[0]}"
+        [[ $retry_unreachable == 0 || -n "$host" ]] || usage_error "--retry-unreachable needs --host"
         if [[ -n "$host" ]]; then
             valid_session_id "$id" || usage_error "'$id' is not a session id (run 'yen sessions list --host $host' to list them)"
-            remote_attach "$host" "$id"
+            remote_attach "$host" "$id" "$retry_unreachable"
         fi
         require_session "$id"
         zmx="$(session_zmx "$id")" || { yen_error "zmx is not available; reinstall YEN."; exit 1; }

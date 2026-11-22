@@ -135,13 +135,19 @@ struct TerminalCommandPaletteView: View {
                 .onAppear {
                     dismissalHandled = false
                     jumpTargetsModel.start()
-                    hostsStore.surfaceDidAppear(surfaceView)
+                    if let seed = RemoteHostsPaletteSeed.take() {
+                        searchModel.query = seed
+                    }
+                    syncHostsDiscovery()
                     refreshRepositoryWorkspaceActions()
                     syncSearchCatalog(with: paletteActions)
                 }
                 .onDisappear {
                     jumpTargetsModel.stop()
                     hostsStore.surfaceDidDisappear(surfaceView)
+                }
+                .onChange(of: hostsIntent) { _ in
+                    syncHostsDiscovery()
                 }
                 .onChange(of: surfaceView.pwd) { _ in
                     refreshRepositoryWorkspaceActions()
@@ -275,14 +281,32 @@ struct TerminalCommandPaletteView: View {
         )
     }
 
-    /// The Hosts rows for the current store state. A session already shown by
-    /// a pane here reads "Open in YEN" and focuses that pane.
+    /// The Hosts rows for the query and the store's last state. A session that
+    /// a pane here is attached to reads "Open in YEN" and focuses that pane.
     var hostsEntries: [RemoteHostsPaletteEntry] {
-        let open = jumpTargetsModel.snapshots.compactMap { $0.surface.remotePaneIdentity }
-        return RemoteHostsPaletteRows.entries(
+        let open = jumpTargetsModel.snapshots.compactMap { snapshot -> RemotePaneIdentity? in
+            guard let identity = snapshot.surface.remotePaneIdentity, RemotePanes.isAttached(snapshot.surface) else { return nil }
+            return identity
+        }
+        return RemoteHostsPaletteRows.catalogEntries(
+            query: searchModel.query,
             snapshot: hostsStore.snapshot,
             isOpenHere: { identity in open.contains { $0.isSameSession(as: identity) } }
         )
+    }
+
+    /// Hosts intent in the query (RemoteHostsIntent).
+    var hostsIntent: Bool {
+        RemoteHostsIntent.matches(searchModel.query)
+    }
+
+    /// Discovery and its timer run only while the palette is open with Hosts intent.
+    private func syncHostsDiscovery() {
+        if isPresented && hostsIntent {
+            hostsStore.surfaceDidAppear(surfaceView)
+        } else {
+            hostsStore.surfaceDidDisappear(surfaceView)
+        }
     }
 
     var customCommandInvalidationKeys: [ActionCatalogCustomCommandKey] {

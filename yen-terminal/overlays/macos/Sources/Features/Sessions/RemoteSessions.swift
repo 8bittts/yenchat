@@ -150,14 +150,16 @@ enum RemoteSessions {
 
     /// The command of a pane attached to a remote session. The pane stays
     /// ephemeral locally; the session lives on the peer, and the CLI reconnects.
-    nonisolated static func attachArguments(host: String, id: UUID) -> [String]? {
+    /// `retryUnreachable` keeps retrying a peer that cannot be reached from the
+    /// first attempt (a restored pane at launch, before the network is up).
+    nonisolated static func attachArguments(host: String, id: UUID, retryUnreachable: Bool = false) -> [String]? {
         guard isValidTarget(host) else { return nil }
-        return ["sessions", "attach", "--host", host, id.uuidString]
+        return ["sessions", "attach", "--host", host] + (retryUnreachable ? ["--retry-unreachable"] : []) + [id.uuidString]
     }
 
     /// `attachArguments` as one shell command line for a pane's `command`.
-    nonisolated static func attachCommandLine(host: String, id: UUID, cliPath: String) -> String? {
-        guard let arguments = attachArguments(host: host, id: id) else { return nil }
+    nonisolated static func attachCommandLine(host: String, id: UUID, cliPath: String, retryUnreachable: Bool = false) -> String? {
+        guard let arguments = attachArguments(host: host, id: id, retryUnreachable: retryUnreachable) else { return nil }
         return ([cliPath] + arguments).map(shellQuoted).joined(separator: " ")
     }
 

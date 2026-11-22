@@ -242,9 +242,11 @@ remote_list() {
 # Reconnects after a dropped link: ssh exits 255 both for a lost connection
 # and for a connection that never succeeded, so a LocalCommand marker, which
 # ssh runs only after authentication, tells the two apart. A first attempt
-# that never connects is reported and not retried.
+# that never connects is reported and not retried, unless the third argument
+# is 1 (--retry-unreachable): then an unreachable peer is retried from the
+# first attempt, and every other failure still stops at once.
 remote_attach() {
-    local target="$1" id="$2" status code established=0 attempt=0 delay cap line options=()
+    local target="$1" id="$2" retry_unreachable="${3:-0}" status code established=0 attempt=0 delay cap line options=()
     cap="${YEN_SSH_RETRY_MAX_DELAY:-30}"
     [[ "$cap" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_RETRY_MAX_DELAY must be a whole number of seconds"
     remote_make_scratch
@@ -280,14 +282,18 @@ remote_attach() {
 
         code=0
         classify_ssh_failure "$remote_scratch/err" || code=$?
-        if [[ $established -eq 0 || $code -ne $REMOTE_EXIT_UNREACHABLE ]]; then
+        if [[ $code -ne $REMOTE_EXIT_UNREACHABLE || ($established -eq 0 && $retry_unreachable != 1) ]]; then
             remote_failure_message "$code" "$target" >&2
             exit "$code"
         fi
         attempt=$((attempt + 1))
         delay=$((1 << (attempt > 6 ? 6 : attempt - 1)))
         [[ $delay -le $cap ]] || delay="$cap"
-        echo "yen sessions: lost the connection to $target; reconnecting in ${delay}s (attempt $attempt, Ctrl-C to stop)" >&2
+        if [[ $established -eq 1 ]]; then
+            echo "yen sessions: lost the connection to $target; reconnecting in ${delay}s (attempt $attempt, Ctrl-C to stop)" >&2
+        else
+            echo "yen sessions: cannot reach $target yet; retrying in ${delay}s (attempt $attempt, Ctrl-C to stop)" >&2
+        fi
         remote_run sleep "$delay"
     done
 }

@@ -263,7 +263,7 @@ extension TerminalCommandPaletteView {
     static func shouldSuppressSurfaceRefocusOnDismiss(for optionID: String) -> Bool {
         let actionID = canonicalActionID(for: optionID)
         switch actionID {
-        case "workspace:rename-split-label", "workspace:toggle-scratchpad":
+        case "workspace:rename-split-label", "workspace:toggle-scratchpad", RemoteHostsPaletteRows.staticRow.id:
             return true
         default:
             return false

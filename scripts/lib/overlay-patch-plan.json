@@ -1260,11 +1260,13 @@
 			"--mode",
 			"exact",
 			"--marker",
-			"RemotePanes.tabTitle(title, for: focusedSurface)",
+			"RemotePanes.tabTitle($0, for: titleSurface, in: self)",
 			"--old-block",
 			"@$PATCHES_DIR/remote-pane-tab-title.old",
 			"--new-block",
-			"@$PATCHES_DIR/remote-pane-tab-title.new"
+			"@$PATCHES_DIR/remote-pane-tab-title.new",
+			"--extra-replace",
+			"@$PATCHES_DIR/remote-pane-tab-title-override.old:::@$PATCHES_DIR/remote-pane-tab-title-override.new"
 		]
 	}
 }

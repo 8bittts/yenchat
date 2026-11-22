@@ -87,13 +87,16 @@ enum RemotePanes {
         let requested = marker.flatMap(decodeMarker)
         // A marker only counts on a pane that has no command of its own.
         let identity = requested.flatMap { config.command == nil ? $0 : nil } ?? (config.command == nil ? restored : nil)
-        guard let identity, let command = attachCommand(for: identity) else {
+        // A restored pane may start before the network or Tailscale is up,
+        // so it keeps retrying an unreachable peer; an opened one reports it.
+        let isRestore = requested == nil && restored != nil
+        guard let identity, let command = attachCommand(for: identity, retryUnreachable: isRestore) else {
             registry.withLock { $0.identities[paneID] = nil }
             return
         }
         config.command = command
-        // Keep a failed attach on screen: the CLI's message says why.
-        config.waitAfterCommand = true
+        // attachWrapper holds a failure on screen and lets a normal end close.
+        config.waitAfterCommand = false
         registry.withLock { $0.identities[paneID] = identity }
     }
 
@@ -118,29 +121,84 @@ enum RemotePanes {
         return resourcePath.map { ($0 as NSString).appendingPathComponent("bin/yen") }
     }
 
+    /// Runs the CLI's attach and decides what the pane does when it ends: a
+    /// normal end (0) or Ctrl-C (130) closes the pane like a local shell that
+    /// exits; any other status stays on screen under the CLI's own message
+    /// until Return. The hold replaces this shell, so its argv no longer names
+    /// the session (`isAttached`).
+    nonisolated static let attachWrapper = #""$@"; s=$?; if [ "$s" -eq 0 ] || [ "$s" -eq 130 ]; then exit "$s"; fi; exec /bin/sh -c 'printf "\nThe remote session is not attached (exit %s). Press Return to close this pane.\n" "$1"; read -r _; exit "$1"' yen-remote-ended "$s""#
+
     nonisolated static func attachCommand(for identity: RemotePaneIdentity, retryUnreachable: Bool = false) -> String? {
-        guard let cliPath = cliPath() else { return nil }
-        return RemoteSessions.attachCommandLine(host: identity.sshTarget, id: identity.sessionID, cliPath: cliPath)
+        guard let cliPath = cliPath(),
+              let arguments = RemoteSessions.attachArguments(
+                  host: identity.sshTarget, id: identity.sessionID, retryUnreachable: retryUnreachable
+              ) else { return nil }
+        // The engine runs a command with `exec -l`, which would make a bare sh
+        // a login shell that reads the user's profile; env starts sh plainly.
+        let words = ["/usr/bin/env", "/bin/sh", "-c", attachWrapper, "yen-remote-attach", cliPath] + arguments
+        return words.map(RemoteSessions.shellQuoted).joined(separator: " ")
     }
 
-    /// True while some process in the tree under `rootPID` carries `argument`
-    /// in its argv. Stub.
+    /// True while some process in the tree under `rootPID` (it included, at
+    /// most six levels down) carries `argument` in its argv.
     nonisolated static func processTree(under rootPID: pid_t, mentions argument: String) -> Bool {
-        true
+        var frontier: [pid_t] = [rootPID]
+        for _ in 0..<6 {
+            var next: [pid_t] = []
+            for pid in frontier where pid > 0 {
+                if arguments(of: pid).contains(argument) { return true }
+                next += children(of: pid)
+            }
+            if next.isEmpty { return false }
+            frontier = next
+        }
+        return false
     }
 
-    /// True while the pane's attach client still runs. Stub.
+    nonisolated private static func children(of pid: pid_t) -> [pid_t] {
+        var buffer = [pid_t](repeating: 0, count: 64)
+        // Returns a count of pids, not bytes (libproc.c).
+        let count = proc_listchildpids(pid, &buffer, Int32(buffer.count * MemoryLayout<pid_t>.size))
+        guard count > 0 else { return [] }
+        return Array(buffer.prefix(min(Int(count), buffer.count))).filter { $0 > 0 }
+    }
+
+    /// argv of a process the user owns, from KERN_PROCARGS2; empty when unreadable.
+    nonisolated private static func arguments(of pid: pid_t) -> [String] {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 0
+        guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return [] }
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0 else { return [] }
+        let argc = buffer.withUnsafeBytes { Int($0.load(as: Int32.self)) }
+        // After argc: the executable path, NUL padding, then argv strings.
+        var parts = buffer[MemoryLayout<Int32>.size..<size].split(separator: 0, omittingEmptySubsequences: true)
+        guard !parts.isEmpty else { return [] }
+        parts.removeFirst()
+        return parts.prefix(argc).map { String(decoding: $0, as: UTF8.self) }
+    }
+
+    /// True while the pane's attach client still runs: its process tree names
+    /// the session. A pane whose client ended (held on screen, or exited) does not.
     @MainActor static func isAttached(_ surface: YEN.SurfaceView) -> Bool {
-        identity(for: surface.id) != nil
+        guard let identity = identity(for: surface.id), !surface.processExited,
+              let pid = surface.surfaceModel?.foregroundPID, pid > 0 else { return false }
+        return processTree(under: pid_t(pid), mentions: identity.sessionID.uuidString)
     }
 
-    /// A pane left its tree; forget its identity once undo can no longer
-    /// bring it back. Stub.
+    /// A pane left its tree; once undo can no longer bring it back and no
+    /// window holds it, forget its identity.
     static func paneLeftTree(
         _ paneID: UUID,
         after delay: Duration,
         isStillPresent: @escaping @MainActor (UUID) -> Bool
-    ) {}
+    ) {
+        guard identity(for: paneID) != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + PersistentSessions.seconds(delay)) {
+            guard !isStillPresent(paneID) else { return }
+            registry.withLock { $0.identities[paneID] = nil }
+        }
+    }
 
     nonisolated static func _testSetCLIPath(_ path: String?) {
         registry.withLock { $0.cliPathOverride = path }
@@ -209,13 +267,41 @@ enum RemotePanes {
 
     // MARK: Labels
 
-    /// The title of a tab or window whose title surface is `surface`: the host
-    /// first, so a remote shell is never mistaken for a local one, even under a
-    /// typed tab title. Called from the engine's `computeTitle` (patch
-    /// `remote-pane-tab-title`).
+    /// The title of a tab whose title comes from `surface`: the host first, so
+    /// a remote shell is never mistaken for a local one. A local pane's title
+    /// passes through unchanged.
     @MainActor static func tabTitle(_ title: String, for surface: YEN.SurfaceView?) -> String {
         guard let surface, let identity = identity(for: surface.id) else { return title }
         return tabTitle(title, host: identity.displayName)
+    }
+
+    /// The engine's title publisher (patch `remote-pane-tab-title`): labels
+    /// the title of the pane it came from, which is the last focused pane
+    /// while no pane has focus, and remembers that pane for a typed tab title.
+    @MainActor static func tabTitle(_ title: String, for surface: YEN.SurfaceView?, in controller: BaseTerminalController) -> String {
+        TitleSource.set(surface, on: controller)
+        return tabTitle(title, for: surface)
+    }
+
+    /// A typed tab title (patch `remote-pane-tab-title`): labeled by the
+    /// focused pane, else the pane the tab's title last came from.
+    @MainActor static func tabTitle(_ title: String, in controller: BaseTerminalController) -> String {
+        tabTitle(title, for: controller.focusedSurface ?? TitleSource.get(controller))
+    }
+
+    @MainActor private enum TitleSource {
+        final class Box { weak var surface: YEN.SurfaceView? }
+        nonisolated(unsafe) static var key: UInt8 = 0
+
+        static func set(_ surface: YEN.SurfaceView?, on controller: BaseTerminalController) {
+            let box = objc_getAssociatedObject(controller, &key) as? Box ?? Box()
+            box.surface = surface
+            objc_setAssociatedObject(controller, &key, box, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+
+        static func get(_ controller: BaseTerminalController) -> YEN.SurfaceView? {
+            (objc_getAssociatedObject(controller, &key) as? Box)?.surface
+        }
     }
 
     nonisolated static func tabTitle(_ title: String, host: String) -> String {
@@ -237,14 +323,17 @@ enum RemotePanes {
         case failed
     }
 
-    /// The open pane already attached to this session, if any.
+    /// The open pane whose client is attached to this session, if any. A pane
+    /// whose client ended stays as it is; selecting the session opens a new tab.
     @MainActor static func existingPane(
         for identity: RemotePaneIdentity,
         in controllers: [BaseTerminalController]? = nil
     ) -> YEN.SurfaceView? {
         for controller in controllers ?? TerminalController.all {
             for surface in controller.surfaceTree {
-                if let other = Self.identity(for: surface.id), other.isSameSession(as: identity) { return surface }
+                if let other = Self.identity(for: surface.id), other.isSameSession(as: identity), isAttached(surface) {
+                    return surface
+                }
             }
         }
         return nil
