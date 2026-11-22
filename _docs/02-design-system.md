@@ -27,7 +27,7 @@ Pane gutters use a 4-point inset on each side of a divider.
 AppKit supplies the tab accessory’s trailing margin.
 Headers and panel contents use a 12-point inset.
 Split headers use the system caption for the pane title and directory, with semibold weight for the title.
-The native tab and split header share the same activity icon.
+Split headers show the activity icon; native tabs show only the title and a pane count.
 Never turn palette values into design tokens, and never edit generated upstream theme sources.
 
 ## File Format

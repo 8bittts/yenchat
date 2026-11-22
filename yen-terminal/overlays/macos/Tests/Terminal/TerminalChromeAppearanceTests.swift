@@ -67,7 +67,7 @@ struct TerminalChromeAppearanceTests {
     }
 
     @available(macOS 27, *)
-    @Test func horizontalTabKeepsItsPaneIconBeforeItsTitleWhenSelectionChanges() async throws {
+    @Test func horizontalTabLeadsWithItsTitleAndRevealsItsShortcutOnlyWithCommand() async throws {
         let groupID = UUID().uuidString
         let nib = try #require(NSNib(nibNamed: "TerminalTabsTitlebarTahoe", bundle: Bundle(for: TerminalWindow.self)))
         let windows = try ["Atlas", "Studio"].map { title in
@@ -80,16 +80,19 @@ struct TerminalChromeAppearanceTests {
             window.title = title
             return window
         }
-        defer { windows.forEach { $0.close() } }
-        let icons = try windows.map { window in
+        defer {
+            TabShortcutReveal.shared.update([])
+            windows.forEach { $0.close() }
+        }
+        let counts = try windows.map { window in
             let accessory = try #require(window.tab.accessoryView as? WorkspaceTabAccessory)
-            let host = PaneTabIconAccessory(rootView: PaneTabIcons(surfaces: []))
-            host.widthAnchor.constraint(equalToConstant: 20).isActive = true
-            host.heightAnchor.constraint(equalToConstant: 18).isActive = true
+            let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 2))
             accessory.install(host, for: window)
             return host
         }
         windows[0].addTabbedWindow(windows[1], ordered: .above)
+        windows[0].keyEquivalent = "⌘1"
+        windows[1].keyEquivalent = "⌘2"
         let group = try #require(windows[0].tabGroup)
         for selected in windows {
             group.selectedWindow = selected
@@ -105,13 +108,27 @@ struct TerminalChromeAppearanceTests {
             #expect(abs(track.midY - trafficLight.midY) <= 1, "Tab bar \(track) and close button \(trafficLight)")
             let labels = root.descendants(withClassName: "NSTextField").compactMap { $0 as? NSTextField }
             for (index, window) in windows.enumerated() {
-                let icon = icons[index]
+                let count = counts[index]
                 let title = try #require(labels.first { $0.stringValue == window.title && $0.firstSuperview(withClassName: "NSTabButton") != nil })
-                #expect(icon.window === title.window)
-                let iconFrame = icon.convert(icon.bounds, to: root)
+                let shortcut = try #require(labels.first { $0.stringValue.hasPrefix("⌘\(index + 1)") })
+                #expect(count.window === title.window)
+                #expect(!count.isHidden && shortcut.isHidden, "Tab \(window.title) shows its count, not its shortcut")
+                let countFrame = count.convert(count.bounds, to: root)
                 let titleFrame = title.convert(title.bounds, to: root)
-                #expect(iconFrame.maxX < titleFrame.minX, "Icon \(iconFrame), title \(titleFrame), hidden \(icon.isHidden), tab \(window.title)")
+                #expect(titleFrame.maxX < countFrame.minX, "Title \(titleFrame), count \(countFrame), tab \(window.title)")
+                #expect(title.textColor == (window === selected ? NSColor.labelColor : NSColor.secondaryLabelColor))
             }
+
+            TabShortcutReveal.shared.update(.command)
+            root.layoutSubtreeIfNeeded()
+            for (index, count) in counts.enumerated() {
+                let shortcut = try #require(labels.first { $0.stringValue.hasPrefix("⌘\(index + 1)") })
+                #expect(count.isHidden && !shortcut.isHidden, "Command swaps tab \(index + 1)'s count for its shortcut")
+            }
+            TabShortcutReveal.shared.update([.command, .shift])
+            #expect(!TabShortcutReveal.shared.isRevealed, "Another modifier hides the shortcuts")
+            TabShortcutReveal.shared.update([])
+            #expect(counts.allSatisfy { !$0.isHidden })
         }
     }
 

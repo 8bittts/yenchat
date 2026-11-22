@@ -864,16 +864,17 @@ function SplitPaneLabelsSection() {
 				or zoomed panes.
 			</p>
 			<p className="text-body">
-				Horizontal tabs show up to three pane icons and a count for additional
-				panes. The icons follow the foreground tool or terminal title. When a
-				tab gets narrow, the icons hide to leave room for its name.
+				Horizontal tabs show the name on the left and, for a tab with splits,
+				its pane count on the right. Hold Command to see each tab&apos;s Cmd +
+				1-9 shortcut. When a tab gets narrow, the count hides to leave room for
+				its name.
 			</p>
 			<figure>
 				<Image
 					src="/doc-images/split-headers.png"
-					alt="Claude Code and Codex in adjacent panes. Each pane has its own icon and title, and both icons appear together in the selected tab."
+					alt="Claude Code and Codex in adjacent panes. Each pane header shows its own icon and title."
 					width={1600}
-					height={330}
+					height={258}
 					sizes="(min-width: 768px) 720px, 100vw"
 					className="w-full h-auto"
 				/>

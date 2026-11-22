@@ -112,50 +112,41 @@ struct PaneActivityIcon: View {
     }
 }
 
-struct PaneTabIcons: View {
-    private static let visibleLimit = 3
-    private let surfaces: [YEN.SurfaceView]
-    private let count: Int
-
-    init(surfaces: [YEN.SurfaceView]) {
-        count = surfaces.count
-        self.surfaces = Array(surfaces.prefix(Self.visibleLimit))
-    }
-
-    func showsSamePanes(as other: Self) -> Bool {
-        count == other.count && surfaces.elementsEqual(other.surfaces, by: { $0 === $1 })
-    }
+/// The trailing split count on a horizontal tab. A tab with one pane shows nothing.
+struct PaneTabSplitCount: View {
+    let count: Int
 
     var body: some View {
-        HStack(spacing: 3) {
-            HStack(spacing: -11) {
-                ForEach(Array(surfaces.enumerated()), id: \.element.id) { index, surface in
-                    PaneActivityReader(surface: surface) { PaneActivityIcon(activity: $0) }
-                        .zIndex(Double(surfaces.count - index))
-                }
+        if count > 1 {
+            HStack(spacing: 3) {
+                Image(systemName: "rectangle.split.2x1")
+                    .imageScale(.small)
+                Text(count, format: .number)
+                    .monospacedDigit()
             }
-            if count > surfaces.count {
-                Text("+\(count - surfaces.count)").font(.caption2.monospacedDigit())
-            }
+            .font(.system(size: NSFont.smallSystemFontSize))
+            .foregroundStyle(.secondary)
+            .fixedSize()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(count) panes")
+            .help("\(count) panes")
         }
-        .fixedSize()
-        .accessibilityElement(children: .combine)
-        .help(count == 1 ? "1 pane" : "\(count) panes")
     }
 }
 
-/// The host belongs to the native tab's existing accessory stack. Let mouse clicks
-/// through to AppKit so selecting or dragging a tab by its icons still works.
-final class PaneTabIconAccessory: NSHostingView<PaneTabIcons> {
+/// Hosts the split count in the native tab's accessory stack. The name predates the
+/// count and stays because the engine patch calls `install`. Let mouse clicks
+/// through to AppKit so selecting or dragging a tab still works.
+final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
     private var observation: AnyCancellable?
 
     static func install(for controller: TerminalController, in window: NSWindow) {
         guard let stack = window.tab.accessoryView as? WorkspaceTabAccessory else { return }
-        let host = PaneTabIconAccessory(rootView: PaneTabIcons(surfaces: []))
+        let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 0))
         stack.install(host, for: window)
-        host.observation = controller.$surfaceTree.map { PaneTabIcons(surfaces: $0.root?.leaves() ?? []) }
-            .removeDuplicates { $0.showsSamePanes(as: $1) }
-            .sink { [weak host] in host?.rootView = $0 }
+        host.observation = controller.$surfaceTree.map { $0.root?.leaves().count ?? 0 }
+            .removeDuplicates()
+            .sink { [weak host] in host?.rootView = PaneTabSplitCount(count: $0) }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }

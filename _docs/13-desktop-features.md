@@ -19,8 +19,10 @@ Intentional deltas, not templates for new windows:
 - Standard terminal windows default to native titlebar tabs.
   Horizontal tabs align to the right and expand to the left.
   They prefer 240 points each and compress at the window edge, where AppKit manages overflow.
-  Pane icons lead the title when AppKit exposes its title stack and yield space to the title in narrow tabs.
-  Shortcuts and zoom controls sit at the trailing edge.
+  The title leads each tab when AppKit exposes its title stack.
+  A tab with splits shows its pane count at the trailing edge, and narrow tabs hide the count to keep the title readable.
+  Holding Command alone swaps every count for the tab's `Cmd + 1-9` shortcut; the zoom control also sits at the trailing edge.
+  The selected tab uses a muted pill tinted from the theme's label color, and other titles use the secondary label color.
   An explicit `macos-titlebar-style` overrides either default.
 - Quick Terminal is a non-activating `NSPanel` with its own space and fullscreen policy.
 - Tab Sidebar and the dictation overlay are borderless non-activating panels so the terminal keeps focus; Onboarding floats during first run; Configuration Errors uses an elevated level.
@@ -289,7 +291,6 @@ It uses the pane background and balances the space above and below the icon and 
 Click the header to focus the pane, drag it to a highlighted edge to move it, or click the pencil to rename it.
 The existing Pane Labels preference controls headers and defaults to on.
 Small and zoomed panes preserve terminal space, and the engine drag-handle setting can disable dragging.
-When visible, the pane icons follow layout order and show a count for panes beyond the first three.
 On supported macOS versions, horizontal tabs center vertically in the toolbar and grow left from its right edge.
 After a tab moves to another window, switching between the remaining tabs keeps the strip width stable.
 The icon uses the local foreground executable and falls back to a recognized terminal title or a terminal symbol.
