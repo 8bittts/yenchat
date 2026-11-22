@@ -121,8 +121,33 @@ If no build is running, remove the stale lock and retry." \
         "ERROR: Could not acquire build lock: $BUILD_LOCK_DIR" || exit 1
 }
 
+# Phase timing receipt. Each phase is sourced and may exit, so the EXIT trap
+# closes the phase that was running and prints one line for the whole run:
+#   TIMING|build-release|01-preflight=4s 02-prepare=2s ... total=612s
+# Without it a release log holds no durations, and a slow step cannot be told
+# from a fast one after the run.
+PHASE_TIMING_RECEIPT=""
+PHASE_TIMING_CURRENT=""
+PHASE_TIMING_STARTED=0
+PHASE_TIMING_RUN_STARTED=$(date +%s)
+phase_timing_open() {
+    phase_timing_close
+    PHASE_TIMING_CURRENT="$1"
+    PHASE_TIMING_STARTED=$(date +%s)
+}
+phase_timing_close() {
+    [ -n "$PHASE_TIMING_CURRENT" ] || return 0
+    PHASE_TIMING_RECEIPT="${PHASE_TIMING_RECEIPT}${PHASE_TIMING_CURRENT}=$(( $(date +%s) - PHASE_TIMING_STARTED ))s "
+    PHASE_TIMING_CURRENT=""
+}
+phase_timing_print() {
+    phase_timing_close
+    [ -n "$PHASE_TIMING_RECEIPT" ] || return 0
+    echo "TIMING|build-release|${PHASE_TIMING_RECEIPT}total=$(( $(date +%s) - PHASE_TIMING_RUN_STARTED ))s"
+}
+
 # Preserve failures and give interrupted builds a nonzero exit after cleanup.
-trap 'build_exit_code=$?; release_build_lock; exit "$build_exit_code"' EXIT
+trap 'build_exit_code=$?; phase_timing_print; release_build_lock; exit "$build_exit_code"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 acquire_shared_workflow_lock "build-release" || exit 1
@@ -145,5 +170,6 @@ for phase in "${BUILD_RELEASE_PHASES[@]}"; do
         echo "ERROR: Build phase missing or unreadable: $phase_path" >&2
         exit 1
     fi
+    phase_timing_open "${phase%.sh}"
     source "$phase_path"
 done

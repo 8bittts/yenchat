@@ -93,6 +93,10 @@ The build script prints 9 numbered steps, `[1/9]` to `[9/9]`:
 8. Verify built-app vendor inventory and run branding verification (`04-verify-branding.sh`, 2 declared units; reports `guarded subjects` present/total).
 9. Package full releases: sign, notarize, create DMG, upload DMG/checksum to the version's GitHub Release, and generate checksum/appcast/version signature — appcast generation also computes Sparkle binary-delta patches against up to 5 prior versions when reachable (non-fatal, falls back to full-DMG-only), uploading any resulting `.delta` files. Every GitHub Release keeps its DMG, so older releases stay available as delta sources and nothing is pruned.
 
+Timing receipt: `build-release.sh` ends with one `TIMING|build-release|01-preflight=<n>s ... 06-package=<n>s total=<n>s` line, also when a phase fails.
+Inside step 9, `finalize-build.sh` prints `TIMING|finalize-build|...` for its seven phases, and the notarization line carries the seconds from submission to a valid staple.
+Quote these lines for the Step 12 Build Time; they are the only durations a release log holds.
+
 Milestone notifications: `scripts/lib/zip-notify.sh` posts macOS notifications (via the `com.yenchat.yen.buildNotification` DistributedNotification that YEN.app forwards to Notification Center) at major sections only — Build started (step 7), App verified (after step 8), Notarized, Release complete, and Release FAILED on packaging abort. Best-effort and never fail the build; silently dropped if YEN.app is not running. Disable with `YEN_ZIP_NOTIFY=off`. Per-command completion notifications remain owned by `.claude/hooks/notify-complete.sh`.
 
 Toolchain hardening (Zig version check, `YEN_SKIP_ZIG_VERSION_CHECK=1`; stable Xcode policy, `YEN_ALLOW_PRERELEASE_XCODE=1`; SDK linker probe, `YEN_SKIP_ZIG_SDK_WORKAROUND=1`) is automatic inside `build-release.sh` and described once in `SKILL.md` -> Inherited Preflight Gates.

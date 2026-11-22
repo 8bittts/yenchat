@@ -120,7 +120,7 @@ The route records no download.
 |----------|---------|
 | Version | <version> |
 | DMG Size | XXM |
-| Build Time | Xm XXs |
+| Build Time | total, compile (04-build) and notarization seconds from the build's TIMING lines |
 | Vendors Updated | [list or "None"] |
 | Changes | [bullet list of what's in this release] |
 ```

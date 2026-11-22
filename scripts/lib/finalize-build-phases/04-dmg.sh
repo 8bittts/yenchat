@@ -287,6 +287,7 @@ echo ""
 
 # Notarize DMG (required for Gatekeeper/Sparkle updates)
 echo "  Notarizing DMG..."
+NOTARIZE_STARTED=$(date +%s)
 if NOTARIZE_DMG_OUTPUT=$(xcrun notarytool submit "$DMG_PATH" --keychain-profile "$NOTARIZATION_PROFILE" --keychain "$NOTARIZATION_KEYCHAIN" --wait 2>&1); then
     :
 else
@@ -318,6 +319,6 @@ if ! VALIDATE_OUTPUT=$(xcrun stapler validate "$DMG_PATH" 2>&1); then
 fi
 
 chmod 644 "$DMG_PATH"
-echo "    Notarized and stapled"
+echo "    Notarized and stapled ($(( $(date +%s) - NOTARIZE_STARTED ))s from submission to a valid staple)"
 zip_notify "Notarized" "DMG signed, notarized, and stapled"
 echo ""

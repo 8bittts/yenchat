@@ -40,7 +40,33 @@ LOCK_KEY=$(printf '%s\n' "$REPO_ROOT" | cksum | awk '{print $1}')
 FINALIZE_LOCK_DIR="${TMPDIR:-/tmp}/yen-finalize-build-${LOCK_KEY}.lock"
 FINALIZE_LOCK_ACQUIRED=false
 
+# Phase timing receipt, the same shape as build-release.sh prints:
+#   TIMING|finalize-build|01-preflight=3s ... 04-dmg=214s ... total=301s
+# release_finalize_lock prints it, because finalize-cleanup.sh replaces the
+# EXIT trap once the staging paths exist and keeps only that call.
+PHASE_TIMING_RECEIPT=""
+PHASE_TIMING_CURRENT=""
+PHASE_TIMING_STARTED=0
+PHASE_TIMING_RUN_STARTED=$(date +%s)
+phase_timing_open() {
+    phase_timing_close
+    PHASE_TIMING_CURRENT="$1"
+    PHASE_TIMING_STARTED=$(date +%s)
+}
+phase_timing_close() {
+    [ -n "$PHASE_TIMING_CURRENT" ] || return 0
+    PHASE_TIMING_RECEIPT="${PHASE_TIMING_RECEIPT}${PHASE_TIMING_CURRENT}=$(( $(date +%s) - PHASE_TIMING_STARTED ))s "
+    PHASE_TIMING_CURRENT=""
+}
+phase_timing_print() {
+    phase_timing_close
+    [ -n "$PHASE_TIMING_RECEIPT" ] || return 0
+    echo "TIMING|finalize-build|${PHASE_TIMING_RECEIPT}total=$(( $(date +%s) - PHASE_TIMING_RUN_STARTED ))s"
+    PHASE_TIMING_RECEIPT=""
+}
+
 release_finalize_lock() {
+    phase_timing_print
     release_shared_workflow_lock
     if [ "$FINALIZE_LOCK_ACQUIRED" = true ] && [ -d "$FINALIZE_LOCK_DIR" ]; then
         rm -rf "$FINALIZE_LOCK_DIR"
@@ -84,8 +110,10 @@ FINALIZE_BUILD_PHASES=(
 for phase in "${FINALIZE_BUILD_PHASES[@]}"; do
     phase_path="$REPO_ROOT/scripts/lib/finalize-build-phases/$phase"
     require_finalize_source "$phase_path"
+    phase_timing_open "${phase%.sh}"
     source "$phase_path"
 done
+phase_timing_close
 
 # ============================================================================
 # DONE

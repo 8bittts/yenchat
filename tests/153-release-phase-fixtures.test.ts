@@ -182,6 +182,42 @@ describe("release build phases", () => {
 			expect(result.stdout).toContain("process-acquired");
 			expect(result.stdout.trim().endsWith("shared-released")).toBe(true);
 		}));
+	test("orchestrator prints one timing line that names every phase", () =>
+		fixture((root) => {
+			installOrchestrator(root);
+			const result = shell(
+				root,
+				"bash yen-terminal/customizations/build-release.sh --local",
+			);
+			expect(result.status, result.stderr).toBe(0);
+			const timing = result.stdout
+				.split("\n")
+				.filter((line) => line.startsWith("TIMING|build-release|"));
+			expect(timing.length).toBe(1);
+			expect(
+				Array.from(
+					(timing[0] ?? "").matchAll(/(\d\d-[a-z]+)=\d+s/g),
+					(match) => `${match[1]}.sh`,
+				),
+			).toEqual(phases);
+			expect(timing[0]).toMatch(/ total=\d+s$/);
+		}));
+	test("a failed phase still reports the time of the phases that ran", () =>
+		fixture((root) => {
+			installOrchestrator(root);
+			write(
+				join(root, "scripts/lib/build-release-phases/02-prepare.sh"),
+				"exit 7\n",
+			);
+			const result = shell(
+				root,
+				"bash yen-terminal/customizations/build-release.sh --local",
+			);
+			expect(result.status, result.stderr).toBe(7);
+			expect(result.stdout).toMatch(
+				/^TIMING\|build-release\|01-preflight=\d+s 02-prepare=\d+s total=\d+s$/m,
+			);
+		}));
 	test("missing phase fails and still releases the workflow lock", () =>
 		fixture((root) => {
 			installOrchestrator(root);
@@ -391,6 +427,21 @@ describe("release finalization phases", () => {
 			).toEqual(finalizePhases.map((name) => `phase=${name}`));
 			expect(result.stdout).toContain("Release packaged: v1.260");
 			expect(result.stdout.match(/shared-released/g)?.length).toBe(1);
+			// One timing line, with every phase, printed before the lock goes:
+			// the cleanup helper replaces the EXIT trap part of the way through.
+			const timing = result.stdout
+				.split("\n")
+				.filter((line) => line.startsWith("TIMING|finalize-build|"));
+			expect(timing.length).toBe(1);
+			expect(
+				Array.from(
+					(timing[0] ?? "").matchAll(/(\d\d-[a-z]+)=\d+s/g),
+					(match) => `${match[1]}.sh`,
+				),
+			).toEqual(finalizePhases);
+			expect(result.stdout.indexOf("TIMING|finalize-build|")).toBeLessThan(
+				result.stdout.indexOf("shared-released"),
+			);
 			expect(existsSync(join(root, "staging"))).toBe(false);
 			expect(existsSync(join(root, "dmg"))).toBe(false);
 			expect(existsSync(join(root, "release.dmg"))).toBe(true);
