@@ -95,7 +95,9 @@ enum RemotePanes {
             return
         }
         config.command = command
-        // attachWrapper holds a failure on screen and lets a normal end close.
+        // attachWrapper holds a failure on screen; a normal end closes through
+        // paneProcessEnded, because the engine forces wait-after-command for
+        // any surface with a command whatever this says.
         config.waitAfterCommand = false
         registry.withLock { $0.identities[paneID] = identity }
     }
@@ -184,6 +186,16 @@ enum RemotePanes {
         guard let identity = identity(for: surface.id), !surface.processExited,
               let pid = surface.surfaceModel?.foregroundPID, pid > 0 else { return false }
         return processTree(under: pid_t(pid), mentions: identity.sessionID.uuidString)
+    }
+
+    /// The pane's process exited. For a remote pane that means its client
+    /// ended normally (the wrapper exits only on 0 or 130) or the user
+    /// dismissed a failure with Return, so close it without the engine's
+    /// "Press any key" hold; a local pane keeps the engine's behavior.
+    @MainActor static func paneProcessEnded(_ surface: YEN.SurfaceView) {
+        guard identity(for: surface.id) != nil,
+              let controller = BaseTerminalController.controller(owning: surface) else { return }
+        controller.closeSurface(surface, withConfirmation: false)
     }
 
     /// A pane left its tree; once undo can no longer bring it back and no

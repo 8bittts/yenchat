@@ -285,25 +285,27 @@ struct RemotePanesTests {
     }
 
     /// The engine forces wait-after-command on any surface given a command,
-    /// so the pane itself must close when its client ends normally.
-    @Test func aRemotePaneWhoseClientEndsNormallyClosesAndAFailedOneStays() throws {
+    /// so a remote pane closes itself when its process ends. The engine's
+    /// child-exit message does not arrive in the test host (measured: the
+    /// process was gone and processExited stayed false for 4 s), so this
+    /// drives the hook the split leaf calls; the running copy proves the rest.
+    @Test func aRemotePaneClosesWhenItsProcessEndsAndALocalPaneDoesNot() throws {
+        // One tab, a local pane split beside a remote one, so closing the
+        // remote pane leaves a tree to inspect.
         let appDelegate = try #require(NSApp.delegate as? AppDelegate)
-        RemotePanes._testSetCLIPath("/usr/bin/true")
-        let normal = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
-        RemotePanes._testSetCLIPath("/usr/bin/false")
-        let failed = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
+        let app = try #require(appDelegate.yen.app)
+        let controller = try makeController(with: nil)
+        let localSurface = try #require(controller.surfaceTree.first)
+        RemotePanes._testSetCLIPath(Self.liveCLI)
+        let remoteSurface = YEN.SurfaceView(app, baseConfig: markedConfig(identity))
         RemotePanes._testSetCLIPath(nil)
-        Self.retainedControllers += [normal, failed]
-        let failedSurface = try #require(failed.surfaceTree.first)
-        normal.showWindow(nil)
-        failed.showWindow(nil)
+        controller.surfaceTree = try controller.surfaceTree.inserting(view: remoteSurface, at: localSurface, direction: .right)
 
-        for _ in 0..<80 where !normal.surfaceTree.isEmpty {
-            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
-        }
-        #expect(normal.surfaceTree.isEmpty)
-        #expect(failed.surfaceTree.contains(failedSurface))
-        failed.window?.close()
+        RemotePanes.paneProcessEnded(localSurface)
+        #expect(controller.surfaceTree.contains(localSurface))
+        RemotePanes.paneProcessEnded(remoteSurface)
+        #expect(!controller.surfaceTree.contains(remoteSurface))
+        #expect(controller.surfaceTree.contains(localSurface))
     }
 
     @Test func onlyARestoredPaneRetriesAnUnreachablePeer() throws {

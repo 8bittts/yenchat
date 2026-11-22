@@ -317,6 +317,12 @@ private struct TerminalSplitLeaf: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Terminal pane")
         }
+        // The engine holds every surface with a command after it exits; a
+        // remote pane's wrapper only exits on a normal end or after its
+        // failure message was dismissed, so close it then.
+        .onReceive(surfaceView.$childExitedMessage.compactMap { $0 }) { _ in
+            RemotePanes.paneProcessEnded(surfaceView)
+        }
     }
 
     private enum DropState: Equatable {
