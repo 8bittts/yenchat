@@ -15,16 +15,24 @@ echo ""
 echo "[7/9] Building YEN.app..."
 zip_notify "Build started" "Compiling YEN.app v$VERSION"
 
-# Progress indicator function (polls every 20 seconds to reduce visual noise)
+# Progress indicator: one line every 30 seconds, and a final line with the build time.
 show_progress() {
     local pid=$1
     local start_time=$(date +%s)
+    local next_report=$start_time
+    # Look at the compiler every second and report every 30. Sleeping the whole
+    # 30 s between looks held the build until the next report, up to 30 s after
+    # the compiler had ended.
     while kill -0 "$pid" 2>/dev/null; do
-        local elapsed=$(($(date +%s) - start_time))
-        local mins=$((elapsed / 60))
-        local secs=$((elapsed % 60))
-        printf "  Building... %dm %02ds\n" $mins $secs
-        sleep 30
+        local now=$(date +%s)
+        if [ "$now" -ge "$next_report" ]; then
+            local elapsed=$((now - start_time))
+            local mins=$((elapsed / 60))
+            local secs=$((elapsed % 60))
+            printf "  Building... %dm %02ds\n" $mins $secs
+            next_report=$((now + 30))
+        fi
+        sleep 1
     done
     # Final elapsed time
     local elapsed=$(($(date +%s) - start_time))
