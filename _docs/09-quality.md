@@ -63,6 +63,9 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
 With no visible Settings window every mutation persists synchronously, so a suite touching `SettingsController.shared` would rewrite the operator's config on every release.
 `SettingsConfigPathTests.testHostNeverTargetsRealUserConfig` guards it; suites that need a specific file still call `_testSetConfigPathOverride`.
 
+**Tests never call the real Keychain.** The test host deletes its own saved items, and a run fails when the item belongs to another tool.
+`TokenPlanConnection.reset` takes the remover as its `removeKey` parameter, so a test passes a closure.
+
 **Live terminal windows.** Suites that create real `TerminalController` windows spawn login shells.
 Close them through the real AppKit close path so `windowWillClose` runs; `orderOut(nil)` leaves `/usr/bin/login` children alive and later runs look frozen.
 For docked-sidebar coverage inject plain `NSView` stubs through `TerminalViewContainer(terminalContentView:dockedSidebarHostingViewFactory:)` and keep frame math in `DockedSidebarGeometry` assertions.

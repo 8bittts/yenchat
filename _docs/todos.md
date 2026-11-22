@@ -55,6 +55,7 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 - [ ] Measure idle and peak memory, wakeups and input-to-draw latency against a ReleaseFast control on representative large histories.
 - [ ] Validate day rollover, locked databases, concurrent provider writes and repeated toggles in the release candidate.
+- [ ] Connect a real personal Cursor API key in a signed build and confirm both Cursor pools, the Grok Bot pool and Disconnect; only mocked responses and a rejected key have run.
 
 ### Experimental moving wallpaper
 

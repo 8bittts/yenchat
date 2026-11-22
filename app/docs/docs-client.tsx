@@ -625,8 +625,9 @@ function AgentTokenUsageSection() {
 					className="h-auto w-full max-w-xs"
 				/>
 				<figcaption className="media-caption">
-					Example readings. Each provider’s top bar shows its share of today’s
-					tokens. The smaller bars show usage within each named plan window.
+					Example readings in YEN 1.285. Each provider’s top bar shows its share
+					of today’s tokens. The smaller bars show usage within each named plan
+					window.
 				</figcaption>
 			</figure>
 			<ul className="list-disc space-y-2 pl-5 text-body">
