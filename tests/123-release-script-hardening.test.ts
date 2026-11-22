@@ -721,6 +721,8 @@ describe("guardrail suites are wired into the release path", () => {
 			"tests/123-release-script-hardening.test.ts",
 			"tests/124-upstream-lib-contract.test.ts",
 			"tests/127-overlay-recurrence-gates.test.ts",
+			"tests/169-copy-on-select-compat.test.ts",
+			"tests/171-third-party-notices.test.ts",
 		]) {
 			expect(block).toContain(suite);
 		}

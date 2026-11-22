@@ -544,6 +544,8 @@ else
         "$REPO_ROOT/tests/124-upstream-lib-contract.test.ts"
         "$REPO_ROOT/tests/127-overlay-recurrence-gates.test.ts"
         "$REPO_ROOT/tests/145-gate-receipt-contract.test.ts"
+        "$REPO_ROOT/tests/169-copy-on-select-compat.test.ts"
+        "$REPO_ROOT/tests/171-third-party-notices.test.ts"
     )
 
     # Fail closed on a missing suite: a deleted or renamed test file must abort,
