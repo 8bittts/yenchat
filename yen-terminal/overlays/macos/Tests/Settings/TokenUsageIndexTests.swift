@@ -25,6 +25,48 @@ struct TokenUsageIndexTests {
         #expect(try index.read(now: now, tools: [.codex])[.codex] == 28)
     }
 
+    @Test func oversizedImageRecordBetweenGrokTurnsKeepsProviderAvailable() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let file = TokenTool.grok.root(home: home).appendingPathComponent("project/session/updates.jsonl")
+        try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let now = Date()
+        func turn(_ id: String, _ input: Int) -> String {
+            """
+            {"_meta":{"agentTimestampMs":\(Int(now.timeIntervalSince1970 * 1000)),"eventId":"\(id)"},"params":{"update":{"sessionUpdate":"turn_completed","usage":{"modelUsage":{"one":{"inputTokens":\(input),"outputTokens":1}}}}}}
+            """
+        }
+        // Grok Build stores a pasted image as one record; real ones exceed 14 MB.
+        let image = """
+            {"params":{"update":{"sessionUpdate":"user_message_chunk","content":{"type":"image","data":"\(String(repeating: "x", count: 9 * 1024 * 1024))"}}}}
+            """
+        try Data(([turn("a", 5), image, turn("b", 7)].joined(separator: "\n") + "\n").utf8).write(to: file)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        #expect(try index.read(now: now, tools: [.grok])[.grok] == 14)
+    }
+
+    @Test func codexLimitsSurviveADayWithoutCodexActivity() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let root = TokenTool.codex.root(home: home)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        let now = Date(), lastNight = Calendar.current.startOfDay(for: now).addingTimeInterval(-3600)
+        let file = root.appendingPathComponent("rollout-last-night.jsonl")
+        // The weekly window outlives the day that reported it.
+        let row = """
+            {"type":"event_msg","timestamp":"\(lastNight.ISO8601Format())","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100}},"rate_limits":{"limit_id":"codex","primary":{"window_minutes":10080,"used_percent":40,"resets_at":\(Int(now.timeIntervalSince1970) + 86400)}}}}
+            """
+        try Data((row + "\n").utf8).write(to: file)
+        try fm.setAttributes([.modificationDate: lastNight], ofItemAtPath: file.path)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        #expect(try index.read(now: now, tools: [.codex])[.codex] == 0)
+        let meters = try index.latestCodexPlan()
+        #expect(meters.map(\.label) == ["Weekly"])
+        #expect(meters.map(\.percent) == [40])
+    }
+
     @Test func resumedSessionsMatchReferenceProviderTotals() throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -134,7 +176,7 @@ struct TokenUsageIndexTests {
         #expect(try index.read(now: now, tools: [.codex])[.codex] == 0)
     }
 
-    @MainActor @Test func observesAppendsThroughAnAliasedProviderDirectory() async throws {
+    @MainActor @Test func observesAndCountsAppendsThroughAnAliasedProviderDirectory() async throws {
         let fm = FileManager.default
         let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? fm.removeItem(at: home) }
@@ -151,9 +193,15 @@ struct TokenUsageIndexTests {
             }
         })
         defer { watcher.stop() }
-        try Data("record\n".utf8).write(to: file)
+        let now = Date()
+        let row = """
+            {"type":"assistant","timestamp":"\(now.ISO8601Format())","requestId":"r","message":{"id":"a","model":"claude-sonnet","usage":{"input_tokens":3,"output_tokens":2}}}
+            """
+        try Data((row + "\n").utf8).write(to: file)
         for _ in 0..<100 where !observed { try await Task.sleep(for: .milliseconds(100)) }
         #expect(observed)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+        #expect(try index.read(now: now, tools: [.claude])[.claude] == 5)
     }
 
     @Test func openCodeUsesSessionCountersOnlyWhenMessageHistoryHasNoUsage() throws {

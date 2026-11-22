@@ -74,6 +74,35 @@ struct TokenPlanUsageTests {
         #expect(try !#require(TokenPlanReading.codex(limit("codex", 600), at: next)).isRollingPlaceholder(after: first))
     }
 
+    @Test func grokBillingReadingSkipsANewerLineWithoutAPercentage() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let log = home.appendingPathComponent(".grok/logs/unified.jsonl")
+        try fm.createDirectory(at: log.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let end = now.addingTimeInterval(86400).ISO8601Format()
+        func line(_ age: TimeInterval, _ percent: String) -> String {
+            """
+            {"ts":"\(now.addingTimeInterval(-age).ISO8601Format())","msg":"billing: fetched credits config","ctx":{"config":{\(percent)"currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","end":"\(end)"}}}}
+            """
+        }
+        // Grok omits the percentage on some fetches; the last line that carries one is still current.
+        try Data((line(60, #""creditUsagePercent":14,"#) + "\n" + line(30, "") + "\n").utf8).write(to: log)
+        let meters = TokenLocalPlans.grok(home: home, now: now)
+        #expect(meters.map(\.label) == ["Grok weekly"])
+        #expect(meters.map(\.percent) == [14])
+    }
+
+    @Test func planPercentagesClampToTheBarRange() {
+        // A pool past its included limit still shows a full bar.
+        #expect(TokenPlanMeter("Weekly", percent: 104.2, reset: nil)?.percent == 100)
+        #expect(TokenPlanMeter("Weekly", percent: -1, reset: nil)?.percent == 0)
+        #expect(TokenPlanMeter("Weekly", percent: true, reset: nil) == nil)
+        #expect(TokenPlanMeter("Weekly", percent: "40", reset: nil) == nil)
+        #expect(TokenPlanMeter("Weekly", percent: Double.nan, reset: nil) == nil)
+    }
+
     @Test func barTonesStayVisibleOnLightAndDarkPanels() {
         func luminance(_ rgb: [Double]) -> Double {
             let linear = rgb.map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
