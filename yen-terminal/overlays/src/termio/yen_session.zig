@@ -38,6 +38,8 @@ pub const socket_dir_key = "ZMX_DIR";
 /// The zmx build that started this pane's session. Attaching with the same
 /// build keeps working when an update ships a zmx with another protocol.
 pub const zmx_key = "YEN_PERSISTENT_SESSION_ZMX";
+/// zmx sets this inside a session and refuses to attach while it is set.
+pub const inherited_session_key = "ZMX_SESSION";
 
 pub fn Prepared(comptime Command: type) type {
     return struct {
@@ -247,6 +249,26 @@ test "wrapFromEnv removes the marker and leaves the command alone without zmx" {
     const missing_zmx = try wrapFromEnv(alloc, std.testing.io, original, &env, "/nonexistent/Resources/yen");
     try std.testing.expectEqualStrings("/bin/zsh", missing_zmx.shell);
     try std.testing.expect(env.get(env_key) == null);
+}
+
+test "a pane never inherits the session the app was launched from" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+    const io = std.testing.io;
+
+    // An app started from a persistent pane inherits that pane's ZMX_SESSION.
+    // zmx treats an attach under it as nested and fails, so the pane dies.
+    var env = std.process.Environ.Map.init(alloc);
+    try env.put(inherited_session_key, "PARENT-1");
+    try env.put(env_key, "ABC-123");
+    _ = try wrapFromEnv(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, null);
+    try std.testing.expect(env.get(inherited_session_key) == null);
+
+    // A pane that is not persistent is not inside that session either.
+    try env.put(inherited_session_key, "PARENT-1");
+    _ = try wrapFromEnv(alloc, io, TestCommand{ .shell = "/bin/zsh" }, &env, null);
+    try std.testing.expect(env.get(inherited_session_key) == null);
 }
 
 test "wrapFromEnv refuses an unsafe name but still strips the marker" {
