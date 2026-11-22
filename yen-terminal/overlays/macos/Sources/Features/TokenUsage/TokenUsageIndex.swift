@@ -75,7 +75,8 @@ struct TokenUsageIndex: Sendable {
     }
 
     private func count(_ tool: TokenTool, db: SQLiteDatabase, day: DateInterval, changes: Set<URL>?) throws -> Int {
-        let root = tool.root(home: home)
+        // A directory walk does not follow a provider directory that is itself a symbolic link.
+        let root = tool.root(home: home).resolvingSymlinksInPath()
         let fm = FileManager.default
         let files: [URL]
         if tool == .openCode {
@@ -97,16 +98,21 @@ struct TokenUsageIndex: Sendable {
                                              errorHandler: { _, error in readError = error; return false }) else {
                 throw CocoaError(.fileReadUnknown)
             }
-            var recent: [URL] = []
-            for case let url as URL in walker {
+            var recent: [URL] = [], idle: (url: URL, modified: Date)?
+            for case let url as URL in walker where tool.accepts(url) {
                 try Task.checkCancellation()
-                if try tool.accepts(url) && url.resourceValues(forKeys: Set(keys)).isRegularFile == true
-                    && (url.resourceValues(forKeys: Set(keys)).contentModificationDate ?? .distantFuture) >= day.start {
+                let values = try url.resourceValues(forKeys: Set(keys))
+                guard values.isRegularFile == true else { continue }
+                let modified = values.contentModificationDate ?? .distantFuture
+                if modified >= day.start {
                     recent.append(url)
+                } else if tool == .codex, modified > idle?.modified ?? .distantPast {
+                    idle = (url, modified)
                 }
             }
             if let readError { throw readError }
-            files = recent
+            // Codex records its account limits only while it runs, and a weekly window outlives the day.
+            files = recent + (idle.map { [$0.url] } ?? [])
         }
         if let changes {
             for url in changes where tool.accepts(url) && !fm.fileExists(atPath: url.path) {
@@ -183,7 +189,7 @@ struct TokenUsageIndex: Sendable {
                 DO UPDATE SET n=excluded.n,output=excluded.output WHERE (excluded.output,excluded.n)>(output,n)
                 """)
             let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
-            let end = try stream(handle, from: offset, through: size, tool: tool) { bytes, _ in
+            let end = try stream(handle, from: offset, through: size) { bytes in
                 if tool == .codex {
                     try codex.ingest(bytes, file: url.path, rollout: rollout, day: day, db: db)
                     return
@@ -212,8 +218,7 @@ struct TokenUsageIndex: Sendable {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func stream(_ handle: FileHandle, from start: Int, through size: Int, tool: TokenTool,
-                        consume: (Data, Int) throws -> Void) throws -> Int {
+    private func stream(_ handle: FileHandle, from start: Int, through size: Int, consume: (Data) throws -> Void) throws -> Int {
         var position = start, committed = start, line = Data()
         var skipping = false
         while position < size {
@@ -226,7 +231,7 @@ struct TokenUsageIndex: Sendable {
                 while let lf = rest.firstIndex(of: 10) {
                     if !skipping { line.append(rest[..<lf]) }
                     position += rest.distance(from: rest.startIndex, to: lf) + 1
-                    if !skipping { try autoreleasepool { try consume(line, committed) } }
+                    if !skipping { try autoreleasepool { try consume(line) } }
                     skipping = false
                     committed = position
                     line.removeAll(keepingCapacity: false)
@@ -235,8 +240,7 @@ struct TokenUsageIndex: Sendable {
                 if !skipping { line.append(rest) }
                 position += rest.count
                 if line.count > 8 * 1024 * 1024 {
-                    // Compactions and image/tool payloads can dwarf the usage events between them.
-                    guard tool == .codex, TokenCodex.isNonUsageEnvelope(line) else { throw CocoaError(.fileReadTooLarge) }
+                    // Usage records are small. Compactions and image or tool payloads between them are not.
                     line.removeAll(keepingCapacity: false)
                     skipping = true
                 }

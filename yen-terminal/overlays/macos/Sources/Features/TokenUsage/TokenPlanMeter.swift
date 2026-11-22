@@ -9,9 +9,10 @@ struct TokenPlanMeter: Codable, Equatable, Sendable, Identifiable {
 
     init?(_ label: String, percent: Any?, reset: Date?) {
         guard let value = percent as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
-              value.doubleValue.isFinite, (0...100).contains(value.doubleValue) else { return nil }
+              value.doubleValue.isFinite else { return nil }
         self.label = label
-        self.percent = value.doubleValue
+        // A pool past its included limit still fills its bar.
+        self.percent = min(100, max(0, value.doubleValue))
         self.reset = reset
     }
 
@@ -115,9 +116,11 @@ enum TokenLocalPlans {
                   let ctx = obj["ctx"] as? TokenRecord.Object, let config = ctx["config"] as? TokenRecord.Object,
                   let period = config["currentPeriod"] as? TokenRecord.Object,
                   let stamp = TokenRecord.date(obj["ts"]), (0...43200).contains(now.timeIntervalSince(stamp)),
-                  let end = TokenRecord.date(period["end"]), end > now else { continue }
-            let weekly = period["type"] as? String == "USAGE_PERIOD_TYPE_WEEKLY"
-            return [TokenPlanMeter(weekly ? "Grok weekly" : "Grok subscription", percent: config["creditUsagePercent"], reset: end)].compactMap { $0 }
+                  let end = TokenRecord.date(period["end"]), end > now,
+                  // Grok omits the percentage on some fetches, so keep looking for the last line that has one.
+                  let meter = TokenPlanMeter(period["type"] as? String == "USAGE_PERIOD_TYPE_WEEKLY" ? "Grok weekly" : "Grok subscription",
+                                             percent: config["creditUsagePercent"], reset: end) else { continue }
+            return [meter]
         }
         return []
     }

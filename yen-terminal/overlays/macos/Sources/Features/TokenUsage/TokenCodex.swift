@@ -9,17 +9,6 @@ struct TokenCodex: Codable {
     private var buckets = [0, 0, 0]
     private var ordinal = 0
 
-    /// Inspect only the outer discriminators of a large rollout record.
-    static func isNonUsageEnvelope(_ data: Data) -> Bool {
-        let prefix = String(decoding: data.prefix(1024), as: UTF8.self)
-        guard let payload = prefix.range(of: #",\s*"payload"\s*:\s*\{"#, options: .regularExpression),
-              let header = try? JSONSerialization.jsonObject(with: Data((prefix[..<payload.lowerBound] + "}").utf8)) as? TokenRecord.Object,
-              let type = header["type"] as? String else { return false }
-        if type != "event_msg" { return true }
-        let fields = prefix[payload.upperBound...]
-        return fields.range(of: #"^\s*"type"\s*:\s*"(?!token_count")[a-z_]+"\s*,"#, options: .regularExpression) != nil
-    }
-
     static func rolloutID(_ url: URL) -> String {
         let name = url.deletingPathExtension().lastPathComponent
         let uuid = #"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"#

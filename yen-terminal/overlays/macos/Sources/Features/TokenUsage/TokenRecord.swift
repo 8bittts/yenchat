@@ -10,7 +10,7 @@ enum TokenTool: String, CaseIterable, Sendable {
         }
         let paths: [Self: String] = [.claude: ".claude/projects", .codex: ".codex/sessions",
             .grok: ".grok/sessions", .openCode: ".local/share/opencode"]
-        return home.resolvingSymlinksInPath().appendingPathComponent(paths[self]!)
+        return home.appendingPathComponent(paths[self]!)
     }
 
     func accepts(_ url: URL) -> Bool {
