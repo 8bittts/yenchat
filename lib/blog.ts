@@ -54,16 +54,49 @@ export interface BlogHeading {
 
 let cachedPosts: readonly BlogPost[] | null = null;
 
+const FULL_SIZE_IMAGE_LABEL = "Open full-size image";
+
+/**
+ * Imported Substack markup needs three accessibility repairs before render:
+ * image links whose image has empty alt text get a name, headings get an
+ * aria-level so the outline under the page h1 starts at 2 and never skips,
+ * and code blocks become focusable so keyboard users can scroll them.
+ * The visual tags stay the same, so the article styles do not change.
+ */
+export function accessibleArticleHtml(html: string): string {
+	const levels = [...html.matchAll(/<h([1-6])\b/g)].map((match) =>
+		Number(match[1]),
+	);
+	const ranks = [...new Set(levels)].sort((a, b) => a - b);
+	let previous = 1;
+	return html
+		.replace(/<pre>/g, '<pre tabindex="0">')
+		.replace(
+			/<a href="([^"]*)">(<img\b[^>]*\balt=""[^>]*>)<\/a>/g,
+			`<a href="$1" aria-label="${FULL_SIZE_IMAGE_LABEL}">$2</a>`,
+		)
+		.replace(/<h([1-6])\b/g, (tag, level: string) => {
+			const outline = Math.min(ranks.indexOf(Number(level)) + 2, previous + 1);
+			previous = outline;
+			return outline === Number(level) ? tag : `${tag} aria-level="${outline}"`;
+		});
+}
+
+function withAccessibleArticleHtml(post: BlogPost): BlogPost {
+	return { ...post, html: accessibleArticleHtml(post.html) };
+}
+
 /** Every post, newest first. */
 export function getBlogPosts(): readonly BlogPost[] {
 	if (!cachedPosts) {
 		cachedPosts = readdirSync(POSTS_DIR)
 			.filter((name) => name.endsWith(".json"))
-			.map(
-				(name) =>
+			.map((name) =>
+				withAccessibleArticleHtml(
 					JSON.parse(
 						readFileSync(path.join(POSTS_DIR, name), "utf8"),
 					) as BlogPost,
+				),
 			)
 			.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 	}
@@ -96,7 +129,9 @@ export function getAdjacentBlogPosts(slug: string): {
 /** The h2/h3 section anchors the importer added to a post. */
 export function getBlogHeadings(post: BlogPost): BlogHeading[] {
 	return [
-		...post.html.matchAll(/<h[23] id="([^"]+)">([\s\S]*?)<\/h[23]>/g),
+		...post.html.matchAll(
+			/<h[23]\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h[23]>/g,
+		),
 	].map((match) => ({
 		id: match[1] ?? "",
 		title: (match[2] ?? "")
