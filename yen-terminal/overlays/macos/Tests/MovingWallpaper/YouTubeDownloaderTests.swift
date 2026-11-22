@@ -122,6 +122,27 @@ struct YouTubeDownloaderTests {
         #expect(try cachedFiles() == [movie.lastPathComponent])
     }
 
+    /// An app that quits or crashes mid-download leaves stream files behind.
+    /// The next download of the same video must not take them for its own.
+    @Test func filesLeftByAnInterruptedRunDoNotBreakTheNextDownload() async throws {
+        defer { cleanUp() }
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        for stale in ["aqz-KE-bpKQ.stream.137.mp4", "aqz-KE-bpKQ.stream.merged.mp4"] {
+            try Data("interrupted".utf8).write(to: cache.appendingPathComponent(stale))
+        }
+        let downloader = try makeDownloader(
+            video: try await makeVideo(named: "video.mp4"), audio: try makeAudio(named: "audio.m4a"), single: nil
+        )
+
+        guard case .success(let movie) = await downloader.download(youtubeURL: link) else {
+            Issue.record("the download did not succeed")
+            return
+        }
+
+        #expect(try await tracks(of: movie) == [.video, .audio])
+        #expect(try cachedFiles() == [movie.lastPathComponent])
+    }
+
     @Test func aVideoWithoutASeparateSoundStreamStillPlays() async throws {
         defer { cleanUp() }
         let downloader = try makeDownloader(video: try await makeVideo(named: "video.mp4"), audio: nil, single: nil)
