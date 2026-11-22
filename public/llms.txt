@@ -36,6 +36,7 @@ Rendering latency and frame rate depend on the Mac and workload; YEN publishes n
 - Splits, native titlebar tabs by default, tab sidebar (Cmd + Shift + B), scratchpad (Cmd + Shift + J), split layout presets (Cmd + Option + 1-0), and Quick Terminal (global hotkey dropdown)
 - Automatic window state restoration on every launch (splits, tabs, positions)
 - Persistent sessions (Settings > General > Keep Sessions Running, on by default) — ordinary shell panes keep running when YEN quits, updates, or crashes and reattach with their screen and scrollback; quitting no longer stops pane processes (a dev server keeps its port); close a pane, use Settings > General > End All Sessions, or run `yen sessions kill <id>` to end sessions; sessions stay on the Mac in `~/.local/state/yen/zmx` and end when it restarts
+- Remote sessions (starting in YEN 1.285; https://yen.chat/#remote-sessions) — attach to a persistent session on another of your Macs over plain `ssh` on your Tailscale network; no YEN relay or account, and nothing is sent to YEN. Needs YEN 1.285 or later and Tailscale signed in to the same account on both Macs, Keep Sessions Running and an SSH server on the other Mac (Remote Login in System Settings > General > Sharing; the App Store and standalone Tailscale apps cannot be a Tailscale SSH server, the open-source CLI can), sign-in that works without a password prompt (for example an SSH key), and Tailscale access rules that let this Mac reach it. Command palette: type `hosts` to list your Macs (same Tailscale user, macOS, not shared, not expired) and their sessions; select one to attach in a new tab or focus the pane that shows it; YEN contacts your Macs only while the query asks for hosts or on Hosts: Refresh Remote Sessions. First time: Connect to <Mac> Once types `ssh <Mac>` so you can check the host key and sign in; a changed host key stops YEN until you fix known_hosts. A remote pane's tab title leads with the Mac's name (`<Mac> · <title>`) and its split header shows the host; splits and tabs opened from it are local. A dropped link reconnects after 1, 2, 4, 8, 16, then 30 seconds until Ctrl-C while the session keeps running on the other Mac; restored remote panes reattach at launch. `yen sessions kill` stays local
 - Copy-on-select — enabled by default and configurable in Settings; selected text copies as plain text
 - Live settings reload — most changes apply while running; background opacity requires an app restart
 - Welcome message for new users with key shortcuts and getting-started tips
@@ -148,6 +149,7 @@ Press Cmd + Shift + P from any terminal surface to open one palette with two mod
 - Cross-window navigation (jump to any open surface)
 - User-configured terminal commands (add command-palette-entry lines in config.yen)
 - App updates (install or skip, when available)
+- Hosts (starting in YEN 1.285): type `hosts` to list your other Macs on Tailscale and their persistent sessions, then attach in a new tab (https://yen.chat/#remote-sessions)
 - Non-empty query: search mixed `action`, `file`, `content`, `diagnostic`, and `history` results for the active project using the same ranking contract as `yen ide search`
 - That desktop search parity now includes deterministic symbol definitions as well as diagnostics; deeper project-specific action synthesis remains future work.
 - The desktop PR review workspace now mirrors the same posting, persisted evidence, and review-decision flows as `yen ide pr-review`, while still reusing the same CLI-backed control plane and evidence contract.
@@ -169,7 +171,7 @@ They do not install it and do not define `y`.
 Core:
 - yen help (yen commands) — Show command listing and usage
 - yen version / yen --version — Show version
-- yen sessions — List persistent pane sessions; `yen sessions attach <id>` attaches a terminal to one and `yen sessions kill <id>` ends it
+- yen sessions — List persistent pane sessions; `yen sessions attach <id>` attaches a terminal to one and `yen sessions kill <id>` ends it; starting in YEN 1.285, `yen sessions list --host <mac>` and `yen sessions attach --host <mac> <id>` reach another Mac over ssh (`--porcelain` gives tab-separated output; exit codes 10-15 are listed in `yen sessions --help`)
 - yen pane cwd <directory> — Report an agent worktree for the current pane; yen pane cwd --clear restores shell tracking. Run it from an agent or hook, not an interactive prompt; new splits still inherit the shell directory
 - yen init zsh — Output shell integration code for external zsh shells (add to ~/.zshrc)
 - yen init bash — Output shell integration code for external bash shells (add to ~/.bashrc)

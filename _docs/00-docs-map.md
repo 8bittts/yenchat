@@ -10,7 +10,7 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 | `00-foundation.md`           | History, decisions, and the index of design assets                                                                      |
 | `01-architecture.md`         | Component boundaries, cross-component contracts, native interaction and input patterns                                  |
 | `02-design-system.md`        | Themes and the generated catalog, the public web design system, Phosphor typography                                     |
-| `04-security.md`             | Upstream overlap, fail-closed vendor gate contracts, the bundled binary inventory                                        |
+| `04-security.md`             | Upstream overlap, fail-closed vendor gate contracts, the bundled binary inventory, the remote attach threat model        |
 | `05-infrastructure.md`       | Desktop toolchain, build guardrails, signing, DMG, release hosting, Sparkle, versioning, web release practice, media retention, environment variables |
 | `07-email.md`                | The support mailbox and mail authentication                                                                             |
 | `08-growth.md`               | Measurement limits, public discovery                                                                          |

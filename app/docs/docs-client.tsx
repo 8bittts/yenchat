@@ -890,7 +890,7 @@ function SplitPaneLabelsSection() {
 	);
 }
 
-// Source: Sessions/{PersistentSessions,PersistentSessionReaper}.swift; yen-cli/commands/core/sessions; _docs/01-architecture.md → Persistent sessions.
+// Source: Sessions/{PersistentSessions,PersistentSessionReaper,TailscalePeers,RemoteSessions,RemotePanes}.swift; yen-cli/commands/core/sessions; yen-cli/lib/sessions-remote.sh; _docs/01-architecture.md → Persistent sessions.
 function PersistentSessionsSection() {
 	return (
 		<DocSection id="persistent-sessions" title="Persistent Sessions">
@@ -920,6 +920,79 @@ function PersistentSessionsSection() {
 				<code className="inline-code-brand">yen sessions</code> to find the
 				others. A detached session that no window holds ends after YEN has
 				watched it continuously for a day.
+			</p>
+			<h3 id="remote-sessions" className="text-heading-sm">
+				Remote sessions
+			</h3>
+			<p className="text-body">
+				Starting in YEN 1.285, you can attach to a persistent session that runs
+				on another of your Macs. YEN connects with the system{" "}
+				<code className="inline-code-brand">ssh</code> over your Tailscale
+				network. It runs no relay, needs no YEN account, and sends nothing to
+				YEN.
+			</p>
+			<ul className="list-disc pl-5 space-y-2 text-body">
+				<li>
+					<strong>Both Macs:</strong> YEN 1.285 or later, and Tailscale signed
+					in to the same Tailscale account. YEN lists only your own Macs, not
+					devices shared with you or devices whose Tailscale key expired.
+				</li>
+				<li>
+					<strong>The other Mac:</strong> Keep Sessions Running on, and an SSH
+					server. On a Mac with the Tailscale app from the App Store or the
+					Tailscale website, turn on Remote Login in System Settings &gt;
+					General &gt; Sharing. Those Tailscale apps cannot act as a Tailscale
+					SSH server; the open-source command-line Tailscale can.
+				</li>
+				<li>
+					<strong>Sign-in:</strong> YEN lists sessions without prompting, so
+					signing in must work without a password, for example with an SSH key.
+					Your Tailscale access rules must also let this Mac reach the other
+					Mac.
+				</li>
+			</ul>
+			<p className="text-body">
+				Open the command palette with{" "}
+				<code className="inline-code-brand">Cmd + Shift + P</code> and type{" "}
+				<code className="inline-code-brand">hosts</code>. YEN then checks your
+				Tailscale network and lists each Mac with its sessions. Select a session
+				to attach in a new tab, or to focus the pane that already shows it. YEN
+				contacts your Macs only while the palette query asks for hosts, and
+				Hosts: Refresh Remote Sessions checks again.
+			</p>
+			<p className="text-body">
+				The first time, the palette asks you to connect once. Select{" "}
+				<strong>Connect to &lt;Mac&gt; Once</strong> to type{" "}
+				<code className="inline-code-brand">ssh &lt;Mac&gt;</code> at your
+				prompt, run it, check the host key, and sign in. If the other Mac&apos;s
+				host key changes, YEN stops connecting to it until you fix{" "}
+				<code className="inline-code-brand">~/.ssh/known_hosts</code>.
+			</p>
+			<p className="text-body">
+				A remote pane&apos;s tab title starts with the other Mac&apos;s name, as
+				in <code className="inline-code-brand">studio · zsh</code>, and its
+				split header shows that name instead of a local folder. A split or tab
+				you open from a remote pane is a local shell. If the connection drops,
+				YEN reconnects after 1, 2, 4, 8, 16, then every 30 seconds until you
+				press <code className="inline-code-brand">Ctrl + C</code>. The session
+				keeps running on the other Mac, and its screen comes back when YEN
+				reattaches. Quit YEN and a restored remote pane reattaches at the next
+				launch.
+			</p>
+			<TerminalCodeBlock
+				title="Terminal"
+				showPrompt
+				code={`yen sessions list --host studio
+yen sessions attach --host studio <id>`}
+			/>
+			<p className="text-body">
+				In a shell, <code className="inline-code-brand">--host</code> takes the
+				other Mac&apos;s Tailscale name or address, with an optional{" "}
+				<code className="inline-code-brand">user@</code>.{" "}
+				<code className="inline-code-brand">yen sessions kill</code> only ends
+				sessions on this Mac; end a remote session from a shell inside it. Run{" "}
+				<code className="inline-code-brand">yen sessions --help</code> for the
+				exit codes.
 			</p>
 		</DocSection>
 	);
@@ -1637,6 +1710,12 @@ function CommandsSection() {
 								or end one; see{" "}
 								<a href="#persistent-sessions" className="link-brand underline">
 									Persistent Sessions
+								</a>
+								. Starting in YEN 1.285,{" "}
+								<code className="inline-code-brand">--host &lt;mac&gt;</code>{" "}
+								lists and attaches sessions on another Mac; see{" "}
+								<a href="#remote-sessions" className="link-brand underline">
+									Remote sessions
 								</a>
 							</td>
 						</tr>

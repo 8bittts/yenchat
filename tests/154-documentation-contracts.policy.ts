@@ -6,6 +6,60 @@ const repoRoot = process.cwd();
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 describe("documentation contracts", () => {
+	test("public docs, privacy and terms carry the remote sessions contract", () => {
+		const manual = read("app/docs/docs-client.tsx");
+		const start = manual.indexOf('<h3 id="remote-sessions"');
+		const end = manual.indexOf("</DocSection>", start);
+		expect(start).toBeGreaterThanOrEqual(0);
+		expect(end).toBeGreaterThan(start);
+		const remote = manual.slice(start, end);
+		const llms = read("public/llms.txt");
+		const privacy = read("components/docs/legal-privacy-content.tsx");
+		const terms = read("app/terms/terms-client.tsx");
+		const security = read("_docs/04-security.md");
+
+		// How to reach the other Mac, as the CLI and the palette do it.
+		expect(remote).toContain("yen sessions list --host studio");
+		expect(remote).toContain("yen sessions attach --host studio <id>");
+		expect(remote).toContain("turn on Remote Login in System Settings &gt;");
+		expect(remote).toContain("signing in must work without a password");
+		expect(remote).toContain(
+			"SSH server; the open-source command-line Tailscale can.",
+		);
+		expect(manual).toContain('<a href="#remote-sessions"');
+		expect(llms).toContain("https://yen.chat/#remote-sessions");
+		expect(llms).toContain("`yen sessions attach --host <mac> <id>`");
+		expect(llms).toContain("cannot be a Tailscale SSH server");
+		expect(llms).toContain("nothing is sent to YEN");
+
+		// Tailscale is the user's software and network, never a YEN provider.
+		expect(privacy).toContain("not a YEN service provider");
+		expect(privacy).toContain("YEN stores no passwords");
+		expect(privacy).toContain("None of this is sent to YEN.");
+		expect(terms).toContain("Tailscale and SSH are third-party");
+		expect(security).toContain("## Remote Attach Threat Model");
+		expect(security).toContain(
+			"Nothing here has run on a real tailnet or between two Macs.",
+		);
+
+		// No public claim the code and its tests cannot back.
+		const llmsRemote = llms
+			.split("\n")
+			.filter((line) => line.includes("remote-sessions"))
+			.join("\n");
+		const privacyRemote = privacy.slice(
+			privacy.indexOf(">Remote sessions</h3>"),
+			privacy.indexOf("</div>", privacy.indexOf(">Remote sessions</h3>")),
+		);
+		expect(llmsRemote).not.toBe("");
+		expect(privacyRemote).toContain("Tailscale");
+		for (const text of [remote, llmsRemote, privacyRemote]) {
+			expect(text).not.toMatch(
+				/security audit|audited|end-to-end encrypt|guarantee/i,
+			);
+		}
+	});
+
 	test("docs record the lsp command/state contract and security review", () => {
 		const commandsDoc = read("_docs/12-commands.md");
 		const vendorDoc = read("_docs/04-security.md");

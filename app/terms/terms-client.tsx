@@ -134,6 +134,12 @@ export function TermsPageClient({
 								You are responsible for your own data, files, and terminal
 								commands. YEN executes what you tell it to.
 							</li>
+							<li>
+								If you use remote sessions, you are responsible for the Macs,
+								accounts, SSH access, and Tailscale network you connect, and for
+								who else can reach them. Tailscale and SSH are third-party
+								software under their own terms.
+							</li>
 						</ul>
 					</DocSection>
 

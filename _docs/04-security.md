@@ -1,6 +1,6 @@
 # Security
 
-Upstream overlap, fail-closed vendor gate contracts and the bundled binary inventory that make up the supply-chain posture of YEN; the product privacy boundary is in AGENTS.md.
+Upstream overlap, fail-closed vendor gate contracts and the bundled binary inventory that make up the supply-chain posture of YEN, and the remote attach threat model; the product privacy boundary is in AGENTS.md.
 
 The `/update-yen` vendor phase owns the procedure; this file owns what each bump is checked against.
 Yazi runtime and plugin behavior live in `_docs/14-file-browser.md`.
@@ -284,6 +284,78 @@ Deliberately not bundled: `bat`, `delta`, `fzf`, `jq`, `resvg` and `zoxide`, bec
 Text files open in the system `less`, diffs render as plain or natively colored text, and `yen-svgthumb` inflates `.svgz` itself.
 Yazi runs `fzf` and `zoxide` for `z` and `Z` only when the user has them on `PATH`; YEN does not feed the `zoxide` database, so a bundled copy finds no history on a clean Mac.
 Bundle one of them only with a caller inside YEN that fails without it.
+
+## Remote Attach Threat Model
+
+Who can reach a persistent session from another Mac, what each input is trusted for, and what is left over.
+The mechanics live in [01-architecture.md](01-architecture.md) → Persistent sessions (Remote attach, Hosts store, Remote panes); this section cites them and does not restate them.
+Nothing here has run on a real tailnet or between two Macs.
+The evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fake-ssh.sh`, `scripts/manual/35-verify-remote-attach-loopback.sh` against a private loopback sshd, and the Swift suites `RemoteSessionsTests`, `TailscaleDiscoveryTests`, `RemoteHostsStoreTests`, `RemotePanesTests` and `RemoteHostsPaletteRowsTests`.
+
+### Who can attach
+
+- SSH on the peer authenticates every connection, and YEN adds no authentication of its own. The peer's ssh server is macOS Remote Login, or Tailscale SSH where the peer runs the open-source `tailscaled`; the Mac App Store and standalone Tailscale apps cannot be a Tailscale SSH server ([Tailscale macOS variants](https://tailscale.com/kb/1065/macos-variants)).
+- YEN opens no listener and runs no relay. The only network client is `/usr/bin/ssh` (`REMOTE_SSH_BIN` in `yen-cli/lib/sessions-remote.sh`), started by the bundled CLI on the Mac that attaches.
+- On the peer, the ssh user's login shell runs fixed text (`remote_command`), which runs that user's own `Contents/Resources/bin/yen sessions list|attach`. A person who can already sign in to the peer as that user gains nothing: the same command, and the sessions' sockets, were already theirs.
+- An attached client is a full zmx client: it sees the screen and scrollback and types into the shell. Attach access is shell access as the peer user.
+- Nothing ends a peer's session remotely: `yen sessions kill` refuses `--host` (`tests/172`, "kill takes no --host"), so a session ends from a shell inside it.
+
+### What the session directory exposes
+
+- Sessions live in `~/.local/state/yen/zmx` (`PersistentSessions.socketDirectory`). Each has a Unix socket named by its pane UUID and three records: `<UUID>.tty` (the inner pty path), `<UUID>.zmx` (the zmx build that started it) and `<UUID>.owner` (bundle identifier, bundle path and process id of the copy that shows it).
+- `<ZMX_DIR>/logs` holds zmx's diagnostic logs. They keep working directories and environment payloads after the session ends, and YEN never deletes them.
+- A local process running as the same user can connect to any socket and attach, list, or end sessions, and can rewrite the records. The `.zmx` record names a binary that `yen sessions attach` and `kill` run (`session_zmx`), while the listing helper runs only a digest-named copy whose SHA-256 matches its name (`yen-cli/lib/list-pane-sessions.sh`). This is not a boundary: that process can already run anything as the user.
+- Another local account cannot attach: the sockets have no group or other write bit, and macOS `connect(2)` needs write access to the socket.
+- YEN creates the directory 0700 (`PersistentSessions.claim`, `PersistentSessions.currentBinaryCopy`) and passes `ZMX_DIR_MODE=0700` to the zmx the engine starts (`PersistentSessions.prepare`). It never corrects the mode of a directory that already exists, and the CLI runs zmx `attach` and `kill` without `ZMX_DIR_MODE`, so a `logs` directory that zmx creates there gets zmx's default 0750. Log files are 0640, so where the directory chain is group-readable, other members of the `staff` group can read the logs and records. This is an open weakness, not a guarantee.
+
+### How Tailscale gates it
+
+- The tailnet's access policy decides whether this Mac can reach the peer's port 22 at all. ACLs are deny-by-default rules about which devices reach which ports ([Tailscale ACLs](https://tailscale.com/kb/1018/acls)), and the default policy allows everything. A blocked connection fails ssh's `ConnectTimeout=10` and shows as unreachable (exit 10).
+- With Tailscale SSH on the peer, the policy's `ssh` rules (`accept`, or `check` with periodic reauthentication) decide who signs in as which user ([Tailscale SSH](https://tailscale.com/kb/1193/tailscale-ssh)). YEN has not been tested against Tailscale SSH.
+- YEN lists only peers that `TailscaleDiscovery.parseStatus` keeps: `OS` is `macOS`, `UserID` equals `Self.UserID`, and the node is neither `ShareeNode` nor `Expired`. A device shared in from another tailnet has another owner and is not listed ([Tailscale sharing](https://tailscale.com/kb/1084/sharing)); an expired node cannot connect until it reauthenticates ([Tailscale key expiry](https://tailscale.com/kb/1028/key-expiry)). Offline peers are never contacted (`RemoteHostsStore.performRefresh`).
+- The filter shapes the list, not the transport. `yen sessions list|attach --host` accepts any target that passes `valid_remote_target`, on or off the tailnet, and then relies on ssh and the peer as above.
+
+### Untrusted input
+
+| Input | Where it goes | Handling |
+|-------|---------------|----------|
+| `tailscale status --json` | Peer list, labels, ssh target | Decoded into fixed fields only; an unknown `BackendState` is `.unavailable`; a target must pass `RemoteSessions.isValidTarget` or the peer is dropped; the label goes through `TailscaleDiscovery.displayLabel` (`TailscalePeers.swift`) |
+| Host target | The ssh argv | `valid_remote_target` (CLI, byte-wise under `LC_ALL=C`) and `RemoteSessions.isValidTarget` (app): `[user@]host`, no leading `-`, no spaces or metacharacters; ssh gets `--` before it (`remote_list`, `remote_attach`) |
+| Session id | The remote command | UUID only (`valid_session_id`), checked before ssh runs; the remote command is otherwise fixed text (`remote_command`) |
+| Remote listing | The CLI table and the palette | Only rows after the `yen-sessions<TAB>1` header that pass `read_porcelain` survive, re-sanitized by `porcelain_row`; the app parses them again (`RemoteSessions.parsePorcelain`) and replaces control and format characters (`RemoteSessions.sanitized`) |
+| ssh and peer stderr | The terminal | `print_remote_errors` replaces C0 and C1 control characters; an attached pane shows the remote terminal's output as ssh would |
+| Saved window state | A restored remote pane's command | `RemotePaneIdentity` re-validates the target and label when decoding; a bad entry is dropped on its own (`RemotePanes.SavedIdentities`) |
+| `YEN_REMOTE_PANE` | A new pane's command | `RemotePanes.prepare` always removes it, ignores it on a pane with its own command, and decodes it through `RemotePaneIdentity`; AppleScript and the New Terminal App Intent can also set it (Residual risks) |
+| `YEN_SSH_BIN`, `YEN_REMOTE_APP`, `YEN_SSH_RETRY_MAX_DELAY`, `YEN_TAILSCALE_BIN` | Which ssh and Tailscale CLI run, which YEN.app the peer runs, the backoff cap | Test hooks the app never sets; `YEN_REMOTE_APP` must be an absolute path of safe characters and the delay a whole number |
+
+Whoever can set the app's environment, write its preferences or saved state, or drive it through Automation already runs code as the user, so these inputs are checked for robustness, not as a privilege boundary.
+
+### What YEN never does
+
+- It never relaxes host key checking: no `StrictHostKeyChecking` and no known-hosts file are passed (`remote_ssh_options`), and a changed key stops the listing and the reconnect loop (exit 15).
+- It never forwards the agent, X11 or ports (`ForwardAgent=no`, `ForwardX11=no`, `ClearAllForwardings=yes`), and never shares a connection (`ControlMaster=no`, `ControlPath=none`). Command-line `-o` options win over the user's `~/.ssh/config`.
+- It never stores, reads or prompts for a password. A listing runs with `BatchMode=yes` and stdin from `/dev/null`; an attach lets ssh prompt in the pane, and the user answers ssh directly.
+- It never relays traffic or sends terminal content, host names or session data to YEN; the bytes travel only between the two Macs over ssh.
+
+### When YEN starts a process
+
+- Discovery runs `tailscale status --json` and, for each online peer, one `yen sessions list --host` only while a Hosts surface is visible: in the command palette, that means while the query has Hosts intent (`RemoteHostsIntent`), refreshed when it appears and every 30 seconds while it stays (`RemoteHostsStore.surfaceDidAppear`). Opening the palette for anything else starts nothing.
+- An explicit refresh (`Hosts: Refresh Remote Sessions`) runs once at once.
+- Selecting a session row opens a pane that runs `yen sessions attach --host` (`RemotePanes.open`).
+- At launch, a remote pane restored from saved window state runs its attach with `--retry-unreachable` (`RemotePanes.prepare`). This is the only ssh YEN starts at launch, and only for panes the user opened.
+- `Connect to <Mac> Once` types `ssh <target>` at a local prompt and runs nothing.
+
+### Residual risks and non-goals
+
+- Unverified: no test has used a real tailnet, a second Mac, Tailscale SSH, or a `check` rule.
+- A listing runs under `BatchMode=yes`, so a peer that accepts only passwords never lists and stays at first connection needed (exit 11); remote sessions need key sign-in or Tailscale SSH.
+- First connection is trust on first use: the user confirms the peer's host key in `ssh <target>`. If name resolution is redirected at that moment, the user can trust the wrong key; YEN never sees or pins the key.
+- Remote Login turns on the macOS ssh server for every network the Mac uses, not only the tailnet, because macOS's `sshd_config` sets no `ListenAddress`. Its Allow access for setting (All users or Only these users) decides which accounts may sign in ([Apple: allow a remote computer to access your Mac](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac)). YEN does not narrow either.
+- The user's `~/.ssh/config` still applies (`ProxyJump`, `ProxyCommand`, `Match exec`, identity files), and so do the peer user's shell startup files.
+- A host label is display text, not identity: the ssh target and its host key are what authenticate. Any surface configuration without a command can carry `YEN_REMOTE_PANE`, so AppleScript (`ScriptSurfaceConfiguration` environment variables) or the New Terminal App Intent can open a pane that runs ssh to any valid target under a label of its choice.
+- The session directory and its logs can be readable by other accounts in `staff` (What the session directory exposes).
+- Discovery runs the first executable of `/Applications/Tailscale.app/Contents/MacOS/Tailscale`, `/usr/local/bin/tailscale` and `/opt/homebrew/bin/tailscale` (`TailscaleDiscovery.candidatePaths`). Whoever can write those paths chooses what YEN runs on Hosts intent.
+- `tailscale status --json` is a format Tailscale marks as subject to change ([Tailscale CLI](https://tailscale.com/kb/1080/cli)); a change shows as `.unavailable` or an empty list, never as a crash.
 
 ## Optional local usage and wallpaper sources
 

@@ -20,6 +20,7 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 [CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
 
 - Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS. Never claim "no third parties".
+  Remote sessions name Tailscale as software and a network the user installs and controls, never as a YEN service provider, because YEN only reads the local Tailscale status and connects the user's own Macs with ssh ([04-security.md](04-security.md#remote-attach-threat-model)).
 - The header links to Docs at `/#guide`, GitHub, and @yenFTW.
 - The footer links to Blog, Email, and Terms and displays the YEN copyright.
 - Downloads are GitHub Release assets; `/download` redirects to the current DMG and records nothing.

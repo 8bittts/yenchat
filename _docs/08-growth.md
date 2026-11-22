@@ -19,3 +19,4 @@ Former documentation, comparison, use-case, Tunes, and library URLs redirect to 
 
 The optional desktop token menu reads local tool records.
 Its readings never enter website analytics.
+Remote sessions connect the user's own Macs with ssh and send nothing to YEN, so they never enter website analytics either.
