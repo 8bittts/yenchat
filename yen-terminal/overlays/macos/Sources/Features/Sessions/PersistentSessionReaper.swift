@@ -116,6 +116,9 @@ enum PersistentSessionReaper {
     nonisolated static func adoptionCandidates(
         sessions: [Session],
         heldPaneIDs: Set<String>,
+        owners: [String: PersistentSessions.Owner] = [:],
+        app: PersistentSessions.Owner? = nil,
+        ownerIsRunning: (PersistentSessions.Owner) -> Bool = { _ in false },
         limit: Int = adoptionLimit
     ) -> [UUID] {
         Array(

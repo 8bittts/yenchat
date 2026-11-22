@@ -153,6 +153,13 @@ enum PersistentSessions {
         (socketDirectory as NSString).appendingPathComponent(sessionName(for: paneID))
     }
 
+    /// The copy of the app that last showed a pane's session.
+    struct Owner: Equatable {
+        let bundleIdentifier: String
+        let bundlePath: String
+        let processID: Int32
+    }
+
     /// Mark a new or restored pane to run inside its own session.
     ///
     /// The marker is always overwritten or removed: a split or tab inherits its
@@ -282,6 +289,14 @@ enum PersistentSessions {
             guard !isTerminating, !isStillPresent(paneID) else { return }
             close(paneID)
         }
+    }
+
+    /// Called when the app quits: end the sessions of panes that already left
+    /// their windows, because undo can no longer bring them back.
+    static func endDepartedPanes(
+        isStillPresent: @MainActor (UUID) -> Bool = paneIsInAnyTerminalWindow,
+        close: @MainActor (UUID) -> Void = { paneDidClose($0) }
+    ) {
     }
 
     /// A terminal window is closing; each of its panes is judged like a pane

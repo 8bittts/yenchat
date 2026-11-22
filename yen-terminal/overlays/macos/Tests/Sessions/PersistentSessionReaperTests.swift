@@ -123,4 +123,31 @@ struct PersistentSessionReaperTests {
         let many = (0..<12).map { _ in PersistentSessionReaper.Session(name: UUID().uuidString, clients: 0) }
         #expect(PersistentSessionReaper.adoptionCandidates(sessions: many, heldPaneIDs: [], limit: 8).count == 8)
     }
+
+    @Test func adoptionReopensOnlySessionsThisCopyOfTheAppWasShowing() {
+        let shown = "22222222-3333-4444-5555-666666666666"
+        let elsewhere = "33333333-4444-5555-6666-777777777777"
+        let foreign = "44444444-5555-6666-7777-888888888888"
+        let sessions = [orphan, shown, attached, elsewhere, foreign].map { PersistentSessionReaper.Session(name: $0, clients: 0) }
+        let installed = "/Applications/YEN.app"
+        let owners: [String: PersistentSessions.Owner] = [
+            // An earlier run of this copy, now gone: a crash, or a quit whose window restore missed the pane.
+            shown: .init(bundleIdentifier: "com.yenchat.yen", bundlePath: installed, processID: 4001),
+            // A second instance of this copy that is still running.
+            attached: .init(bundleIdentifier: "com.yenchat.yen", bundlePath: installed, processID: 4002),
+            // Another copy of the app, such as a local build, and another app identity.
+            elsewhere: .init(bundleIdentifier: "com.yenchat.yen", bundlePath: "/Users/dev/yen/zig-out/YEN.app", processID: 4003),
+            foreign: .init(bundleIdentifier: "com.yenchat.yen.debug", bundlePath: installed, processID: 4004),
+        ]
+
+        // `orphan` has no owner record: no copy of the app with this build ever showed it.
+        let picked = PersistentSessionReaper.adoptionCandidates(
+            sessions: sessions,
+            heldPaneIDs: [],
+            owners: owners,
+            app: .init(bundleIdentifier: "com.yenchat.yen", bundlePath: installed, processID: 5000),
+            ownerIsRunning: { $0.processID == 4002 }
+        )
+        #expect(picked == [UUID(uuidString: shown)!])
+    }
 }

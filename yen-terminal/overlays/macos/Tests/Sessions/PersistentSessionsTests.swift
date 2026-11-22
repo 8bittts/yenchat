@@ -89,6 +89,38 @@ struct PersistentSessionsTests {
         #expect(closed == [closedID])
     }
 
+    @MainActor @Test func quittingInsideTheUndoWindowEndsTheSessionOfAClosedPane() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("yen-persistent-quit-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let closedID = UUID()
+        let undoneID = UUID()
+        for id in [closedID, undoneID] {
+            FileManager.default.createFile(atPath: directory.appendingPathComponent(id.uuidString).path, contents: Data())
+        }
+
+        // Both panes left their windows a moment ago; undo brought one back.
+        var closed: [UUID] = []
+        for id in [closedID, undoneID] {
+            PersistentSessions.paneLeftTree(
+                id,
+                undoExpiration: .seconds(600),
+                socketDirectory: directory.path,
+                isStillPresent: { _ in false },
+                close: { closed.append($0) }
+            )
+        }
+
+        // The app quits before the undo window ends, so the delayed check never runs.
+        PersistentSessions.endDepartedPanes(isStillPresent: { $0 == undoneID }, close: { closed.append($0) })
+        #expect(closed == [closedID])
+
+        // Each departed pane is judged once.
+        PersistentSessions.endDepartedPanes(isStillPresent: { _ in false }, close: { closed.append($0) })
+        #expect(closed == [closedID])
+    }
+
     @Test func aNewSessionRecordsTheCurrentBuildAndALiveOneKeepsItsRecordedBuild() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("yen-zmx-binary-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
