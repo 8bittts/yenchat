@@ -153,7 +153,7 @@ The Debug and ReleaseLocal files also carry `com.apple.security.cs.disable-libra
 | `NSScreenCaptureUsageDescription` | Must stay absent; screenshots capture only YEN's own window and need no Screen Recording grant |
 
 `YEN-Info.plist` owns the three usage strings above.
-`configure_overlay_project` deletes the matching `INFOPLIST_KEY_*` build settings, because a build setting overrides the file and ships upstream's generic prompt text.
+`plist_set_usage_description` writes each one and deletes the matching `INFOPLIST_KEY_*` build setting, because a build setting overrides the file and ships upstream's generic prompt text.
 
 `INFOPLIST_PREPROCESS = NO` must stay set, because the preprocessor treats `//` in `https://` as a comment and truncates `SUFeedURL`.
 

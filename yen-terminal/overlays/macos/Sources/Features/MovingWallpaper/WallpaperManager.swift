@@ -441,6 +441,9 @@ final class WallpaperManager {
                         for: item.key
                     )
                     pendingRedownloads[item.key] = nil
+                    if mode == .allDesktops {
+                        state.reconcileAllDesktops(connectedDisplayIDs: connectedDisplayIDs)
+                    }
                     saveState()
                     rebuildAllWindows()
                 case .failure:

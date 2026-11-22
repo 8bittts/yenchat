@@ -56,14 +56,16 @@ if [ -f "$INFO_PLIST" ]; then
     # Ensure minimum supported macOS is explicit in app metadata.
     plist_upsert "$INFO_PLIST" "LSMinimumSystemVersion" "string" "$YEN_MIN_MACOS"
 
-    # Add Photos usage description for the Moving Wallpaper shuffle
-    plist_upsert "$INFO_PLIST" "NSPhotoLibraryUsageDescription" "string" "YEN uses Photos to shuffle videos when you choose Shuffle from Photos for your wallpaper."
+    # YEN's own privacy prompt text (see plist_set_usage_description).
+    PBXPROJ_FILE="macos/YEN.xcodeproj/project.pbxproj"
+    plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "NSPhotoLibraryUsageDescription" "YEN uses Photos to shuffle videos when you choose Shuffle from Photos for your wallpaper."
+    plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "NSMicrophoneUsageDescription" "YEN uses your microphone for Option + Space speech-to-text dictation in any app."
+    plist_set_usage_description "$INFO_PLIST" "$PBXPROJ_FILE" "NSSpeechRecognitionUsageDescription" "YEN uses speech recognition to convert speech to text when you hold Option + Space to dictate."
 
-    # Add microphone usage description for dictation feature
-    plist_upsert "$INFO_PLIST" "NSMicrophoneUsageDescription" "string" "YEN uses your microphone for Option + Space speech-to-text dictation in any app."
-
-    # Add speech recognition usage description for dictation feature
-    plist_upsert "$INFO_PLIST" "NSSpeechRecognitionUsageDescription" "string" "YEN uses speech recognition to convert speech to text when you hold Option + Space to dictate."
+    # Shuffle from Photos reads the library through PhotoKit. 02-renames.sh
+    # strips this entitlement with upstream's unused ones; that file is an
+    # engine build input (48-vendor-zmx.sh), so the grant lives here.
+    plist_grant_entitlement "macos" "com.apple.security.personal-information.photos-library"
 
     # Remove camera usage description (Hands-Free Pointer removed; no YEN code uses camera)
     plist_delete "$INFO_PLIST" "NSCameraUsageDescription"

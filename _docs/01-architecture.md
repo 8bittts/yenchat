@@ -155,6 +155,7 @@ Terminal panes and the renderer do not subscribe to usage updates.
 
 The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behind desktop icons.
 Video playback uses AVFoundation and animated GIFs use ImageIO.
+GIF frames decode on a background task and only the finished frame reaches the main thread, which also handles terminal input; `CGAnimateImageAtURLWithBlock` decodes on the main queue, so the view does not use it.
 The wallpaper engine suspends occluded playback and responds to power and thermal pressure.
 Its cache, preferences and controls belong to YEN, independent of standalone MovingPaper.
 Reset and disable tear down feature-owned workers, observers and windows.

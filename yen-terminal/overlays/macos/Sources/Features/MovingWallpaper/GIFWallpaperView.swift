@@ -1,19 +1,20 @@
 import AppKit
 import ImageIO
 
-/// AppKit view that renders animated GIF frames into a `CALayer` via
-/// `CGAnimateImageAtURLWithBlock`. The system handles frame timing from the
-/// GIF's delay metadata automatically.
+/// AppKit view that renders animated GIF frames into a `CALayer`.
+///
+/// Frames are decoded on a background task and only presented on the main
+/// thread. `CGAnimateImageAtURLWithBlock` decodes on the main queue, which in a
+/// terminal is the thread that handles typing: a 1080p GIF held it for about
+/// 18 ms per frame.
 @MainActor
 final class GIFWallpaperView: NSView, WallpaperContentView {
     private var imageLayer: CALayer?
     /// The GIF currently loaded, so a resume can restart it.
     private var currentURL: URL?
+    /// Decodes and times the frames. Canceling it stops the animation.
+    private var animation: Task<Void, Never>?
     var onFailure: ((URL, String) -> Void)?
-
-    /// Identifies the live animation. ImageIO has no cancel call, so a frame
-    /// callback that carries a stale value stops its own loop.
-    private var animationGeneration = 0
 
     var isPlaybackPaused = false {
         didSet {
@@ -21,11 +22,10 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
             if isPlaybackPaused {
                 // Keep the last frame up so a pause does not flash the desktop
                 // through an empty layer.
-                animationGeneration += 1
+                animation?.cancel()
             } else if let currentURL {
-                // CGAnimateImageAtURLWithBlock has no resume-at-frame API, so a revealed
-                // GIF restarts from the first frame — the last frame stays visible until
-                // the first new callback arrives.
+                // A resumed GIF restarts from the first frame; the last frame
+                // stays visible until then.
                 loadGIF(url: currentURL)
             }
         }
@@ -71,71 +71,68 @@ final class GIFWallpaperView: NSView, WallpaperContentView {
         CATransaction.commit()
     }
 
+    /// Loop the GIF, or show only its first frame while playback is paused.
+    /// Wallpaper GIFs loop even when the file's own loop count is 1.
     func loadGIF(url: URL) {
         currentURL = url
-        animationGeneration += 1
-        guard !isPlaybackPaused else {
-            displayFirstFrame(of: url)
-            return
-        }
-        let generation = animationGeneration
-        // Wallpaper GIFs must loop even when the file's Netscape count is 1.
-        let options: NSDictionary = [kCGImageAnimationLoopCount: Double.infinity]
-        // ImageIO runs the block on the main queue.
-        let status = CGAnimateImageAtURLWithBlock(
-            url as CFURL,
-            options
-        ) { [weak self] _, cgImage, stop in
-            guard let self, generation == self.animationGeneration else {
-                stop.pointee = true
+        animation?.cancel()
+        let firstFrameOnly = isPlaybackPaused
+        animation = Task.detached(priority: .utility) { [weak self] in
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+                await self?.fail(url)
                 return
             }
-            self.displayFrame(cgImage)
-        }
-        if status != noErr {
-            currentURL = nil
-            onFailure?(url, Self.playbackMessage(status: status))
+            let frameCount = CGImageSourceGetCount(source)
+            // Decode here, not lazily when Core Animation first draws the frame.
+            let decodeNow = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+            let clock = ContinuousClock()
+            var nextFrame = clock.now
+            var index = 0
+            while !Task.isCancelled {
+                guard let image = CGImageSourceCreateImageAtIndex(source, index, decodeNow) else {
+                    await self?.fail(url)
+                    return
+                }
+                guard await self?.present(image) == true, !firstFrameOnly, frameCount > 1 else { return }
+                // Time frames from a running deadline so decode time does not
+                // slow the animation; start over after falling behind.
+                nextFrame = max(nextFrame + .seconds(Self.frameDelay(of: source, at: index)), clock.now)
+                try? await clock.sleep(until: nextFrame)
+                index = (index + 1) % frameCount
+            }
         }
     }
 
-    /// A GIF loaded while paused shows its first frame instead of an empty panel.
-    private func displayFirstFrame(of url: URL) {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            currentURL = nil
-            onFailure?(url, Self.playbackMessage(status: CGImageAnimationStatus.parameterError.rawValue))
-            return
-        }
-        displayFrame(image)
+    /// The frame's delay in seconds. Like browsers, a delay too short to be
+    /// intended plays at 10 frames per second.
+    private nonisolated static func frameDelay(of source: CGImageSource, at index: Int) -> Double {
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any]
+        let gif = properties?[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+        let delay = (gif?[kCGImagePropertyGIFUnclampedDelayTime] ?? gif?[kCGImagePropertyGIFDelayTime]) as? Double
+        guard let delay, delay >= 0.011 else { return 0.1 }
+        return delay
     }
 
-    /// Present a frame without CALayer's implicit fade (which looks like tearing).
-    func displayFrame(_ image: CGImage) {
+    /// Show a decoded frame. Returns false once this animation was canceled,
+    /// so a frame decoded for an old GIF never replaces the new one.
+    private func present(_ image: CGImage) -> Bool {
+        guard !Task.isCancelled else { return false }
+        // No implicit CALayer fade between frames (it looks like tearing).
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         imageLayer?.contents = image
         CATransaction.commit()
+        return true
+    }
+
+    private func fail(_ url: URL) {
+        guard !Task.isCancelled else { return }
+        currentURL = nil
+        onFailure?(url, "The GIF couldn't be played.")
     }
 
     override func removeFromSuperview() {
-        animationGeneration += 1
+        animation?.cancel()
         super.removeFromSuperview()
-    }
-
-    static func playbackMessage(status: OSStatus) -> String {
-        switch status {
-        case CGImageAnimationStatus.parameterError.rawValue:
-            return "The GIF couldn't be opened."
-        case CGImageAnimationStatus.corruptInputImage.rawValue:
-            return "The GIF file is unreadable."
-        case CGImageAnimationStatus.unsupportedFormat.rawValue:
-            return "That image format can't be animated."
-        case CGImageAnimationStatus.incompleteInputImage.rawValue:
-            return "The GIF file is incomplete."
-        case CGImageAnimationStatus.allocationFailure.rawValue:
-            return "There isn't enough memory to play that GIF."
-        default:
-            return "The GIF couldn't be played."
-        }
     }
 }

@@ -61,6 +61,10 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 ### Experimental moving wallpaper
 
 - [ ] Verify Photos picker and shuffle permissions, multi-display Spaces and power-state changes before desktop release.
+  The Shuffle from Photos prompt needs a signed build that carries the Photos entitlement, then one click on Allow.
+- [ ] Decide how YouTube wallpapers reach full resolution.
+  The single-stream selector in `YouTubeDownloader` downloads format 18 (640x360); the 1080p streams come as separate video and audio files.
+  yt-dlp merges those only with ffmpeg, and AVFoundation reads each unmerged stream at twice its real length, so neither plays as downloaded.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 
