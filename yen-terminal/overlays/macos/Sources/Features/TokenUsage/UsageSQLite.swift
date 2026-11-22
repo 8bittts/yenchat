@@ -5,17 +5,10 @@ import SQLite3
 // imported into Swift, so reconstruct it.
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-public enum SQLiteError: Error, CustomStringConvertible {
+public enum SQLiteError: Error {
 	case open(String)
 	case prepare(String)
 	case step(String)
-	public var description: String {
-		switch self {
-		case .open(let m): return "sqlite open: \(m)"
-		case .prepare(let m): return "sqlite prepare: \(m)"
-		case .step(let m): return "sqlite step: \(m)"
-		}
-	}
 }
 
 /// A connection owned by one token refresh. SQLite transactions keep its cursor and event updates atomic.

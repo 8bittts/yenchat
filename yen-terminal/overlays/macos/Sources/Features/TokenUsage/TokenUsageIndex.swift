@@ -8,8 +8,8 @@ struct TokenUsageIndex: Sendable {
     let directory: URL
     typealias Counts = [TokenTool: Int]
 
-    func read(now: Date = Date(), tools: Set<TokenTool>, changes: [TokenTool: Set<URL>] = [:], calendar: Calendar = .current) throws -> Counts {
-        guard let day = calendar.dateInterval(of: .day, for: now) else { return [:] }
+    func read(now: Date = Date(), tools: Set<TokenTool>, changes: [TokenTool: Set<URL>] = [:]) throws -> Counts {
+        guard let day = Calendar.current.dateInterval(of: .day, for: now) else { return [:] }
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let db = try SQLiteDatabase(path: directory.appendingPathComponent("today.sqlite").path)

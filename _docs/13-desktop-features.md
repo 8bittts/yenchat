@@ -130,6 +130,7 @@ Click its YEN status item to open the local day’s overview beneath the icon on
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count, share of counted tokens and official usage link.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
+A plan reading stays until its reset time.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.

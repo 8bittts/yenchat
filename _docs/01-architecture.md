@@ -129,6 +129,8 @@ Native test rules (TCC, real config, green-but-empty runs): `_docs/09-quality.md
 The token status item owns a cancelable utility worker and filesystem notifications for local Claude Code, Codex, Grok Build and OpenCode records.
 Counts belong to the recording tool and use the local calendar day.
 JSONL cursors and event contributions commit together in a YEN-owned SQLite cache.
+The reader skips a record over 8 MB, because usage records are small and image, tool and compaction payloads are not.
+A provider directory can be a symbolic link.
 OpenCode reads its database in read-only mode and prefers the current copy of a message during schema migration.
 OpenCode uses cumulative session counters only when the store has no dated assistant usage across its history.
 Each legacy session belongs to its creation day.
@@ -136,11 +138,14 @@ The index ranks duplicate snapshots by output and then total tokens.
 Codex corrections reconcile input, cached input and output independently within a rollout.
 Grok uses completed turns, and OpenCode includes all gateways in its store.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
+Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
+A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
 When JPtheCat has an enabled plan cache, YEN can read its local Cursor and Grok Bot readings.
 Once the optional Cursor connection is active, it replaces the JPtheCat readings for Cursor and Grok Bot.
 The optional Cursor connection exchanges a user-supplied API key for a temporary access token on api2.cursor.sh.
 The same host supplies Cursor’s current billing-cycle pools and Grok Bot’s weekly included pool.
 YEN saves only the user-supplied key in its own Keychain item and deletes that item on disconnect.
+A failed Cursor request keeps the last reading, and a rejected key clears it.
 Disabling the token menu cancels requests.
 Terminal panes and the renderer do not subscribe to usage updates.
 

@@ -14,7 +14,7 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 The provider comparison covers streamed Claude snapshots, Codex counter resets, per-model Grok replay and legacy OpenCode log identities.
 The OpenCode database tests distinguish empty message history from a day without usage.
 Check the menu anchor before and after expanding a provider row.
-Its filesystem test exercises changes through a symbolic link.
+Its filesystem test observes and counts a change through a symbolic link.
 For native acceptance, check that an appended record changes the menu without opening it.
 Verify that disabling Moving Wallpaper removes its desktop panel and restores the system wallpaper.
 
@@ -67,6 +67,7 @@ With no visible Settings window every mutation persists synchronously, so a suit
 
 **Tests never call the real Keychain.** The test host deletes its own saved items, and a run fails when the item belongs to another tool.
 `TokenPlanConnection.reset` takes the remover as its `removeKey` parameter, so a test passes a closure.
+`TokenPlanConnection.init` takes the client, the saved key and the connection state for the same reason.
 
 **Live terminal windows.** Suites that create real `TerminalController` windows spawn login shells.
 Close them through the real AppKit close path so `windowWillClose` runs; `orderOut(nil)` leaves `/usr/bin/login` children alive and later runs look frozen.

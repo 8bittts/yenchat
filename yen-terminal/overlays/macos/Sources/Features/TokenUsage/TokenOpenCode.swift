@@ -58,16 +58,13 @@ struct TokenOpenCode {
 	}
 
 	/// One projection over every assistant row, whichever table holds it, with stable column names:
-	/// `session_id, id, created, model_id, provider_id, t_input, t_output, t_reasoning, t_cache_read,
-	/// t_cache_write`. Nil when neither table exists (a legacy session-only store).
+	/// `created, t_input, t_output, t_reasoning, t_cache_read, t_cache_write`.
+	/// Nil when neither table exists (a legacy session-only store).
 	static func assistantProjection(tables: Set<String>) -> String? {
 		let v2 = tables.contains(sessionMessageTable)
 		let v1 = tables.contains(legacyMessageTable)
 		let sessionMessages = """
-			SELECT session_id, id,
-			       json_extract(data, '$.time.created') AS created,
-			       json_extract(data, '$.model.id') AS model_id,
-			       json_extract(data, '$.model.providerID') AS provider_id,
+			SELECT json_extract(data, '$.time.created') AS created,
 			       json_extract(data, '$.tokens.input') AS t_input,
 			       json_extract(data, '$.tokens.output') AS t_output,
 			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,
@@ -77,10 +74,7 @@ struct TokenOpenCode {
 			WHERE type = 'assistant'
 			"""
 		let legacyMessages = """
-			SELECT session_id, id,
-			       json_extract(data, '$.time.created') AS created,
-			       json_extract(data, '$.modelID') AS model_id,
-			       json_extract(data, '$.providerID') AS provider_id,
+			SELECT json_extract(data, '$.time.created') AS created,
 			       json_extract(data, '$.tokens.input') AS t_input,
 			       json_extract(data, '$.tokens.output') AS t_output,
 			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,
