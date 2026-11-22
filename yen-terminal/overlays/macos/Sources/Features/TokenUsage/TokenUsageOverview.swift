@@ -4,7 +4,9 @@ import SwiftUI
 /// Bar colors for the providers after the brand-colored first one, as sRGB components.
 enum TokenBarTone {
     static func neutrals(dark: Bool) -> [[Double]] {
-        [[0.78, 0.73, 0.65], [0.66, 0.70, 0.76], [0.54, 0.62, 0.57]]
+        // A light theme draws the panel on white, where the dark-theme tones fade into the track.
+        dark ? [[0.78, 0.73, 0.65], [0.66, 0.70, 0.76], [0.54, 0.62, 0.57]]
+             : [[0.60, 0.52, 0.40], [0.42, 0.48, 0.58], [0.33, 0.45, 0.38]]
     }
 }
 
@@ -17,7 +19,7 @@ struct TokenUsageOverview: View {
     let refresh: () -> Void
     @State private var showsConnection = false
     @State private var apiKey = ""
-    @AppStorage("com.yenchat.yen.tokenUsage.twoColumns") private var twoColumns = false
+    @AppStorage(TokenMenuDisplay.columnsKey) private var twoColumns = false
     private var counts: TokenUsageIndex.Counts { snapshot.counts ?? [:] }
     private var total: Int { counts.values.reduce(0, +) }
     @Environment(\.colorScheme) private var scheme
@@ -113,7 +115,7 @@ struct TokenUsageOverview: View {
             ForEach(meters) { meter in
                 HStack(spacing: 8) {
                     Text(meter.label).font(.caption).frame(width: 100, alignment: .leading)
-                    track(meter.percent / 100, color: color.opacity(0.8))
+                    track(meter.percent / 100, color: color.opacity(scheme == .dark ? 0.8 : 1))
                     Text((meter.percent / 100).formatted(.percent.precision(.fractionLength(0...1))))
                         .font(.caption.monospacedDigit()).frame(minWidth: 30, alignment: .trailing)
                 }.padding(.leading, 8).accessibilityElement(children: .combine)
@@ -178,7 +180,7 @@ struct TokenUsageOverview: View {
                 Text("Connect a personal Cursor API key to read included plan usage. YEN saves it in your Keychain.")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
-                    SecureField("Cursor API key", text: $apiKey)
+                    SecureField("Cursor API key", text: $apiKey).accessibilityLabel("Cursor API key")
                     Button("Connect") { connection.connect(apiKey); apiKey = "" }
                         .disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || connection.loading)
                 }

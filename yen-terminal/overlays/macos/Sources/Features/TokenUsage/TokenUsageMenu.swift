@@ -290,6 +290,7 @@ private struct TokenMenuReading: Sendable {
 enum TokenMenuDisplay: String, CaseIterable {
     case total = "Total tokens", provider = "Top provider", limits = "Plan limits", mark = "Icon only"
     static let key = "com.yenchat.yen.tokenUsage.display"
+    static let columnsKey = "com.yenchat.yen.tokenUsage.twoColumns"
 }
 
 @MainActor

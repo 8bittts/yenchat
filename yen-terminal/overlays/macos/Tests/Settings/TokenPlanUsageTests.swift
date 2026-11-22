@@ -87,4 +87,14 @@ struct TokenPlanUsageTests {
             }
         }
     }
+
+    @MainActor @Test func resetForgetsTheCursorConnectionAndDisplayChoices() throws {
+        let suite = "token-plan-reset-" + UUID().uuidString
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let keys = ["com.yenchat.yen.tokenUsage.cursorPlan", "com.yenchat.yen.tokenUsage.display", "com.yenchat.yen.tokenUsage.twoColumns"]
+        for key in keys { defaults.set(true, forKey: key) }
+        #expect(TokenPlanConnection.reset(defaults: defaults))
+        #expect(keys.allSatisfy { defaults.object(forKey: $0) == nil })
+    }
 }

@@ -129,6 +129,7 @@ Click its YEN status item to open the local day’s overview beneath the icon on
 Each provider shows its exact daily count, share of counted tokens and official usage link.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
 The layout button switches between one and two columns.
+Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.
 A source label identifies plan readings supplied by an existing JPtheCat opt-in.
 The connection button accepts a personal Cursor API key for Cursor and Grok Bot plan usage and offers Disconnect.
@@ -145,6 +146,7 @@ Turning it off reveals the system wallpaper and keeps assignments for the next e
 The wallpaper engine yields while standalone MovingPaper runs.
 Open YEN at Login remains the single startup control.
 Both features default to off and a successful Reset All Settings switches both off.
+Reset All Settings also removes the saved Cursor key and the token menu’s layout and display choices.
 
 ### Settings hitch benchmark
 

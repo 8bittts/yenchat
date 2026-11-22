@@ -1923,6 +1923,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
                 successMessage: "All settings reset to defaults",
                 postSuccess: {
                     DesktopExtras.shared.setUsage(false)
+                    TokenPlanConnection.reset()
                     DesktopExtras.shared.setWallpaper(false)
                     try? TerminalBackgroundImageStore.cleanupManagedImages()
                 }

@@ -45,8 +45,8 @@ export function LegalPrivacyContent() {
 						JPtheCat installation. If you separately connect a personal Cursor
 						API key, YEN uses Cursor’s service at api2.cursor.sh to read your
 						Cursor and Grok Bot plan usage. Only the credential goes to Cursor.
-						The key stays in your Mac’s Keychain until you disconnect. YEN’s
-						servers receive no usage data.
+						The key stays in your Mac’s Keychain until you disconnect or reset
+						all settings. YEN’s servers receive no usage data.
 					</p>
 				</div>
 

@@ -121,6 +121,13 @@ final class TokenPlanConnection: ObservableObject {
     private var task: Task<Void, Never>?
     private var lastAttempt = Date.distantPast
 
+    /// Reset All Settings removes the saved key and the menu's display choices.
+    @discardableResult
+    static func reset(defaults: UserDefaults = .standard) -> Bool {
+        for key in [enabledKey, TokenMenuDisplay.key, TokenMenuDisplay.columnsKey] { defaults.removeObject(forKey: key) }
+        return TokenPlanKey.remove()
+    }
+
     func connect(_ key: String) {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { return }
