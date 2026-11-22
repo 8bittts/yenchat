@@ -56,8 +56,10 @@ if [ -f "$INFO_PLIST" ]; then
     # Ensure minimum supported macOS is explicit in app metadata.
     plist_upsert "$INFO_PLIST" "LSMinimumSystemVersion" "string" "$YEN_MIN_MACOS"
 
-    # Add microphone usage description for dictation feature
+    # Add Photos usage description for the Moving Wallpaper shuffle
     plist_upsert "$INFO_PLIST" "NSPhotoLibraryUsageDescription" "string" "YEN uses Photos to shuffle videos when you choose Shuffle from Photos for your wallpaper."
+
+    # Add microphone usage description for dictation feature
     plist_upsert "$INFO_PLIST" "NSMicrophoneUsageDescription" "string" "YEN uses your microphone for Option + Space speech-to-text dictation in any app."
 
     # Add speech recognition usage description for dictation feature

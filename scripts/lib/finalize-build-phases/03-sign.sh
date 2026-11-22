@@ -106,6 +106,10 @@ if ! printf '%s\n' "$ENT_DUMP" | grep -q "com.apple.security.personal-informatio
     echo "  ERROR: Speech recognition entitlement not embedded — speech permission prompt may not appear"
     exit 1
 fi
+if ! printf '%s\n' "$ENT_DUMP" | grep -q "com.apple.security.personal-information.photos-library"; then
+    echo "  ERROR: Photos library entitlement not embedded — Shuffle from Photos is denied without a prompt"
+    exit 1
+fi
 if ! printf '%s\n' "$ENT_DUMP" | grep -q "com.apple.security.automation.apple-events"; then
     echo "  ERROR: Apple events entitlement not embedded — osascript IPC will not work"
     exit 1

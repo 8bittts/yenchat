@@ -469,13 +469,17 @@ else
         PUB_KEY=$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$INFO_PLIST" 2>/dev/null || echo "")
         [ -z "$PUB_KEY" ] && fail "SUPublicEDKey missing"
 
-        # NSMicrophoneUsageDescription (dictation)
-        MIC_DESC=$(/usr/libexec/PlistBuddy -c "Print :NSMicrophoneUsageDescription" "$INFO_PLIST" 2>/dev/null || echo "")
-        [ -z "$MIC_DESC" ] && fail "NSMicrophoneUsageDescription missing (dictation)"
-
-        # NSSpeechRecognitionUsageDescription (dictation)
-        SPEECH_DESC=$(/usr/libexec/PlistBuddy -c "Print :NSSpeechRecognitionUsageDescription" "$INFO_PLIST" 2>/dev/null || echo "")
-        [ -z "$SPEECH_DESC" ] && fail "NSSpeechRecognitionUsageDescription missing (dictation)"
+        # The privacy prompts must carry YEN's own text. A project build setting
+        # for the same key overrides YEN-Info.plist and ships upstream's generic
+        # "A program running within YEN" text instead.
+        for usage_key in NSMicrophoneUsageDescription NSSpeechRecognitionUsageDescription NSPhotoLibraryUsageDescription; do
+            USAGE_DESC=$(/usr/libexec/PlistBuddy -c "Print :$usage_key" "$INFO_PLIST" 2>/dev/null || echo "")
+            case "$USAGE_DESC" in
+                "YEN uses "*) ;;
+                "") fail "$usage_key missing" ;;
+                *) fail "$usage_key is not YEN's text: $USAGE_DESC" ;;
+            esac
+        done
 
         # NSScreenCaptureUsageDescription must stay absent: own-window screenshot
         # capture does not require Screen Recording permission and the key widens

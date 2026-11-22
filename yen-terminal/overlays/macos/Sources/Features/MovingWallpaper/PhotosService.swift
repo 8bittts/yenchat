@@ -3,7 +3,6 @@ import Photos
 import os
 
 /// Why a Photos shuffle produced no video, with the alert copy that explains it.
-@available(macOS 27.0, *)
 enum PhotosShuffleFailure: Equatable {
     case accessDenied
     case noVideos
@@ -24,12 +23,11 @@ enum PhotosShuffleFailure: Equatable {
         case .noVideos:
             "Add a video to your Photos library, then try Shuffle from Photos again."
         case .exportFailed:
-            "MovingPaper couldn't export a video from Photos. Try again, or choose a video with Choose from Photos."
+            "YEN couldn't export a video from Photos. Try again, or choose a video with Choose from Photos."
         }
     }
 }
 
-@available(macOS 27.0, *)
 enum PhotosShuffleOutcome: Equatable {
     case video(URL)
     case failed(PhotosShuffleFailure)
@@ -37,7 +35,6 @@ enum PhotosShuffleOutcome: Equatable {
 
 /// Fetches random videos from the Photos library for shuffle mode.
 /// Stateless, so callable from any isolation.
-@available(macOS 27.0, *)
 enum PhotosService {
 
     private static func requestAccess() async -> Bool {
@@ -216,7 +213,6 @@ enum PhotosService {
 /// the timeout bounds the wait only because `operation` ends promptly on
 /// cancellation: `requestExportSession` resumes itself and `export(to:as:)`
 /// throws when canceled.
-@available(macOS 27.0, *)
 private func withTimeout<T: Sendable>(seconds: TimeInterval, operation: @escaping @Sendable () async -> T) async -> T? {
     await withTaskGroup(of: T?.self) { group in
         group.addTask { await operation() }

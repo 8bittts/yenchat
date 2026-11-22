@@ -230,6 +230,9 @@ if [ -f "$PBXPROJ" ]; then
         -e 's/INFOPLIST_PREPROCESS = YES;/INFOPLIST_PREPROCESS = NO;/g' \
         -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9.][0-9.]*;/MACOSX_DEPLOYMENT_TARGET = $YEN_MIN_MACOS;/g" \
         -e '/INFOPLIST_KEY_NSCalendarsUsageDescription = /d' \
+        -e '/INFOPLIST_KEY_NSMicrophoneUsageDescription = /d' \
+        -e '/INFOPLIST_KEY_NSPhotoLibraryUsageDescription = /d' \
+        -e '/INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = /d' \
         "$PBXPROJ"
 fi
 }
@@ -254,12 +257,13 @@ except Exception as e:
 for k in ['com.apple.security.personal-information.addressbook',
            'com.apple.security.personal-information.calendars',
            'com.apple.security.personal-information.location',
-           'com.apple.security.personal-information.photos-library',
            'com.apple.security.device.camera']:
     d.pop(k, None)
 # Dictation requires both microphone and speech-recognition privacy grants.
 d['com.apple.security.device.audio-input'] = True
 d['com.apple.security.personal-information.speech-recognition'] = True
+# Shuffle from Photos reads the library through PhotoKit.
+d['com.apple.security.personal-information.photos-library'] = True
 with open(ent_file, 'wb') as f:
     plistlib.dump(d, f)
 " "$ent_dir/$ent_file" || { echo "  ERROR: Entitlements cleanup failed for $ent_file"; exit 1; }

@@ -135,7 +135,8 @@ It also asserts `REPO_ROOT` is the repo root before packaging.
 It runs `scripts/01-verify-release-target.sh`, which fails when `gh` is missing, the release repository is unreachable or not public, or the session cannot push to it.
 `finalize-build.sh` repeats the notarization check as a backstop.
 
-**Entitlements.** `YEN.entitlements` (Release), `YENDebug.entitlements` and `YENReleaseLocal.entitlements` carry `com.apple.security.device.audio-input`, `com.apple.security.personal-information.speech-recognition` and `com.apple.security.automation.apple-events`.
+**Entitlements.** `YEN.entitlements` (Release), `YENDebug.entitlements` and `YENReleaseLocal.entitlements` carry `com.apple.security.device.audio-input`, `com.apple.security.personal-information.speech-recognition`, `com.apple.security.personal-information.photos-library` and `com.apple.security.automation.apple-events`.
+The hardened runtime denies a protected resource without its entitlement and shows no prompt, so Shuffle from Photos needs the Photos entry.
 The Debug and ReleaseLocal files also carry `com.apple.security.cs.disable-library-validation`; the Release file does not.
 `apply-overlays.sh` strips every other `personal-information.*` entitlement.
 
@@ -148,7 +149,11 @@ The Debug and ReleaseLocal files also carry `com.apple.security.cs.disable-libra
 | `SUEnableInstallerLauncherService` | `true`; installs fail silently without it |
 | `SUEnableAutomaticChecks` | Deleted, so Sparkle asks on first launch; `false` would silently disable checks |
 | `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription` | Required for dictation prompts |
+| `NSPhotoLibraryUsageDescription` | Required for the Shuffle from Photos prompt |
 | `NSScreenCaptureUsageDescription` | Must stay absent; screenshots capture only YEN's own window and need no Screen Recording grant |
+
+`YEN-Info.plist` owns the three usage strings above.
+`configure_overlay_project` deletes the matching `INFOPLIST_KEY_*` build settings, because a build setting overrides the file and ships upstream's generic prompt text.
 
 `INFOPLIST_PREPROCESS = NO` must stay set, because the preprocessor treats `//` in `https://` as a comment and truncates `SUFeedURL`.
 
