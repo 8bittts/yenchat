@@ -61,7 +61,7 @@ bash $HOME/Documents/yenchat/scripts/13-scan-artifact-fingerprints.sh --app $HOM
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Swift concurrency error | x86_64 stricter isolation | Add `@MainActor`, `nonisolated`, or explicit types in the overlay source |
+| Swift concurrency error | Actor isolation in overlay code | Add `@MainActor`, `nonisolated`, or explicit types in the overlay source |
 | "Cannot find type" | Overlay references a removed upstream API | Update the overlay to the new API |
 | `uucode_build_tables: FileNotFound` | Shared or half-cleaned `.zig-cache` | Full `trash yen-terminal/ghostty/.zig-cache`, then rebuild (`references/vendor-troubleshooting.md`) |
 | Zig fetch timeout | Transient network error | Auto-retried by `is_zig_retryable_flake()` |

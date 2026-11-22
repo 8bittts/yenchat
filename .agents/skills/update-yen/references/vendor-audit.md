@@ -81,7 +81,7 @@ For non-Ghostty updates with an intact xcframework, a standalone compile check i
 xcodebuild -project $HOME/Documents/yenchat/yen-terminal/ghostty/macos/YEN.xcodeproj -scheme YEN -configuration Debug -sdk macosx build 2>&1 | tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-vendor-xcodebuild.out | /usr/bin/grep -E '\*\* BUILD (SUCCEEDED|FAILED) \*\*|error:'
 ```
 
-`** BUILD SUCCEEDED **` is the pass. Common failures: Swift concurrency isolation (x86_64 is stricter), renamed upstream APIs, new `@MainActor` requirements, transient Zig fetch flakes (retry), and coordinate/responder bugs that compile cleanly (caught only in Layer 4).
+`** BUILD SUCCEEDED **` is the pass. Common failures: Swift concurrency isolation, renamed upstream APIs, new `@MainActor` requirements, transient Zig fetch flakes (retry), and coordinate/responder bugs that compile cleanly (caught only in Layer 4).
 
 ## Layer 6: Decision and Documentation
 

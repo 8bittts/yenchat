@@ -294,7 +294,7 @@ The homepage, `yen version`, the welcome banner and the shell's `TERM_PROGRAM_VE
 | `covariant 'Self' type cannot be referenced from a stored property initializer` | Use the explicit type name, or set the value in `init` |
 | SourceKit "Cannot find type" in an overlay file | IDE noise; overlays sit outside the Xcode project until applied |
 
-The x86_64 compile gate is stricter than arm64 Debug:
+The Release build compiles arm64 only. Patterns it has rejected:
 
 - Call `private static` methods with an explicit `Self.` from instance context.
 - `deinit` is nonisolated, so cleanup it calls must be `nonisolated`, even as a no-op.

@@ -30,7 +30,6 @@ When multiple patches conflict: build-critical, then security (entitlements, sig
 | `@MainActor` isolation error | Add `@MainActor` to the class or method, or `nonisolated` to the callback, in the overlay source |
 | `@Sendable` coercion warning | Use the async API variant (for example `UNUserNotificationCenter.add(request)`) |
 | Static property initializer error | Use explicit type qualification, not `Self.` |
-| x86_64-only error | The local smoke build catches it; the DockTilePlugin gate is arm64-only |
 
 ## Binary Vendor Updates
 

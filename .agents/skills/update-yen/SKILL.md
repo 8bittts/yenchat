@@ -67,7 +67,7 @@ Local mode uses `bash $HOME/Documents/yenchat/scripts/native/01-macos-smoke.sh -
 
 Load only the reference file for the current phase. Do not preload all references.
 Step D2 decides the deps phase: nothing outdated skips Steps D3 to D6 and goes to Step V1. Step V1 decides the vendor phase: exit 0 (all current) skips Steps V2 to V5 and goes straight to Step 0. Recovery patterns live in `references/vendor-troubleshooting.md`, and audit conflict resolution in `references/vendor-audit-decision-matrix.md`; Yazi title recovery follows the `ind-app-title` subscriber, not the retired static key.
-Step 5's universal build compiles both architectures, so there is no separate x86_64 compile step; a Swift isolation error surfaces there.
+Step 5 compiles the app for arm64 only, the one architecture macOS 27 runs on; a Swift isolation error surfaces there.
 
 **Release notes are a required part of the release phase, not optional docs.** Step 8 prepares the version's factual line in `RELEASE_COPY` for the public SEO gate.
 Step 11 creates or refreshes the current Monday-start `RELEASE_WEEK_COPY` story in `lib/release-notes/release-notes-copy.ts`. The weekly story must establish the meaningful theme, name the most important concrete improvements, and close on why the updates are better to use or worth downloading; do not concatenate every build into a feature inventory. It must be broken into blank-line-separated paragraphs (a literal `\n\n` in the string, rendered one `<p>` each — 2-3 paragraphs for a substantial week, 1-2 for a thin one) and written so the reader wants to try it: lead with the change a person would feel, in the second person, preferring one concrete detail over a category.

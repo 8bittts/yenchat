@@ -142,8 +142,9 @@ function TerminalIDESection() {
 				</li>
 				<li>
 					<strong>Bundled tools:</strong> fd and rg for file-browser search,
-					lazygit, btop, and fastfetch. IDE integrations can require additional
-					tools; see{" "}
+					lazygit, btop, and fastfetch. Starting in YEN 1.285, YEN no longer
+					bundles fzf, zoxide, bat, or jq. IDE integrations can require
+					additional tools; see{" "}
 					<a href="#ide-workflows" className="link-brand underline">
 						IDE Workflows
 					</a>
@@ -946,8 +947,8 @@ function FileBrowserSection() {
 					<code className="inline-code-brand">browse</code> command opens the
 					same browser without changing the shell directory. Press{" "}
 					<code className="inline-code-brand">Enter</code> on a code file for a
-					read-only view in the system pager, or{" "}
-					<code className="inline-code-brand">O</code> for open-with.
+					read-only view, or <code className="inline-code-brand">O</code> for
+					open-with.
 				</p>
 			</div>
 
@@ -992,9 +993,10 @@ function FileBrowserSection() {
 								current directory, <code className="inline-code-brand">s</code>{" "}
 								to search by name, and{" "}
 								<code className="inline-code-brand">S</code> to search file
-								contents. <code className="inline-code-brand">z</code> and{" "}
-								<code className="inline-code-brand">Z</code> use fzf and zoxide
-								when you have them installed
+								contents. <code className="inline-code-brand">z</code> opens
+								fuzzy search and <code className="inline-code-brand">Z</code>{" "}
+								lists frequent directories. Starting in YEN 1.285, these two
+								need your own fzf and zoxide
 							</td>
 						</tr>
 						<tr className="border-b border-border-light">
