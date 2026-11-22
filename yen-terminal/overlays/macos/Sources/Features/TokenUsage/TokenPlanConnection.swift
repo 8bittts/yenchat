@@ -172,9 +172,11 @@ final class TokenPlanConnection: ObservableObject {
                 else if meters.isEmpty { message = "No included plan pools reported." }
             } catch {
                 guard !Task.isCancelled else { return }
-                meters = []
-                if case TokenPlanClient.Failure.signIn = error { message = "Cursor rejected the key. Check it and reconnect." }
-                else if error is CocoaError { message = "Couldn’t save the key in Keychain." }
+                // A dropped request keeps the last reading; each pool still expires at its own reset.
+                if case TokenPlanClient.Failure.signIn = error {
+                    meters = []
+                    message = "Cursor rejected the key. Check it and reconnect."
+                } else if error is CocoaError { message = "Couldn’t save the key in Keychain." }
                 else { message = "Couldn’t read the Cursor plan. Try again." }
             }
             loading = false
