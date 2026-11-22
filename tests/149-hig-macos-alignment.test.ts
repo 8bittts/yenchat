@@ -53,24 +53,22 @@ describe("Native macOS HIG alignment guardrails", () => {
 		expect(preview).toContain("accessibilityReduceMotion");
 	});
 
-	test("JP the Cat lives in Help, not the Apple menu", () => {
+	test("Help holds YEN Help and Bitcoin Email, and no link to the retired JP the Cat", () => {
 		const xib = readOverlay("Sources/App/MainMenu.xib");
 		const appDelegate = readOverlay("Sources/App/AppDelegate.swift");
-		const appleMenu = xib.match(
-			/<menu key="submenu" title="YEN" systemMenu="apple"[\s\S]*?<\/menu>/,
-		)?.[0];
 		const helpMenu = xib.match(
 			/<menu key="submenu" title="Help" systemMenu="help"[\s\S]*?<\/menu>/,
 		)?.[0];
-		expect(appleMenu).toBeDefined();
 		expect(helpMenu).toBeDefined();
-		expect(appleMenu).not.toContain('title="JP the Cat"');
-		expect(helpMenu).toContain('title="JP the Cat"');
-		expect(helpMenu).toContain('title="Bitcoin Email"');
-		expect(helpMenu?.indexOf("JP the Cat")).toBeLessThan(
-			helpMenu?.indexOf("Bitcoin Email") ?? -1,
+		const titles = Array.from(
+			helpMenu?.matchAll(/<menuItem title="([^"]+)"/g) ?? [],
+			(match) => match[1],
 		);
-		expect(appDelegate).toContain('systemSymbolName: "pawprint"');
+		expect(titles).toEqual(["YEN Help", "Bitcoin Email"]);
+		// A menu item, outlet, action or link left behind would still reach the retired site.
+		expect(xib).not.toMatch(/JP ?the ?Cat/i);
+		expect(appDelegate).not.toMatch(/JP ?the ?Cat/i);
+		expect(appDelegate).not.toContain('systemSymbolName: "pawprint"');
 		expect(appDelegate).toContain('systemSymbolName: "bitcoinsign.circle"');
 		expect(appDelegate).toContain('systemSymbolName: "lightbulb"');
 		expect(appDelegate).toContain("func openBitcoinEmail");
