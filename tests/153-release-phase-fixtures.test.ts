@@ -182,6 +182,27 @@ describe("release build phases", () => {
 			expect(result.stdout).toContain("process-acquired");
 			expect(result.stdout.trim().endsWith("shared-released")).toBe(true);
 		}));
+	test("the build progress loop ends when the compiler ends", () => {
+		// The loop slept 30 s between looks at the compiler, so a build that
+		// ended one second after a look was reported 29 s later. Ten clean
+		// builds in a row all read exactly "3m 00s" or "3m 30s".
+		const started = performance.now();
+		const result = spawnSync(
+			"bash",
+			[
+				"-c",
+				'eval "$(sed -n \'/^show_progress() {/,/^}/p\' "$1")"; sleep 1 & show_progress $!',
+				"fixture",
+				join(phaseRoot, "04-build.sh"),
+			],
+			{ encoding: "utf8" },
+		);
+		const elapsedMs = performance.now() - started;
+		expect(result.status, result.stderr).toBe(0);
+		expect(result.stdout).toContain("Building... 0m 00s");
+		expect(result.stdout).toMatch(/Build complete \(0m 0[12]s\)/);
+		expect(elapsedMs).toBeLessThan(5_000);
+	}, 45_000);
 	test("orchestrator prints one timing line that names every phase", () =>
 		fixture((root) => {
 			installOrchestrator(root);
