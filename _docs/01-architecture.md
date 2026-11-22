@@ -157,6 +157,8 @@ The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behin
 Video playback uses AVFoundation and animated GIFs use ImageIO.
 GIF frames decode into IOSurfaces on a background task, because the main thread also handles terminal input.
 `CGAnimateImageAtURLWithBlock` decodes on the main queue, and a bitmap frame is still copied and color-matched at commit, so the view uses neither.
+YouTube serves one file with picture and sound only at 360p, so `YouTubeDownloader` fetches the best H.264 video up to 1080p and its sound as two streams and `YouTubeStreamMerger` copies them into one MP4.
+AVFoundation reads each of those streams at twice its real length and ends it with an empty marker buffer at the doubled time; the merger copies only buffers that carry samples.
 The wallpaper engine suspends occluded playback and responds to power and thermal pressure.
 Its cache, preferences and controls belong to YEN, independent of standalone MovingPaper.
 Reset and disable tear down feature-owned workers, observers and windows.

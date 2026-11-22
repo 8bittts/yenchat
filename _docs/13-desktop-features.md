@@ -154,6 +154,7 @@ The [architecture](01-architecture.md) owns the reader and cache boundaries.
 On macOS 27 or newer, General → Experimental → Moving Wallpaper exposes Wallpaper Controls inside Settings.
 Select a local movie or GIF, a YouTube link, a video from Photos or a random Photos video.
 Playback starts muted and supports pause, sound and per-desktop assignments.
+A YouTube link downloads as H.264 video up to 1080p with its sound, and needs no ffmpeg.
 YEN owns only its background windows and saved selections.
 Turning it off reveals the system wallpaper and keeps assignments for the next enable.
 The wallpaper engine yields while standalone MovingPaper runs.

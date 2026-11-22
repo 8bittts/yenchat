@@ -22,6 +22,7 @@ Capture a frame during the turn without the window shadow and confirm that no op
 The contrast test holds `TokenBarTone.link` at 4.5:1 on both panels; confirm a hovered label in a light and a dark capture as well.
 For native acceptance, check that an appended record changes the menu without opening it.
 `WallpaperToggleTests` drives the Moving Wallpaper switch with its own preferences and fails when a panel outlives the switch.
+`YouTubeDownloaderTests` runs the real downloader against a script in yt-dlp's place, so the stream merge and the single-file fallback are tested without the network.
 For native acceptance, click the switch in a verify copy and count that process's windows one level above `CGWindowLevelForKey(.desktopWindow)`: one per display when on, none when off.
 
 Native fast tests inspect a temporary snapshot of their Swift source, shortcut docs, and vendored config.

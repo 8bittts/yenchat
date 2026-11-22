@@ -60,11 +60,7 @@ Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
 
 ### Experimental moving wallpaper
 
-- [ ] Verify Photos picker and shuffle permissions, multi-display Spaces and power-state changes before desktop release.
-  The Shuffle from Photos prompt needs a signed build that carries the Photos entitlement, then one click on Allow.
-- [ ] Decide how YouTube wallpapers reach full resolution.
-  The single-stream selector in `YouTubeDownloader` downloads format 18 (640x360); the 1080p streams come as separate video and audio files.
-  yt-dlp merges those only with ffmpeg, and AVFoundation reads each unmerged stream at twice its real length, so neither plays as downloaded.
+- [ ] Verify the Photos picker, multi-display Spaces and power-state changes before desktop release.
 
 ### Hand-written `copy-on-select = true` no longer reaches the system clipboard
 
@@ -95,6 +91,8 @@ In 84 a `runYen` call returned `status: null` at the 5-second test limit; in 88 
 `tests/75-ide-s2-controls.test.ts` failed the same way at load 9 ("merge-readiness reports a no-PR snapshot without inventing a second trust surface": a hook timed out after 8.8 seconds) and passes alone.
 `tests/133-ide-lazy-router.test.ts` failed the same way at load 8 ("replay loads a sufficient module set": a hook timed out after 6.9 seconds) and passes alone.
 `tests/95-ide-s3i-trust-center.test.ts` failed the same way ("trust status keeps expired share inspection read-only": `runYen` returned `status: null` with SIGTERM at the 5-second default); it now carries the 15-second limit its two sibling tests already used, so the item's limit change should cover it rather than repeat it.
+`tests/103-ide-s3p-remote-state-keying.test.ts` failed the same way at load 11 ("shared state helpers keep local and remote trust/state paths distinct for the same repo root": the probe returned `status: null` at the 5-second default) and passes alone.
+`tests/125-lint-swift-view-modifiers.test.ts` is not an IDE test but failed for the same reason in that run: its second full scan of the overlay sources timed out at the 5-second default while the first passed.
 
 - [ ] Reproduce under generated load, then give the spawned CLI calls and the cleanup hook a limit that holds without hiding a real hang.
 
