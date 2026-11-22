@@ -95,6 +95,7 @@ struct TokenUsageOverview: View {
     private func provider(_ tool: TokenTool, color: Color, now: Date) -> some View {
         let count = counts[tool]
         let share = total > 0 ? Double(count ?? 0) / Double(total) : 0
+        let percent = FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0...1))
         let meters = snapshot.meters(for: tool, connection: connection).filter { $0.isCurrent(at: now) }
         return VStack(alignment: .leading, spacing: 5) {
             Divider()
@@ -105,7 +106,9 @@ struct TokenUsageOverview: View {
             }
             HStack(spacing: 7) {
                 track(share, color: color)
-                Text(count == nil || total == 0 ? "—" : share.formatted(.percent.precision(.fractionLength(0...1))) + " of today")
+                // Reserve the widest caption so the four tracks end on one line.
+                Text(0.999.formatted(percent) + " of today").hidden()
+                    .overlay(alignment: .trailing) { Text(count == nil || total == 0 ? "—" : share.formatted(percent) + " of today") }
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }.accessibilityElement(children: .ignore)
                 .accessibilityLabel("Share of counted tokens").accessibilityValue(count == nil || total == 0 ? "Unavailable" : share.formatted(.percent))
