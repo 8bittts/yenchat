@@ -203,8 +203,8 @@ export function HomeClient({ version }: { version: string }) {
 						<h2>What did your agents use today?</h2>
 						<p className="ph-lede">
 							Run Claude Code in one pane and Codex in another. Open the YEN
-							menu to see their token counts for the day, including work you did
-							outside YEN.
+							menu to see each tool’s tokens for the day beside its plan usage,
+							including work you did outside YEN.
 						</p>
 						<a className="ph-text-link" href="#agent-token-usage">
 							See how each tool counts →

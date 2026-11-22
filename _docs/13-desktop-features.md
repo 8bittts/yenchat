@@ -126,6 +126,7 @@ Tried and reverted, do not retry without new evidence:
 
 General → Menu Bar → Show Token Usage enables the experimental agent token counter.
 Click its YEN status item to open the local day’s overview beneath the icon on the same display.
+The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count, share of counted tokens and official usage link.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
 The layout button switches between one and two columns.
