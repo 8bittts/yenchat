@@ -1,6 +1,9 @@
-import type { DocNavItem } from "@/components/docs/doc-nav";
+export interface PolicySection {
+	id: string;
+	title: string;
+}
 
-export const LEGAL_PRIVACY_NAV_ITEMS: DocNavItem[] = [
+export const LEGAL_PRIVACY_NAV_ITEMS: PolicySection[] = [
 	{ id: "desktop", title: "Desktop Application" },
 	{ id: "website", title: "Website" },
 	{ id: "cookies", title: "Cookies" },
@@ -13,7 +16,7 @@ export const LEGAL_PRIVACY_NAV_ITEMS: DocNavItem[] = [
 	{ id: "contact", title: "Privacy Contact" },
 ];
 
-export const LEGAL_TERMS_NAV_ITEMS: DocNavItem[] = [
+export const LEGAL_TERMS_NAV_ITEMS: PolicySection[] = [
 	{ id: "agreement", title: "Agreement" },
 	{ id: "what-yen-is", title: "What YEN Is" },
 	{ id: "license", title: "License" },
@@ -26,7 +29,7 @@ export const LEGAL_TERMS_NAV_ITEMS: DocNavItem[] = [
 	{ id: "terms-contact", title: "Terms Contact" },
 ];
 
-export const LEGAL_COMBINED_NAV_ITEMS: DocNavItem[] = [
+export const LEGAL_COMBINED_NAV_ITEMS: PolicySection[] = [
 	...LEGAL_PRIVACY_NAV_ITEMS,
 	...LEGAL_TERMS_NAV_ITEMS,
 ];

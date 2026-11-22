@@ -7,9 +7,9 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 ## Sources of truth
 
 - `app/globals.css` — every token and shared utility.
-- `components/docs/doc-page-shell.tsx`, `PageShell`, `components/shared/{header,footer}.tsx` — page shells.
+- `components/shared/page-shell.tsx`, `components/shared/{header,footer}.tsx` — page shells.
 - `lib/seo.ts` (`PUBLIC_PAGE_SEO`), `app/sitemap.ts`, `app/robots.ts`, `app/manifest.ts` — metadata and discovery.
-- `lib/library/public-pages.ts` — archived comparison registry.
+- `lib/http/retired-pages.ts` — former main-site paths.
   Known legacy routes redirect to the homepage.
 - `proxy.ts` and `scripts/44-build-web-csp.ts` — host validation and CSP.
 - `lib/blog.ts`, `lib/http/blog-host.ts`, `app/blog/`, `content/blog/` and `public/blog-media/` — blog.yen.chat ([Blog](#blog-blogyenchat)).
@@ -27,13 +27,15 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 - Historical public assets such as `public/skills.md` may stay reachable but are labeled historical.
 - Performance claims: the upstream engine's "about 100x faster than Terminal.app" is its own qualitative claim with no published method; the measured comparison is one workload in its devlog 006 (73 ms versus iTerm2's 470 ms). Never present either as YEN's benchmark, and never call YEN "fastest".
 - Verify source before editing a public surface, and the live `https://yen.chat` response after deploying.
-- A copy correction must also check `public/llms.txt`, `app/manifest.ts`, and `lib/library/public-pages.ts`; these independent surfaces can retain the same stale claim.
+- A copy correction must also check `public/llms.txt` and `app/manifest.ts`; these independent surfaces can retain the same stale claim.
+- Social previews use the Phosphor homepage, privacy receipt, journal masthead, and release log.
+  An article uses its own cover when available.
 - Settings screenshots and recordings are not current feature evidence; compare their labels and controls with the shipped Settings source before placing them in instructions.
 
 ## Release Notes
 
 `https://blog.yen.chat/releases` (`app/blog/releases/page.tsx`) is the public build history, grouped into Monday-Sunday weeks, newest first, each with one curated story, its build count and latest version.
-It reuses `DocPageShell`, `DocNav` and `DocSection` exactly like `/terms`, stays out of the header and footer, and is listed in the blog sitemap.
+The build log has a month index, a permanent anchor for each week, and a listing in the blog sitemap.
 The retired yen.chat `/release` 308s there, and each week keeps its `w-<iso>` anchor, so an old week link still lands on its week; the build script's GitHub Release body links the blog page.
 
 - [HARD REQUIREMENT] Structure is generated, voice is curated. `bun scripts/gen-release-notes.ts` writes `release-notes-data.ts` from the frozen `lib/release-notes/release-ledger.ts` (the 514 builds shipped before the open-source history, which the public git log no longer holds) and then from `public/stable/version.json` bump commits; never edit the data file by hand (Biome ignores it), and never add to the ledger. `tests/161` fails if a regeneration drops a ledger build. `RELEASE_COPY` holds each version's factual line and `RELEASE_WEEK_COPY` each week's story; missing copy in either fails generation.
@@ -54,7 +56,7 @@ The 53 posts imported from the Substack export live in `content/blog/posts/<slug
 
 - Routing lives in `proxy.ts` through `lib/http/blog-host.ts`, never in a `next.config.ts` host rewrite. The proxy picks a page's static CSP by path before rewrites run, so only the proxy can give `blog.yen.chat/<slug>` the hashes of the prerendered `/blog/<slug>`.
 - On blog.yen.chat, `/` and `/<slug>` render `app/blog/`; `/feed`, `/sitemap.xml` and `/robots.txt` are the blog's own route handlers; `/p/<slug>` and a trailing slash 308 to `/<slug>`; Substack-only pages 308 to `/`; and every other page path 308s to yen.chat, except a script fetch (`Sec-Fetch-Dest` other than `document`), which gets an empty 204: Next strips the `rsc` header before the proxy, and the 204 keeps a router prefetch of a relative yen.chat link from tripping CSP `connect-src` while a click falls back to a full navigation.
-- The blog pages pass `siteOrigin={SITE_URL}` to `DocPageShell`, so the shared header and footer link to yen.chat directly; a relative `/` there is the blog index, and `tests/55-web-ui-dom.test.tsx` pins every shared link to yen.chat.
+- The blog pages pass `siteOrigin={SITE_URL}` to `PageShell`, so the shared header and footer link to yen.chat directly; a relative `/` there is the blog index, and `tests/55-web-ui-dom.test.tsx` pins every shared link to yen.chat.
 - On yen.chat, `/blog` and `/blog/<path>` 308 to blog.yen.chat; previews and local development still render `/blog` directly.
 - Local `next dev` and `next start` rewrite the request host to `localhost`, so host routing is proven by `tests/159-blog-host-routing.test.ts` and on the deployed domain, never by a local Host header.
 - `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, checks that all 53 imported posts remain alongside locally authored posts, and fails if a post references media missing from `public/blog-media/`.
@@ -69,7 +71,7 @@ Release notes are labeled "Release notes": the weekly record of what changed, wr
 
 - The index (`app/blog/page.tsx`) is one month-by-month timeline of both, built by `lib/blog-archive.ts`. A week's entry shows its label, build count and latest version and links to its anchor on `/releases`; its story is never repeated on the index.
 - A week's month is the month of its Thursday, the same rule as the release notes nav; a post's month and day are read in Pacific time, like its date label.
-- The two cross-link by week: a release week lists that week's posts under "From the creator this week", and a post's "More posts" section links the release notes for the week it was published in.
+- The two cross-link by week: a release week lists that week's posts under "From the creator this week", and a post's "More field notes" section links the release notes for the week it was published in.
 - A post can introduce a feature that the same week's release notes also mention. The post explains why; the week story stays the short factual record. Neither copies the other's text.
 - The feed (`/feed`) carries posts only, because a week's story is refreshed by every build that week.
 - `tests/55` and `tests/158` fail if the index drops or repeats an entry, or prints a week's story.

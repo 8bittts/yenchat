@@ -6,7 +6,7 @@ import { trackProductEvent } from "@/lib/analytics/product-analytics";
 import { ThemeToggle } from "./theme-toggle";
 
 interface HeaderProps {
-	currentPage?: "home" | "docs" | "tunes" | undefined;
+	currentPage?: "home" | "docs" | undefined;
 	onMobileNavToggle?: (open: boolean) => void;
 	mobileNavOpen?: boolean;
 	/**

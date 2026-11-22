@@ -11,8 +11,7 @@ export type ProductEventName =
 	| "download_click"
 	| "footer_click"
 	| "header_click"
-	| "theme_toggle"
-	| "tunes_platform_click";
+	| "theme_toggle";
 
 type ProductEventValue = string | number | boolean;
 type ProductEventProperties = Record<

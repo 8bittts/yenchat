@@ -16,8 +16,6 @@ Terms combines the terms of service, privacy policy, and cookie policy.
 The sitemap lists these two pages.
 The separate blog hosts articles and release notes.
 Former documentation, comparison, use-case, Tunes, and library URLs redirect to the homepage.
-Keep the archived comparison sources current before reusing a claim.
-Run `bun run seo:source-check` after changing a comparison claim.
 
 The optional desktop token menu reads local tool records.
 Its readings never enter website analytics.

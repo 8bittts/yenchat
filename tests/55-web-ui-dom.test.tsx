@@ -47,12 +47,10 @@ mock.module("next-themes", () => ({
 }));
 
 const { Header } = await import("@/components/shared/header");
-const { DocPageShell } = await import("@/components/docs/doc-page-shell");
+const { PageShell } = await import("@/components/shared/page-shell");
 const { HomeClient } = await import("@/app/home-client");
-const { TunesClient } = await import("@/app/tunes/tunes-client");
-const { DocsPageClient } = await import("@/app/docs/docs-client");
+const { ManualChapters } = await import("@/app/docs/docs-client");
 const { TermsPageClient } = await import("@/app/terms/terms-client");
-const { LibraryClient } = await import("@/app/library/library-client");
 const { NotFoundClient } = await import("@/app/not-found-client");
 const { default: ReleaseNotesPage } = await import("@/app/blog/releases/page");
 const { default: BlogIndexPage } = await import("@/app/blog/page");
@@ -61,13 +59,6 @@ const { RELEASE_WEEKS } = await import(
 	"@/lib/release-notes/release-notes-data"
 );
 const { default: GlobalError } = await import("@/app/global-error");
-const { PublicLibraryPage } = await import(
-	"@/components/library/public-library-page"
-);
-const { getAlternativePage, getUseCasePage } = await import(
-	"@/lib/library/public-pages"
-);
-
 let dom: JSDOM;
 let root: Root | null = null;
 
@@ -215,11 +206,11 @@ describe("web client UI smoke", () => {
 		});
 	});
 
-	test("DocPageShell with a site origin points every internal header and footer link at it", async () => {
+	test("PageShell with a site origin points every internal header and footer link at it", async () => {
 		await render(
-			<DocPageShell siteOrigin="https://yen.chat" navItems={[]}>
+			<PageShell siteOrigin="https://yen.chat">
 				<p>Post</p>
-			</DocPageShell>,
+			</PageShell>,
 		);
 
 		const internalHrefs = [
@@ -283,14 +274,13 @@ describe("web client UI smoke", () => {
 		// These pages carry no hooks, handlers, or browser APIs. Marking any of
 		// them "use client" ships its whole static tree to the browser a second time
 		// as a hydratable chunk — the release notes once re-shipped every week for two
-		// analytics onClicks. The interactive leaves (DocPageShell, TerminalCodeBlock,
+		// analytics onClicks. The interactive leaves (PageShell, TerminalCodeBlock,
 		// TrackedDownloadLink) carry their own directives, so nothing here needs one.
 		// Nothing else guards this: re-adding the directive, or inlining `track` or a
 		// hook, silently re-clientises the tree with every other suite still green.
 		for (const relativePath of [
 			"app/docs/docs-client.tsx",
 			"app/home-client.tsx",
-			"app/yeni/yeni-client.tsx",
 			"app/blog/releases/page.tsx",
 			"app/blog/page.tsx",
 		]) {
@@ -301,59 +291,8 @@ describe("web client UI smoke", () => {
 		}
 	});
 
-	test("TunesClient honors reduced motion and renders the video embed plus platform icons", async () => {
-		prefersReducedMotion = true;
-
-		await render(<TunesClient />);
-
-		expect(document.body.textContent).toContain("Terminals and Tunes");
-		expect(document.body.textContent).toContain("Terminals & Tunes");
-		expect(document.querySelector("h1")?.textContent).toBe(
-			"Music for coding, focus, and the beautifully quiet hours between builds.",
-		);
-		// The Tunes heading grows as it types. See the design system.
-		expect(
-			document.querySelector('[data-layout-reserve="hero-title"]'),
-		).toBeNull();
-		expect(document.body.textContent).toContain(
-			"YEN would not exist if it weren't for music.",
-		);
-		expect(document.body.textContent).toContain("Listen Now");
-		expect(document.querySelector("iframe")?.getAttribute("src")).toContain(
-			"youtube-nocookie.com/embed/AyTMFhww7uo",
-		);
-		expect(document.querySelector("iframe")?.getAttribute("loading")).toBe(
-			"lazy",
-		);
-		const listenNowLink = Array.from(document.querySelectorAll("a")).find(
-			(link) => link.textContent?.includes("Listen Now"),
-		);
-		expect(listenNowLink?.getAttribute("href")).toBe(
-			"https://www.youtube.com/watch?v=AyTMFhww7uo",
-		);
-		expect(listenNowLink?.className).toContain("btn-primary");
-		expect(document.querySelector('a[aria-label="Listen on YouTube"]')).toBe(
-			listenNowLink ?? null,
-		);
-		expect(
-			document.querySelector('a[aria-label*="Spotify"], a[href*="spotify"]'),
-		).toBeNull();
-		expect(
-			document.querySelectorAll('button[aria-label$="is not available yet"]'),
-		).toHaveLength(3);
-		expect(document.body.textContent).not.toContain("Summarize via AI:");
-	});
-
-	test("DocsPageClient opens the mobile docs nav from the shared header toggle", async () => {
-		await render(
-			<DocsPageClient
-				navItems={[
-					{ id: "install", title: "Install" },
-					{ id: "commands", title: "Commands" },
-				]}
-			/>,
-		);
-
+	test("homepage manual exposes the workspace and workflow chapters", async () => {
+		await render(<ManualChapters />);
 		expect(document.body.textContent).not.toContain("Summarize via AI:");
 		expect(document.getElementById("terminal-history")).toBeNull();
 		expect(
@@ -376,19 +315,6 @@ describe("web client UI smoke", () => {
 				.getElementById("ide-workflows")
 				?.querySelector(":scope > div details summary")?.textContent,
 		).toContain("Workflow commands");
-		expect(
-			document.querySelector(
-				'nav[aria-label="Documentation table of contents"]',
-			)?.textContent,
-		).toContain("Install");
-
-		await click(
-			document.querySelector('button[aria-label="Toggle navigation menu"]'),
-		);
-
-		const mobileDocNav = document.getElementById("mobile-doc-nav");
-		expect(mobileDocNav?.textContent).toContain("Install");
-		expect(mobileDocNav?.textContent).toContain("Commands");
 	});
 });
 
@@ -430,13 +356,6 @@ describe("public web surface render smoke", () => {
 		);
 	});
 
-	test("library index renders its H1 and skip link", async () => {
-		await render(<LibraryClient sections={[]} />);
-		expect(document.querySelector("h1")?.textContent).toBe("Page library");
-		expect(document.querySelector('a[href="#main-content"]')).toBeTruthy();
-		expect(document.querySelector("main")?.id).toBe("main-content");
-	});
-
 	test("release notes render shared landmarks and both download CTAs", async () => {
 		await render(<ReleaseNotesPage />);
 
@@ -472,14 +391,11 @@ describe("public web surface render smoke", () => {
 		// look like "Jul 2026". Assert the shape, not a specific month, so the
 		// test stays stable as history grows.
 		expect(
-			document.querySelector(
-				'nav[aria-label="Documentation table of contents"]',
-			)?.textContent,
+			document.querySelector('nav[aria-label="Release months"]')?.textContent,
 		).toMatch(/[A-Z][a-z]{2} \d{4}/);
-		expect(document.querySelector(".lg\\:docs-sidebar-fixed")).toBeTruthy();
 		const releaseNavLinks = Array.from(
 			document.querySelectorAll<HTMLAnchorElement>(
-				'nav[aria-label="Documentation table of contents"] a[href^="#"]',
+				'nav[aria-label="Release months"] a[href^="#"]',
 			),
 		);
 		expect(releaseNavLinks.length).toBeGreaterThan(5);
@@ -493,11 +409,11 @@ describe("public web surface render smoke", () => {
 		await click(
 			document.querySelector('button[aria-label="Toggle navigation menu"]'),
 		);
-		const mobileReleaseNav = document.getElementById("mobile-doc-nav");
-		expect(mobileReleaseNav?.textContent).toMatch(/[A-Z][a-z]{2} \d{4}/);
-		await click(mobileReleaseNav?.querySelector('a[href="#try-yen"]') ?? null);
-		expect(document.getElementById("mobile-doc-nav")).toBeNull();
-
+		expect(
+			document.querySelector(
+				'#mobile-site-nav a[href="https://yen.chat/#guide"]',
+			),
+		).toBeTruthy();
 		for (const link of downloadLinks) {
 			link.addEventListener("click", (event) => event.preventDefault());
 		}
@@ -518,7 +434,7 @@ describe("public web surface render smoke", () => {
 
 		const articles = Array.from(document.querySelectorAll("main article"));
 		const eyebrows = articles.map(
-			(article) => article.querySelector(".eyebrow-text")?.textContent ?? "",
+			(article) => article.querySelector(".ed-label")?.textContent ?? "",
 		);
 		const posts = getBlogPosts();
 		expect(articles).toHaveLength(posts.length + RELEASE_WEEKS.length);
@@ -556,45 +472,6 @@ describe("public web surface render smoke", () => {
 		expect(markup).toContain("<html");
 		expect(markup).toContain("Something went wrong");
 		expect(markup).toContain("Try again");
-		expect(markup).toContain("btn-primary");
-	});
-
-	test("pSEO alternative + use-case pages render their H1 and CTA", async () => {
-		const alternative = getAlternativePage("warp");
-		expect(alternative).toBeTruthy();
-		if (alternative) {
-			await render(<PublicLibraryPage page={alternative} relatedPages={[]} />);
-			expect(document.querySelector("h1")?.textContent).toBe(alternative.h1);
-			// The download link keeps its primary-button styling.
-			expect(
-				document.querySelector('a.btn-primary[href="/download"]'),
-			).toBeTruthy();
-			const skip = document.querySelector('a[href="#main-content"]');
-			expect(skip).toBeTruthy();
-			expect(skip?.textContent).toContain("Skip to main content");
-
-			// PageShell owns mobile-nav state — hamburger must open site nav
-			await click(
-				document.querySelector('button[aria-label="Toggle navigation menu"]'),
-			);
-			expect(document.querySelector("#mobile-site-nav")).toBeTruthy();
-			expect(
-				document.querySelector('#mobile-site-nav a[href="/#guide"]'),
-			).toBeTruthy();
-		}
-
-		const useCase = getUseCasePage("macos-terminal-with-speech-to-text");
-		expect(useCase).toBeTruthy();
-		if (useCase) {
-			await render(<PublicLibraryPage page={useCase} relatedPages={[]} />);
-			expect(
-				Array.from(document.querySelectorAll("h1")).some(
-					(h1) => h1.textContent === useCase.h1,
-				),
-			).toBe(true);
-			expect(
-				document.querySelector('a.btn-primary[href="/download"]'),
-			).toBeTruthy();
-		}
+		expect(markup).toContain("<button");
 	});
 });

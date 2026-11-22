@@ -208,15 +208,15 @@ describe("documentation contracts", () => {
 		);
 	});
 
-	test("is documented as the public PSEO source-refresh lane", () => {
+	test("documents the hosted public page inventory", () => {
 		const gtmDoc = readFileSync(join(repoRoot, "_docs/08-growth.md"), "utf8");
 		const scriptsReadme = readFileSync(
 			join(repoRoot, "scripts/00-scripts-readme.md"),
 			"utf8",
 		);
 
-		expect(gtmDoc).toContain("bun run seo:source-check");
-		expect(scriptsReadme).toContain("43-check-library-sources.ts");
+		expect(gtmDoc).toContain("The sitemap lists these two pages.");
+		expect(scriptsReadme).toContain("44-build-web-csp.ts");
 	});
 
 	test("PR Review descriptions distinguish raw diffs from Delta resolution previews", () => {

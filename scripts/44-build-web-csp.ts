@@ -9,13 +9,13 @@ import {
 } from "node:fs";
 import { createServer } from "node:net";
 import { join, relative, sep } from "node:path";
+import blogSlugs from "@/content/blog/slugs.json";
 import {
 	ORGANIZATION_STRUCTURED_DATA_SCRIPT,
 	THEME_COLOR_BOOTSTRAP_SCRIPT,
 	WEBSITE_STRUCTURED_DATA_SCRIPT,
 } from "@/lib/csp/inline-scripts";
 import { buildCSP } from "@/lib/csp/policy";
-import { getPublicLibraryPagesByKind } from "@/lib/library/public-pages";
 
 const REPO_ROOT = join(import.meta.dir, "..");
 const NEXT_OUTPUT = join(REPO_ROOT, ".next");
@@ -125,7 +125,7 @@ function scopedArtifactName(relativePath: string): string {
 }
 
 /**
- * Maps each prerendered artifact name ("index", "alternatives/warp",
+ * Maps each prerendered artifact name ("index", "blog/skills",
  * "robots.txt") to its file. Next writes them under server/app, except that
  * 16.3.8+ writes them under server/route-cache/<kind>/<owner hash>/$/ when a
  * build adapter is set, which every Vercel build does.
@@ -202,15 +202,6 @@ function intersectHashSets(hashSets: readonly string[][]): string[] {
 		return [];
 	}
 	return first.filter((hash) => rest.every((hashes) => hashes.includes(hash)));
-}
-
-function expectedPublicLibraryPaths(): string[] {
-	return [
-		...getPublicLibraryPagesByKind("alternative"),
-		...getPublicLibraryPagesByKind("use-case"),
-	]
-		.map((page) => page.path)
-		.sort();
 }
 
 function findAvailablePort(): Promise<number> {
@@ -447,25 +438,22 @@ function assertPrerenderCoverage(
 	}
 }
 
-function assertPublicLibraryCoverage(
+function assertBlogCoverage(
 	prerenderManifest: PrerenderManifest,
 	routes: Record<string, string[]>,
 	htmlArtifacts: Map<string, string>,
 ): void {
-	const expected = expectedPublicLibraryPaths();
+	const expected = blogSlugs.map((slug) => `/blog/${slug}`).sort();
 	const missingPath = expected.find((path) => !routes[path]);
 	if (missingPath) {
 		throw new Error(`missing prerendered HTML + CSP hashes for ${missingPath}`);
 	}
 	const actual = Object.keys(routes)
-		.filter(
-			(path) =>
-				path.startsWith("/alternatives/") || path.startsWith("/use-cases/"),
-		)
+		.filter((path) => path.startsWith("/blog/") && path !== "/blog/releases")
 		.sort();
 	if (JSON.stringify(actual) !== JSON.stringify(expected)) {
 		throw new Error(
-			`PSEO prerender set drifted: expected ${expected.join(", ")}; got ${actual.join(", ")}`,
+			`blog article prerender set drifted: expected ${expected.join(", ")}; got ${actual.join(", ")}`,
 		);
 	}
 	const common = intersectHashSets(
@@ -479,7 +467,7 @@ function assertPublicLibraryCoverage(
 	const missingHash = required.find((hash) => !common.includes(hash));
 	if (missingHash) {
 		throw new Error(
-			`root inline script hash is not common to every PSEO page: ${missingHash}`,
+			`root inline script hash is not common to every blog article page: ${missingHash}`,
 		);
 	}
 	const bodies = expected
@@ -501,7 +489,7 @@ function assertPublicLibraryCoverage(
 		)
 	) {
 		throw new Error(
-			"next-themes bootstrap hash is not common to every PSEO page",
+			"next-themes bootstrap hash is not common to every blog article page",
 		);
 	}
 }
@@ -532,7 +520,7 @@ export async function collectHashManifest(): Promise<HashManifest> {
 		collectPrerenderRouteHashes(prerenderManifest, htmlArtifacts);
 	mergeRawMarkupRoutes(routes, internalErrors);
 	assertPrerenderCoverage(htmlArtifacts, mappedHtmlPaths, internalErrors);
-	assertPublicLibraryCoverage(prerenderManifest, routes, htmlArtifacts);
+	assertBlogCoverage(prerenderManifest, routes, htmlArtifacts);
 	const legacyErrorHashes = collectLegacyErrorHashes();
 	const dynamicRoot = await collectDynamicRootHashes();
 	const manifest = {

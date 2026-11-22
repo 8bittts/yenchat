@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 export const SITE_URL = "https://yen.chat";
 const DEFAULT_OG_IMAGE = {
 	url: `${SITE_URL}/og-image.png`,
-	width: 2004,
-	height: 1262,
+	width: 1200,
+	height: 630,
 } as const;
 export const SEO_TITLE_MAX_LENGTH = 60;
 export const SEO_DESCRIPTION_MAX_LENGTH = 160;
@@ -17,61 +17,13 @@ export const PUBLIC_PAGE_SEO = {
 		url: SITE_URL,
 		imageAlt: "YEN Terminal - Fast GPU-Accelerated Terminal",
 	},
-	docs: {
-		title: "YEN Docs - Terminal Features, IDE Workflows, and CLI",
-		description:
-			"Set up YEN for macOS: terminal shortcuts, speech-to-text, themes, native WebKit browser preview, and CLI workflows with their requirements.",
-		url: `${SITE_URL}/docs`,
-		imageAlt: "YEN Documentation",
-	},
-	tunes: {
-		title: "YEN Tunes - Music for Coding, Focus, and Deep Work",
-		description:
-			"YEN Tunes is music for coding, terminal sessions, focused work, and the beats behind every line of code written for YEN.",
-		url: `${SITE_URL}/tunes`,
-		imageAlt: "YEN Terminals and Tunes music project",
-	},
-	alternatives: {
-		title: "YEN Terminal Alternatives for Developers",
-		description:
-			"Research-backed YEN alternative pages for developers comparing macOS terminals, AI terminals, IDEs, and terminal-first local workflows.",
-		url: `${SITE_URL}/alternatives`,
-		imageAlt: "YEN terminal alternatives research hub",
-	},
-	useCases: {
-		title: "YEN Terminal Use Cases",
-		description:
-			"Focused YEN use cases for speech-to-text, native browser preview, local Git diffs, terminal IDE workflows, privacy, and GPU terminal work.",
-		url: `${SITE_URL}/use-cases`,
-		imageAlt: "YEN terminal use cases research hub",
-	},
-	privacy: {
-		title: "YEN Privacy & Cookie Policy",
-		description:
-			"How YEN handles desktop app data, website analytics, cookies, update checks, and service providers.",
-		url: `${SITE_URL}/privacy`,
-		imageAlt: "YEN Privacy and Cookie Policy",
-	},
 	terms: {
 		title: "YEN Terms & Privacy",
 		description:
 			"Terms of service, privacy policy, and cookie policy for YEN, the free GPU-accelerated macOS terminal, including data handling, license, and responsibilities.",
 		url: `${SITE_URL}/terms`,
-		imageAlt: "YEN Terms and Privacy Policy",
-	},
-	// Unlisted character bible (direct URL only — not sitemap / llms / nav).
-	yeni: {
-		title: "YENI — Canonical Character Bible",
-		description:
-			"The one locked character behind every YEN Tunes cover, loop, and thumbnail.",
-		url: `${SITE_URL}/yeni`,
-		imageAlt: "YENI face — locked canonical character portrait",
-		image: {
-			// Canonical front headshot (not a lifestyle scene) for social cards.
-			url: `${SITE_URL}/yeni/yeni-canonical-front.png`,
-			width: 1760,
-			height: 2352,
-		},
+		imageAlt: "YEN Terms and privacy with the desktop privacy receipt",
+		image: { url: `${SITE_URL}/social/terms.png`, width: 1200, height: 630 },
 	},
 } as const;
 
@@ -151,7 +103,6 @@ export function buildSocialMetadata({
 					width: image.width,
 					height: image.height,
 					alt: imageAlt,
-					type: "image/png",
 				},
 			],
 		},

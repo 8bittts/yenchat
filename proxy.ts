@@ -14,6 +14,10 @@ import {
 } from "@/lib/http/blog-host";
 import { resolveRequestHostSignals } from "@/lib/http/request-host";
 
+import { RETIRED_PAGES } from "@/lib/http/retired-pages";
+
+const retired: ReadonlySet<string> = new Set(RETIRED_PAGES);
+
 export { buildCSP } from "@/lib/csp/policy";
 
 const HEADER_BYPASS_PREFIXES = [
@@ -174,21 +178,6 @@ function routeBlogHost(request: NextRequest): NextResponse | null {
 	return null;
 }
 
-function isRetiredPage(pathname: string, staticPath?: string) {
-	const legacy = staticPath ?? pathname;
-	const formerPages = [
-		"/docs",
-		"/tunes",
-		"/yeni",
-		"/library",
-		"/alternatives",
-		"/use-cases",
-	];
-	return (
-		formerPages.includes(legacy) ||
-		Boolean(staticPath && /^\/(alternatives|use-cases)\//.test(legacy))
-	);
-}
 export function proxy(request: NextRequest) {
 	const { hasConflict, host } = getRequestHost(request);
 	const pathname = request.nextUrl.pathname;
@@ -234,7 +223,10 @@ export function proxy(request: NextRequest) {
 	}
 
 	const canonicalStaticPath = findCanonicalStaticPath(pathname);
-	if (host !== BLOG_HOST && isRetiredPage(pathname, canonicalStaticPath)) {
+	if (
+		host !== BLOG_HOST &&
+		retired.has(decodeUnreservedPathname(pathname).toLowerCase())
+	) {
 		const url = request.nextUrl.clone();
 		url.pathname = "/";
 		// A fragment-free redirect preserves the chapter in old /docs# links.

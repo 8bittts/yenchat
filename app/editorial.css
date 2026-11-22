@@ -1,0 +1,406 @@
+/* The journal and policy use the same Phosphor paper, ink and type as the field guide. */
+.ph-site main.ed-page {
+	flex: 1;
+	background: var(--ph-paper);
+	color: var(--ph-ink);
+	--color-text-primary: var(--ph-ink);
+	--color-text-muted: var(--ph-secondary);
+	--color-brand-dark: var(--ph-ink);
+	--color-border: var(--ph-reader-line);
+	--text-primary: 136 22% 12%;
+	--text-body: 136 19% 17%;
+	--text-muted: 132 10% 33%;
+	--brand-dark: 138 38% 23%;
+	--border: 128 14% 66%;
+	--card-content: 125 14% 89%;
+}
+.dark .ph-site main.ed-page {
+	--text-primary: 130 23% 93%;
+	--text-body: 130 13% 86%;
+	--text-muted: 132 13% 74%;
+	--brand-dark: 128 100% 82%;
+	--border: 137 18% 29%;
+	--card-content: 136 18% 14%;
+}
+.ed-page :is(h1, h2, h3) {
+	text-wrap: balance;
+}
+.ed-cover {
+	color: var(--ph-text);
+	background: var(--ph-night);
+	border-bottom: 1px solid var(--ph-line);
+}
+.ed-cover-grid,
+.ed-legal-head {
+	display: grid;
+	align-items: center;
+	grid-template-columns: 1.35fr 1fr;
+	gap: clamp(24px, 6vw, 100px);
+	padding-block: clamp(40px, 6vw, 96px);
+}
+.ed-cover h1,
+.ed-legal-head h1 {
+	font-weight: 550;
+	font-size: clamp(70px, 9vw, 153px);
+	line-height: 0.88;
+	letter-spacing: -0.084em;
+}
+.ed-cover h1 em,
+.ed-legal-head h1 em {
+	font-style: normal;
+	color: var(--ph-green);
+}
+.ed-cover-art {
+	display: grid;
+	align-content: center;
+	justify-self: center;
+	width: min(100%, 395px);
+	background: #091509;
+	border: 1px solid var(--ph-line);
+	border-radius: 12px;
+	overflow: hidden;
+	transform: rotate(2deg);
+	transition: transform 0.18s;
+}
+.ed-cover-art:hover,
+.ed-cover-art:focus-visible {
+	transform: rotate(0deg);
+}
+.ed-cover-art img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+.ed-cover-art span {
+	display: flex;
+	justify-content: space-between;
+	padding: 12px 18px;
+	background: #19281c;
+	color: var(--ph-green);
+	font: 500 13px / 1.5 var(--ph-mono);
+}
+.ed-night-link,
+.ed-text-link,
+.ed-next a,
+.ed-archive-head a,
+.ed-page .link-brand {
+	text-decoration: underline;
+	text-underline-offset: 0.21em;
+}
+.ed-night-link {
+	color: var(--ph-text);
+}
+.ed-sheet,
+.ed-story,
+.ed-legal-body {
+	padding-block: clamp(32px, 5vw, 82px);
+}
+.ed-label,
+.ed-byline,
+.ed-lead time,
+.ed-index summary,
+.ed-archive-head a,
+.ed-legal-nav,
+.ed-receipt {
+	font-family: var(--ph-mono);
+}
+.ed-label {
+	font-size: 0.74rem;
+	line-height: 1.5;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	font-weight: 650;
+	color: var(--ph-secondary);
+}
+.ed-lead,
+.ed-month,
+.ed-reading,
+.ed-legal-body {
+	display: grid;
+	grid-template-columns: minmax(175px, 1fr) minmax(0, 2.5fr);
+	gap: clamp(20px, 5vw, 85px);
+}
+.ed-lead {
+	border-block: 2px solid var(--ph-ink);
+	padding: clamp(20px, 3vw, 46px) 0;
+	align-items: start;
+}
+.ed-lead time,
+.ed-byline {
+	display: block;
+	color: var(--ph-secondary);
+	font-size: 0.82rem;
+	line-height: 1.6;
+	margin-top: 10px;
+}
+.ed-lead h2,
+.ed-archive-head h2,
+.ed-next h2 {
+	font-size: clamp(32px, 4.5vw, 76px);
+	line-height: 1.03;
+	letter-spacing: -0.065em;
+	font-weight: 550;
+}
+.ed-lead p:not(.ed-label),
+.ed-row p:not(.ed-label),
+.ed-deck {
+	color: var(--ph-secondary);
+	line-height: 1.55;
+	margin-top: 0.65rem;
+}
+.ed-archive {
+	margin-top: clamp(48px, 7vw, 100px);
+}
+.ed-archive-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+.ed-archive-head a {
+	font-size: 0.85rem;
+}
+.ed-index {
+	border-block: 1px solid var(--ph-reader-line);
+	padding: 0;
+}
+.ed-index summary {
+	cursor: pointer;
+	padding: 14px 4px;
+	font-size: 0.86rem;
+	font-weight: 600;
+}
+.ed-index nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 18px;
+	padding: 4px 4px 18px;
+}
+.ed-index a {
+	padding: 4px 0;
+	text-decoration: underline;
+	text-underline-offset: 0.18em;
+}
+.ed-month {
+	padding-block: clamp(28px, 4vw, 60px);
+	border-bottom: 1px solid var(--ph-reader-line);
+}
+.ed-month h2 {
+	font-size: clamp(20px, 2.3vw, 36px);
+	letter-spacing: -0.045em;
+	line-height: 1.1;
+}
+.ed-row + .ed-row {
+	border-top: 1px solid var(--ph-reader-line);
+}
+.ed-row a {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 20px 0;
+}
+
+.ed-row h3 {
+	font-size: clamp(21px, 2.1vw, 35px);
+	letter-spacing: -0.045em;
+	line-height: 1.15;
+	margin-top: 6px;
+}
+
+.ed-story-head {
+	border-bottom: 1px solid var(--ph-reader-line);
+	padding-bottom: clamp(24px, 4vw, 64px);
+	margin-bottom: clamp(24px, 4vw, 64px);
+}
+.ed-story-head h1,
+.ed-release-head h1 {
+	font-size: clamp(42px, 6.7vw, 115px);
+	letter-spacing: -0.071em;
+	line-height: 1;
+	font-weight: 550;
+	max-width: 20ch;
+	margin-block: 22px;
+}
+.ed-story-head .ed-label {
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+.ed-deck {
+	font-size: clamp(17px, 1.6vw, 24px);
+	max-width: 48ch;
+}
+.ed-reading,
+.ed-legal-body {
+	grid-template-columns: minmax(145px, 0.85fr) minmax(0, 2.3fr);
+}
+.ed-reading > div,
+.ed-policy {
+	max-width: 74ch;
+	min-width: 0;
+}
+.blog-prose,
+.ed-policy,
+.ed-log {
+	font-size: clamp(16px, 1.18vw, 20px);
+	line-height: 1.7;
+	overflow-wrap: anywhere;
+}
+.ed-reading .ed-index nav,
+.ed-legal-body .ed-index nav {
+	flex-direction: column;
+}
+.ed-next {
+	border-top: 2px solid var(--ph-ink);
+	padding-block: 30px;
+	display: grid;
+	gap: 16px;
+	margin-top: 3rem;
+}
+.ed-release-head {
+	padding-block: clamp(45px, 6vw, 98px);
+}
+.ed-log > section {
+	display: grid;
+	grid-template-columns: minmax(180px, 1fr) minmax(0, 2.5fr);
+	column-gap: clamp(25px, 5vw, 85px);
+	border-bottom: 1px solid var(--ph-reader-line);
+	padding-block: clamp(28px, 4vw, 66px);
+}
+.ed-log > section > div {
+	max-width: 72ch;
+}
+.ed-policy h2,
+.ed-log > section > h2 {
+	font-size: clamp(25px, 2.5vw, 42px);
+	line-height: 1.12;
+	letter-spacing: -0.05em;
+	font-weight: 550;
+	border: none;
+}
+.ed-page :is(.ed-policy, .ed-log) .text-body-sm {
+	font-size: inherit;
+	line-height: inherit;
+	color: var(--ph-ink);
+}
+.ed-legal-head h1 em {
+	color: var(--ph-secondary);
+}
+.ed-legal-head h1 {
+	margin: 20px 0;
+}
+.ed-receipt {
+	justify-self: center;
+	width: min(100%, 385px);
+	padding: clamp(20px, 3vw, 38px);
+	background: var(--ph-night);
+	color: var(--ph-text);
+	transform: rotate(-2deg);
+	border-bottom: 6px dotted var(--ph-paper);
+}
+.ed-receipt .ed-label {
+	color: var(--ph-green);
+}
+.ed-receipt dl {
+	border-block: 1px dashed var(--ph-muted);
+	margin: 20px 0;
+	padding-block: 14px;
+	font-size: clamp(12px, 1vw, 15px);
+}
+.ed-receipt dl div {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
+	padding-block: 5px;
+}
+.ed-receipt dd {
+	color: var(--ph-green);
+	text-align: right;
+}
+.ed-receipt > p:last-child {
+	font-size: 0.75rem;
+	color: var(--ph-muted);
+}
+.ed-legal-nav {
+	background: var(--ph-night);
+	color: var(--ph-green);
+	font-size: 0.85rem;
+}
+.ed-legal-nav .ph-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 clamp(16px, 4vw, 65px);
+}
+.ed-legal-nav a {
+	padding: 16px 0;
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+.ed-policy > section {
+	border-bottom: 1px solid var(--ph-reader-line);
+	padding-block: 32px;
+}
+.ed-policy > section:first-child {
+	padding-top: 0;
+}
+.ed-policy h3 {
+	font-size: 1.14em;
+	letter-spacing: -0.025em;
+}
+.ed-policy .inline-code-brand {
+	background: transparent;
+	color: var(--ph-ink);
+	font-family: var(--ph-mono);
+}
+@media (max-width: 700px) {
+	.ed-cover-grid,
+	.ed-legal-head,
+	.ed-lead,
+	.ed-month,
+	.ed-reading,
+	.ed-legal-body,
+	.ed-log > section {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.ed-cover-art {
+		max-width: 260px;
+		justify-self: end;
+	}
+	.ed-cover-grid {
+		gap: 28px;
+	}
+	.ed-receipt {
+		justify-self: stretch;
+	}
+	.ed-log > section {
+		row-gap: 8px;
+	}
+	.ed-legal-nav a {
+		padding: 10px 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.ed-cover-art {
+		transition: none;
+	}
+}
+
+.ed-row:first-child a {
+	padding-top: 0;
+}
+
+.ed-row a:hover h3,
+.ed-lead a:hover {
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.14em;
+}
+
+.ed-reading:has(> div:only-child) {
+	display: block;
+}
+.ed-reading > div:only-child {
+	margin-inline: auto;
+}

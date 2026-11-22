@@ -106,7 +106,7 @@ Check every changed public page at about 390x844 for the last-section-to-footer 
 
 - `https://yen.chat` is canonical; `www` redirects permanently, and every canonical, sitemap, OpenGraph and Twitter URL uses the apex host.
 - The main site indexes the homepage and Terms. Both carry canonical, Open Graph, Twitter, and robots metadata.
-- Noindex: `/api/*`, `/download`, `/stable/*`, `/cookies`, 404, and `/library`, with route-level `X-Robots-Tag` where it applies.
+- Noindex: `/api/*`, `/download`, `/stable/*`, `/cookies`, and 404, with route-level `X-Robots-Tag` where it applies.
 - `robots.txt` comes only from `app/robots.ts`: it disallows `/api` and `/stable`, leaves `/download` and `/cookies` crawlable so crawlers see the header or redirect, and allows the major search and AI crawlers.
 - `app/manifest.ts` is the only manifest; a static `public/manifest.webmanifest` collides with the route and returns 500 in development.
 - `app/sitemap.ts` is deterministic: exact membership, apex host, unique URLs, a fixed release `lastModified`, and no deploy-time `new Date()`; `tests/121-seo-guardrails.test.ts` guards it.
@@ -123,7 +123,7 @@ A local build has no adapter, so reproduce the Vercel layout with `NEXT_ADAPTER_
 `proxy.ts` serves static routes with hash-only CSP, redirects encoded or case-variant aliases to canonical paths, rejects encoded slash and backslash separators before normalization, and uses request nonces for dynamic and unknown routes.
 `connect-src` lists only hosts the browser actually fetches; the release manifest is read server-side and downloads are a 302 navigation, so the GitHub release host stays out.
 
-**Analytics.** Vercel Analytics and Speed Insights only, with these custom events: `download_click`, `header_click`, `footer_click`, `tunes_platform_click` and `theme_toggle`.
+**Analytics.** Vercel Analytics and Speed Insights only, with these custom events: `download_click`, `header_click`, `footer_click` and `theme_toggle`.
 The names were Title Case (`Download Click`) before the rename dated in `00-foundation.md` → Timeline, so compare a period that crosses it under both names in the Vercel dashboard.
 Every event goes through `trackProductEvent` in `lib/analytics/product-analytics.ts`, whose `ProductEventName` union is the list above; `tests/56-product-analytics.test.ts` fails if any other file imports `track` from `@vercel/analytics`.
 Traffic is not part of `/growth`; see `_docs/08-growth.md`.

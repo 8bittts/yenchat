@@ -1,7 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { DocNavItem } from "@/components/docs/doc-nav";
-import { DocPageShell } from "@/components/docs/doc-page-shell";
 
 function DocSection({
 	id,
@@ -26,10 +24,6 @@ function DocSection({
 import { TerminalCodeBlock } from "@/components/docs/terminal-code-block";
 import { TerminalPanel } from "@/components/docs/terminal-panel";
 import { DOWNLOAD_HREF } from "@/lib/analytics/download-cta";
-
-interface DocsPageClientProps {
-	navItems: DocNavItem[];
-}
 
 // Source: yen-terminal/overlays/macos/Sources/Features/Update/UpdateController.swift; public/stable/version.json.
 function GetStartedSection() {
@@ -1798,29 +1792,6 @@ function TroubleshootingSection() {
 				<strong>Reset All Settings</strong>.
 			</p>
 		</DocSection>
-	);
-}
-
-export function DocsPageClient({ navItems }: DocsPageClientProps) {
-	return (
-		<DocPageShell
-			currentPage="docs"
-			variant="guide"
-			navItems={navItems}
-			hero={
-				<header className="space-y-3 max-w-5xl">
-					<h1 className="text-heading-md pb-2 border-b border-border">
-						Terminal Documentation
-					</h1>
-					<p className="text-body max-w-4xl">
-						Install and configure YEN for macOS. Find terminal shortcuts,
-						dictation setup, workspace tools, and CLI workflows.
-					</p>
-				</header>
-			}
-		>
-			<ManualChapters />
-		</DocPageShell>
 	);
 }
 

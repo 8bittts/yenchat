@@ -1,15 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { NextRequest } from "next/server";
 import robots from "../app/robots";
 import sitemap from "../app/sitemap";
 import { blogUrlForMainHostPath } from "../lib/http/blog-host";
-import {
-	isPublicLibraryPageEligible,
-	PUBLIC_LIBRARY_LAST_MODIFIED,
-	PUBLIC_LIBRARY_MIN_EVIDENCE_SCORE,
-	PUBLIC_LIBRARY_PAGES,
-} from "../lib/library/public-pages";
+import { RETIRED_PAGES } from "../lib/http/retired-pages";
 import { RELEASE_EXCLUDE } from "../lib/release-notes/release-notes-copy";
 import {
 	buildPublicPageMetadata,
@@ -96,9 +92,9 @@ describe("public SEO guardrails", () => {
 		expect(firstScreen).toContain("[Contact](https://twitter.com/yenFTW)");
 		expect(firstScreen).not.toContain("https://yen.chat/library");
 
-		for (const page of PUBLIC_LIBRARY_PAGES) {
-			const assertion = expect(llmsText, page.path);
-			const url = `https://yen.chat${page.path}`;
+		for (const path of RETIRED_PAGES) {
+			const assertion = expect(llmsText, path);
+			const url = `https://yen.chat${path}`;
 			assertion.not.toContain(url);
 		}
 	});
@@ -114,10 +110,6 @@ describe("public SEO guardrails", () => {
 		for (const entry of sitemapEntries) {
 			expect(entry.url).toMatch(/^https:\/\/yen\.chat(\/|$)/);
 			expect(entry.url).not.toContain("www.");
-			expect(entry.lastModified).toBeInstanceOf(Date);
-			expect((entry.lastModified as Date).toISOString()).toBe(
-				PUBLIC_LIBRARY_LAST_MODIFIED.toISOString(),
-			);
 		}
 	});
 
@@ -133,9 +125,6 @@ describe("public SEO guardrails", () => {
 		expect(Object.hasOwn(PUBLIC_PAGE_SEO, "release")).toBe(false);
 		expect(pageSource).toContain("buildPublicPageMetadata");
 		expect(pageSource).toContain("url: `${BLOG_URL}${RELEASES_PATH}`");
-		expect(pageSource).toContain("DocPageShell");
-		expect(pageSource).toContain("DocSection");
-		expect(pageSource).not.toContain('from "@/components/shared/page-shell"');
 		expect(blogUrlForMainHostPath("/release")).toBe(
 			"https://blog.yen.chat/releases",
 		);
@@ -222,39 +211,6 @@ describe("public SEO guardrails", () => {
 		expect(footerSource).not.toContain("jpthecat.com");
 	});
 
-	test("yeni character bible has page-local social metadata and stays unlisted", () => {
-		const pageSource = readFileSync(
-			join(process.cwd(), "app", "yeni", "page.tsx"),
-			"utf8",
-		);
-		const sitemapUrls = sitemap().map((entry) => entry.url);
-		const llmsText = readFileSync(
-			join(process.cwd(), "public", "llms.txt"),
-			"utf8",
-		);
-		const headerSource = readFileSync(
-			join(process.cwd(), "components", "shared", "header.tsx"),
-			"utf8",
-		);
-		const footerSource = readFileSync(
-			join(process.cwd(), "components", "shared", "footer.tsx"),
-			"utf8",
-		);
-
-		expect(PUBLIC_PAGE_SEO.yeni.url).toBe("https://yen.chat/yeni");
-		expect(PUBLIC_PAGE_SEO.yeni.image.url).toBe(
-			"https://yen.chat/yeni/yeni-canonical-front.png",
-		);
-		expect(pageSource).toContain("buildPublicPageMetadata");
-		expect(pageSource).toContain("PUBLIC_PAGE_SEO.yeni");
-
-		// Direct URL only — not discoverable via sitemap, llms, or chrome links.
-		expect(sitemapUrls).not.toContain("https://yen.chat/yeni");
-		expect(llmsText).not.toContain("https://yen.chat/yeni");
-		expect(headerSource).not.toContain('href="/yeni"');
-		expect(footerSource).not.toContain('href="/yeni"');
-	});
-
 	test("week-grouped release history covers the current build and holds public-copy guardrails", () => {
 		// blog.yen.chat/releases renders the generated, week-grouped dataset — that
 		// file (not the page) is where the real changelog copy lives, so the
@@ -336,49 +292,22 @@ describe("public SEO guardrails", () => {
 		expect(summaries.every((summary) => !summary.includes("!"))).toBe(true);
 	});
 
-	test("public library pages have unique concise metadata", () => {
-		const paths = new Set<string>();
-		const titles = new Set<string>();
-		const descriptions = new Set<string>();
-
-		for (const page of PUBLIC_LIBRARY_PAGES) {
-			expect(page.publicEligible, page.path).toBe(true);
-			expect(page.path).toMatch(/^\/(alternatives|use-cases)\//);
-			expect(paths.has(page.path), `${page.path} duplicate path`).toBe(false);
-			expect(titles.has(page.seo.title), `${page.path} duplicate title`).toBe(
-				false,
+	test("each retired URL redirects with its query intact and unknown slugs stay unknown", () => {
+		for (const path of RETIRED_PAGES) {
+			const response = proxy(
+				new NextRequest(`https://yen.chat${path}?ref=bookmark`),
 			);
-			expect(
-				descriptions.has(page.seo.description),
-				`${page.path} duplicate description`,
-			).toBe(false);
-
-			paths.add(page.path);
-			titles.add(page.seo.title);
-			descriptions.add(page.seo.description);
-
-			expect(page.seo.title.length, `${page.path} title`).toBeLessThanOrEqual(
-				SEO_TITLE_MAX_LENGTH,
+			expect(response.status, path).toBe(308);
+			expect(response.headers.get("location"), path).toBe(
+				"https://yen.chat/?ref=bookmark",
 			);
-			expect(
-				page.seo.description.length,
-				`${page.path} description`,
-			).toBeLessThanOrEqual(SEO_DESCRIPTION_MAX_LENGTH);
-			expect(page.evidenceScore, page.path).toBeGreaterThanOrEqual(
-				PUBLIC_LIBRARY_MIN_EVIDENCE_SCORE,
-			);
-			expect(isPublicLibraryPageEligible(page), page.path).toBe(true);
-			expect(page.yenProofPoints.length, page.path).toBeGreaterThanOrEqual(2);
-			expect(page.decisionPoints.length, page.path).toBeGreaterThanOrEqual(3);
-
-			if (page.kind === "alternative") {
-				expect(page.officialSources.length, page.path).toBeGreaterThanOrEqual(
-					2,
-				);
-			}
 		}
+		expect(
+			proxy(
+				new NextRequest("https://yen.chat/alternatives/missing-bookmark"),
+			).headers.get("location"),
+		).toBeNull();
 	});
-
 	test("www host redirects permanently to the apex canonical host", () => {
 		const response = proxy({
 			headers: new Headers({ host: "www.yen.chat" }),

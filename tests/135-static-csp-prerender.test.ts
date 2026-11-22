@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import blogSlugs from "../content/blog/slugs.json";
 import {
 	DYNAMIC_ROOT_INLINE_SCRIPT_HASHES,
 	ERROR_INLINE_SCRIPT_HASHES,
@@ -19,7 +20,6 @@ import {
 	THEME_COLOR_BOOTSTRAP_SCRIPT,
 	WEBSITE_STRUCTURED_DATA_SCRIPT,
 } from "../lib/csp/inline-scripts";
-import { getPublicLibraryPagesByKind } from "../lib/library/public-pages";
 import { buildCSP } from "../proxy";
 import {
 	collectPrerenderArtifacts,
@@ -151,13 +151,13 @@ describe("static CSP prerender build", () => {
 		withServerOutput(
 			[
 				"app/index.html",
-				"app/alternatives/warp.html",
+				"app/blog/skills.html",
 				"app/robots.txt.body",
 				"app/page.js",
 			],
 			(serverOutput) => {
 				expect(artifactNames(serverOutput, ".html")).toEqual([
-					"alternatives/warp",
+					"blog/skills",
 					"index",
 				]);
 				expect(artifactNames(serverOutput, ".body")).toEqual(["robots.txt"]);
@@ -169,14 +169,14 @@ describe("static CSP prerender build", () => {
 		withServerOutput(
 			[
 				`route-cache/APP_PAGE/${OWNER_HASH}/$/index.html`,
-				`route-cache/APP_PAGE/${"b".repeat(64)}/$/alternatives/warp.html`,
+				`route-cache/APP_PAGE/${"b".repeat(64)}/$/blog/skills.html`,
 				`route-cache/APP_PAGE/${OWNER_HASH}/$/index.rsc`,
 				`route-cache/APP_ROUTE/${"c".repeat(64)}/$/robots.txt.body`,
 				"app/page.js",
 			],
 			(serverOutput) => {
 				expect(artifactNames(serverOutput, ".html")).toEqual([
-					"alternatives/warp",
+					"blog/skills",
 					"index",
 				]);
 				expect(artifactNames(serverOutput, ".body")).toEqual(["robots.txt"]);
@@ -214,18 +214,10 @@ describe("static CSP prerender build", () => {
 		);
 	});
 
-	test("generated manifest covers every finite PSEO slug with strict hashes", () => {
-		const expectedPaths = [
-			...getPublicLibraryPagesByKind("alternative"),
-			...getPublicLibraryPagesByKind("use-case"),
-		]
-			.map((page) => page.path)
-			.sort();
+	test("generated manifest covers every finite blog article with strict hashes", () => {
+		const expectedPaths = blogSlugs.map((slug) => `/blog/${slug}`).sort();
 		const actualPaths = Object.keys(STATIC_INLINE_SCRIPT_HASHES)
-			.filter(
-				(path) =>
-					path.startsWith("/alternatives/") || path.startsWith("/use-cases/"),
-			)
+			.filter((path) => path.startsWith("/blog/") && path !== "/blog/releases")
 			.sort();
 		expect(actualPaths).toEqual(expectedPaths);
 
@@ -261,7 +253,7 @@ describe("static CSP prerender build", () => {
 		}
 		expect(ERROR_INLINE_SCRIPT_HASHES.length).toBeGreaterThan(0);
 		expect(STATIC_INLINE_SCRIPT_HASHES["/"]?.length).toBeGreaterThan(0);
-		expect(STATIC_INLINE_SCRIPT_HASHES["/docs"]?.length).toBeGreaterThan(0);
+		expect(STATIC_INLINE_SCRIPT_HASHES["/terms"]?.length).toBeGreaterThan(0);
 	});
 
 	test("generated source is deterministic regardless of object insertion order", () => {

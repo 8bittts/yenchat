@@ -7,4 +7,4 @@ DMGs are hosted on GitHub Releases; `public/stable/version.json` identifies the 
 
 - Stage only reviewed files for the current task; never stage every asset implicitly.
 - Do not delete assets based on static analysis; external links and build tools may still use them.
-- `_docs/10-gtm.md` owns public-media retention, and `_docs/05-infrastructure.md` owns release-artifact pruning.
+- `_docs/05-infrastructure.md` owns public-media retention, and `_docs/05-infrastructure.md` owns release-artifact pruning.

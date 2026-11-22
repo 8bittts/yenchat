@@ -52,12 +52,11 @@ Then read the affected surface owner from `_docs/00-docs-map.md`, with `_docs/02
 ## Web
 
 - Use the tokens and shared utilities in `app/globals.css`.
-- Reuse `PageShell`, `DocPageShell`, `DocSection`, shared header, and shared footer.
+- Reuse `PageShell`, `DocSection`, shared header, and shared footer.
 - Every indexable page needs a canonical URL, contextual Open Graph metadata, contextual Twitter metadata, and `index,follow` robots directives.
 - Keep the former `/library` URL redirected and outside public discovery.
 - Route blog.yen.chat only in `proxy.ts` (`lib/http/blog-host.ts`); a `next.config.ts` host rewrite would serve the static blog pages a nonce CSP and break hydration ([_docs/10-gtm.md](_docs/10-gtm.md#blog-blogyenchat)).
 - Regenerate release notes with `bun scripts/gen-release-notes.ts` after editing release copy or version history.
-- Run `bun run seo:source-check` after changing public comparison claims.
 - Verify public pages at desktop and mobile widths in a real browser.
 
 ## Required Gates
@@ -112,7 +111,7 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Releases go only to the public repository | `scripts/01-verify-release-target.sh` |
 | The vendored engine tree must exist before the full suite | `tests/45-overlay-patching.test.ts` and `tests/119-vendor-process-guardrails.test.ts` (fail unless `YEN_ALLOW_MISSING_VENDOR_TREE=1`) |
 | Indexable pages carry canonical and social metadata | `tests/121-seo-guardrails.test.ts` |
-| `/library` stays noindex and unlinked | `tests/130-library-workbench.test.ts` |
+| `/library` redirects and stays outside discovery | `tests/121-seo-guardrails.test.ts` |
 | Route blog.yen.chat only in `proxy.ts` | `tests/159-blog-host-routing.test.ts` |
 | Do not edit `lib/release-notes/release-notes-data.ts` by hand | none (prose) |
 | Run `gitleaks` before pushing scripts, config or fixtures | none (prose) |
@@ -125,6 +124,6 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Scan the bundled shell CLI before release | `scripts/13-scan-artifact-fingerprints.sh`, proven by `tests/46-artifact-fingerprint-gate.test.ts` |
 | Isolate browser preview state | `yen-terminal/overlays/macos/Tests/Browser/WebPreviewRepresentableTests.swift` |
 | Use the shared web design system and verify layouts at desktop and mobile widths | `tests/55-web-ui-dom.test.tsx` checks shared shell behavior. Visual verification requires a browser. |
-| Regenerate public release notes and verify public comparison sources when they change | `scripts/gen-release-notes.ts` and `scripts/43-check-library-sources.ts` implement the checks. Invocation is manual. |
+| Regenerate public release notes when they change | `scripts/gen-release-notes.ts` generates the public data. Invocation is manual. |
 | Run the declared gates before commit with the bundled jq and the required Zig toolchain | `package.json` defines the lanes and `scripts/lib/zig-toolchain.sh` checks the compiler. Precommit invocation is manual. |
 | Verify the serving commit and run live checks after promotion | `tests/10-production.prod.ts` checks live routes. The ship workflow verifies the serving commit. |

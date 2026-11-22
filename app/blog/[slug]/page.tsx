@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { DocNavItem } from "@/components/docs/doc-nav";
-import { DocPageShell } from "@/components/docs/doc-page-shell";
-import { DocSection } from "@/components/docs/doc-section";
+import { PageShell } from "@/components/shared/page-shell";
 import {
 	BLOG_TITLE,
 	blogPostUrl,
@@ -66,81 +64,65 @@ export default async function BlogPostPage({ params }: BlogPostRouteProps) {
 	if (!post) notFound();
 	const { newer, older } = getAdjacentBlogPosts(post.slug);
 	const releaseWeek = getReleaseWeekForPost(post);
-	const navItems: DocNavItem[] = [
-		...getBlogHeadings(post),
-		{ id: "more-posts", title: "More posts" },
-	];
-
+	const headings = getBlogHeadings(post);
 	return (
-		<DocPageShell
-			siteOrigin={SITE_URL}
-			variant="guide"
-			navItems={navItems}
-			hero={
-				<header className="space-y-3">
-					<p className="eyebrow-text">
-						<Link href="/" className="link-brand">
-							{BLOG_TITLE}
-						</Link>
-						{" · "}
+		<PageShell siteOrigin={SITE_URL} mainClassName="ed-page">
+			<div className="ph-wrap ed-story">
+				<header className="ed-story-head">
+					<Link className="ed-label" href="/">
+						← {BLOG_TITLE}
+					</Link>
+					<h1>{post.title}</h1>
+					<p className="ed-deck">{post.subtitle}</p>
+					<p className="ed-byline">
+						8BIT <span> / </span>{" "}
 						<time dateTime={post.publishedAt}>
 							{formatBlogDate(post.publishedAt)}
 						</time>
 					</p>
-					<h1 className="text-heading-md pb-2 border-b border-border">
-						{post.title}
-					</h1>
-					{post.subtitle ? (
-						<p className="text-body text-text-muted">{post.subtitle}</p>
-					) : null}
 				</header>
-			}
-		>
-			{/* Post HTML is a repo-owned static file sanitized by scripts/47-import-substack-blog.ts. */}
-			{/* react-doctor-disable-next-line react/no-danger, react-doctor/dangerous-html-sink */}
-			<article
-				className="blog-prose"
-				dangerouslySetInnerHTML={{ __html: post.html }}
-			/>
-
-			<DocSection id="more-posts" title="More posts">
-				<ul className="space-y-3">
-					{newer ? (
-						<li className="text-body-sm">
-							<span className="text-text-muted">Newer: </span>
-							<Link href={`/${newer.slug}`} className="link-brand">
-								{newer.title}
+				<div className="ed-reading">
+					{headings.length > 0 && (
+						<aside>
+							<details className="ed-index">
+								<summary>In this field note</summary>
+								<nav aria-label="Article sections">
+									{headings.map((h) => (
+										<a key={h.id} href={`#${h.id}`}>
+											{h.title}
+										</a>
+									))}
+								</nav>
+							</details>
+						</aside>
+					)}
+					<div>
+						{/* The importer sanitizes this repository-owned article before publication. */}
+						{/* react-doctor-disable-next-line react/no-danger, react-doctor/dangerous-html-sink */}
+						<article
+							className="blog-prose"
+							dangerouslySetInnerHTML={{ __html: post.html }}
+						/>
+						<section className="ed-next" id="more-posts">
+							<h2>More field notes</h2>
+							{newer && (
+								<Link href={`/${newer.slug}`}>Newer · {newer.title} ↗</Link>
+							)}
+							{older && (
+								<Link href={`/${older.slug}`}>Older · {older.title} ↗</Link>
+							)}
+							<Link
+								href={
+									releaseWeek ? releaseWeekHref(releaseWeek) : RELEASES_PATH
+								}
+							>
+								{releaseWeek ? releaseWeek.label : "All release notes"} ↗
 							</Link>
-						</li>
-					) : null}
-					{older ? (
-						<li className="text-body-sm">
-							<span className="text-text-muted">Older: </span>
-							<Link href={`/${older.slug}`} className="link-brand">
-								{older.title}
-							</Link>
-						</li>
-					) : null}
-					<li className="text-body-sm">
-						<Link href="/" className="link-brand">
-							All posts
-						</Link>
-					</li>
-					<li className="text-body-sm">
-						<span className="text-text-muted">What shipped: </span>
-						{releaseWeek ? (
-							<Link href={releaseWeekHref(releaseWeek)} className="link-brand">
-								Release notes for the{" "}
-								{releaseWeek.label.replace(/^Week/, "week")}
-							</Link>
-						) : (
-							<Link href={RELEASES_PATH} className="link-brand">
-								All release notes
-							</Link>
-						)}
-					</li>
-				</ul>
-			</DocSection>
-		</DocPageShell>
+							<Link href="/">All posts ↗</Link>
+						</section>
+					</div>
+				</div>
+			</div>
+		</PageShell>
 	);
 }

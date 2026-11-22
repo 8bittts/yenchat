@@ -29,8 +29,7 @@
 		"test:coverage": "bun test --coverage",
 		"test:ide-integration": "bun test ./tests/*.integration.ts",
 		"test:policy": "bun test ./tests/75-theme-curation-gates.policy.ts ./tests/126-settings-hitch-docs.policy.ts ./tests/154-documentation-contracts.policy.ts",
-		"test:prod": "bun test ./tests/10-production.prod.ts",
-		"seo:source-check": "bun scripts/43-check-library-sources.ts"
+		"test:prod": "bun test ./tests/10-production.prod.ts"
 	},
 	"dependencies": {
 		"@vercel/analytics": "2.0.1",

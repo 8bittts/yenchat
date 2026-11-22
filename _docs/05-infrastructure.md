@@ -310,15 +310,15 @@ A contributor build with no credentials fails that last step by design, so `bun 
 
 ## Public Web Release Practice
 
-Web, SEO, PSEO and legal changes ship separately from `/update-yen`:
+Web, SEO and legal changes ship separately from `/update-yen`:
 
-1. Verify the edited route, `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`, `public/llms.txt` and the owning docs; run `bun run seo:source-check` for PSEO edits.
-2. Run `tests/121-seo-guardrails.test.ts` and the page-family tests (`tests/130`, `tests/131`).
+1. Verify the edited route, `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`, `public/llms.txt` and the owning docs.
+2. Run `tests/121-seo-guardrails.test.ts` and the blog archive and host-routing tests.
 3. Run the required gates in `AGENTS.md`.
 4. Render the touched routes at desktop and 390x844: one `h1`, skip link, `main#main-content`, named controls, visible legal links, no band after the footer, no horizontal overflow.
-5. Ship with a `[deploy]` subject, verify production by commit SHA and `READY`, then live-check representative URLs, `/sitemap.xml`, `/robots.txt` and `/library`.
+5. Ship with a `[deploy]` subject, verify production by commit SHA and `READY`, then live-check representative URLs, `/sitemap.xml`, `/robots.txt` and the retired route redirects.
 
-`.vercelignore` keeps local-only workspaces out of the upload; `/tunes` uses committed web assets and embeds only.
+`.vercelignore` keeps local-only workspaces out of the upload.
 
 ## Public Media Retention
 
@@ -326,4 +326,3 @@ Web, SEO, PSEO and legal changes ship separately from `/update-yen`:
 `public/mascot/` and `public/doc-images/` are kept as backup material; a sweep may report unreferenced media, but removal is the operator's call.
 Keep the `public/mascot/*.mp4` entry in `outputFileTracingExcludes` and `/mascot` in `HEADER_BYPASS_PREFIXES`; they keep that media out of the serverless bundle.
 `public/blog-media/` holds every blog.yen.chat image and video, has the same tracing exclude and bypass entry, and is rewritten only by `scripts/47-import-substack-blog.ts` ([10-gtm.md](10-gtm.md#blog-blogyenchat)).
-`public/yeni/yeni-canonical-front.png` is referenced as the `/yeni` social card.
