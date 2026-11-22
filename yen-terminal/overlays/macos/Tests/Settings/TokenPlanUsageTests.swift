@@ -63,6 +63,35 @@ struct TokenPlanUsageTests {
         }
     }
 
+    @MainActor @Test func repeatedTogglesReleaseTheMenuAndItsWork() async throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: home) }
+        let file = TokenTool.claude.root(home: home).appendingPathComponent("project/session.jsonl")
+        try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("""
+            {"type":"assistant","timestamp":"\(Date().ISO8601Format())","requestId":"r","message":{"id":"m","model":"claude-sonnet","usage":{"input_tokens":4,"output_tokens":1}}}
+
+            """.utf8).write(to: file)
+        let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+
+        // Each round is one switch on and off. Some rounds stop the menu while its first read runs.
+        for round in 0..<12 {
+            weak var released: TokenUsageMenu?
+            do {
+                let menu = TokenUsageMenu(index: index)
+                released = menu
+                if round.isMultiple(of: 2) { try await Task.sleep(for: .milliseconds(60)) }
+                menu.stop()
+            }
+            // The read and the watcher hold the menu weakly, so nothing keeps it after the switch goes off.
+            for _ in 0..<150 where released != nil { try await Task.sleep(for: .milliseconds(20)) }
+            #expect(released == nil, "round \(round)")
+        }
+        // The cache is still usable after the cancelled reads.
+        #expect(try index.read(tools: [.claude])[.claude] == 5)
+    }
+
     @MainActor @Test func resetForgetsTheDisplayChoices() throws {
         let suite = "token-display-reset-" + UUID().uuidString
         let defaults = try #require(UserDefaults(suiteName: suite))

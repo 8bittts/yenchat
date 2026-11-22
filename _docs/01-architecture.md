@@ -150,6 +150,8 @@ Codex records its limits only while it runs, so the index also reads the newest 
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
 The token menu depends on no other app: it reads no JPtheCat file, holds no credential and opens no network connection, so Cursor and Grok Bot plan pools are not shown.
 The retired connection source is listed in `scripts/lib/overlay-data/retired-paths.tsv`, which removes its copy from an existing build tree.
+A source that was readable and fails one read, such as a locked store, gets one more try after the 8-second debounce; a second failure waits for the next file change, so an absent tool costs no wakeups.
+macOS reports a file change when the writer closes the file, so a tool that kept its record file open would be read again only when it closed it or the panel opened; Claude Code appends and closes for each record.
 Disabling the token menu cancels requests.
 Terminal panes and the renderer do not subscribe to usage updates.
 

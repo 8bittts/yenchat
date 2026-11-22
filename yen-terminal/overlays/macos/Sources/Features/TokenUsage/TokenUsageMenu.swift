@@ -21,12 +21,17 @@ final class TokenUsageMenu: NSObject {
     private var active = true
     private var displayedDay = Calendar.current.startOfDay(for: Date())
 
-    override init() {
+    /// Reads the user's records into the app's cache folder.
+    nonisolated static var standardIndex: TokenUsageIndex {
         let fm = FileManager.default
         let cache = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.yenchat.yen")
             .appendingPathComponent("TokenUsage")
-        index = TokenUsageIndex(home: fm.homeDirectoryForCurrentUser, directory: cache)
+        return TokenUsageIndex(home: fm.homeDirectoryForCurrentUser, directory: cache)
+    }
+
+    init(index: TokenUsageIndex = TokenUsageMenu.standardIndex) {
+        self.index = index
         super.init()
         item.autosaveName = "YENTokenUsage"
         item.isVisible = true
@@ -192,6 +197,11 @@ final class TokenUsageMenu: NSObject {
             self.worker = nil
             if day == self.displayedDay {
                 var counts = self.snapshot.counts ?? [:]
+                // A source that was readable and failed this time gets one more try: a lock or a
+                // store in the middle of a write clears by itself, and no file event announces that.
+                // A second failure waits for the next change, so an absent source costs no wakeups.
+                let lost = tools.filter { counts[$0] != nil && result.counts[$0] == nil }
+                if !lost.isEmpty { self.schedule(lost) }
                 for tool in tools { counts[tool] = result.counts[tool] }
                 if tools.contains(.openCode) { self.snapshot.workspace = result.workspace }
                 self.snapshot.plans = result.plans
