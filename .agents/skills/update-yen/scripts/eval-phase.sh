@@ -153,15 +153,21 @@ case "$action" in
         ( eval "$command_to_run" ) >"$cmd_log" 2>&1 &
         cmd_pid=$!
 
+        # Poll for the command's end every 0.2 s and print a heartbeat once per
+        # interval. Sleeping the whole interval before looking again made every
+        # check last a multiple of it: a `test` that returned in 40 ms was
+        # recorded 20 s later, on each of the roughly 45 checks in a full run.
         if [ "$heartbeat_seconds" -gt 0 ]; then
+            next_heartbeat=$((start_epoch + heartbeat_seconds))
             while kill -0 "$cmd_pid" 2>/dev/null; do
-                sleep "$heartbeat_seconds"
-                if kill -0 "$cmd_pid" 2>/dev/null; then
-                    now_epoch="$(date +%s)"
+                sleep 0.2
+                now_epoch="$(date +%s)"
+                if [ "$now_epoch" -ge "$next_heartbeat" ] && kill -0 "$cmd_pid" 2>/dev/null; then
                     elapsed=$((now_epoch - start_epoch))
                     mins=$((elapsed / 60))
                     secs=$((elapsed % 60))
                     printf '[RUNNING] %s: %s (%dm%02ds)\n' "$check_id" "$description" "$mins" "$secs"
+                    next_heartbeat=$((now_epoch + heartbeat_seconds))
                 fi
             done
         fi

@@ -1428,11 +1428,12 @@ describe("eval-phase.sh fails closed", () => {
 	// unseen. Measured on 75 release runs: a check whose command is a single
 	// `test` took a median of 20 s, the heartbeat interval exactly.
 	function runTimed(script: string, args: string[], heartbeat?: string) {
-		const env: Record<string, string | undefined> = { ...process.env };
-		delete env.YEN_SKILL_EVAL_HEARTBEAT_SECONDS;
-		if (heartbeat !== undefined) {
-			env.YEN_SKILL_EVAL_HEARTBEAT_SECONDS = heartbeat;
-		}
+		const { YEN_SKILL_EVAL_HEARTBEAT_SECONDS: _inherited, ...baseEnv } =
+			process.env;
+		const env =
+			heartbeat === undefined
+				? baseEnv
+				: { ...baseEnv, YEN_SKILL_EVAL_HEARTBEAT_SECONDS: heartbeat };
 		const started = performance.now();
 		const result = spawnSync("bash", [script, ...args], {
 			encoding: "utf8",
