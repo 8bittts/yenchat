@@ -15,9 +15,9 @@ for binary in "$contents/MacOS/yen" "$contents/PlugIns/DockTilePlugin.plugin/Con
     arches=$(lipo -archs "$binary")
     [[ " $arches " == *" arm64 "* ]] || { echo "ERROR: Missing arm64 in $binary" >&2; exit 1; }
     for arch in $arches; do
-        actual=$(xcrun vtool -arch "$arch" -show-build "$binary" | awk '$1 == "minos" {print $2}')
-        if [[ "$actual" != "$YEN_MIN_MACOS" ]]; then
-            echo "ERROR: $binary ($arch) requires '$actual', expected $YEN_MIN_MACOS" >&2
+        actual=$(xcrun vtool -arch "$arch" -show-build "$binary" | awk '$1 == "platform" {platform = $2} $1 == "minos" {print platform, $2}')
+        if [[ "$actual" != "MACOS $YEN_MIN_MACOS" ]]; then
+            echo "ERROR: $binary ($arch) targets '$actual', expected MACOS $YEN_MIN_MACOS" >&2
             exit 1
         fi
     done

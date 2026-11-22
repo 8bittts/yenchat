@@ -194,7 +194,8 @@ A new Go binary built on `tcell` or Bubble Tea will need its own entry.
 - **Provenance.** Binary assets must match GitHub release-asset SHA-256 metadata, source tags resolve to immutable archives, and Ghostty commits need verified forge status. A local first-download digest is not provenance.
 - **pbxproj exception sets.** Branding renames `Ghostty*` paths in exception sets while files keep the `Ghostty` prefix; `apply-overlays.sh` restores them and needs new patterns when upstream adds files.
 - **Shell integration resources.** Bundled scripts read `YEN_RESOURCES_DIR` only and fail closed without it; never restore `GHOSTTY_RESOURCES_DIR`. Judge branding from the built `Contents/Resources/yen/shell-integration/`, not the gitignored source.
-- **Support floor.** While YEN supports macOS 13, stay on the Ghostty 1.3-compatible line.
+- **Ghostty updates.** The vendor check compares the pinned commit with upstream `main`.
+  The [YEN deployment target](05-infrastructure.md#requirements-and-toolchain) applies independently of Ghostty’s minimum.
 - **Exposure gaps.** Settings exposes generic title editing, not upstream's separate window/tab title actions. Command palette border actions do not switch scope.
 - **Theme discovery.** Runtime themes come from `~/.config/yen/themes` and bundled `Resources/yen/themes`; never restore migration from `~/.yen/themes`.
 - **Stale verifier.** When a check fails after a bump, confirm the checked symbol did not just move in a YEN refactor before blaming upstream.

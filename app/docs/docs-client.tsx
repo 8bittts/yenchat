@@ -68,9 +68,11 @@ function GetStartedSection() {
 			</TerminalPanel>
 			<p id="requirements" className="text-body">
 				Builds after 1.283 require macOS 27.0 or later on Apple silicon. YEN
-				1.283 supports macOS 13.0 and later. No YEN account is required.
-				Dictation needs Accessibility, Microphone, and Speech Recognition
-				permissions; see{" "}
+				1.283 supports macOS 13.0 and later. In 1.283, YEN’s actions in Apple
+				Shortcuts require macOS 14 or later. On macOS 13 through 15, dictation
+				uses the legacy recognizer and dictation translation is unavailable. No
+				YEN account is required. Dictation needs Accessibility, Microphone, and
+				Speech Recognition permissions; see{" "}
 				<a href="#voice-dictation" className="link-brand underline">
 					dictation setup
 				</a>

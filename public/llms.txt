@@ -127,7 +127,7 @@ Hold Option + Space, speak, release. Your words appear at the cursor.
 
 ## System Requirements
 - Builds after 1.283 require macOS 27.0 or later on Apple silicon
-- YEN 1.283 supports macOS 13.0 and later
+- YEN 1.283 supports macOS 13.0 and later. In 1.283, YEN’s actions in Apple Shortcuts require macOS 14 or later. SpeechAnalyzer and dictation translation require macOS 26 or later.
 - Accessibility, Microphone, and Speech Recognition permissions for dictation
 
 ## Pages

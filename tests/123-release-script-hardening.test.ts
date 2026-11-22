@@ -290,7 +290,7 @@ exit "$ISSUES"
 				const mismatch = verify();
 				expect(mismatch.status).toBe(1);
 				expect(mismatch.stderr).toContain(
-					"yen-pdfthumb (x86_64) requires '26.0'",
+					"yen-pdfthumb (x86_64) targets 'MACOS 26.0'",
 				);
 				rmSync(app);
 				expect(verify().status).not.toBe(0);

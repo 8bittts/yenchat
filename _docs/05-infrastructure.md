@@ -18,9 +18,8 @@ Web deploys follow Public Web Release Practice below and never need `/update-yen
 YEN requires macOS 27.0 or later on Apple silicon.
 The build uses the minimum in `yen-cli/lib/macos-version.sh` for Xcode targets, Launch Services, thumbnail helpers and the standalone CLI.
 Direct invocation of the app or a thumbnail helper checks the running OS against the compiled deployment target before entering main.
-The release gate checks the packaged app and its helpers before signing metadata and generating the Sparkle feed.
+Before signing metadata or generating the Sparkle feed, the release gate verifies the macOS platform and minimum version in every packaged YEN binary slice.
 Libghostty and bundled vendor tools can target earlier systems.
-The Ghostty 1.3-line floor that follows from this is in `_docs/04-security.md`.
 
 | Tool | Rule |
 |------|------|
