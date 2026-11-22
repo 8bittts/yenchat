@@ -24,7 +24,7 @@ describe("Native macOS HIG alignment guardrails", () => {
 		}
 	});
 
-	test("Settings uses grouped system forms and glass with a material fallback", () => {
+	test("Settings uses grouped system forms and glass", () => {
 		const panes = readOverlay(
 			"Sources/Features/Settings/SettingsStudioPanes.swift",
 		);
@@ -33,10 +33,7 @@ describe("Native macOS HIG alignment guardrails", () => {
 		);
 		expect(panes).toContain(".formStyle(.grouped)");
 		expect(panes).toContain(".scrollContentBackground(.hidden)");
-		// Liquid Glass is macOS 26+; the deployment target is older.
-		expect(preview).toContain("if #available(macOS 26.0, *)");
 		expect(preview).toContain(".glassEffect(.regular, in: shape)");
-		expect(preview).toContain(".background(.regularMaterial, in: shape)");
 		// The cursor blink honors Reduce Motion.
 		expect(preview).toContain("accessibilityReduceMotion");
 	});

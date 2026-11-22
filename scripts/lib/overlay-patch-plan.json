@@ -1198,5 +1198,35 @@
 			"--new-block",
 			"    // Foundation consumes single-dash defaults and leaves the original argv available to AppKit.\n    if argument.hasPrefix(\"-com.yenchat.yen.\"), argument != \"-com.yenchat.yen.\",\n       index + 1 < arguments.count, !arguments[index + 1].hasPrefix(\"-\"),\n       !arguments[index + 1].hasPrefix(\"+\") {"
 		]
+	},
+	"new-terminal-intent-modes": {
+		"target": "ghostty/macos/Sources/Features/App Intents/NewTerminalIntent.swift",
+		"arguments": [
+			"--label",
+			"new terminal intent modes",
+			"--mode",
+			"exact",
+			"--marker",
+			"// Launch the shortcut in the background on supported systems.",
+			"--old-block",
+			"@$PATCHES_DIR/new-terminal-intent-modes.old",
+			"--new-block",
+			"@$PATCHES_DIR/new-terminal-intent-modes.new"
+		]
+	},
+	"remove-scroll-pocket-observer": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceScrollView.swift",
+		"arguments": [
+			"--label",
+			"remove scroll pocket observer",
+			"--mode",
+			"exact",
+			"--marker",
+			"// macOS 27 handles scroll pocket geometry without a frame observer.",
+			"--old-block",
+			"@$PATCHES_DIR/remove-scroll-pocket-observer.old",
+			"--new-block",
+			"@$PATCHES_DIR/remove-scroll-pocket-observer.new"
+		]
 	}
 }

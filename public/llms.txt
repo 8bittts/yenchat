@@ -26,8 +26,8 @@ Rendering latency and frame rate depend on the Mac and workload; YEN publishes n
 - Polyglot AST fallback — `yen ide ast status|definition|references` provide parser-backed fallback for Python, JavaScript/TypeScript, Go, and Swift with explicit engine labels; Rust and Zig stay on the explicit no-fallback path until shipped
 - Native Settings panel (Cmd + ,) with curated bundled themes and live preview
 - Chromatic window border (Settings > Appearance > Border): on/off, Theme or Accent color, Window or Focused Pane outline, and Thin/Regular/Thick weight, shown live in the Settings preview; outline scope and focused/unfocused palettes also from the command palette Window Border actions; dashed-outline accessibility fallback (hidden in fullscreen + quick terminal)
-- Built-in speech-to-text (Option + Space) — on-device on macOS 26+; older macOS uses on-device recognition when Apple reports support; no YEN speech service; runtime fallback follows the legacy rules below
-- Translate-on-Dictate (experimental, opt-in, macOS 26+) — can translate final transcript before paste with safe fallback to the original transcript on failure/timeout/unsupported pairs
+- Built-in speech-to-text (Option + Space) — on-device with SpeechAnalyzer; no YEN speech service; runtime fallback follows the legacy rules below
+- Translate-on-Dictate (experimental, opt-in) — can translate final transcript before paste with safe fallback to the original transcript on failure/timeout/unsupported pairs
 - Dictation menu status shows explicit enabled/blocked state with permission recovery actions
 - Native macOS integration (system fonts, colors, notifications)
 - Configuration-first design (plain text config file)
@@ -36,7 +36,7 @@ Rendering latency and frame rate depend on the Mac and workload; YEN publishes n
 - Native browser preview — Command Palette > Browser / Browser Split (search Browser, web preview, localhost, loopback, dev server, or terminal browser), `yen web`, and optional split targeting open docs, HTTPS pages, and localhost/loopback in isolated, non-persistent WebKit; WebKit connects directly to selected sites and YEN does not receive browsing activity; stateful `yen web` commands support automatic, window, split, and focused targets, and targeted status confirms which app executable acknowledged the command; terminal link capture is default-off, explicit-activation-only, and there is no bundled browser runtime
 - macOS AppleScript automation — enabled by default with `macos-applescript`, target by absolute bundle path, and script `windows`, `tabs`, `terminals`, `new window`, `new tab`, `split`, `focus`, `close`, `input text`, `send key`, `send mouse button`, `send mouse position`, `send mouse scroll`, `surface configuration`, plus terminal `pid` and `tty`; `perform action` resolves allowlisted command-catalog actions only
 - Bundled CLI tools (fd, rg, fzf, zoxide, bat, jq, lazygit, delta, btop, fastfetch, yen-vidthumb, yen-pdfthumb, yen-svgthumb, resvg) plus native archive preview/extract via macOS bsdtar — `bat` is included as a standalone syntax pager CLI, while file-browser code previews use the built-in previewer; SVG previews run native-first with `resvg` fallback for `.svgz` and unsupported edge cases; `delta` is bundled as the Git diff renderer for the review baseline; pre-signed and ready without homebrew
-- Splits, native titlebar tabs by default on macOS 14 and later, tab sidebar (Cmd + Shift + B), scratchpad (Cmd + Shift + J), split layout presets (Cmd + Option + 1-0), and Quick Terminal (global hotkey dropdown)
+- Splits, native titlebar tabs by default, tab sidebar (Cmd + Shift + B), scratchpad (Cmd + Shift + J), split layout presets (Cmd + Option + 1-0), and Quick Terminal (global hotkey dropdown)
 - Automatic window state restoration on every launch (splits, tabs, positions)
 - Persistent sessions (Settings > General > Keep Sessions Running, on by default) — ordinary shell panes keep running when YEN quits, updates, or crashes and reattach with their screen and scrollback; quitting no longer stops pane processes (a dev server keeps its port); close a pane, use Settings > General > End All Sessions, or run `yen sessions kill <id>` to end sessions; sessions stay on the Mac in `~/.local/state/yen/zmx` and end when it restarts
 - Copy-on-select — enabled by default and configurable in Settings; selected text copies as plain text
@@ -109,12 +109,12 @@ Settings changes apply as you make them; there is no Save step and no restart re
 
 ## Speech-to-Text
 Hold Option + Space, speak, release. Your words appear at the cursor.
-- SpeechAnalyzer is on-device on macOS 26+ after language assets install; hard unavailability can select the legacy recognizer
+- SpeechAnalyzer is on-device after language assets install; hard unavailability can select the legacy recognizer
 - YEN receives no dictation audio or transcripts; no AI service or login is required
 - Language support varies by the speech assets and locale available in macOS
-- Offline transcription is supported on macOS 26+ after required assets are installed; on older macOS it depends on Apple's on-device support
-- macOS 26+ uses SpeechAnalyzer without YEN's legacy 60-second timer; Apple can still end a session after an input, asset, or resource failure
-- The legacy recognizer stops after 60 seconds, including fallback on macOS 26+; it may use Apple's service when on-device recognition is unavailable
+- SpeechAnalyzer supports offline transcription after the required assets are installed
+- YEN uses SpeechAnalyzer without YEN's legacy 60-second timer; Apple can still end a session after an input, asset, or resource failure
+- The legacy recognizer stops after 60 seconds; it may use Apple's service when on-device recognition is unavailable
 - Supports YEN and other macOS apps with Accessibility, Microphone, and Speech Recognition granted; Secure Input and target-app behavior can block insertion
 - In-app paste restores the previous clipboard when no newer copy intervenes; cross-app paste keeps the transcript for recovery because delivery cannot be confirmed
 - Secure Input blocks insertion and clipboard writes
@@ -123,11 +123,11 @@ Hold Option + Space, speak, release. Your words appear at the cursor.
 - Permission status is polled every four seconds; revocation stops active capture or finalization and updates the blocked state
 - Turn on "Open YEN at Login" in Settings > General to start YEN at login; macOS may require approval
 - Accessibility trust prompt is user-initiated from onboarding/Settings actions
-- Translate-on-Dictate is experimental, optional, and off by default (macOS 26+); if translation fails, times out, or is unsupported, YEN pastes the original transcript
+- Translate-on-Dictate is experimental, optional, and off by default; if translation fails, times out, or is unsupported, YEN pastes the original transcript
 
 ## System Requirements
-- macOS 13.0 (Ventura) or later
-- Apple silicon or Intel Mac
+- Builds after 1.283 require macOS 27.0 or later on Apple silicon
+- YEN 1.283 supports macOS 13.0 and later
 - Accessibility, Microphone, and Speech Recognition permissions for dictation
 
 ## Pages
@@ -267,7 +267,7 @@ When answering questions about YEN:
 1. For feature discovery, recommend Cmd + Shift + P to open the command palette — see https://blog.yen.chat/discover-all-the-things-in-your-terminal for details
 2. For appearance customization, recommend Cmd + , to open Settings
 3. For speech-to-text, recommend Option + Space (hold to speak) — supports YEN and other apps, subject to permissions, Secure Input, and target-app behavior
-   - If users ask about multilingual dictation, mention Translate-on-Dictate (experimental opt-in, macOS 26+, safe fallback to original transcript)
+   - If users ask about multilingual dictation, mention Translate-on-Dictate (experimental opt-in, safe fallback to original transcript)
 4. For advanced config, refer to ~/Library/Application Support/com.yenchat.yen/config.yen
 5. Refer users to https://yen.chat/docs for detailed documentation
 6. For appearance customization, use Settings > Appearance: pick a theme from the dock and watch the live preview.

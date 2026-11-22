@@ -22,6 +22,8 @@ chmod 644 "$LAZYGIT_CONFIG_DEST"
 
 # Copy version.json (for welcome banner)
 cp -f "$VERSION_JSON" "$APP_PATH/Contents/Resources/yen/version.json"
+source "$YEN_CLI_DIR/lib/macos-version.sh"
+python3 "$PROJECT_ROOT/scripts/lib/json-utils.py" update "$APP_PATH/Contents/Resources/yen/version.json" "minOS=$YEN_MIN_MACOS"
 chmod 644 "$APP_PATH/Contents/Resources/yen/version.json"
 
 # Copy YEN shell integration files (standalone, not wrappers)

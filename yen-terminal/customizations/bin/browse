@@ -3,6 +3,9 @@
 # Wrapper that hides implementation details from terminal output
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../lib/macos-version.sh" || exit 1
+require_yen_macos || exit 1
+
 RESOURCES_DIR="$(dirname "$SCRIPT_DIR")"
 
 if [ ! -x "$SCRIPT_DIR/yazi" ]; then

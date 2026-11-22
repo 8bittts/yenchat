@@ -16,12 +16,11 @@ Overlay-owned utility windows (Settings, About, Onboarding, PR Review, Merge Con
 
 Intentional deltas, not templates for new windows:
 
-- Standard terminal windows default to native titlebar tabs on macOS 14 and later.
+- Standard terminal windows default to native titlebar tabs.
   Horizontal tabs align to the right and expand to the left.
   They prefer 240 points each and compress at the window edge, where AppKit manages overflow.
   Pane icons lead the title when AppKit exposes its title stack and yield space to the title in narrow tabs.
   Shortcuts and zoom controls sit at the trailing edge.
-  macOS 13 keeps the transparent titlebar default for native tab restoration.
   An explicit `macos-titlebar-style` overrides either default.
 - Quick Terminal is a non-activating `NSPanel` with its own space and fullscreen policy.
 - Tab Sidebar and the dictation overlay are borderless non-activating panels so the terminal keeps focus; Onboarding floats during first run; Configuration Errors uses an elevated level.
@@ -50,11 +49,11 @@ The rounded monitor icon pulses while About is active and shows a steady glow wi
 **Shell.** `Cmd + ,` toggles the window and is reserved: config-synced shortcuts never claim it, and `AppDelegate` keeps it in the direct key-equivalent index because local event monitors do not see menu-tracking loops.
 The window is a live terminal preview (`SettingsStudioPreview`) that draws the current theme, font, cursor, padding, opacity, background image and border.
 Two Liquid Glass panels float above it: an inspector on the right with a five-segment pane switcher (Appearance, General, Notifications, Dictation, Shortcuts), and a theme dock bottom-left that shows every catalog theme as a swatch and appears only on Appearance.
-Glass sits on the control layer only, as the HIG asks; the forms inside the inspector are standard grouped `Form`s with a hidden scroll background, and their top margin is trimmed to `SettingsSpacing.formTopMargin` on macOS 14 and newer.
+Glass sits on the control layer only, as the HIG asks; the forms inside the inspector are standard grouped `Form`s with a hidden scroll background, and their top margin is trimmed to `SettingsSpacing.formTopMargin`.
 Every spacing and text style in the Settings views comes from `SettingsSpacing` and `SettingsTypography`; the inspector header uses `contentInset`, the grouped form's own section inset, so the header lines up with the sections.
 [CRITICAL] A switcher that spans a row uses `SettingsSegmentedControl` (an `NSSegmentedControl` with `.fillEqually` that takes the offered width), never a segmented SwiftUI `Picker`. On macOS that `Picker` keeps its natural width: it never stretches and never shrinks, and the five shortcut groups measured 395 pt, which pushed the Shortcuts pane past the inspector's right edge.
 The inspector is 380 pt wide so a permission row fits its name, status and button on one line.
-`glassEffect` needs macOS 26, so `settingsGlassPanel()` falls back to `.regularMaterial` with a hairline on older systems.
+`settingsGlassPanel()` uses `glassEffect`.
 The preview cursor blinks through a `TimelineView` that stops under Reduce Motion, and its border uses the runtime `WindowBorderRenderingPolicy.strokeModel`, so weight and corner match a terminal window.
 The preview border sits `SettingsSpacing.previewBorderInset` inside the window edge, applied as padding after the stroke rather than as a larger shape inset, which would also shrink the corner radius; at the window edge the Settings window's own rounded corners clipped the outline.
 The preview's ANSI accents come from `palette = 1` through `6` in the theme file, parsed once per path by `SettingsStudioPalette`.
@@ -323,7 +322,7 @@ Screenshot, disabled-feature, and layout toasts share integral window-ID routing
 Only screenshots allow a window-object target or a default message; other toast sources require an explicit target and nonempty text.
 
 **Screenshot** (`Cmd + Shift + S`).
-Captures only YEN's window at native pixel size: ScreenCaptureKit for the current process on macOS 14.4+, own-window Core Graphics on macOS 13 to 14.3 or on failure, so no Screen Recording grant is needed.
+ScreenCaptureKit captures only YEN’s own window at native pixel size without a Screen Recording grant.
 Encoding runs off the main thread, files are allocated exclusively so concurrent captures never overwrite, and the toast in that window reports the real outcome (saved, copied, partial, failed).
 
 **Background image scope** (Settings > Appearance > Image Fills, shown while an image is set).

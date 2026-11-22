@@ -543,3 +543,5 @@ apply_overlay_patch ghosttypackage-sendable-retrofit-removal
 apply_overlay_patch pane-header-focus
 apply_overlay_patch pane-header-grab-handle
 apply_overlay_patch pane-tab-icons
+apply_overlay_patch new-terminal-intent-modes
+apply_overlay_patch remove-scroll-pocket-observer

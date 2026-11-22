@@ -20,3 +20,5 @@ ghostty/src/cli/help.zig
 ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsTahoeTerminalWindow.swift
 ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsVenturaTerminalWindow.swift
 ghostty/macos/Sources/YEN/Surface View/SurfaceDragSource.swift
+ghostty/macos/Sources/Features/App Intents/NewTerminalIntent.swift
+ghostty/macos/Sources/YEN/Surface View/SurfaceScrollView.swift

@@ -120,9 +120,7 @@ enum ScreenshotOutputWriter {
 ///
 /// Saves to the user's configured screenshot location with their naming
 /// preferences (reads com.apple.screencapture defaults). Also copies PNG
-/// to clipboard. Uses permission-free current-process ScreenCaptureKit on
-/// macOS 14.4 and newer, with the legacy own-window Core Graphics capture API
-/// retained for older supported releases and as a capture failure fallback.
+/// to clipboard. Uses current-process ScreenCaptureKit without a Screen Recording grant.
 extension AppDelegate {
     @IBAction func takeScreenshot(_ sender: Any?) {
         let targetWindow = NSApp.keyWindow ?? NSApp.mainWindow
@@ -144,7 +142,7 @@ extension AppDelegate {
 
     @MainActor
     private func captureAndSaveScreenshot(of window: NSWindow) async {
-        guard let image = await Self.captureImage(windowID: CGWindowID(window.windowNumber)) else {
+        guard let image = await Self.captureCurrentProcessImage(of: window) else {
             postScreenshotStatus(
                 targetWindow: window,
                 fileSaved: false,
@@ -213,29 +211,20 @@ extension AppDelegate {
         let failureReason: String?
     }
 
-    private static func captureImage(windowID: CGWindowID) async -> CGImage? {
-        if #available(macOS 14.4, *),
-           let image = await captureCurrentProcessImage(windowID: windowID)
-        {
-            return image
-        }
-
-        return captureLegacyOwnWindowImage(windowID: windowID)
-    }
-
-    @available(macOS 14.4, *)
-    static func captureCurrentProcessImage(windowID: CGWindowID) async -> CGImage? {
+    static func captureCurrentProcessImage(of target: NSWindow) async -> CGImage? {
         do {
             let content = try await SCShareableContent.currentProcess
-            guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
+            guard let window = content.windows.first(where: { $0.windowID == CGWindowID(target.windowNumber) }) else {
                 return nil
             }
             let filter = SCContentFilter(desktopIndependentWindow: window)
             let configuration = SCStreamConfiguration()
+            // ScreenCaptureKit can list a new window before publishing its frame.
+            let useAppKitGeometry = filter.contentRect.isEmpty
             let dimensions = ScreenshotCaptureConfiguration.apply(
                 to: configuration,
-                contentRect: filter.contentRect,
-                pointPixelScale: CGFloat(filter.pointPixelScale)
+                contentRect: useAppKitGeometry ? target.frame : filter.contentRect,
+                pointPixelScale: useAppKitGeometry ? target.backingScaleFactor : CGFloat(filter.pointPixelScale)
             )
             let image = try await SCScreenshotManager.captureImage(
                 contentFilter: filter,
@@ -248,15 +237,6 @@ extension AppDelegate {
         } catch {
             return nil
         }
-    }
-
-    private static func captureLegacyOwnWindowImage(windowID: CGWindowID) -> CGImage? {
-        return CGWindowListCreateImage(
-            .null,
-            .optionIncludingWindow,
-            windowID,
-            [.boundsIgnoreFraming]
-        )
     }
 
     private static func encodeAndSaveScreenshot(

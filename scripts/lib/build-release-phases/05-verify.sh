@@ -10,6 +10,8 @@ if [ ! -d "$BUILT_APP" ]; then
     exit 1
 fi
 
+bash "$REPO_ROOT/scripts/lib/verify-macos-floor.sh" "$BUILT_APP" || exit 1
+
 # Enforce built app vendor inventory/signing expectations (post-build artifact gate).
 if [ -f "$REPO_ROOT/scripts/12-verify-vendor-audit.sh" ]; then
     bash "$REPO_ROOT/scripts/12-verify-vendor-audit.sh" --app "$BUILT_APP" || {

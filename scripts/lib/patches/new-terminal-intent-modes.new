@@ -1,0 +1,2 @@
+    // Launch the shortcut in the background on supported systems.
+    static var supportedModes: IntentModes = .background

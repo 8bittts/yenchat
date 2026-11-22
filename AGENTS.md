@@ -19,8 +19,8 @@ YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the deci
 - YEN is open source under the MIT License; `LICENSE` also carries Ghostty's MIT notice, which must stay because the overlays carry Ghostty-derived code.
 - The desktop app requires no YEN account and sends no terminal content or desktop usage telemetry to YEN.
 - YEN does not operate a speech-recognition service.
-- Dictation normally uses Apple's on-device `SpeechAnalyzer` on macOS 26 or newer.
-- Older systems and runtime fallback use Apple's legacy recognizer, which can use Apple's service when on-device recognition is unavailable.
+- Dictation normally uses Apple's on-device `SpeechAnalyzer`.
+- Runtime fallback uses Apple's legacy recognizer, which can use Apple's service when on-device recognition is unavailable.
 - `/download` redirects to the current DMG and records nothing; the site measures only through Vercel Web Analytics ([_docs/08-growth.md](_docs/08-growth.md)).
 
 ## Public Repository

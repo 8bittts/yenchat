@@ -14,7 +14,9 @@ chmod 644 "$RELEASE_DIR/${DMG_FILENAME}.sha256"
 # Update version.json with DMG sha256 and GitHub Release asset URL
 RELEASE_TAG="$(github_release_tag "$VERSION")"
 RELEASE_DMG_URL="$(github_release_asset_url "$VERSION" "$DMG_FILENAME")"
+BUILT_MIN_OS=$(plutil -extract LSMinimumSystemVersion raw "$BUILD_PATH/Contents/Info.plist")
 python3 "$REPO_ROOT/scripts/lib/json-utils.py" update "$VERSION_JSON" \
+    "minOS=$BUILT_MIN_OS" \
     "sha256=$DMG_SHA256" \
     "url=$RELEASE_DMG_URL"
 chmod 644 "$VERSION_JSON"

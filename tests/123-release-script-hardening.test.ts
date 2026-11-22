@@ -123,17 +123,173 @@ exit "$ISSUES"
 		);
 	});
 
+	test("standalone YEN commands enforce the same macOS minimum outside Finder", () => {
+		const root = mkdtempSync(join(tmpdir(), "yen-host-version-"));
+		const env = { ...process.env, PATH: `${root}:${process.env.PATH}` };
+		const cli = join(repoRoot, "yen-cli/bin/yen");
+		try {
+			writeFileSync(
+				join(root, "sw_vers"),
+				'#!/bin/sh\nprintf "%s\\n" "$YEN_TEST_OS"\n',
+				{ mode: 0o755 },
+			);
+			for (const version of ["13.6.9", "26.9.9", "", "unknown"]) {
+				for (const command of [
+					cli,
+					...["browse", "yen-quicklook", "yen-yazi-edit"].map((name) =>
+						join(repoRoot, "yen-terminal/customizations/bin", name),
+					),
+				]) {
+					const result = spawnSync(command, ["version"], {
+						env: { ...env, YEN_TEST_OS: version },
+						encoding: "utf8",
+					});
+					expect(result.status).toBe(1);
+					expect(result.stderr).toContain("YEN requires macOS 27.0 or later");
+				}
+			}
+			for (const version of ["27.0", "27.2.1", "28.0"]) {
+				const result = spawnSync(cli, ["version"], {
+					env: { ...env, YEN_TEST_OS: version },
+					encoding: "utf8",
+				});
+				expect(result.status, result.stderr).toBe(0);
+				expect(result.stdout).toContain("YEN");
+			}
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	test.skipIf(process.platform !== "darwin")(
+		"native direct launch refuses a deployment target newer than the host",
+		() => {
+			const root = mkdtempSync(join(tmpdir(), "yen-native-minimum-"));
+			try {
+				const host = spawnSync("sw_vers", ["-productVersion"], {
+					encoding: "utf8",
+				});
+				expect(host.status).toBe(0);
+				const nextMajor = Number.parseInt(host.stdout, 10) + 1;
+				const probe = join(root, "probe");
+				const guard = join(
+					repoRoot,
+					"yen-terminal/overlays/macos/Sources/App/YENMinimumSystemVersion.m",
+				);
+				const target = `${process.arch === "arm64" ? "arm64" : "x86_64"}-apple-macos${nextMajor}.0`;
+				const build = spawnSync(
+					"xcrun",
+					[
+						"clang",
+						"-target",
+						target,
+						"-framework",
+						"Foundation",
+						guard,
+						"-x",
+						"c",
+						"-",
+						"-o",
+						probe,
+					],
+					{
+						encoding: "utf8",
+						input: "int main(void) { return 42; }",
+					},
+				);
+				expect(build.status, build.stderr).toBe(0);
+				const launch = spawnSync(probe, { encoding: "utf8" });
+				expect(launch.status).toBe(1);
+				expect(launch.stderr).toContain(
+					`YEN requires macOS ${nextMajor}.0 or later`,
+				);
+			} finally {
+				rmSync(root, { recursive: true, force: true });
+			}
+		},
+	);
+
+	test.skipIf(process.platform !== "darwin")(
+		"release gate inspects the minimum in each packaged YEN binary",
+		() => {
+			const root = mkdtempSync(join(tmpdir(), "yen-artifact-floor-"));
+			const contents = join(root, "Contents");
+			const dock = join(contents, "PlugIns/DockTilePlugin.plugin/Contents");
+			const app = join(contents, "MacOS/yen");
+			const helpers = [
+				join(dock, "MacOS/DockTilePlugin"),
+				...["pdf", "svg", "vid"].map((name) =>
+					join(contents, "Resources/bin", `yen-${name}thumb`),
+				),
+			];
+			const verify = () =>
+				spawnSync(
+					"bash",
+					[join(repoRoot, "scripts/lib/verify-macos-floor.sh"), root],
+					{ encoding: "utf8" },
+				);
+			try {
+				for (const dir of [
+					join(contents, "MacOS"),
+					join(contents, "Resources/bin"),
+					join(dock, "MacOS"),
+				])
+					mkdirSync(dir, { recursive: true });
+				for (const dir of [contents, dock]) {
+					writeFileSync(
+						join(dir, "Info.plist"),
+						'<plist version="1.0"><dict><key>LSMinimumSystemVersion</key><string>27.0</string></dict></plist>',
+					);
+				}
+				const compile = (path: string, target: string) => {
+					const result = spawnSync(
+						"xcrun",
+						["clang", "-target", target, "-x", "c", "-", "-o", path],
+						{ input: "int main(void) { return 0; }", encoding: "utf8" },
+					);
+					expect(result.status, result.stderr).toBe(0);
+				};
+				compile(app, "arm64-apple-macos27.0");
+				for (const path of helpers) copyFileSync(app, path);
+				const valid = verify();
+				expect(valid.status, valid.stderr).toBe(0);
+				const otherSlice = join(root, "old");
+				compile(otherSlice, "x86_64-apple-macos26.0");
+				const mixed = spawnSync(
+					"lipo",
+					[
+						"-create",
+						app,
+						otherSlice,
+						"-output",
+						join(contents, "Resources/bin/yen-pdfthumb"),
+					],
+					{ encoding: "utf8" },
+				);
+				expect(mixed.status, mixed.stderr).toBe(0);
+				const mismatch = verify();
+				expect(mismatch.status).toBe(1);
+				expect(mismatch.stderr).toContain(
+					"yen-pdfthumb (x86_64) requires '26.0'",
+				);
+				rmSync(app);
+				expect(verify().status).not.toBe(0);
+			} finally {
+				rmSync(root, { recursive: true, force: true });
+			}
+		},
+	);
+
 	test("appcast generation validates minOS before writing Sparkle metadata", () => {
 		const script = readFileSync(generateAppcastPath, "utf8");
 		const validationIndex = script.indexOf(
-			'if ! is_valid_min_os_version "$MIN_OS"; then',
+			'if [ "$MIN_OS" != "$YEN_MIN_MACOS" ]; then',
 		);
 		const appcastWriteIndex = script.indexOf(
 			"<sparkle:minimumSystemVersion>$MIN_OS</sparkle:minimumSystemVersion>",
 		);
 
-		expect(script).toContain("is_valid_min_os_version()");
-		expect(script).toContain("expected macOS 13.0 or newer dotted version");
+		expect(script).toContain('verify-macos-floor.sh" "$MOUNT_POINT/YEN.app"');
 		expect(validationIndex).toBeGreaterThan(0);
 		expect(appcastWriteIndex).toBeGreaterThan(0);
 		expect(validationIndex).toBeLessThan(appcastWriteIndex);

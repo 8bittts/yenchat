@@ -845,7 +845,9 @@ test("shell resource phase allows absent optional upstream integrations", () =>
 			"shell-integration/yen-welcome.sh",
 		])
 			copy(root, custom + file);
-		write(join(root, "version.json"), "{}\n");
+		copy(root, "yen-cli/lib/macos-version.sh");
+		copy(root, "scripts/lib/json-utils.py");
+		write(join(root, "version.json"), '{"minOS":"13.0"}\n');
 		write(
 			join(
 				root,
@@ -855,7 +857,7 @@ test("shell resource phase allows absent optional upstream integrations", () =>
 		);
 		const result = shell(
 			root,
-			'set -e; APP_PATH="$1/YEN.app"; CUSTOMIZATIONS_DIR="$1/yen-terminal/customizations"; VERSION_JSON="$1/version.json"; source "$2"; echo shell-phase-complete',
+			'set -e; PROJECT_ROOT="$1"; YEN_CLI_DIR="$1/yen-cli"; APP_PATH="$1/YEN.app"; CUSTOMIZATIONS_DIR="$1/yen-terminal/customizations"; VERSION_JSON="$1/version.json"; source "$2"; echo shell-phase-complete',
 			[
 				root,
 				join(
@@ -866,6 +868,17 @@ test("shell resource phase allows absent optional upstream integrations", () =>
 		);
 		expect(result.status, result.stdout + result.stderr).toBe(0);
 		expect(result.stdout).toContain("shell-phase-complete");
+		expect(
+			JSON.parse(
+				readFileSync(
+					join(root, "YEN.app/Contents/Resources/yen/version.json"),
+					"utf8",
+				),
+			).minOS,
+		).toBe("27.0");
+		expect(
+			JSON.parse(readFileSync(join(root, "version.json"), "utf8")).minOS,
+		).toBe("13.0");
 		expect(
 			existsSync(
 				join(

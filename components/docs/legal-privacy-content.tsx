@@ -49,12 +49,11 @@ export function LegalPrivacyContent() {
 					<p className="text-body-sm text-text-muted mb-4">
 						Voice dictation uses Apple&apos;s macOS Speech frameworks. YEN does
 						not receive audio or transcripts and does not run a YEN speech
-						service. On macOS 26 or newer, YEN uses Apple&apos;s on-device
-						SpeechAnalyzer when available. Older versions and runtime fallback
-						use the legacy recognizer, which requests on-device recognition when
-						Apple reports support; otherwise Apple&apos;s Speech framework can
-						use Apple&apos;s network service. Apple controls its processing and
-						speech assets.
+						service. YEN uses Apple&apos;s on-device SpeechAnalyzer when
+						available. Its fallback uses the legacy recognizer, which requests
+						on-device recognition when Apple reports support; otherwise
+						Apple&apos;s Speech framework can use Apple&apos;s network service.
+						Apple controls its processing and speech assets.
 					</p>
 				</div>
 

@@ -60,6 +60,8 @@ if [ ! -f "$ENTITLEMENTS_PATH" ]; then
     exit 1
 fi
 
+bash "$REPO_ROOT/scripts/lib/verify-macos-floor.sh" "$BUILD_PATH" || exit 1
+
 # Quick verification of critical components
 if [ ! -x "$BUILD_PATH/Contents/Resources/bin/yen" ]; then
     echo "  ERROR: Build verification failed (CLI missing)"

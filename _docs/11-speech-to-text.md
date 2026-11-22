@@ -5,12 +5,11 @@ Code is in `yen-terminal/overlays/macos/Sources/Features/Dictation/`; `Dictation
 
 ## Platform Policy
 
-| macOS | Recognizer | Session limit |
+| Recognizer selection | Recognizer | Session limit |
 |-------|------------|---------------|
-| 26+ (recommended) | `SpeechAnalyzer` with `DictationTranscriber`, on-device after language assets install | None from YEN; Apple can still end a session on an input, asset or resource error |
-| 13–25 (supported) | `SFSpeechRecognizer`, on-device when Apple reports support, otherwise Apple's service | YEN stops at 60 seconds and inserts what it has; release and re-press to continue |
+| Default | `SpeechAnalyzer` with `DictationTranscriber`, on-device after language assets install | None from YEN; Apple can still end a session on an input, asset or resource error |
+| Runtime fallback | `SFSpeechRecognizer`, on-device when Apple reports support, otherwise Apple's service | YEN stops at 60 seconds and inserts what it has; release and re-press to continue |
 
-The pre-26 path is a supported runtime path, not cleanup debt.
 If `SpeechAnalyzer` reports hard unavailability at runtime, YEN falls back to the legacy recognizer, including its 60-second limit and on-device availability rules.
 YEN runs no speech service and never receives audio or transcripts.
 
@@ -45,7 +44,7 @@ There is no eager init-time warm-up; it front-loads launch latency and shows "li
 It refreshes its locale when `Locale.current` changed since the last session and on `NSLocale.currentLocaleDidChangeNotification`, deferring while a session is active.
 
 **Measured, left alone.** The converter uses `primeMethod = .none`, and a stop-path measurement found no frames after the first pass, so there is no drain loop.
-The macOS 27 SDK includes `AnalyzerInputConverter` and `CaptureInputSequenceProvider`, but YEN still uses its existing converter and capture pipeline to support older systems.
+The macOS 27 SDK includes `AnalyzerInputConverter` and `CaptureInputSequenceProvider`, but YEN still uses its existing converter and capture pipeline.
 
 ## Insertion
 
@@ -95,7 +94,7 @@ A hotkey press never raises a permission prompt; it posts a non-modal recovery n
 The permission monitor ticks every 4s (0.6s tolerance); a revocation during capture or finalization tears the session down, while one at idle only updates the blocked state without dropping an insertion still in flight.
 Deep links prefer `Privacy_Accessibility`, `Privacy_Microphone` and `Privacy_SpeechRecognition`, with fallbacks for older releases.
 
-## Translate-on-Dictate (macOS 26+)
+## Translate-on-Dictate
 
 Off by default; Apple's `Translation` framework runs on the final transcript.
 The source language is the recognizer locale for that session, everywhere: Settings target options, asset preparation and stop-time translation never consult a second detector or `Locale.current`.
@@ -121,7 +120,7 @@ Left empty for the row's `.onAppear` to fill, the Microphone row never renders.
 - **Assets.** Resolve the locale with `DictationTranscriber.supportedLocale(equivalentTo:)`, request assets through `AssetInventory`, and start capture only when they are ready; setup state goes to status surfaces, never transcript text.
 - **No voice activity detection.** Hold-to-talk stays the default for an explicit privacy boundary; `SpeechDetector` would need an opt-in setting, debounce, and false-trigger measurement first.
 - **Audio tap API.** `installTap(onBus:bufferSize:format:block:)` is deprecated in macOS 27. The macOS 27 SDK includes `installAudioTap`, but `DictationAudioEngineTap` still uses the legacy API for both recognizers.
-  Any migration must retain the older-system fallback, single-tap ownership, and live-matrix verification; active work belongs in `_docs/todos.md`.
+  Any migration must retain the runtime recognizer fallback, single-tap ownership, and live-matrix verification; active work belongs in `_docs/todos.md`.
 
 ## Verification
 
@@ -135,7 +134,7 @@ Run it from Terminal.app or iTerm2 with `/Applications/YEN.app` quit, because th
 |---------|-----|
 | Option + Space does nothing | Check the blocked state in the menu bar item, grant Accessibility, and look for a conflict in Settings > Shortcuts |
 | No microphone or speech prompt, or YEN missing from the list | Use Grant to trigger the native prompt; in a release build verify entitlements with `codesign -d --entitlements -` |
-| Dictation shows a local speech warning | Follow the detail under Settings > Dictation > Permissions; the status refreshes every few seconds while the pane is open; before macOS 26, System Keyboard Dictation may be off |
+| Dictation shows a local speech warning | Follow the detail under Settings > Dictation > Permissions; the status refreshes every few seconds while the pane is open |
 | Launch at Login stays pending | Approve YEN in System Settings > General > Login Items |
-| Stops at 60 seconds | Expected whenever the legacy recognizer is active, including fallback on macOS 26+ |
+| Stops at 60 seconds | Expected whenever the legacy recognizer is active |
 | Bell rings while holding the key | The hotkey stopped consuming key repeats |

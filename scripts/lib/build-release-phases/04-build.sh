@@ -137,8 +137,6 @@ run_app_intents_source_guardrails() {
 
     if [ ! -f "$keybind_file" ]; then
         findings=$(append_finding "$findings" "missing file: $keybind_file")
-    elif ! grep -Fq "@available(macOS 14.0, *)" "$keybind_file"; then
-        findings=$(append_finding "$findings" "KeybindIntent missing required @available(macOS 14.0, *) annotation")
     fi
 
     if [ ! -f "$details_file" ]; then

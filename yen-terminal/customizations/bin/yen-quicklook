@@ -7,6 +7,10 @@
 
 set -u
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../lib/macos-version.sh" || exit 1
+require_yen_macos || exit 1
+
 target="${1-}"
 if [ -z "$target" ]; then
     exit 2

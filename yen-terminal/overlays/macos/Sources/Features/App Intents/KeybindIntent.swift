@@ -21,13 +21,7 @@ struct KeybindIntent: AppIntent {
     )
     var command: CommandEntity
 
-#if compiler(>=6.2)
-    @available(macOS 26.0, *)
     static var supportedModes: IntentModes = [.background, .foreground]
-#endif
-
-    @available(macOS, obsoleted: 26.0, message: "Replaced by supportedModes")
-    static var openAppWhenRun = true
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> {

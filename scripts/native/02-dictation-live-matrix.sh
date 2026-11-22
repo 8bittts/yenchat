@@ -2,7 +2,7 @@
 # Dictation live-matrix capture + report harness for YEN.
 #
 # Closes the last manual-only validation on _docs/11-speech-to-text.md's
-# "macOS 26 Verification Matrix": speaking into a live local YEN.app and
+# "Dictation Verification Matrix": speaking into a live local YEN.app and
 # capturing the per-session structured logs (stop_cause, fallback_used,
 # insertion_outcome, transcript_source, key_up_to_insert_ms, state
 # transitions) that the headless coordinator/controller harness cannot prove.
@@ -249,16 +249,10 @@ run_capture() {
     local local_bin_canonical
     local_bin_canonical="$(cd "$(dirname "$LOCAL_APP_BIN")" && pwd -P)/$(basename "$LOCAL_APP_BIN")"
 
-    # macOS version -> recognizer path.
-    local osver major
-    osver="$(sw_vers -productVersion 2>/dev/null || echo "unknown")"
-    major="${osver%%.*}"
-    echo "macOS $osver"
-    if [ "$major" != "unknown" ] && [ "$major" -ge 26 ] 2>/dev/null; then
-        echo "Recognizer path: SpeechAnalyzer + DictationTranscriber (no 60s limit; Translate-on-Dictate available)"
-    else
-        echo "Recognizer path: SFSpeechRecognizer legacy (60s cap; no translation)"
-    fi
+    source "$REPO_ROOT/yen-cli/lib/macos-version.sh"
+    require_yen_macos || exit 1
+    echo "macOS $(sw_vers -productVersion)"
+    echo "Default recognizer: SpeechAnalyzer. Runtime fallback: SFSpeechRecognizer (60-second limit)."
 
     # Detect other running YEN instances (session-host conflict / tap fight).
     local nonlocal_running=false existing_local_running=false

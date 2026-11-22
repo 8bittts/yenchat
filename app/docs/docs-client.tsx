@@ -67,9 +67,10 @@ function GetStartedSection() {
 				</table>
 			</TerminalPanel>
 			<p id="requirements" className="text-body">
-				Requires macOS 13 Ventura or newer on Apple silicon or Intel. No YEN
-				account is required. Dictation needs Accessibility, Microphone, and
-				Speech Recognition permissions; see{" "}
+				Builds after 1.283 require macOS 27.0 or later on Apple silicon. YEN
+				1.283 supports macOS 13.0 and later. No YEN account is required.
+				Dictation needs Accessibility, Microphone, and Speech Recognition
+				permissions; see{" "}
 				<a href="#voice-dictation" className="link-brand underline">
 					dictation setup
 				</a>
@@ -518,19 +519,17 @@ function VoiceDictationSection() {
 				release to paste. Use no extra modifiers.
 			</p>
 			<p className="text-body">
-				On macOS 26+, Apple&apos;s SpeechAnalyzer transcribes on-device after
-				language assets are installed. Prepare missing assets in Settings. YEN
-				imposes no 60-second timer on this path, but system or input errors can
-				end a session. Older macOS and runtime fallback use Apple&apos;s legacy
-				recognizer: it stops after 60 seconds and may use Apple&apos;s service
-				when on-device recognition is unavailable. YEN receives no audio or
-				transcripts.
+				Apple&apos;s SpeechAnalyzer transcribes on-device after language assets
+				are installed. Prepare missing assets in Settings. YEN imposes no
+				60-second timer on this path, but system or input errors can end a
+				session. Runtime fallback uses Apple&apos;s legacy recognizer: it stops
+				after 60 seconds and may use Apple&apos;s service when on-device
+				recognition is unavailable. YEN receives no audio or transcripts.
 			</p>
 			<p className="text-body">
 				Turn on Show Live Transcript in Settings &gt; Dictation to see partial
-				text. Translate Dictation is off by default and requires macOS 26+ and
-				an installed language pair. A translation failure inserts the original
-				transcript.
+				text. Translate Dictation is off by default and requires an installed
+				language pair. A translation failure inserts the original transcript.
 			</p>
 			<p className="text-body">
 				Successful in-app paste restores the previous clipboard; cross-app paste
@@ -564,8 +563,8 @@ function VoiceDictationSection() {
 			</p>
 
 			<p className="text-body">
-				<strong>Pro tip:</strong> On older macOS, release and press again for
-				longer content. Enable{" "}
+				<strong>Pro tip:</strong> With the fallback recognizer, release and
+				press again for longer content. Enable{" "}
 				<code className="inline-code-brand">Open YEN at Login</code> in Settings
 				{">"} General for dictation without a terminal window open.
 			</p>
@@ -756,7 +755,7 @@ function TabSidebarSection() {
 	return (
 		<DocSection id="tab-sidebar" title="Tab Sidebar">
 			<p className="text-body">
-				On macOS 14 and later, tabs share the titlebar by default. Set{" "}
+				Tabs share the titlebar by default. Set{" "}
 				<code className="inline-code-brand">
 					macos-titlebar-style = transparent
 				</code>{" "}
@@ -1114,7 +1113,7 @@ function AutomationSection() {
 	return (
 		<DocSection id="automation" title="macOS Automation">
 			<p className="text-body mb-4">
-				On macOS 14+, YEN also exposes actions in Apple Shortcuts. The
+				YEN also exposes actions in Apple Shortcuts. The
 				<code className="inline-code-brand"> macos-shortcuts</code> config
 				accepts
 				<code className="inline-code-brand"> ask</code>,

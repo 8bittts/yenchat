@@ -13,12 +13,6 @@ enum SystemSettingsOpener {
         "x-apple.systempreferences:com.apple.preference.keyboard?Shortcuts",
         "x-apple.systempreferences:com.apple.preference.keyboard"
     ]
-    static let keyboardDictationCandidates = [
-        "x-apple.systempreferences:com.apple.Keyboard-Settings.extension?Dictation",
-        "x-apple.systempreferences:com.apple.Keyboard-Settings.extension",
-        "x-apple.systempreferences:com.apple.preference.keyboard?Dictation",
-        "x-apple.systempreferences:com.apple.preference.keyboard"
-    ]
     static let accessibilityDisplayCandidates = [
         "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?Display",
         "x-apple.systempreferences:com.apple.Accessibility?Display",
@@ -29,11 +23,6 @@ enum SystemSettingsOpener {
     @MainActor
     static func openKeyboardShortcutsSettings() {
         open(candidates: keyboardShortcutsCandidates)
-    }
-
-    @MainActor
-    static func openKeyboardDictationSettings() {
-        open(candidates: keyboardDictationCandidates)
     }
 
     @MainActor

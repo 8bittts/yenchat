@@ -87,6 +87,11 @@ if ! source "${YEN_LIB}/common.sh" 2>&1; then
 fi
 
 # =============================================================================
+# The shell entry point can run outside the app, where Launch Services cannot check it.
+source "${YEN_LIB}/macos-version.sh"
+require_yen_macos || exit 1
+
+# =============================================================================
 # VERSION (read dynamically from version.json)
 # =============================================================================
 

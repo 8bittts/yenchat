@@ -209,6 +209,7 @@ fi
 }
 
 configure_overlay_project() {
+source "$REPO_ROOT/yen-cli/lib/macos-version.sh"
 PBXPROJ="macos/YEN.xcodeproj/project.pbxproj"
 if [ -f "$PBXPROJ" ]; then
     sed -i '' \
@@ -227,7 +228,7 @@ if [ -f "$PBXPROJ" ]; then
         -e 's/INFOPLIST_KEY_CFBundleDisplayName = Ghostty;/INFOPLIST_KEY_CFBundleDisplayName = YEN;/g' \
         -e 's/within Ghostty/within YEN/g' \
         -e 's/INFOPLIST_PREPROCESS = YES;/INFOPLIST_PREPROCESS = NO;/g' \
-        -e 's/MACOSX_DEPLOYMENT_TARGET = [0-9][0-9]*\.[0-9][0-9]*;/MACOSX_DEPLOYMENT_TARGET = 13.0;/g' \
+        -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9.][0-9.]*;/MACOSX_DEPLOYMENT_TARGET = $YEN_MIN_MACOS;/g" \
         -e '/INFOPLIST_KEY_NSCalendarsUsageDescription = /d' \
         "$PBXPROJ"
 fi

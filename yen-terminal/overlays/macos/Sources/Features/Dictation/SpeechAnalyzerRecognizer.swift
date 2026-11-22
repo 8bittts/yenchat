@@ -7,7 +7,7 @@ import Speech
 /// Removes the 60-second recognition limit and uses modern async/await internally,
 /// bridged to the callback-based `DictationRecognizerProtocol` interface.
 ///
-/// Automatically selected on macOS 26+; older systems fall back to `DictationRecognizer`.
+/// YEN starts with this recognizer and can fall back to `DictationRecognizer` at runtime.
 /// Metrics are printed to console for latency profiling.
 @available(macOS 26, *)
 final class SpeechAnalyzerRecognizer: DictationRecognizerProtocol {

@@ -59,21 +59,14 @@ struct SettingsDictationControlsTests {
                 translationSupportedOnThisMac: false,
                 translateOnDictateEnabled: true,
                 availableTargetLanguages: []
-            ) == ["Translation needs macOS 26 or later."]
+            ) == ["Translation is unavailable on this Mac."]
         )
     }
 
     @Test func dictationPermissionsFooterNeverClaimsSpeechAlwaysStaysOnThisMac() {
         // On-device recognition is the normal path, and the legacy recognizer can
         // use Apple's service when it is unavailable, so the copy states a condition.
-        #expect(SettingsDictationPane.footerSpeechAnalyzer.contains("when on-device recognition is available"))
-        #expect(!SettingsDictationPane.footerLegacy.localizedCaseInsensitiveContains("on this Mac"))
-        for footer in [SettingsDictationPane.footerSpeechAnalyzer, SettingsDictationPane.footerLegacy] {
-            #expect(footer.hasPrefix("Hold ⌥Space to dictate."))
-        }
-        #expect(
-            [SettingsDictationPane.footerSpeechAnalyzer, SettingsDictationPane.footerLegacy]
-                .contains(SettingsDictationPane.permissionsFooter)
-        )
+        #expect(SettingsDictationPane.permissionsFooter.contains("when on-device recognition is available"))
+        #expect(SettingsDictationPane.permissionsFooter.hasPrefix("Hold ⌥Space to dictate."))
     }
 }

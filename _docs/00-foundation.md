@@ -37,7 +37,7 @@ Dates are the evidence in this doc; the owner docs carry none.
   Rejected: a YEN-owned daemon, which would rebuild zmx on the same library; shpool, which is Linux-first with a single client per session; abduco and dtach, which replay no screen state; and tmux control mode, which needs a tmux install and whose upstream viewer has no macOS interface.
 - **YEN is open source under MIT.** The repository starts from a fresh root commit; the pre-open-source history is private and never pushed to the public repository (`AGENTS.md` → Public Repository).
   Ghostty's MIT notice stays in `LICENSE` because the overlays carry Ghostty-derived code.
-- **No account, no telemetry.** The desktop app requires no YEN account and sends no terminal content or usage telemetry; dictation runs on-device through Apple's `SpeechAnalyzer` on macOS 26 and later ([11-speech-to-text.md](11-speech-to-text.md)).
+- **No account, no telemetry.** The desktop app requires no YEN account and sends no terminal content or usage telemetry; dictation runs on-device through Apple's `SpeechAnalyzer` when available ([11-speech-to-text.md](11-speech-to-text.md)).
 - **Ghostty is a generated upstream mirror.** YEN changes live in overlays, customizations and the patch pipeline, never in the mirror ([01-architecture.md](01-architecture.md), [04-security.md](04-security.md)).
 - **Native frameworks before bundled binaries.** Every bundled binary is pinned, inventoried and verified by the vendor audit ([04-security.md](04-security.md)).
 - **Deploy by subject marker.** Vercel builds only `[deploy]` in the commit subject; a marker written in a commit body once launched an unintended build ([05-infrastructure.md](05-infrastructure.md)).

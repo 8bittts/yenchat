@@ -1,7 +1,7 @@
 #if os(macOS)
 
 /// Headless coordination surface for dictation session lifecycle decisions.
-/// Keeps macOS 26 stop/restart/watchdog/revocation behavior testable without AppKit wiring.
+/// Keeps dictation stop/restart/watchdog/revocation behavior testable without AppKit wiring.
 struct DictationCaptureSessionCoordinator {
     struct StopSession: Equatable {
         let token: UUID

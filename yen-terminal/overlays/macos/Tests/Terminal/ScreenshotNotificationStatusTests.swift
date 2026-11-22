@@ -29,7 +29,6 @@ private final class ScreenshotPasteboardStub: ScreenshotPasteboardWriting {
 }
 
 struct ScreenshotNotificationStatusTests {
-    @available(macOS 14.4, *)
     @Test @MainActor func capturesAnActualWindowOfTheCurrentProcess() async throws {
         let window = NSWindow(
             contentRect: NSRect(x: 120, y: 120, width: 240, height: 160),
@@ -38,12 +37,18 @@ struct ScreenshotNotificationStatusTests {
             defer: false
         )
         window.isReleasedWhenClosed = false
+        window.contentView?.wantsLayer = true
+        window.contentView?.layer?.backgroundColor = NSColor.red.cgColor
         window.orderFront(nil)
         defer { window.close() }
 
-        let image = try #require(await AppDelegate.captureCurrentProcessImage(windowID: CGWindowID(window.windowNumber)))
-        #expect(image.width >= 240)
-        #expect(image.height >= 160)
+        let image = try #require(await AppDelegate.captureCurrentProcessImage(of: window))
+        #expect(image.width == Int(window.frame.width * window.backingScaleFactor))
+        #expect(image.height == Int(window.frame.height * window.backingScaleFactor))
+        let bitmap = NSBitmapImageRep(cgImage: image)
+        let center = try #require(bitmap.colorAt(x: image.width / 2, y: image.height / 2)?.usingColorSpace(.sRGB))
+        #expect(center.redComponent > 2 * center.greenComponent)
+        #expect(center.redComponent > 2 * center.blueComponent)
     }
 
     @Test func sharedToastRoutingPreservesWindowAndMessagePolicies() {

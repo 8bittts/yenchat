@@ -13,7 +13,6 @@ enum DictationCopy {
     static let enabledDetail = "Hold \(fixedHotkey) to dictate (fixed)"
     static let pausedDetail = "Paused: choose Resume Dictation to dictate"
     static let localRecognizerUnavailableDetail = "Blocked: local speech recognizer unavailable"
-    static let localLegacyDictationDisabledDetail = "Blocked: local speech recognizer unavailable (System Dictation may be off)"
     static let localNoAudioInputDetail = "Blocked: no audio input device detected"
     static let localForegroundInstallRequiredDetail = "Blocked: bring YEN to the foreground to finish installing local speech"
     static let localRuntimeFailureDetail = "Blocked: local speech service failed"
@@ -25,7 +24,6 @@ enum DictationCopy {
     static let recheckLocalServiceTitle = "Re-check Local Speech Service"
     static let openAllGrantedTitle = "Open Missing Permission Settings (all granted)"
     static let openSpeechRecognitionSettingsTitle = "Open Speech Recognition Settings"
-    static let openSystemDictationSettingsTitle = "Open Dictation Settings"
     static let openSoundInputSettingsTitle = "Open Sound Input Settings"
     static let activateYENTitle = "Bring YEN to Front"
 

@@ -15,8 +15,11 @@ Web deploys follow Public Web Release Practice below and never need `/update-yen
 
 ## Requirements and Toolchain
 
-YEN supports macOS 13 Ventura and newer as a universal (arm64 + x86_64) app.
-`apply-overlays.sh` sets `MACOSX_DEPLOYMENT_TARGET = 13.0` and `LSMinimumSystemVersion = 13.0`; every bundled binary must be universal and run on macOS 13.
+YEN requires macOS 27.0 or later on Apple silicon.
+The build uses the minimum in `yen-cli/lib/macos-version.sh` for Xcode targets, Launch Services, thumbnail helpers and the standalone CLI.
+Direct invocation of the app or a thumbnail helper checks the running OS against the compiled deployment target before entering main.
+The release gate checks the packaged app and its helpers before signing metadata and generating the Sparkle feed.
+Libghostty and bundled vendor tools can target earlier systems.
 The Ghostty 1.3-line floor that follows from this is in `_docs/04-security.md`.
 
 | Tool | Rule |

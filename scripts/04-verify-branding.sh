@@ -154,28 +154,6 @@ fi
 # Check 9: YENCustomResources.zig
 [ ! -f "overlays/src/build/YENCustomResources.zig" ] && add_issue "YENCustomResources.zig not found"
 
-# Check 10: macOS API compatibility
-SCAN_PATHS=()
-# Scan overlays only (authoritative source) — ghostty/ is a copy and would double-count
-[ -d "overlays/macos/Sources" ] && SCAN_PATHS+=("overlays/macos/Sources")
-if [ "${#SCAN_PATHS[@]}" -gt 0 ]; then
-    # Exclude #available-guarded usages (grep -B1 to check preceding line for #available guard)
-    MACOS14_APIS=$(grep -rn "onChange.*{.*_,.*newValue\|onChange.*initial:" --include="*.swift" "${SCAN_PATHS[@]}" 2>/dev/null | while IFS=: read -r file line rest; do
-        prev=$((line - 1))
-        if ! sed -n "${prev}p" "$file" 2>/dev/null | grep -q '#available'; then
-            echo "$file:$line:$rest"
-        fi
-    done | wc -l | tr -d ' ')
-else
-    # A missing scan root manufactured a pass: MACOS14_APIS=0 is
-    # indistinguishable from "scanned and found none", so an overlay tree that
-    # moved or failed to materialize reported this check clean. An absent
-    # subject is a broken gate, not a clean one.
-    MACOS14_APIS=0
-    add_issue "macOS 14+ API scan found no source root (overlays/macos/Sources missing) — check skipped, not clean"
-fi
-[ "$MACOS14_APIS" -gt 0 ] && add_issue "Found $MACOS14_APIS macOS 14+ only APIs"
-
 # Check 11: Sparkle integration
 if subject_present f "ghostty/macos/Sources/Features/Update/UpdateController.swift"; then
     grep -q "SPUStandardUpdaterController\|SPUUpdater" ghostty/macos/Sources/Features/Update/UpdateController.swift || add_issue "UpdateController not using Sparkle API"

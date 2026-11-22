@@ -12,16 +12,9 @@ private struct SettingsGlassModifier<GlassShape: InsettableShape>: ViewModifier 
     let shape: GlassShape
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .clipShape(shape)
-                .glassEffect(.regular, in: shape)
-        } else {
-            content
-                .background(.regularMaterial, in: shape)
-                .clipShape(shape)
-                .overlay(shape.strokeBorder(Color(NSColor.separatorColor), lineWidth: 0.5))
-        }
+        content
+            .clipShape(shape)
+            .glassEffect(.regular, in: shape)
     }
 }
 

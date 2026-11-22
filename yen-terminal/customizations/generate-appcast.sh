@@ -24,21 +24,7 @@ source "$REPO_ROOT/scripts/lib/release-constants.sh"
 source "$REPO_ROOT/scripts/lib/version-utils.sh"
 source "$REPO_ROOT/scripts/lib/mount-utils.sh"
 
-is_valid_min_os_version() {
-    local min_os="$1"
-
-    if [ -z "$min_os" ] || [ "$min_os" = "null" ]; then
-        return 1
-    fi
-
-    # YEN currently supports macOS 13.0+. Support-floor changes must update the
-    # desktop/vendor docs and release messaging in the same change.
-    if printf '%s\n' "$min_os" | command grep -Eq '^(1[3-9]|[2-9][0-9])\.[0-9]+(\.[0-9]+)?$'; then
-        return 0
-    fi
-
-    return 1
-}
+source "$REPO_ROOT/yen-cli/lib/macos-version.sh"
 
 # Extract version to determine DMG filename
 VERSION=$(get_version "$VERSION_JSON")
@@ -91,8 +77,8 @@ if ! is_valid_release_version "$VERSION"; then
     exit 1
 fi
 
-if ! is_valid_min_os_version "$MIN_OS"; then
-    echo "  ERROR: Invalid minOS value in version.json: $MIN_OS (expected macOS 13.0 or newer dotted version)"
+if [ "$MIN_OS" != "$YEN_MIN_MACOS" ]; then
+    echo "  ERROR: Invalid minOS value in version.json: $MIN_OS (expected $YEN_MIN_MACOS)"
     exit 1
 fi
 
@@ -128,6 +114,8 @@ if [ ! -f "$DMG_INFO_PLIST" ]; then
     echo "  ERROR: Info.plist not found in DMG"
     exit 1
 fi
+
+bash "$REPO_ROOT/scripts/lib/verify-macos-floor.sh" "$MOUNT_POINT/YEN.app"
 
 DMG_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$DMG_INFO_PLIST" 2>/dev/null || echo "")
 DMG_BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$DMG_INFO_PLIST" 2>/dev/null || echo "")

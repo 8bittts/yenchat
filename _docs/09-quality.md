@@ -79,7 +79,9 @@ Run it by hand only with `TEST_RUNNER_IDE_DISABLED_OS_ACTIVITY_DT_MODE=1`; witho
 
 **Known-warning baseline: 6.** All six are upstream `ScriptKeyEventCommandTests` `Issue.record(..., severity: .warning)` markers for `send key` ignoring keyboard layout.
 A change in that count is a signal.
-Build warnings outside `appintentsmetadataprocessor` extraction, the `YENKit` umbrella header, the arm64 `ext.o` ImGui symbols, the macOS 13 versus XCTest/Testing linker floor, and upstream's `@Test` macro warning on the non-Sendable `Any?` parameter in `ScriptKeyEventCommandTests` are regressions until proven otherwise; YEN overlay sources and tests compile with zero warnings.
+Build warnings outside `appintentsmetadataprocessor` extraction, the `YENKit` umbrella header, the arm64 `ext.o` ImGui symbols, and upstream's `@Test` macro warning on the non-Sendable `Any?` parameter in `ScriptKeyEventCommandTests` require investigation.
+At the macOS 27 deployment target, Xcode also reports deprecations in SwiftUI views and audio capture APIs.
+See [11-speech-to-text.md](11-speech-to-text.md) for the audio tap contract.
 
 ## Web Quality Baselines
 
@@ -129,7 +131,7 @@ Traffic is not part of `/growth`; see `_docs/08-growth.md`.
 ## Dictation Live Manual Matrix — Runbook + Evidence Template
 
 Owner surface for the Dictation live matrix; run it before shipping any change to dictation capture or insertion.
-The headless coordinator/controller harness already covers the macOS 26 `SpeechAnalyzer` control path; what remains can only be proven by speaking into a live local `YEN.app` and observing real target apps, TCC timing, and the per-session structured logs.
+The headless coordinator/controller harness already covers the `SpeechAnalyzer` control path; what remains can only be proven by speaking into a live local `YEN.app` and observing real target apps, TCC timing, and the per-session structured logs.
 
 Source of truth for expected behavior: `_docs/11-speech-to-text.md` (Session Contract, Insertion, Verification).
 This file is the operator checklist + fillable evidence record.
@@ -189,8 +191,8 @@ Non-obvious facts that will otherwise burn operator time (verified from source):
    - Quit `/Applications/YEN.app` (menu bar / Cmd+Q). If a Claude/Codex session
      lives inside it, save/close that first — it will terminate.
    - Confirm none remain: `pgrep -fl 'YEN.app/Contents/MacOS/yen'` prints nothing.
-4. Confirm platform: `sw_vers -productVersion` -> `26.x` or later uses `SpeechAnalyzer`
-   when available (no YEN timer; Translate-on-Dictate available). Runtime fallback and `13.x–25.x` use
+4. Confirm platform: `sw_vers -productVersion` -> `27.x` or later uses `SpeechAnalyzer`
+   when available (no YEN timer; Translate-on-Dictate available). Runtime fallback uses
    `SFSpeechRecognizer` (60s cap; Case 2 expectations differ — see below).
 5. Permissions must already be granted (Accessibility, Microphone, Speech
    Recognition). If prompted on first capture, that is itself a valid onboarding
@@ -258,9 +260,9 @@ Expected log: states `starting -> listening -> stopping -> inserting`; `stop_cau
 
 #### Case 2 — Long utterance (past 60s)
 Steps: dictate continuously past 60 seconds, then release.
-Expected (SpeechAnalyzer active on macOS 26+): no forced timeout, no mid-session auto-paste, menu-bar indicator stays visible, final insert only on release.
+Expected (SpeechAnalyzer active): no forced timeout, no mid-session auto-paste, menu-bar indicator stays visible, final insert only on release.
 NO event with `stop_cause=legacyTimeout`.
-Expected (legacy recognizer, including fallback on macOS 26+): auto-stops at ~60s with `stop_cause=legacyTimeout` and auto-paste; release+re-press to continue.
+Expected (legacy recognizer): auto-stops at ~60s with `stop_cause=legacyTimeout` and auto-paste; release+re-press to continue.
 - Observed: `________`  saw legacyTimeout? `____`  Verdict: `____`
 
 #### Case 3 — Stop/re-press during finalization

@@ -12,8 +12,6 @@ enum DictationPermissionMenuPolicy {
         switch issue {
         case .recognizerUnavailable:
             return "Local speech recognizer unavailable. Open Speech Recognition Settings, then try \(DictationCopy.fixedHotkey) again."
-        case .legacySystemDictationDisabled:
-            return "System Dictation may be off. Open Dictation Settings, enable it, then try \(DictationCopy.fixedHotkey) again."
         case .noAudioInput:
             return "No audio input device detected. Open Sound Input Settings, select a microphone, then try \(DictationCopy.fixedHotkey) again."
         case .foregroundInstallRequired:

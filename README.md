@@ -26,7 +26,7 @@ Closing a pane still ends what runs in it.
 ### Speech-to-text in any app
 
 Press `Option + Space`, talk, and your words land in the terminal or in any other macOS app.
-Dictation runs on Apple's on-device `SpeechAnalyzer` on macOS 26 or newer, so there is no AI service, no account and no upload.
+Dictation runs on Apple's on-device `SpeechAnalyzer` after language assets install.
 YEN never receives your audio or transcripts.
 
 ### Paste anything
@@ -56,11 +56,11 @@ No terminal content is sent to YEN.
 
 ## Requirements
 
-- macOS 13 Ventura or newer.
-- Apple silicon or Intel Mac.
+- Builds after 1.283 require macOS 27.0 or later on Apple silicon.
+- YEN 1.283 supports macOS 13.0 and later.
 - Accessibility, Microphone, and Speech Recognition permissions for dictation.
 
-On systems older than macOS 26, or when the on-device recognizer is unavailable, YEN requests on-device recognition when Apple reports support.
+When SpeechAnalyzer is unavailable, YEN requests on-device recognition when Apple reports support.
 Apple's legacy recognizer can use Apple's service when on-device recognition is unavailable.
 
 ## Install

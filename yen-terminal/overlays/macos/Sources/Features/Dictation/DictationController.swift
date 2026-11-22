@@ -91,10 +91,7 @@ final class DictationController: NSObject, NSMenuDelegate {
     typealias BackgroundRecoveryReporter = @MainActor (_ title: String, _ body: String) -> Void
 
     private var recognizer: DictationRecognizerProtocol
-    /// Backing cache for the legacy `SFSpeechRecognizer`-based recognizer. On macOS 26
-    /// it stays nil until the first fallback activation, so the process pays for neither
-    /// the `SFSpeechRecognizer` nor its process-lifetime locale observer unless fallback
-    /// actually runs; on pre-26 it holds the same instance already assigned to `recognizer`.
+    /// Allocate the legacy recognizer and its locale observer only when fallback is needed.
     private var legacyRecognizerInstance: DictationRecognizerProtocol?
     /// Lazily materializes (and caches) the legacy recognizer on first read. The class and
     /// its only reader (`activateLegacyRecognizerFallback`) are `@MainActor`, so the cache
@@ -240,7 +237,7 @@ final class DictationController: NSObject, NSMenuDelegate {
 
     enum LocalServiceIssue: Equatable {
         case recognizerUnavailable
-        case legacySystemDictationDisabled
+
         case noAudioInput
         case foregroundInstallRequired
         case runtimeFailure
@@ -249,8 +246,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             switch self {
             case .recognizerUnavailable:
                 return DictationCopy.localRecognizerUnavailableDetail
-            case .legacySystemDictationDisabled:
-                return DictationCopy.localLegacyDictationDisabledDetail
             case .noAudioInput:
                 return DictationCopy.localNoAudioInputDetail
             case .foregroundInstallRequired:
@@ -264,8 +259,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             switch self {
             case .recognizerUnavailable, .runtimeFailure:
                 return DictationCopy.openSpeechRecognitionSettingsTitle
-            case .legacySystemDictationDisabled:
-                return DictationCopy.openSystemDictationSettingsTitle
             case .noAudioInput:
                 return DictationCopy.openSoundInputSettingsTitle
             case .foregroundInstallRequired:
@@ -277,8 +270,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             switch self {
             case .recognizerUnavailable, .runtimeFailure:
                 return .openSpeechRecognitionSettings
-            case .legacySystemDictationDisabled:
-                return .openSystemDictationSettings
             case .noAudioInput:
                 return .openSoundInputSettings
             case .foregroundInstallRequired:
@@ -381,37 +372,15 @@ final class DictationController: NSObject, NSMenuDelegate {
         return image
     }
 
-    /// Maximum dictation duration — safety limit for SFSpeechRecognizer fallback (macOS < 26)
+    /// Maximum dictation duration — safety limit for the SFSpeechRecognizer runtime fallback
     private let maxDurationSeconds: TimeInterval = 60.0
 
     /// Blink interval for recording indicator
     private let blinkIntervalSeconds: TimeInterval = 0.5
     private static let startupIssueRefreshIntervalSeconds: CFAbsoluteTime = 8.0
 
-    // Production entry point. The DI init below already encodes every live default,
-    // so this only computes the recognizer + legacy cache (the legacy recognizer stays
-    // lazy on macOS 26), delegates, and binds hotkeys (the DI init deliberately does NOT
-    // bind, so tests stay side-effect free).
     private override convenience init() {
-        let recognizer: DictationRecognizerProtocol
-        let legacyRecognizerInstance: DictationRecognizerProtocol?
-        let usingLegacyRecognizerFallback: Bool
-        if #available(macOS 26, *) {
-            recognizer = SpeechAnalyzerRecognizer()
-            legacyRecognizerInstance = nil        // materialized lazily at first fallback
-            usingLegacyRecognizerFallback = false
-        } else {
-            let legacyRecognizer = DictationRecognizer()
-            recognizer = legacyRecognizer
-            legacyRecognizerInstance = legacyRecognizer  // active recognizer IS the legacy one
-            usingLegacyRecognizerFallback = true
-        }
-        self.init(
-            recognizer: recognizer,
-            legacyRecognizer: legacyRecognizerInstance,
-            usingLegacyRecognizerFallback: usingLegacyRecognizerFallback,
-            suppressInteractiveUI: false
-        )
+        self.init(recognizer: SpeechAnalyzerRecognizer(), suppressInteractiveUI: false)
         bindHotkeyCallbacks()
     }
 
@@ -554,8 +523,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             }
         case .openSpeechRecognitionSettings:
             openSettings(for: .speechRecognition)
-        case .openSystemDictationSettings:
-            openSystemDictationSettings()
         case .openSoundInputSettings:
             openSoundInputSettings()
         case .activateYEN:
@@ -580,7 +547,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             return
         }
         guard currentLocalServiceIssue == .recognizerUnavailable else { return }
-        guard #available(macOS 26, *) else { return }
         guard !usingLegacyRecognizerFallback else { return }
         guard !recognizer.requiresSessionTimeout else { return }
 
@@ -891,7 +857,7 @@ final class DictationController: NSObject, NSMenuDelegate {
                     self.localServiceIssue = self.startupLocalServiceIssue()
                     notificationIssue = self.localServiceIssue
                 } else {
-                    let mappedIssue = self.mapRecognizerErrorToLocalServiceIssue(error)
+                    let mappedIssue = Self.mapRecognizerErrorToLocalServiceIssue(error)
                     let startupIssue = self.startupLocalServiceIssue()
                     self.localServiceIssue = mappedIssue ?? startupIssue
                     notificationIssue = mappedIssue ?? startupIssue
@@ -1402,7 +1368,6 @@ final class DictationController: NSObject, NSMenuDelegate {
     private func tryActivateLegacyRecognizerFallback(
         after error: DictationRecognizer.RecognizerError
     ) -> Bool {
-        guard #available(macOS 26, *) else { return false }
         guard Self.shouldActivateLegacyRecognizerFallback(
             usingLegacyRecognizerFallback: usingLegacyRecognizerFallback,
             isSpeechAnalyzerActive: !recognizer.requiresSessionTimeout,
@@ -1506,7 +1471,7 @@ final class DictationController: NSObject, NSMenuDelegate {
             case none
             case openMissingPermission
             case openSpeechRecognitionSettings
-            case openSystemDictationSettings
+
             case openSoundInputSettings
             case activateYEN
         }
@@ -1843,48 +1808,6 @@ final class DictationController: NSObject, NSMenuDelegate {
         DictationPermissionMenuPolicy.localServiceRecoveryBody(for: issue)
     }
 
-    static func legacySystemDictationEnabled(
-        hitoolboxDomain: [String: Any]?,
-        assistantDomain: [String: Any]?
-    ) -> Bool? {
-        for key in ["DictationIMMasterDictationEnabled", "DictationIMEnabled", "AppleDictationAutoEnable"] {
-            if let value = legacyBool(from: hitoolboxDomain?[key]) {
-                return value
-            }
-        }
-
-        for key in ["Dictation Enabled", "DictationEnabled"] {
-            if let value = legacyBool(from: assistantDomain?[key]) {
-                return value
-            }
-        }
-
-        return nil
-    }
-
-    private static func legacyBool(from rawValue: Any?) -> Bool? {
-        switch rawValue {
-        case let value as Bool:
-            return value
-        case let value as Int:
-            return value != 0
-        case let value as NSNumber:
-            return value.intValue != 0
-        case let value as String:
-            let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            switch normalized {
-            case "1", "true", "yes", "on", "enabled":
-                return true
-            case "0", "false", "no", "off", "disabled":
-                return false
-            default:
-                return nil
-            }
-        default:
-            return nil
-        }
-    }
-
     static func menuState(
         missing: [PrivacyDestination],
         localServiceIssue: LocalServiceIssue?,
@@ -2090,9 +2013,8 @@ final class DictationController: NSObject, NSMenuDelegate {
         if let override = Self.startupLocalServiceIssueOverrideForTesting {
             return override()
         }
-        let issue = mapRecognizerErrorToLocalServiceIssue(recognizer.startupIssue())
+        let issue = Self.mapRecognizerErrorToLocalServiceIssue(recognizer.startupIssue())
         guard issue == .recognizerUnavailable else { return issue }
-        guard #available(macOS 26, *) else { return issue }
         guard !usingLegacyRecognizerFallback else { return issue }
         guard !recognizer.requiresSessionTimeout else { return issue }
         if let analyzer = recognizer as? SpeechAnalyzerRecognizer,
@@ -2108,25 +2030,7 @@ final class DictationController: NSObject, NSMenuDelegate {
         }
 
         activateLegacyRecognizerFallback(reason: "startup-readiness")
-        return mapRecognizerErrorToLocalServiceIssue(recognizer.startupIssue())
-    }
-
-    private func mapRecognizerErrorToLocalServiceIssue(
-        _ error: DictationRecognizer.RecognizerError?
-    ) -> LocalServiceIssue? {
-        let mapped = Self.mapRecognizerErrorToLocalServiceIssue(error)
-        guard mapped == .recognizerUnavailable else { return mapped }
-        if #available(macOS 26, *) {
-            return mapped
-        }
-        let legacyEnabled = Self.legacySystemDictationEnabled(
-            hitoolboxDomain: UserDefaults.standard.persistentDomain(forName: "com.apple.HIToolbox"),
-            assistantDomain: UserDefaults.standard.persistentDomain(forName: "com.apple.assistant.support")
-        )
-        if legacyEnabled == false {
-            return .legacySystemDictationDisabled
-        }
-        return mapped
+        return Self.mapRecognizerErrorToLocalServiceIssue(recognizer.startupIssue())
     }
 
     var currentLocalServiceIssue: LocalServiceIssue? {
@@ -2236,10 +2140,6 @@ final class DictationController: NSObject, NSMenuDelegate {
             "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension",
             "x-apple.systempreferences:com.apple.preference.security"
         ])
-    }
-
-    private func openSystemDictationSettings() {
-        SystemSettingsOpener.openKeyboardDictationSettings()
     }
 
     private func openSoundInputSettings() {

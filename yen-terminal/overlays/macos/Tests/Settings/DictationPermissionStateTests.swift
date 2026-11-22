@@ -424,22 +424,6 @@ struct DictationPermissionStateTests {
         #expect(state.pauseEnabled == false)
     }
 
-    @Test func legacySystemDictationDisabledIssueMapsToDedicatedRecoveryAction() {
-        let state = DictationController.menuState(
-            missing: [],
-            localServiceIssue: .legacySystemDictationDisabled,
-            isPaused: false,
-            launchNeedsApproval: false
-        )
-
-        #expect(state.summaryTitle == DictationCopy.blockedSummary)
-        #expect(state.detailTitle == DictationCopy.localLegacyDictationDisabledDetail)
-        #expect(state.openPrimaryTitle == DictationCopy.openSystemDictationSettingsTitle)
-        #expect(state.openPrimaryAction == .openSystemDictationSettings)
-        #expect(state.recheckTitle == DictationCopy.recheckLocalServiceTitle)
-        #expect(state.pauseEnabled == false)
-    }
-
     @Test func hotkeyEligibilityPrioritizesLocalBlockThenPause() {
         #expect(
             DictationController.hotkeyEligibility(
@@ -1889,42 +1873,6 @@ struct DictationPermissionStateTests {
         focusFingerprint = 100
         #expect(controller.testingValidatePendingInsertionTarget() == false)
         #expect(fingerprintReads == 0)
-    }
-
-    @Test func legacySystemDictationEnabledUsesHitoolboxPreferenceWhenPresent() {
-        let enabled = DictationController.legacySystemDictationEnabled(
-            hitoolboxDomain: ["DictationIMMasterDictationEnabled": 1],
-            assistantDomain: ["Dictation Enabled": 0]
-        )
-        let disabled = DictationController.legacySystemDictationEnabled(
-            hitoolboxDomain: ["DictationIMMasterDictationEnabled": 0],
-            assistantDomain: ["Dictation Enabled": 1]
-        )
-
-        #expect(enabled == true)
-        #expect(disabled == false)
-    }
-
-    @Test func legacySystemDictationEnabledFallsBackToAssistantDomain() {
-        let enabled = DictationController.legacySystemDictationEnabled(
-            hitoolboxDomain: [:],
-            assistantDomain: ["Dictation Enabled": "on"]
-        )
-        let disabled = DictationController.legacySystemDictationEnabled(
-            hitoolboxDomain: nil,
-            assistantDomain: ["DictationEnabled": "off"]
-        )
-
-        #expect(enabled == true)
-        #expect(disabled == false)
-    }
-
-    @Test func legacySystemDictationEnabledReturnsNilWhenNoSupportedKeysExist() {
-        let unknown = DictationController.legacySystemDictationEnabled(
-            hitoolboxDomain: ["Unrelated": 1],
-            assistantDomain: ["Nope": true]
-        )
-        #expect(unknown == nil)
     }
 
     @Test func localeChangeActionDefersRefreshUntilSessionEndWhenLegacyRecognizerActive() {
@@ -3786,10 +3734,6 @@ struct DictationPermissionStateTests {
         #expect(
             DictationController.localServiceRecoveryBody(for: .recognizerUnavailable)
                 == "Local speech recognizer unavailable. Open Speech Recognition Settings, then try Option + Space again."
-        )
-        #expect(
-            DictationController.localServiceRecoveryBody(for: .legacySystemDictationDisabled)
-                == "System Dictation may be off. Open Dictation Settings, enable it, then try Option + Space again."
         )
         #expect(
             DictationController.localServiceRecoveryBody(for: .noAudioInput)

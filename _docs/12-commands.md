@@ -123,7 +123,7 @@ Support-only, hidden and runnable with `YEN_CLI_SUPPORT_ACTIONS=1`: `+show-confi
 Internal, blocked unless `YEN_CLI_INTERNAL_ACTIONS=1`: `+boo`.
 `05-detect-failures.sh` verifies the tiers on the built binary.
 
-**Shortcuts (`macos-shortcuts`, macOS 14+).** `ask` prompts once per scope, `allow` skips prompts, `deny` refuses every intent.
+**Shortcuts (`macos-shortcuts`).** `ask` prompts once per scope, `allow` skips prompts, `deny` refuses every intent.
 Allow grants last 10 minutes for `control`, 5 for `input`, 3 for `read`.
 `KeybindIntent` and `CommandPaletteIntent` accept only allowlisted `CommandEntity` values that persist canonical action identities (older family tokens still resolve); denials raise intent errors and are logged.
 A request with no window foregrounds YEN and falls back to an app-modal prompt.

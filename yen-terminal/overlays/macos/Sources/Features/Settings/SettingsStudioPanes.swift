@@ -922,20 +922,11 @@ struct SettingsDictationPane: View {
     @StateObject private var store: SoundsSettingsStore
 
     static let translateHint = "Translates what you say before it is typed."
-    static let footerSpeechAnalyzer =
+    static let permissionsFooter =
         "Hold ⌥Space to dictate. Speech is recognized on this Mac when on-device recognition is available."
-    static let footerLegacy =
-        "Hold ⌥Space to dictate. This macOS version limits one recording to 60 seconds."
 
     init(controller: SettingsController) {
         _store = StateObject(wrappedValue: SoundsSettingsStore(controller: controller))
-    }
-
-    static var permissionsFooter: String {
-        if #available(macOS 26, *) {
-            return footerSpeechAnalyzer
-        }
-        return footerLegacy
     }
 
     static func translationTargetFallbackLabel(
@@ -953,7 +944,7 @@ struct SettingsDictationPane: View {
         availableTargetLanguages: [DictationTranslationLanguageOption]
     ) -> [String] {
         guard translationSupportedOnThisMac else {
-            return ["Translation needs macOS 26 or later."]
+            return ["Translation is unavailable on this Mac."]
         }
         guard translateOnDictateEnabled else { return [] }
 

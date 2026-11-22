@@ -8,6 +8,9 @@ set -u
 
 editor_cmd="${EDITOR:-vi}"
 script_dir="$(cd "$(dirname "$0")" && pwd)"
+source "$script_dir/../lib/macos-version.sh" || exit 1
+require_yen_macos || exit 1
+
 helper_candidates=()
 helper_path=""
 
