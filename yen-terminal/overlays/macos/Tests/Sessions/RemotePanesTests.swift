@@ -284,6 +284,28 @@ struct RemotePanesTests {
         #expect(failed.output.contains("Press Return to close"))
     }
 
+    /// The engine forces wait-after-command on any surface given a command,
+    /// so the pane itself must close when its client ends normally.
+    @Test func aRemotePaneWhoseClientEndsNormallyClosesAndAFailedOneStays() throws {
+        let appDelegate = try #require(NSApp.delegate as? AppDelegate)
+        RemotePanes._testSetCLIPath("/usr/bin/true")
+        let normal = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
+        RemotePanes._testSetCLIPath("/usr/bin/false")
+        let failed = TerminalController(appDelegate.yen, withBaseConfig: markedConfig(identity))
+        RemotePanes._testSetCLIPath(nil)
+        Self.retainedControllers += [normal, failed]
+        let failedSurface = try #require(failed.surfaceTree.first)
+        normal.showWindow(nil)
+        failed.showWindow(nil)
+
+        for _ in 0..<80 where !normal.surfaceTree.isEmpty {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        }
+        #expect(normal.surfaceTree.isEmpty)
+        #expect(failed.surfaceTree.contains(failedSurface))
+        failed.window?.close()
+    }
+
     @Test func onlyARestoredPaneRetriesAnUnreachablePeer() throws {
         let opened = try #require(withFakeCLI { RemotePanes.attachCommand(for: identity) })
         #expect(!opened.contains("--retry-unreachable"))
