@@ -2,12 +2,13 @@ import AppKit
 
 @MainActor
 final class WallpaperControls: NSObject {
-    private let wallpaperManager = WallpaperManager()
+    private let wallpaperManager: WallpaperManager
     private var picker: PhotosPickerController?
     private var active = true
     private var cleanup: Task<Void, Never>?
 
-    override init() {
+    init(defaults: UserDefaults = .standard) {
+        wallpaperManager = WallpaperManager(persistenceStore: WallpaperPersistenceStore(userDefaults: defaults))
         super.init()
         let protected = wallpaperManager.referencedLocalPaths
         let start = Date()

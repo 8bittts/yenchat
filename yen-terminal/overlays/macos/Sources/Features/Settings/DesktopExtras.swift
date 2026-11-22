@@ -12,23 +12,28 @@ final class DesktopExtras: ObservableObject {
     private var menu: TokenUsageMenu?
     private var wallpaper: WallpaperControls?
     private let workspace = NSWorkspace.shared
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     func restore() {
-        setUsage(UserDefaults.standard.bool(forKey: Self.usageKey))
-        setWallpaper(UserDefaults.standard.bool(forKey: Self.wallpaperKey))
+        setUsage(defaults.bool(forKey: Self.usageKey))
+        setWallpaper(defaults.bool(forKey: Self.wallpaperKey))
     }
 
     func setUsage(_ enabled: Bool) {
         guard enabled != showsUsage else { return }
         showsUsage = enabled
-        UserDefaults.standard.set(enabled, forKey: Self.usageKey)
+        defaults.set(enabled, forKey: Self.usageKey)
         if enabled { menu = TokenUsageMenu() } else { menu?.stop(); menu = nil }
     }
 
     func setWallpaper(_ enabled: Bool) {
         guard showsWallpaper != enabled else { return }
         showsWallpaper = enabled
-        UserDefaults.standard.set(enabled, forKey: Self.wallpaperKey)
+        defaults.set(enabled, forKey: Self.wallpaperKey)
         if enabled {
             for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
                 workspace.notificationCenter.addObserver(self, selector: #selector(appChanged(_:)), name: name, object: nil)
@@ -53,7 +58,7 @@ final class DesktopExtras: ObservableObject {
             wallpaper?.stop()
             wallpaper = nil
         } else if wallpaper == nil {
-            wallpaper = WallpaperControls()
+            wallpaper = WallpaperControls(defaults: defaults)
         }
     }
 

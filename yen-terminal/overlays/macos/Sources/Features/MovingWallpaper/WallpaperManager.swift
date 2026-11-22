@@ -31,13 +31,14 @@ final class WallpaperManager {
     private let youtubeDownloader = YouTubeDownloader()
     private let loadingOverlay = LoadingOverlayController()
     private let requestCoordinator = WallpaperRequestCoordinator()
-    private let persistenceStore = WallpaperPersistenceStore()
+    private let persistenceStore: WallpaperPersistenceStore
     private var powerMonitor: PowerStateMonitor?
     private var screenObserver: Any?
     private var spaceObserver: Any?
     private var restoreTask: Task<Void, Never>?
 
-    init() {
+    init(persistenceStore: WallpaperPersistenceStore = WallpaperPersistenceStore()) {
+        self.persistenceStore = persistenceStore
         router.onPlaybackFailure = { [weak self] url, message in
             self?.handlePlaybackFailure(url: url, message: message)
         }
