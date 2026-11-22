@@ -7,6 +7,11 @@
 -- yazi continues without git status rather than crashing init
 pcall(function() require("git"):setup() end)
 
+-- Native archive extraction. The `extract` opener in yazi.toml only sends an
+-- `extract-native` message; this subscribes the plugin that acts on it.
+-- Without it Yazi refuses the message and Enter on an archive fails.
+pcall(function() require("extract-native"):setup() end)
+
 -- YEN branding in terminal/window title (replaces Yazi's default "Yazi: {cwd}").
 -- Yazi v26.5.6 removed the static `title_format` TOML key in favor of the
 -- `ind-app-title` DDS event, which lets us compute the title dynamically.

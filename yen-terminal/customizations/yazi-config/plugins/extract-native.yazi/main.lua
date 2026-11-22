@@ -94,7 +94,9 @@ function M:try_with(from, pwd, to)
         fail("Invalid URL '%s'", from)
     end
 
-    local tmp = fs.unique_name(to:join(self.tmp_name(from)))
+    -- fs.unique reserves the name by creating the directory, which bsdtar -C
+    -- needs to exist. It replaced fs.unique_name in Yazi 26.
+    local tmp = fs.unique("dir", to:join(self.tmp_name(from)))
     if not tmp then
         fail("Failed to determine a temporary directory for %s", from)
     end
@@ -146,7 +148,9 @@ function M:tidy(from, to, tmp)
     local metadata_dir = tostring(tmp) .. "/__MACOSX"
     fs.remove("dir_all", Url(metadata_dir))
 
-    local outs = fs.read_dir(tmp)
+    -- Two entries are enough to tell one extracted item from several. The
+    -- options table is required since Yazi 26.
+    local outs = fs.read_dir(tmp, { limit = 2 })
     if not outs then
         fail("Failed to read the temporary directory '%s' when extracting '%s'", tmp, from)
     elseif #outs == 0 then
@@ -156,13 +160,19 @@ function M:tidy(from, to, tmp)
 
     local only = #outs == 1
     local target
+    local target_kind = "dir"
     if only then
         target = to:join(outs[1].name)
+        if not outs[1].cha.is_dir then
+            target_kind = "file"
+        end
     else
         target = to:join(self.trim_ext(from.name))
     end
 
-    target = fs.unique_name(target)
+    -- fs.unique creates an empty file or directory at the unique name; the
+    -- rename below replaces it with the extracted entry.
+    target = fs.unique(target_kind, target)
     if not target then
         fail("Failed to determine a target for '%s'", from)
     end

@@ -45,7 +45,7 @@ For `micro` it adds `-ruler false -softwrap true -wordwrap true` so copy-on-sele
 | `code-guard.yazi` | Wraps upstream `code` preview | Files over 1 MB or minified fall back to plain wrapped text (64 KB sample, decision cache by path+length+mtime, 64-entry line cache) |
 | `git.yazi` | Git status column | At most 2048 tracked directories with per-scope refcounted pruning; a failed git call degrades without breaking init |
 | `archive-native.yazi` | Archive listing through macOS `bsdtar` | 128-entry cache, 5000 indexed entries, visible slice only; renders `(empty archive)` or an error widget |
-| `extract-native.yazi` | Extraction | Temp directory and tidy pass, strips `__MACOSX`, cleans up on failure |
+| `extract-native.yazi` | Extraction, started by the `ya pub extract-native` opener | `init.lua` must call its `setup()`, or Yazi refuses the message; temp directory and tidy pass, strips `__MACOSX`, cleans up on failure |
 | `video-native.yazi`, `pdf-native.yazi` | Thumbnails through `yen-vidthumb` and `yen-pdfthumb` | 512-entry metadata caches, preload-owned rendering, honors `image_delay` and preview bounds; a helper failure never breaks the session |
 | `svg-native.yazi` | SVG thumbnails through `yen-svgthumb`, which inflates `.svgz` itself (64 MB cap) | A failed render logs `ya.err` and shows an error widget |
 
@@ -75,5 +75,6 @@ The `/update-yen` vendor phase carries the Yazi checks in `.agents/skills/update
 - `theme.toml` still matches the schema (`[tabs]`, `[indicator]`, `[cmp]`, `[icon].{prepend,append}_globs`, `filetype.rules` with `url`); `tests/35-yazi-config.test.ts` guards it.
 - Flavor fields still validate.
 - `init.lua` still receives `ind-app-title`.
+- Enter on an archive still extracts it in a running copy: one file, one folder, several entries, and a name that already exists.
 - Every preview type still renders in a running copy: text, JSON, SVG, `.svgz`, PDF, video, `.zip` and `.tar.gz`. A Lua stub cannot show a changed Yazi API; `tests/35-yazi-config.test.ts` rejects only the argument types already known to fail.
 - A native `<S-Enter>` binding does not collide with YEN's Shift + Enter mapping (`\r`).

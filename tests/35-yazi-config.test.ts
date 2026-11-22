@@ -842,13 +842,21 @@ ui = {
     return 0
   end,
 }
-File = function(_)
-  return {
-    icon = function()
+-- Yazi 26.9 resolves icons through th.icon:match; File:icon() now raises a
+-- deprecation notice over the browser.
+File = function(value)
+  value.icon = function()
+    error("File:icon() is deprecated, use th.icon:match(file)")
+  end
+  return value
+end
+th = {
+  icon = {
+    match = function(_, _)
       return nil
     end,
-  }
-end
+  },
+}
 Url = function(value)
   return value
 end
@@ -919,6 +927,72 @@ end
 					`init.lua never calls require("${kind}"):setup()`,
 				).toContain(`require("${kind}"):setup()`);
 			}
+		},
+	);
+
+	yaziTest(
+		"moves extracted entries into place through the current Yazi file API",
+		() => {
+			// Yazi 26 replaced fs.unique_name with fs.unique(kind, url), which
+			// creates the entry it names, and made the options table of
+			// fs.read_dir required. The stubs fail the way Yazi does.
+			const result = runLuaScript(`
+local calls = {}
+local entries = {}
+fs = {
+  remove = function(_, _) end,
+  read_dir = function(_, opts)
+    if type(opts) ~= "table" then
+      error("bad argument #2: error converting Lua nil to table")
+    end
+    return entries
+  end,
+  unique = function(kind, target)
+    table.insert(calls, "unique " .. kind .. " " .. tostring(target))
+    return target
+  end,
+}
+Url = function(value)
+  return value
+end
+os.rename = function(source, target)
+  table.insert(calls, "rename " .. tostring(source) .. " -> " .. tostring(target))
+  return true
+end
+
+local plugin = dofile(${JSON.stringify(yaziExtractNativePluginPath)})
+local from = { name = "bundle.tar.gz" }
+local to = {
+  join = function(_, name)
+    return "/dest/" .. name
+  end,
+}
+local function expect(label, wanted)
+  local got = table.concat(calls, "; ")
+  if got ~= wanted then
+    error(label .. ": expected [" .. wanted .. "], got [" .. got .. "]")
+  end
+  calls = {}
+end
+
+entries = { { name = "single.txt", url = "/tmp/t/single.txt", cha = { is_dir = false } } }
+plugin:tidy(from, to, "/tmp/t")
+expect("one file", "unique file /dest/single.txt; rename /tmp/t/single.txt -> /dest/single.txt")
+
+entries = { { name = "pack", url = "/tmp/t/pack", cha = { is_dir = true } } }
+plugin:tidy(from, to, "/tmp/t")
+expect("one folder", "unique dir /dest/pack; rename /tmp/t/pack -> /dest/pack")
+
+entries = {
+  { name = "a.txt", url = "/tmp/t/a.txt", cha = { is_dir = false } },
+  { name = "b.txt", url = "/tmp/t/b.txt", cha = { is_dir = false } },
+}
+plugin:tidy(from, to, "/tmp/t")
+expect("several entries", "unique dir /dest/bundle; rename /tmp/t -> /dest/bundle")
+`);
+
+			expect(result.stderr).toBe("");
+			expect(result.status).toBe(0);
 		},
 	);
 

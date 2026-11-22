@@ -209,10 +209,12 @@ function M:peek(job)
     local left = {}
     for i = job.skip + 1, math.min(#files, job.skip + limit) do
         local f = files[i]
-        local icon = File({
+        -- th.icon:match replaced File:icon(), which now raises a deprecation
+        -- notice over the browser.
+        local icon = th.icon:match(File({
             url = Url(f.path),
             cha = Cha { mode = tonumber(f.is_dir and "40700" or "100644", 8) },
-        }):icon()
+        }))
 
         if icon then
             left[#left + 1] = ui.Span(" " .. icon.text .. " "):style(icon.style)
