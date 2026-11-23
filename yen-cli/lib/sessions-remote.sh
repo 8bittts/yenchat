@@ -186,11 +186,12 @@ remote_make_scratch() {
         yen_error "Could not create a temporary directory."
         exit 1
     }
+    # Set the cleanup before any check can exit, so a refused path is removed.
+    trap remote_cleanup EXIT
     [[ "$remote_scratch" =~ ^/[A-Za-z0-9._/-]+$ ]] || {
         yen_error "Unusable temporary directory: $remote_scratch"
         exit 1
     }
-    trap remote_cleanup EXIT
     trap 'remote_cleanup; exit 130' INT
     trap 'remote_cleanup; exit 129' HUP
     trap 'remote_cleanup; exit 143' TERM
