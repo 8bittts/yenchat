@@ -505,30 +505,49 @@ struct WindowBorderRenderingPolicyTests {
 
     @Test func sparkKeepsOneSpeedBetweenItsLapLimits() throws {
         // 340 points a second: a 2040 point outline takes six seconds.
-        let window = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2))
+        let window = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .medium))
         #expect(abs(window.lapDuration - 6) < 0.0001)
         // Segments sit three points apart, so each one trails the next by 3/340 of a second.
         #expect(abs(window.segmentDelay - 3.0 / 340.0) < 0.0001)
 
-        let smallPane = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 300, lineWidth: 2))
+        let smallPane = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 300, lineWidth: 2, speed: .medium))
         #expect(smallPane.lapDuration == 3)
         #expect(smallPane.tailLength <= 300 / 4)
 
-        let largeWindow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 10_000, lineWidth: 2))
+        let largeWindow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 10_000, lineWidth: 2, speed: .medium))
         #expect(largeWindow.lapDuration == 12)
         // The tail is whole segments, so it stops within one segment of its 160 point limit.
         #expect(largeWindow.tailLength <= 160)
         #expect(largeWindow.tailLength > 160 - WindowBorderRenderingPolicy.sparkSegmentSpacing)
 
-        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: 0, lineWidth: 2) == nil)
-        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: .infinity, lineWidth: 2) == nil)
+        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: 0, lineWidth: 2, speed: .medium) == nil)
+        #expect(WindowBorderRenderingPolicy.sparkModel(perimeter: .infinity, lineWidth: 2, speed: .medium) == nil)
+    }
+
+    @Test func sparkSpeedsRunFromSuperSlowToSuperFastOnEveryOutline() throws {
+        // A small pane, a window, and a large window: each speed must differ
+        // on all three, so a lap limit never flattens two speeds into one.
+        for perimeter: CGFloat in [300, 2040, 10_000] {
+            let laps = try WindowBorderSparkSpeed.allCases.map { speed in
+                try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: perimeter, lineWidth: 2, speed: speed))
+                    .lapDuration
+            }
+            #expect(laps == laps.sorted(by: >))
+            #expect(Set(laps).count == laps.count)
+        }
+        // Speed changes the timing only, never the tail.
+        let slow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .superSlow))
+        let fast = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .superFast))
+        #expect(slow.segmentCount == fast.segmentCount)
+        #expect(slow.segmentLength == fast.segmentLength)
+        #expect(slow.headGlowDiameter == fast.headGlowDiameter)
     }
 
     @Test func sparkTailHasNoGapsOrBandsAtAnyWeight() throws {
         let spacing = WindowBorderRenderingPolicy.sparkSegmentSpacing
         for weight in SettingsBorderWeight.allCases {
             let model = try #require(
-                WindowBorderRenderingPolicy.sparkModel(perimeter: 2400, lineWidth: CGFloat(weight.rawValue))
+                WindowBorderRenderingPolicy.sparkModel(perimeter: 2400, lineWidth: CGFloat(weight.rawValue), speed: .medium)
             )
             // A segment longer than the spacing leaves no gap, and a whole
             // multiple of it covers every point the same number of times.
@@ -572,16 +591,16 @@ struct WindowBorderRenderingPolicyTests {
         let view = WindowBorderSparkLayerView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 2, lineWidth: 4)
 
-        view.configure(geometry: geometry, color: .white)
+        view.configure(geometry: geometry, color: .white, speed: .medium)
         #expect(!view.isTraveling)
 
         window.contentView?.addSubview(view)
-        view.configure(geometry: geometry, color: .white)
+        view.configure(geometry: geometry, color: .white, speed: .medium)
         #expect(view.isTraveling)
         #expect(view.segmentSizeForTesting.height == 4)
         #expect(view.segmentCountForTesting > 1)
 
-        view.configure(geometry: WindowBorderEffectGeometry(cornerRadius: 10, inset: 0.5, lineWidth: 1), color: .white)
+        view.configure(geometry: WindowBorderEffectGeometry(cornerRadius: 10, inset: 0.5, lineWidth: 1), color: .white, speed: .medium)
         #expect(view.isTraveling)
         #expect(view.segmentSizeForTesting.height == 1)
 
@@ -631,19 +650,26 @@ struct WindowBorderRenderingPolicyTests {
         window.contentView?.addSubview(view)
         let geometry = WindowBorderEffectGeometry(cornerRadius: 10, inset: 1, lineWidth: 2)
 
-        view.configure(geometry: geometry, color: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
+        view.configure(geometry: geometry, color: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1), speed: .medium)
         #expect(view.travelBuildCount == 1)
 
         // SwiftUI hands over a new color object on every update, sometimes in
         // another color space. The same color must not restart the spark.
-        view.configure(geometry: geometry, color: NSColor(white: 1, alpha: 1))
-        view.configure(geometry: geometry, color: .white)
+        view.configure(geometry: geometry, color: NSColor(white: 1, alpha: 1), speed: .medium)
+        view.configure(geometry: geometry, color: .white, speed: .medium)
         view.layout()
         #expect(view.travelBuildCount == 1)
 
-        view.configure(geometry: geometry, color: .systemOrange)
+        view.configure(geometry: geometry, color: .systemOrange, speed: .medium)
         #expect(view.travelBuildCount == 2)
         #expect(view.isTraveling)
+
+        // A new speed takes effect at once.
+        let mediumLap = view.lapDurationForTesting
+        view.configure(geometry: geometry, color: .systemOrange, speed: .superFast)
+        #expect(view.travelBuildCount == 3)
+        #expect(view.isTraveling)
+        #expect(view.lapDurationForTesting < mediumLap)
     }
 
     @MainActor

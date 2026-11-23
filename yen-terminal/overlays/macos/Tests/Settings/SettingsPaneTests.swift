@@ -53,20 +53,35 @@ struct SettingsPaneTests {
 
     @Test func borderSectionOffersScopeWhenTheBorderIsOn() {
         #expect(
-            SettingsAppearancePane.borderRows(enabled: true, auraEnabled: false)
+            SettingsAppearancePane.borderRows(enabled: true, sparkEnabled: false, auraEnabled: false)
                 == [.color, .scope, .weight, .spark, .aura]
         )
-        #expect(SettingsAppearancePane.borderRows(enabled: false, auraEnabled: false).isEmpty)
+        #expect(SettingsAppearancePane.borderRows(enabled: false, sparkEnabled: false, auraEnabled: false).isEmpty)
         #expect(SettingsBorderScopeChoice.allCases.map(\.scope) == [.window, .focusedSplit])
         #expect(SettingsBorderScopeChoice.allCases.map(\.title) == ["Window", "Focused Pane"])
     }
 
     @Test func borderEffectsSitBelowWeightAndTheAuraOwnsItsColorRow() {
-        let rows = SettingsAppearancePane.borderRows(enabled: true, auraEnabled: true)
+        let rows = SettingsAppearancePane.borderRows(enabled: true, sparkEnabled: false, auraEnabled: true)
         #expect(rows == [.color, .scope, .weight, .spark, .aura, .auraColor, .auraPulse])
         #expect(WindowBorderAuraPulse.allCases.map(\.displayName) == ["Slow", "Medium", "Fast"])
         // A hidden border hides its effects, whatever they are set to.
-        #expect(SettingsAppearancePane.borderRows(enabled: false, auraEnabled: true).isEmpty)
+        #expect(SettingsAppearancePane.borderRows(enabled: false, sparkEnabled: true, auraEnabled: true).isEmpty)
+    }
+
+    @Test func theSparkOwnsItsSpeedRowWithFiveSpeeds() {
+        #expect(
+            SettingsAppearancePane.borderRows(enabled: true, sparkEnabled: true, auraEnabled: false)
+                == [.color, .scope, .weight, .spark, .sparkSpeed, .aura]
+        )
+        #expect(
+            SettingsAppearancePane.borderRows(enabled: true, sparkEnabled: true, auraEnabled: true)
+                == [.color, .scope, .weight, .spark, .sparkSpeed, .aura, .auraColor, .auraPulse]
+        )
+        #expect(
+            WindowBorderSparkSpeed.allCases.map(\.displayName)
+                == ["Super Slow", "Slow", "Medium", "Fast", "Super Fast"]
+        )
     }
 
     @Test func borderEffectHintsNameTheSettingThatStopsTheMotion() {
