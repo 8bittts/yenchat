@@ -54,7 +54,7 @@ const { TermsPageClient } = await import("@/app/terms/terms-client");
 const { NotFoundClient } = await import("@/app/not-found-client");
 const { default: ReleaseNotesPage } = await import("@/app/blog/releases/page");
 const { default: BlogIndexPage } = await import("@/app/blog/page");
-const { getBlogPosts } = await import("@/lib/blog");
+const { getBlogWeeks } = await import("@/lib/blog-weeks");
 const { RELEASE_WEEKS } = await import(
 	"@/lib/release-notes/release-notes-data"
 );
@@ -395,6 +395,25 @@ describe("public web surface render smoke", () => {
 		);
 	});
 
+	// Every published week links its Friday issue; a week still shipping says
+	// when its issue comes out.
+	function expectReleaseWeeksLinkTheirIssues() {
+		const issueHrefs = new Set(
+			Array.from(document.querySelectorAll<HTMLAnchorElement>("main a")).map(
+				(link) => link.getAttribute("href"),
+			),
+		);
+		const published = getBlogWeeks().filter((week) => week.release);
+		expect(
+			published.filter((week) => !issueHrefs.has(`/${week.slug}`)),
+		).toEqual([]);
+		const newestIssue = getBlogWeeks()[0]?.week ?? "";
+		const stillShipping = (RELEASE_WEEKS[0]?.iso ?? "") > newestIssue;
+		expect(document.body.textContent?.includes("issue comes out Friday")).toBe(
+			stillShipping,
+		);
+	}
+
 	test("release notes render shared landmarks and both download CTAs", async () => {
 		await render(<ReleaseNotesPage />);
 
@@ -414,16 +433,7 @@ describe("public web surface render smoke", () => {
 		for (const week of RELEASE_WEEKS) {
 			expect(document.getElementById(`w-${week.iso}`)).toBeTruthy();
 		}
-		// A week links the creator's posts from that week; the index links back.
-		const postLinks = Array.from(
-			document.querySelectorAll<HTMLAnchorElement>("main a"),
-		).filter((link) =>
-			getBlogPosts().some(
-				(post) => link.getAttribute("href") === `/${post.slug}`,
-			),
-		);
-		expect(postLinks.length).toBeGreaterThan(20);
-		expect(document.body.textContent).toContain("From the creator this week:");
+		expectReleaseWeeksLinkTheirIssues();
 		expect(document.querySelector('a[href="#main-content"]')).toBeTruthy();
 		expect(document.querySelector("main")?.id).toBe("main-content");
 		// Nav is grouped by month (the page itself is grouped by week); labels
@@ -468,34 +478,49 @@ describe("public web surface render smoke", () => {
 		});
 	});
 
-	test("blog index lists every post and every release week once, each labeled by kind", async () => {
+	test("blog index lists every weekly issue once, and marks the creator's issues apart from updates", async () => {
 		await render(<BlogIndexPage />);
 
-		const articles = Array.from(document.querySelectorAll("main article"));
-		const eyebrows = articles.map(
-			(article) => article.querySelector(".ed-label")?.textContent ?? "",
+		const weeks = getBlogWeeks();
+		const rows = Array.from(
+			document.querySelectorAll("main .ed-month article"),
 		);
-		const posts = getBlogPosts();
-		expect(articles).toHaveLength(posts.length + RELEASE_WEEKS.length);
-		expect(
-			eyebrows.filter((text) => text.startsWith("From the creator · ")),
-		).toHaveLength(posts.length);
-		expect(eyebrows.filter((text) => text === "Release notes")).toHaveLength(
-			RELEASE_WEEKS.length,
+		expect(rows).toHaveLength(weeks.length);
+		const hrefs = rows.map(
+			(row) => row.querySelector("a")?.getAttribute("href") ?? "",
 		);
+		expect(hrefs).toEqual(weeks.map((week) => `/${week.slug}`));
 
-		// The index never repeats a week's story: it links to it on /releases.
-		const weekHrefs = Array.from(
-			document.querySelectorAll<HTMLAnchorElement>(
-				'main a[href^="/releases#w-"]',
-			),
-		).map((link) => link.getAttribute("href"));
-		expect(new Set(weekHrefs).size).toBe(RELEASE_WEEKS.length);
-		for (const week of RELEASE_WEEKS) {
-			expect(document.body.textContent).not.toContain(
-				week.summary.slice(0, 80),
+		// A personal issue is labeled and styled apart; an update is not.
+		const personal = weeks.filter((week) => week.kind === "personal");
+		const personalRows = rows.filter((row) =>
+			row.classList.contains("ed-row-personal"),
+		);
+		expect(personalRows).toHaveLength(personal.length);
+		for (const row of personalRows) {
+			expect(row.querySelector(".ed-label")?.textContent).toStartWith(
+				"From the creator · ",
 			);
 		}
+		for (const row of rows.filter(
+			(r) => !r.classList.contains("ed-row-personal"),
+		)) {
+			expect(row.querySelector(".ed-label")?.textContent).toStartWith(
+				"Weekly update · ",
+			);
+		}
+
+		// The index lists issues; it never prints a week's story.
+		for (const week of weeks) {
+			if (week.release) {
+				expect(document.body.textContent).not.toContain(
+					week.release.summary.slice(0, 80),
+				);
+			}
+		}
+		expect(document.querySelector(".ph-kicker")?.textContent).toBe(
+			"Engineering Journal",
+		);
 		expect(document.querySelector('a[href="/releases"]')).toBeTruthy();
 	});
 

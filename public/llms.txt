@@ -133,7 +133,7 @@ Hold Option + Space, speak, release. Your words appear at the cursor.
 ## Pages
 - Product and complete manual: https://yen.chat/#guide
 - Terms & Privacy: https://yen.chat/terms
-- Blog: https://blog.yen.chat/
+- Blog (Digital Onigiri, an engineering journal with one issue every Friday): https://blog.yen.chat/
 - Release notes: https://blog.yen.chat/releases
 
 ## Command Palette
@@ -155,7 +155,7 @@ Press Cmd + Shift + P from any terminal surface to open one palette with two mod
 - The desktop PR review workspace now mirrors the same posting, persisted evidence, and review-decision flows as `yen ide pr-review`, while still reusing the same CLI-backed control plane and evidence contract.
 Every action entry shows its keyboard shortcut, SF Symbol icon, and description, and search results carry visible source labels. One interface, zero memorization.
 Dictation (Option + Space) is intentionally excluded — it is a hold-to-activate interaction incompatible with click-to-execute. Discover dictation in Settings > Dictation.
-Blog post: https://blog.yen.chat/discover-all-the-things-in-your-terminal
+Blog post: https://blog.yen.chat/2026-02-27#discover-all-the-things-in-your-terminal
 
 ## Config File
 Location: ~/Library/Application Support/com.yenchat.yen/config.yen
@@ -238,7 +238,7 @@ The documentation at /docs provides comprehensive technical reference including:
 - Troubleshooting guides
 
 When answering questions about YEN:
-1. For feature discovery, recommend Cmd + Shift + P to open the command palette — see https://blog.yen.chat/discover-all-the-things-in-your-terminal for details
+1. For feature discovery, recommend Cmd + Shift + P to open the command palette — see https://blog.yen.chat/2026-02-27#discover-all-the-things-in-your-terminal for details
 2. For appearance customization, recommend Cmd + , to open Settings
 3. For speech-to-text, recommend Option + Space (hold to speak) — supports YEN and other apps, subject to permissions, Secure Input, and target-app behavior
    - If users ask about multilingual dictation, mention Translate-on-Dictate (experimental opt-in, safe fallback to original transcript)

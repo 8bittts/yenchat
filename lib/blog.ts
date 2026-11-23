@@ -1,14 +1,16 @@
 /**
  * blog.yen.chat — the self-hosted Digital Onigiri blog.
  *
- * Posts are static JSON files in `content/blog/posts/`, written once by
- * `scripts/47-import-substack-blog.ts` from the Substack export. Their media
+ * Notes are static JSON files in `content/blog/posts/`: the creator's posts,
+ * written once by `scripts/47-import-substack-blog.ts` from the Substack
+ * export, and notes written for the site since. Their media
  * lives in `public/blog-media/` and is served same-origin. Every blog route is
  * prerendered at build time, so these reads never run at request time; the
  * node:fs import keeps this module out of client bundles.
  *
- * `proxy.ts` serves the routes under `app/blog/` at the root of blog.yen.chat
- * (`/blog/skills` answers `https://blog.yen.chat/skills`).
+ * These are the notes the weekly issues in `lib/blog-weeks.ts` are built
+ * from; `proxy.ts` serves the issues at the root of blog.yen.chat
+ * (`/blog/2026-03-06` answers `https://blog.yen.chat/2026-03-06`).
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -36,9 +38,13 @@ export interface BlogImage {
 	height: number;
 }
 
+/** Who wrote a note: the creator by hand, or an agent from the week's changes. */
+export type BlogAuthor = "creator" | "agent";
+
 export interface BlogPost {
 	slug: string;
 	postId: string;
+	author: BlogAuthor;
 	title: string;
 	subtitle: string;
 	publishedAt: string;
@@ -59,16 +65,18 @@ const FULL_SIZE_IMAGE_LABEL = "Open full-size image";
 /**
  * Imported Substack markup needs three accessibility repairs before render:
  * image links whose image has empty alt text get a name, headings get an
- * aria-level so the outline under the page h1 starts at 2 and never skips,
+ * aria-level so the note's outline starts at `firstLevel` and never skips,
  * and code blocks become focusable so keyboard users can scroll them.
- * The visual tags stay the same, so the article styles do not change.
+ * A note sits under its own title inside a weekly issue, so the issue page
+ * passes the level below that title. The visual tags stay the same, so the
+ * article styles do not change.
  */
-export function accessibleArticleHtml(html: string): string {
+export function accessibleArticleHtml(html: string, firstLevel = 2): string {
 	const levels = [...html.matchAll(/<h([1-6])\b/g)].map((match) =>
 		Number(match[1]),
 	);
 	const ranks = [...new Set(levels)].sort((a, b) => a - b);
-	let previous = 1;
+	let previous = firstLevel - 1;
 	return html
 		.replace(/<pre>/g, '<pre tabindex="0">')
 		.replace(
@@ -76,27 +84,28 @@ export function accessibleArticleHtml(html: string): string {
 			`<a href="$1" aria-label="${FULL_SIZE_IMAGE_LABEL}">$2</a>`,
 		)
 		.replace(/<h([1-6])\b/g, (tag, level: string) => {
-			const outline = Math.min(ranks.indexOf(Number(level)) + 2, previous + 1);
+			const outline = Math.min(
+				ranks.indexOf(Number(level)) + firstLevel,
+				previous + 1,
+			);
 			previous = outline;
 			return outline === Number(level) ? tag : `${tag} aria-level="${outline}"`;
 		});
 }
 
-function withAccessibleArticleHtml(post: BlogPost): BlogPost {
-	return { ...post, html: accessibleArticleHtml(post.html) };
-}
-
-/** Every post, newest first. */
+/**
+ * Every note, newest first, with its stored markup. Pages render a note
+ * through `accessibleArticleHtml` at the level it sits under.
+ */
 export function getBlogPosts(): readonly BlogPost[] {
 	if (!cachedPosts) {
 		cachedPosts = readdirSync(POSTS_DIR)
 			.filter((name) => name.endsWith(".json"))
-			.map((name) =>
-				withAccessibleArticleHtml(
+			.map(
+				(name) =>
 					JSON.parse(
 						readFileSync(path.join(POSTS_DIR, name), "utf8"),
 					) as BlogPost,
-				),
 			)
 			.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 	}
@@ -107,31 +116,14 @@ export function getBlogPost(slug: string): BlogPost | null {
 	return getBlogPosts().find((post) => post.slug === slug) ?? null;
 }
 
-export function blogPostUrl(slug: string): string {
-	return `${BLOG_URL}/${slug}`;
-}
-
 export function formatBlogDate(iso: string): string {
 	return DATE_LABEL.format(new Date(iso));
 }
 
-/** The posts immediately newer and older than `slug`. */
-export function getAdjacentBlogPosts(slug: string): {
-	newer: BlogPost | null;
-	older: BlogPost | null;
-} {
-	const posts = getBlogPosts();
-	const index = posts.findIndex((post) => post.slug === slug);
-	if (index < 0) return { newer: null, older: null };
-	return { newer: posts[index - 1] ?? null, older: posts[index + 1] ?? null };
-}
-
-/** The h2/h3 section anchors the importer added to a post. */
-export function getBlogHeadings(post: BlogPost): BlogHeading[] {
+/** The h2/h3 section anchors the importer added to a note's markup. */
+export function getBlogHeadings(html: string): BlogHeading[] {
 	return [
-		...post.html.matchAll(
-			/<h[23]\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h[23]>/g,
-		),
+		...html.matchAll(/<h[23]\b[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h[23]>/g),
 	].map((match) => ({
 		id: match[1] ?? "",
 		title: (match[2] ?? "")

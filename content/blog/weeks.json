@@ -1,0 +1,217 @@
+[
+	{
+		"week": "2025-12-15",
+		"title": "Signed, Notarized, and Shipping",
+		"deck": "89 builds to turn a fast terminal into something you can hand to a stranger."
+	},
+	{
+		"week": "2025-12-22",
+		"title": "Trusting the Release Machine",
+		"deck": "A hardened build workflow, real diagnostics, and fewer reasons to reinstall."
+	},
+	{
+		"week": "2025-12-29",
+		"title": "A Quiet Holiday Week",
+		"deck": "A faster engine, and YEN's orange shows up in the system UI."
+	},
+	{
+		"week": "2026-01-12",
+		"lead": "small-bites-from-the-digital-onigiri"
+	},
+	{
+		"week": "2026-01-19",
+		"lead": "talk-to-your-terminal-without-ai"
+	},
+	{
+		"week": "2026-02-02",
+		"lead": "platform"
+	},
+	{
+		"week": "2026-02-09",
+		"lead": "your-terminal-has-a-file-browser"
+	},
+	{
+		"week": "2026-02-16",
+		"lead": "email-is-now-in-your-terminal"
+	},
+	{
+		"week": "2026-02-23",
+		"lead": "pickaxes"
+	},
+	{
+		"week": "2026-03-02",
+		"lead": "skills"
+	},
+	{
+		"week": "2026-03-09",
+		"lead": "s2t"
+	},
+	{
+		"week": "2026-03-16",
+		"lead": "ide"
+	},
+	{
+		"week": "2026-03-23",
+		"lead": "v1"
+	},
+	{
+		"week": "2026-03-30",
+		"title": "A Faster Prompt",
+		"deck": "IDE detection is cached, so the prompt stops paying for it on every launch."
+	},
+	{
+		"week": "2026-04-06",
+		"title": "Lighter Long Sessions",
+		"deck": "A tab leak closed, hidden tabs let go of memory, and the download got smaller."
+	},
+	{
+		"week": "2026-04-13",
+		"lead": "focus-feature"
+	},
+	{
+		"week": "2026-04-20",
+		"lead": "browser"
+	},
+	{
+		"week": "2026-04-27",
+		"lead": "receipts-ports-and-applescript"
+	},
+	{
+		"week": "2026-05-04",
+		"title": "Faster File Previews",
+		"deck": "Arrow through a folder and the preview keeps up."
+	},
+	{
+		"week": "2026-05-11",
+		"lead": "quiet"
+	},
+	{
+		"week": "2026-05-18",
+		"title": "Small Certainties",
+		"deck": "Open Terminal Here works, nested splits resize, and quit finally lets go."
+	},
+	{
+		"week": "2026-05-25",
+		"title": "A Foundation Week",
+		"deck": "A 22-commit engine refresh, a newer fuzzy finder, and nothing to relearn."
+	},
+	{
+		"week": "2026-06-01",
+		"lead": "tunes"
+	},
+	{
+		"week": "2026-06-08",
+		"lead": "happy"
+	},
+	{
+		"week": "2026-06-15",
+		"title": "Quick Terminal Stays Put",
+		"deck": "Quick Terminal stays where you put it, and Shortcuts gets clean terminal output."
+	},
+	{
+		"week": "2026-06-22",
+		"lead": "git-drawer"
+	},
+	{
+		"week": "2026-06-29",
+		"title": "A Keyboard-First Git Drawer",
+		"deck": "j / k follows the pane you're reading, diffs stick to the top, and copy on select just works."
+	},
+	{
+		"week": "2026-07-06",
+		"lead": "jp"
+	},
+	{
+		"week": "2026-07-13",
+		"title": "Holding Up Under Pressure",
+		"deck": "A deep audit of the app, shipped one fix at a time."
+	},
+	{
+		"week": "2026-07-20",
+		"title": "Every Panel Slides the Same",
+		"deck": "Quick Terminal, the Git drawer, the sidebar, and Scratchpad move as one system."
+	},
+	{
+		"week": "2026-07-27",
+		"title": "Scrollback in Lines",
+		"deck": "Keep your last 50,000 lines, or keep everything."
+	},
+	{
+		"week": "2026-08-03",
+		"title": "Settings That Keep Every Value",
+		"deck": "Repeated shortcuts, theme colors, and fallback fonts survive a save."
+	},
+	{
+		"week": "2026-08-10",
+		"title": "YEN Opens Faster",
+		"deck": "About 15% off launch time and 27% off the wait for the first frame."
+	},
+	{
+		"week": "2026-08-17",
+		"title": "Voice You Can See",
+		"deck": "A rainbow waveform, and dictation that keeps your partial words when audio fails."
+	},
+	{
+		"week": "2026-08-24",
+		"title": "Pick Your Microphone",
+		"deck": "Dictation lists every input, and an idle terminal uses less."
+	},
+	{
+		"week": "2026-08-31",
+		"title": "Windows That Cascade Again",
+		"deck": "New windows step across the screen, and new tabs stop flashing."
+	},
+	{
+		"week": "2026-09-07",
+		"title": "Engine 1.4",
+		"deck": "The terminal engine moves to its 1.4 release, and pasted paths point at live files."
+	},
+	{
+		"week": "2026-09-14",
+		"title": "Titles You Can Read",
+		"deck": "Custom title bar fonts stop clipping, and the chrome reads like a Mac app."
+	},
+	{
+		"week": "2026-09-21",
+		"title": "Splits That Know Their Worktree",
+		"deck": "Each pane can name itself after the git worktree it's working in."
+	},
+	{
+		"week": "2026-09-28",
+		"title": "One Shortcut, One Window",
+		"deck": "On macOS 27, a shortcut that opens a terminal opens exactly one."
+	},
+	{
+		"week": "2026-10-05",
+		"title": "Where Is the Agent Working?",
+		"deck": "yen pane cwd lets an agent in a split report the folder it's really in."
+	},
+	{
+		"week": "2026-10-12",
+		"lead": "love"
+	},
+	{
+		"week": "2026-10-19",
+		"title": "The Cursor Stays in the Box",
+		"deck": "Margins and origin mode behave, so editors and dashboards that draw in a box line up."
+	},
+	{
+		"week": "2026-10-26",
+		"title": "No More Title Bar Flash",
+		"deck": "Tabs move between windows cleanly, and a mode report can't hang a program."
+	},
+	{
+		"week": "2026-11-02",
+		"title": "You Stay in Your Folder",
+		"deck": "New tabs keep your directory, and wide characters draw faster."
+	},
+	{
+		"week": "2026-11-09",
+		"lead": "a-new-updated-and-lovely-settings"
+	},
+	{
+		"week": "2026-11-16",
+		"title": "Quit the App, Keep the Shell",
+		"deck": "Persistent sessions, an outline all the way around the focused pane, and agent usage in the menu bar."
+	}
+]

@@ -1,6 +1,7 @@
 {
 	"slug": "skills",
 	"postId": "190176100",
+	"author": "creator",
 	"title": "From Makefiles to Agentic Skills: Shipping a 30-Language Desktop App via a Single Command",
 	"subtitle": "Building YEN via Simple Orchestration and a Clean Agent Harness",
 	"publishedAt": "2026-03-07T17:01:15.496Z",

@@ -7,11 +7,11 @@ import {
 import { proxy } from "@/proxy";
 
 describe("blog.yen.chat host routing", () => {
-	test("renders the index, posts, and blog files from app/blog", () => {
+	test("renders the index, weekly issues, and blog files from app/blog", () => {
 		expect(routeBlogHostPath("/")).toEqual({ kind: "page", pathname: "/blog" });
-		expect(routeBlogHostPath("/skills")).toEqual({
+		expect(routeBlogHostPath("/2026-03-06")).toEqual({
 			kind: "page",
-			pathname: "/blog/skills",
+			pathname: "/blog/2026-03-06",
 		});
 		expect(routeBlogHostPath("/releases")).toEqual({
 			kind: "page",
@@ -31,22 +31,25 @@ describe("blog.yen.chat host routing", () => {
 		});
 	});
 
-	test("redirects Substack /p/ addresses to the clean post address", () => {
-		expect(routeBlogHostPath("/p/skills")).toEqual({
-			kind: "redirect",
-			url: "https://blog.yen.chat/skills",
-		});
-		expect(routeBlogHostPath("/p/skills/comments")).toEqual({
-			kind: "redirect",
-			url: "https://blog.yen.chat/skills",
-		});
+	test("redirects a note's old and Substack addresses to the note inside its issue", () => {
+		for (const path of [
+			"/skills",
+			"/skills/",
+			"/p/skills",
+			"/p/skills/comments",
+		]) {
+			expect(routeBlogHostPath(path)).toEqual({
+				kind: "redirect",
+				url: "https://blog.yen.chat/2026-03-06#skills",
+			});
+		}
 		expect(routeBlogHostPath("/p/no-such-post")).toEqual({
 			kind: "redirect",
 			url: "https://blog.yen.chat/",
 		});
-		expect(routeBlogHostPath("/skills/")).toEqual({
+		expect(routeBlogHostPath("/2026-03-06/")).toEqual({
 			kind: "redirect",
-			url: "https://blog.yen.chat/skills",
+			url: "https://blog.yen.chat/2026-03-06",
 		});
 	});
 
@@ -105,20 +108,22 @@ describe("proxy on blog.yen.chat", () => {
 		return new NextRequest(url, { headers: { host: new URL(url).host } });
 	}
 
-	test("308s a Substack address to the clean post address", () => {
-		const response = proxy(
-			request("https://blog.yen.chat/p/skills?utm_source=x"),
-		);
-		expect(response.status).toBe(308);
-		expect(response.headers.get("location")).toBe(
-			"https://blog.yen.chat/skills?utm_source=x",
-		);
+	test("308s an old note address into its issue, query before the anchor", () => {
+		for (const path of ["/p/skills", "/skills"]) {
+			const response = proxy(
+				request(`https://blog.yen.chat${path}?utm_source=x`),
+			);
+			expect(response.status).toBe(308);
+			expect(response.headers.get("location")).toBe(
+				"https://blog.yen.chat/2026-03-06?utm_source=x#skills",
+			);
+		}
 	});
 
-	test("renders a post from /blog/<slug> with a page CSP", () => {
-		const response = proxy(request("https://blog.yen.chat/skills"));
+	test("renders an issue from /blog/<friday> with a page CSP", () => {
+		const response = proxy(request("https://blog.yen.chat/2026-03-06"));
 		expect(response.headers.get("x-middleware-rewrite")).toBe(
-			"https://blog.yen.chat/blog/skills",
+			"https://blog.yen.chat/blog/2026-03-06",
 		);
 		expect(response.headers.get("content-security-policy")).toContain(
 			"script-src 'self'",

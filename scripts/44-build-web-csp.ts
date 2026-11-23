@@ -441,7 +441,7 @@ function assertBlogCoverage(
 	routes: Record<string, string[]>,
 	htmlArtifacts: Map<string, string>,
 ): void {
-	const expected = blogSlugs.map((slug) => `/blog/${slug}`).sort();
+	const expected = blogSlugs.weeks.map((slug) => `/blog/${slug}`).sort();
 	const missingPath = expected.find((path) => !routes[path]);
 	if (missingPath) {
 		throw new Error(`missing prerendered HTML + CSP hashes for ${missingPath}`);

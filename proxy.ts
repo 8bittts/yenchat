@@ -165,7 +165,10 @@ function routeBlogHost(request: NextRequest): NextResponse | null {
 		if (fetchDest && fetchDest !== "document") {
 			return new NextResponse(null, { status: 204 });
 		}
-		return NextResponse.redirect(`${route.url}${request.nextUrl.search}`, 308);
+		// A note's address carries its #anchor, so the query goes before it.
+		const location = new URL(route.url);
+		location.search = request.nextUrl.search;
+		return NextResponse.redirect(location, 308);
 	}
 	if (route.kind === "file") {
 		const rewriteUrl = request.nextUrl.clone();

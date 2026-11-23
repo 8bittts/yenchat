@@ -214,7 +214,7 @@ describe("static CSP prerender build", () => {
 	});
 
 	test("generated manifest covers every finite blog article with strict hashes", () => {
-		const expectedPaths = blogSlugs.map((slug) => `/blog/${slug}`).sort();
+		const expectedPaths = blogSlugs.weeks.map((slug) => `/blog/${slug}`).sort();
 		const actualPaths = Object.keys(STATIC_INLINE_SCRIPT_HASHES)
 			.filter((path) => path.startsWith("/blog/") && path !== "/blog/releases")
 			.sort();

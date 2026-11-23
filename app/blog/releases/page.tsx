@@ -6,10 +6,14 @@ import { TrackedDownloadLink } from "@/components/shared/tracked-download-link";
 import { BLOG_TITLE, BLOG_URL } from "@/lib/blog";
 import {
 	describeReleaseWeek,
-	getPostsForReleaseWeek,
 	RELEASES_PATH,
 	releaseWeekId,
 } from "@/lib/blog-archive";
+import {
+	addDays,
+	getBlogWeekForRelease,
+	weekKindLabel,
+} from "@/lib/blog-weeks";
 import { RELEASE_WEEKS } from "@/lib/release-notes/release-notes-data";
 import { buildPublicPageMetadata, SITE_URL } from "@/lib/seo";
 
@@ -49,8 +53,8 @@ export default function ReleaseNotesPage() {
 						What changed in <em>YEN</em>
 					</h1>
 					<p className="ph-hero-lede">
-						The build log, one week at a time. See when a feature landed and
-						follow the field notes behind it.
+						The build log, one week at a time. Each Friday the week's changes
+						roll up into an issue of the journal.
 					</p>
 					<div className="ph-actions">
 						<TrackedDownloadLink
@@ -79,7 +83,7 @@ export default function ReleaseNotesPage() {
 				</details>
 				<div className="ed-log">
 					{RELEASE_WEEKS.map((week) => {
-						const posts = getPostsForReleaseWeek(week);
+						const issue = getBlogWeekForRelease(week);
 						return (
 							<DocSection
 								key={week.iso}
@@ -100,19 +104,18 @@ export default function ReleaseNotesPage() {
 										</p>
 									))}
 								</div>
-								{posts.length > 0 ? (
-									<p className="text-body-sm text-text-muted">
-										From the creator this week:{" "}
-										{posts.map((post, index) => (
-											<span key={post.slug}>
-												{index > 0 ? "; " : null}
-												<Link href={`/${post.slug}`} className="link-brand">
-													{post.title}
-												</Link>
-											</span>
-										))}
-									</p>
-								) : null}
+								<p className="text-body-sm text-text-muted">
+									{issue ? (
+										<>
+											{weekKindLabel(issue)}:{" "}
+											<Link href={`/${issue.slug}`} className="link-brand">
+												{issue.title}
+											</Link>
+										</>
+									) : (
+										`This week's issue comes out Friday, ${addDays(week.iso, 4)}.`
+									)}
+								</p>
 							</DocSection>
 						);
 					})}

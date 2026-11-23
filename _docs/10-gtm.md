@@ -62,23 +62,35 @@ The 53 posts imported from the Substack export live in `content/blog/posts/<slug
 - The blog pages pass `siteOrigin={SITE_URL}` to `PageShell`, so the shared header and footer link to yen.chat directly; a relative `/` there is the blog index, and `tests/55-web-ui-dom.test.tsx` pins every shared link to yen.chat.
 - On yen.chat, `/blog` and `/blog/<path>` 308 to blog.yen.chat; previews and local development still render `/blog` directly.
 - Local `next dev` and `next start` rewrite the request host to `localhost`, so host routing is proven by `tests/159-blog-host-routing.test.ts` and on the deployed domain, never by a local Host header.
-- `content/blog/slugs.json` is the slug index the proxy bundles; `tests/158-blog-archive.test.ts` keeps it equal to the post files, checks that all 53 imported posts remain alongside locally authored posts, and fails if a post references media missing from `public/blog-media/`.
-- A new post is a new `content/blog/posts/<slug>.json` in the same shape plus its slug in `slugs.json`, with its media under `public/blog-media/`.
-- `tests/158` refuses a post slug that collides with a blog route such as `releases`.
-- `lib/blog.ts` (`accessibleArticleHtml`) repairs article markup on load: an image link whose image has empty alt text gets an `aria-label`, headings get an `aria-level` so the outline under the page `h1` starts at 2 and never skips, and each `pre` becomes focusable. The visual tags stay unchanged, so a new post needs none of this by hand; `tests/167-blog-article-accessibility.test.ts` checks every post.
+- `tests/158-blog-archive.test.ts` checks that all 53 imported posts remain as creator notes, and fails if a note references media missing from `public/blog-media/` or a slug collides with a blog route such as `releases`.
+- A new note is a new `content/blog/posts/<slug>.json` in the same shape, with `"author"` set to `creator` or `agent` and its media under `public/blog-media/`; it appears when its week's issue is published.
+- `lib/blog.ts` (`accessibleArticleHtml`) repairs note markup at render: an image link whose image has empty alt text gets an `aria-label`, headings get an `aria-level` so the outline never skips, and each `pre` becomes focusable. The visual tags stay unchanged, so a new note needs none of this by hand; `tests/167-blog-article-accessibility.test.ts` checks every note inside its issue.
 
-### Posts and release notes
+### Weekly issues
 
-The blog holds two kinds of writing, and each says which it is.
-Posts are labeled "From the creator": long-form, first-person notes on why and how YEN is built.
-Release notes are labeled "Release notes": the weekly record of what changed, written for the person deciding whether to update.
+blog.yen.chat publishes one issue per Monday-Sunday week, dated that week's Friday, at `/<friday>` (for example `/2026-11-20`).
+`lib/blog-weeks.ts` builds each issue from the week's release story, the week's notes in `content/blog/posts/`, and its entry in `content/blog/weeks.json`.
+An issue exists only when `weeks.json` lists its week, so the current week stays open until its Friday.
 
-- The index (`app/blog/page.tsx`) is one month-by-month timeline of both, built by `lib/blog-archive.ts`. A week's entry shows its label, build count and latest version and links to its anchor on `/releases`; its story is never repeated on the index.
-- A week's month is the month of its Thursday, the same rule as the release notes nav; a post's month and day are read in Pacific time, like its date label.
-- The two cross-link by week: a release week lists that week's posts under "From the creator this week", and a post's "More field notes" section links the release notes for the week it was published in.
-- A post can introduce a feature that the same week's release notes also mention. The post explains why; the week story stays the short factual record. Neither copies the other's text.
-- The feed (`/feed`) carries posts only, because a week's story is refreshed by every build that week.
-- `tests/55` and `tests/158` fail if the index drops or repeats an entry, or prints a week's story.
+Every issue opens with **Technical updates**: the curated week story from `lib/release-notes/release-notes-copy.ts`, the build range, and a link to that week on `/releases`.
+A note an agent wrote for the site (`"author": "agent"`) renders inside Technical updates as a feature note.
+
+There are two kinds of issue, and the index, the issue page, the feed and the social card all say which one it is.
+
+| Kind | When | Title and deck | Look |
+|------|------|----------------|------|
+| From the creator | The creator wrote a note that week (`"author": "creator"`) | The lead note's own title and subtitle (`"lead"` in `weeks.json`) | Card tint and a brand rule on the index row and the lead; Technical updates, then a tinted "Notes from the creator" section with each note under its own title and date |
+| Weekly update | No creator note that week | `"title"` and `"deck"` in `weeks.json`, written in the creator's voice (`/voice`) | Plain paper; Technical updates only |
+
+- Personal issues keep the creator's notes word for word; an agent never edits or summarizes them.
+- A weekly update's title is short, proper case, and concrete ("Scrollback in Lines"); its deck is one plain sentence with a fact in it. No marketing adjectives.
+- A personal issue shares the lead note's cover; a weekly update shares its own card from `public/social/weeks/<friday>.png`, written by `bun scripts/gen-blog-week-cards.tsx`. Each issue's Open Graph and Twitter title, description and image name that issue and its week.
+- A note's old address (`/<note>`, `/p/<note>`, `yen.chat/blog/<note>`) 308s to `/<friday>#<note>`, keeping the query before the anchor; `content/blog/slugs.json`, written by `bun scripts/gen-blog-slugs.ts`, is the index `proxy.ts` bundles for that.
+- Notes render inside an issue under its h1, a section h2 and their own h3, so `accessibleArticleHtml` starts their headings at level 4; a heading id an earlier note on the page already uses gets the note's slug as a prefix.
+- The index, the feed (`/feed`) and the sitemap list issues only. `/releases` stays the build-by-build record the app links to: a week links its issue once it is out, and says when the current week's issue comes out.
+
+To publish a week on its Friday: add its entry to `content/blog/weeks.json` (a `"lead"` note slug for a personal week, or a `"title"` and `"deck"`), then run `bun scripts/gen-blog-slugs.ts` and `bun scripts/gen-blog-week-cards.tsx`, and ship with `[deploy]`.
+`tests/158-blog-archive.test.ts` fails if a week lands on a day other than Friday, a release week or note belongs to no issue or to two, an issue's kind does not match its notes, an issue lacks its card, or `slugs.json` is stale; `tests/55` and `tests/167` cover the index markup and the issue outline.
 
 ## Content Voice
 
@@ -93,7 +105,8 @@ YEN is a solo-developer product written in the first person ("I built", never "w
 
 | Channel | Style |
 |---------|-------|
-| Blog (blog.yen.chat) | Long-form, personal, technical; "Hey folks!" and a "— 8" sign-off |
+| Blog notes from the creator | Long-form, personal, technical; written by the creator; "Hey folks!" and a "— 8" sign-off |
+| Blog weekly updates | The week story, plus a title and deck in the creator's voice ([Weekly issues](#weekly-issues)) |
 | Social | One insight per post, code welcome |
 | Public docs | Clear, scannable, accurate over promotional |
 | Release notes (blog.yen.chat/releases) | The weekly story rules above |

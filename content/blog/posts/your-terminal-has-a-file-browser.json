@@ -1,6 +1,7 @@
 {
 	"slug": "your-terminal-has-a-file-browser",
 	"postId": "188058338",
+	"author": "creator",
 	"title": "Your Terminal Has a File Browser Now",
 	"subtitle": "How we built a full file manager into a Terminal Emulator w/o a single floating window.",
 	"publishedAt": "2026-02-15T19:54:04.791Z",

@@ -1,6 +1,7 @@
 {
 	"slug": "ide",
 	"postId": "190885250",
+	"author": "creator",
 	"title": "The Terminal IS the IDE Now",
 	"subtitle": "YEN has a Terminal-first IDE stack with local LSP workflows, encrypted sharing, devcontainer control, deterministic VS Code import, review tooling, and more.",
 	"publishedAt": "2026-03-17T20:38:21.329Z",

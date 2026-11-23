@@ -1,6 +1,7 @@
 {
 	"slug": "split-names",
 	"postId": "190362522",
+	"author": "creator",
 	"title": "Terminal Tabs Have Names. Splits Should Too.",
 	"subtitle": "Split Labels give each pane its own identity without turning the Terminal into UI soup.",
 	"publishedAt": "2026-03-10T14:30:59.759Z",

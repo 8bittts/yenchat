@@ -272,7 +272,9 @@
 	max-width: 72ch;
 }
 .ed-policy h2,
-.ed-log > section > h2 {
+.ed-log > section > h2,
+section.ed-updates > h2,
+section.ed-creator > h2 {
 	font-size: clamp(25px, 2.5vw, 42px);
 	line-height: 1.12;
 	letter-spacing: -0.05em;
@@ -403,4 +405,81 @@
 }
 .ed-reading > div:only-child {
 	margin-inline: auto;
+}
+
+/* Weekly issues come in two kinds. A personal issue carries notes the creator
+   wrote by hand: its index row, its lead, and its notes section sit on the
+   card tint with a brand rule. A weekly update keeps the plain paper. */
+.ed-row.ed-row-personal a,
+.ed-lead-personal {
+	background: hsl(var(--card-content));
+	border-left: 3px solid hsl(var(--brand-dark));
+	padding-inline: clamp(14px, 2vw, 24px);
+}
+.ed-row-personal + .ed-row,
+.ed-row + .ed-row-personal {
+	border-top-color: transparent;
+}
+.ed-row-personal + .ed-row-personal {
+	margin-top: 8px;
+}
+.ed-row-personal .ed-label,
+.ed-lead-personal .ed-label,
+.ed-story-personal .ed-kind,
+.ed-creator > .ed-label,
+.ed-legend-personal {
+	color: hsl(var(--brand-dark));
+}
+.ed-row-meta,
+.ed-legend {
+	font-family: var(--ph-mono);
+	font-size: 0.8rem;
+	color: var(--ph-secondary);
+}
+.ed-legend {
+	margin-bottom: 18px;
+}
+.ed-legend span {
+	font-weight: 650;
+}
+.ed-story-head .ed-kind {
+	margin-top: 18px;
+	text-decoration: none;
+}
+.ed-updates > .blog-prose {
+	margin-top: 1rem;
+}
+.ed-updates > p:last-of-type .ed-text-link {
+	font-family: var(--ph-mono);
+	font-size: 0.85rem;
+}
+.ed-note {
+	margin-top: clamp(32px, 4vw, 56px);
+	padding-top: clamp(24px, 3vw, 40px);
+	border-top: 1px solid var(--ph-reader-line);
+}
+.ed-story article.ed-note > h3 {
+	font-size: clamp(24px, 2.3vw, 38px);
+	line-height: 1.12;
+	letter-spacing: -0.045em;
+	font-weight: 550;
+}
+.ed-note-deck {
+	color: var(--ph-secondary);
+	margin-top: 0.5rem;
+	line-height: 1.5;
+}
+.ed-note > .blog-prose {
+	margin-top: 1.5rem;
+}
+.ed-creator {
+	margin-top: clamp(40px, 6vw, 80px);
+	padding: clamp(20px, 3vw, 40px);
+	background: hsl(var(--card-content));
+	border-left: 3px solid hsl(var(--brand-dark));
+}
+.ed-creator .ed-note:first-of-type {
+	border-top: none;
+	margin-top: clamp(16px, 2vw, 28px);
+	padding-top: 0;
 }

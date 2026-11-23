@@ -2,10 +2,12 @@
  * Host routing for blog.yen.chat, applied by proxy.ts.
  *
  * The blog lives under app/blog/ and is served at the root of its own host:
- * `https://blog.yen.chat/skills` renders `/blog/skills`, and `/releases` renders
- * the weekly release notes at `/blog/releases`. Substack's
- * `/p/<slug>` addresses redirect to `/<slug>`, Substack-only pages redirect to
- * the blog index, and any other page path belongs to yen.chat.
+ * a weekly issue such as `https://blog.yen.chat/2026-11-20` renders
+ * `/blog/2026-11-20`, and `/releases` renders the release notes at
+ * `/blog/releases`. A note's old address (`/skills`, or Substack's
+ * `/p/skills`) 308s to the note inside its weekly issue
+ * (`/2026-03-06#skills`), Substack-only pages redirect to the blog index, and
+ * any other page path belongs to yen.chat.
  */
 
 import BLOG_SLUGS from "@/content/blog/slugs.json";
@@ -14,7 +16,14 @@ export const BLOG_HOST = "blog.yen.chat";
 const BLOG_ORIGIN = `https://${BLOG_HOST}`;
 const MAIN_ORIGIN = "https://yen.chat";
 
-const SLUGS: ReadonlySet<string> = new Set(BLOG_SLUGS);
+const WEEKS: ReadonlySet<string> = new Set(BLOG_SLUGS.weeks);
+const NOTE_WEEKS: Readonly<Record<string, string>> = BLOG_SLUGS.notes;
+
+/** A note lives inside its weekly issue, at its own anchor. */
+function noteUrl(slug: string): string | null {
+	const week = NOTE_WEEKS[slug];
+	return week ? `${BLOG_ORIGIN}/${week}#${slug}` : null;
+}
 
 /** Pages rendered as HTML, which need the route's CSP. */
 const BLOG_PAGE_ROUTES: Readonly<Record<string, string>> = {
@@ -50,19 +59,19 @@ export function routeBlogHostPath(pathname: string): BlogHostRoute {
 	if (file) return { kind: "file", pathname: file };
 
 	const slug = pathname.match(/^\/([^/]+)\/?$/)?.[1];
-	if (slug && SLUGS.has(slug)) {
+	if (slug && WEEKS.has(slug)) {
 		return pathname.endsWith("/")
 			? { kind: "redirect", url: `${BLOG_ORIGIN}/${slug}` }
 			: { kind: "page", pathname: `/blog/${slug}` };
 	}
+	const note = slug ? noteUrl(slug) : null;
+	if (note) return { kind: "redirect", url: note };
 
 	const legacySlug = pathname.match(/^\/p\/([^/]+)/)?.[1];
 	if (legacySlug) {
 		return {
 			kind: "redirect",
-			url: SLUGS.has(legacySlug)
-				? `${BLOG_ORIGIN}/${legacySlug}`
-				: `${BLOG_ORIGIN}/`,
+			url: noteUrl(legacySlug) ?? `${BLOG_ORIGIN}/`,
 		};
 	}
 	if (SUBSTACK_PAGE_PATTERN.test(pathname)) {

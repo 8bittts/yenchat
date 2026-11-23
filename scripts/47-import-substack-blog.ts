@@ -16,8 +16,8 @@
  *      cached). Images are the 848px and 1456px webp copies Substack served to
  *      readers; GIFs and videos are the originals.
  *   4. Copy the cached media into `public/blog-media/`, served same-origin.
- *   5. Write one `content/blog/posts/<slug>.json` per published post and the
- *      `content/blog/slugs.json` index.
+ *   5. Write one `content/blog/posts/<slug>.json` per published post. Run
+ *      `bun scripts/gen-blog-slugs.ts` afterwards to rebuild the route index.
  *
  * Nothing in the output depends on Substack hosting: media URLs are
  * `/blog-media/...`, and links to other posts point at `/<slug>` on
@@ -78,6 +78,8 @@ interface BlogImage {
 interface ConvertedPost {
 	slug: string;
 	postId: string;
+	/** Every Substack post was written by the creator. */
+	author: "creator";
 	title: string;
 	subtitle: string;
 	publishedAt: string;
@@ -600,6 +602,7 @@ function convertPost(
 	const converted: ConvertedPost = {
 		slug: post.slug,
 		postId: post.numericId,
+		author: "creator",
 		title: post.title,
 		subtitle: post.subtitle,
 		publishedAt: post.publishedAt,
@@ -737,12 +740,6 @@ function writePosts(converted: readonly ConvertedPost[]): void {
 			`${JSON.stringify(post, null, "\t")}\n`,
 		);
 	}
-	// The slug index is bundled into proxy.ts, which routes blog.yen.chat without reading the filesystem.
-	const slugs = converted.map((post) => post.slug).sort();
-	writeFileSync(
-		path.join(CONTENT_DIR, "slugs.json"),
-		`${JSON.stringify(slugs, null, "\t")}\n`,
-	);
 }
 
 async function main(): Promise<void> {

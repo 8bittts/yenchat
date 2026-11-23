@@ -1,11 +1,13 @@
 // RSS feed served at https://blog.yen.chat/feed (the address Substack used), so readers keep their subscription.
+// One item per weekly issue; an old note guid no longer appears, so readers get each issue once.
+import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL } from "@/lib/blog";
 import {
-	BLOG_DESCRIPTION,
-	BLOG_TITLE,
-	BLOG_URL,
-	blogPostUrl,
-	getBlogPosts,
-} from "@/lib/blog";
+	type BlogWeek,
+	blogWeekUrl,
+	getBlogWeeks,
+	renderWeekNotes,
+	weekKindLabel,
+} from "@/lib/blog-weeks";
 
 export const dynamic = "force-static";
 
@@ -29,17 +31,38 @@ function absolutizeLinks(html: string): string {
 		.replace(/srcset="\/blog-media\//g, `srcset="${BLOG_URL}/blog-media/`);
 }
 
+/** The whole issue as feed HTML: technical updates, then the creator's notes. */
+function issueHtml(week: BlogWeek): string {
+	const updates = week.release
+		? week.release.summary
+				.split("\n\n")
+				.map((paragraph) => `<p>${escapeXml(paragraph)}</p>`)
+				.join("")
+		: "<p>No build shipped this week.</p>";
+	const notes = (title: string, posts: BlogWeek["notes"]) =>
+		posts.length === 0
+			? ""
+			: `<h2>${title}</h2>${renderWeekNotes(posts, 4)
+					.map(
+						(note) =>
+							`<h3 id="${note.post.slug}">${escapeXml(note.post.title)}</h3>${note.html}`,
+					)
+					.join("")}`;
+	return `<h2>Technical updates</h2>${updates}${notes("Feature notes", week.features)}${notes("Notes from the creator", week.notes)}`;
+}
+
 export function GET(): Response {
-	const posts = getBlogPosts();
-	const items = posts.map((post) =>
+	const weeks = getBlogWeeks();
+	const items = weeks.map((week) =>
 		[
 			"<item>",
-			`<title>${escapeXml(post.title)}</title>`,
-			`<description>${escapeXml(post.subtitle)}</description>`,
-			`<link>${blogPostUrl(post.slug)}</link>`,
-			`<guid isPermaLink="true">${blogPostUrl(post.slug)}</guid>`,
-			`<pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>`,
-			`<content:encoded>${cdata(absolutizeLinks(post.html))}</content:encoded>`,
+			`<title>${escapeXml(week.title)}</title>`,
+			`<description>${escapeXml(week.deck)}</description>`,
+			`<category>${escapeXml(weekKindLabel(week))}</category>`,
+			`<link>${blogWeekUrl(week)}</link>`,
+			`<guid isPermaLink="true">${blogWeekUrl(week)}</guid>`,
+			`<pubDate>${new Date(week.publishedAt).toUTCString()}</pubDate>`,
+			`<content:encoded>${cdata(absolutizeLinks(issueHtml(week)))}</content:encoded>`,
 			"</item>",
 		].join(""),
 	);
@@ -51,7 +74,7 @@ export function GET(): Response {
 		`<description>${escapeXml(BLOG_DESCRIPTION)}</description>`,
 		`<link>${BLOG_URL}</link>`,
 		`<atom:link href="${BLOG_URL}/feed" rel="self" type="application/rss+xml"/>`,
-		`<lastBuildDate>${new Date(posts[0]?.publishedAt ?? 0).toUTCString()}</lastBuildDate>`,
+		`<lastBuildDate>${new Date(weeks[0]?.publishedAt ?? 0).toUTCString()}</lastBuildDate>`,
 		...items,
 		"</channel>",
 		"</rss>",
