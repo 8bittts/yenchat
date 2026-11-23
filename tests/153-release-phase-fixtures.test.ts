@@ -868,6 +868,11 @@ describe("resource bundling phases", () => {
 			];
 			for (const [source] of resources) copy(root, join(custom, source));
 			write(join(root, "YEN.app/Contents/Resources/stale"), "stale");
+			const retiredNotice = join(
+				root,
+				"YEN.app/Contents/Resources/Notices/Retired.txt",
+			);
+			write(retiredNotice, "retired");
 			write(
 				join(root, "YEN.app/Contents/Info.plist"),
 				'<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleShortVersionString</key><string>old</string><key>CFBundleVersion</key><string>1</string><key>YENBuild</key><string>old</string><key>YENCommit</key><string>old</string></dict></plist>',
@@ -896,6 +901,7 @@ describe("resource bundling phases", () => {
 					readFileSync(join(root, "YEN.app/Contents/Resources", destination)),
 				).toEqual(readFileSync(join(repoRoot, custom, source)));
 			}
+			expect(existsSync(retiredNotice)).toBe(false);
 			const plist = spawnSync(
 				"/usr/libexec/PlistBuddy",
 				["-c", "Print :YENCommit", join(root, "YEN.app/Contents/Info.plist")],
