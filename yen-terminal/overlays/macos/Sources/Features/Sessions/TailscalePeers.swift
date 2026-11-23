@@ -38,8 +38,8 @@ enum TailscaleStatus: Equatable, Sendable {
 /// Field names come from Tailscale's `ipn/ipnstate` `Status` and `PeerStatus`,
 /// whose JSON keys are the Go field names (`BackendState`, `Self`, `Peer`,
 /// `HostName`, `DNSName`, `OS`, `UserID`, `TailscaleIPs`, `Online`, `Expired`,
-/// `ShareeNode`, and `CurrentTailnet.MagicDNSEnabled`). Everything in the
-/// output is untrusted input.
+/// `ShareeNode`, `PeerAPIURL`, and `CurrentTailnet.MagicDNSEnabled`).
+/// Everything in the output is untrusted input.
 enum TailscaleDiscovery {
     /// Test hook: the Tailscale CLI to run instead of the installed one.
     static let binaryEnvironmentKey = "YEN_TAILSCALE_BIN"
@@ -119,6 +119,7 @@ enum TailscaleDiscovery {
         let online: Bool?
         let expired: Bool?
         let sharee: Bool?
+        let peerAPI: [String]?
 
         enum CodingKeys: String, CodingKey {
             case id = "ID"
@@ -130,6 +131,7 @@ enum TailscaleDiscovery {
             case online = "Online"
             case expired = "Expired"
             case sharee = "ShareeNode"
+            case peerAPI = "PeerAPIURL"
         }
     }
 
@@ -151,10 +153,28 @@ enum TailscaleDiscovery {
         let namesResolve = status.tailnet?.magicDNSEnabled == true
         let peers = (status.peers ?? [:]).values.compactMap { node -> TailscalePeer? in
             guard node.os == macOS, node.userID == owner, node.sharee != true, node.expired != true,
-                  let id = node.id, !id.isEmpty, id != me.id else { return nil }
+                  isFullClient(node), let id = node.id, !id.isEmpty, id != me.id else { return nil }
             return peer(from: node, id: id, namesResolve: namesResolve)
         }
         return .running(peers: peers.sorted { ($0.displayName.lowercased(), $0.id) < ($1.displayName.lowercased(), $1.id) })
+    }
+
+    /// True for a full Tailscale client, which a Mac that can host YEN runs.
+    /// A node another app embeds (tsnet) reports the user's `OS` and `UserID`
+    /// too, but runs no peer API and no ssh server, so it is not listed.
+    ///
+    /// Tailscale fills `PeerStatus.PeerAPIURL` from the peer's
+    /// `Hostinfo.Services` (the `peerapi4` and `peerapi6` ports;
+    /// `LocalBackend.populatePeerStatusLocked` and `peerAPIPorts` in ipn/ipnlocal/local.go),
+    /// not from whether the peer is online, and `OS` comes from the same
+    /// Hostinfo; so an offline Mac that still reads `OS: macOS` keeps its
+    /// peer API addresses and still shows as offline. `TaildropTarget` cannot
+    /// tell the two apart: `taildropTargetStatus` in feature/taildrop/ext.go
+    /// reports Offline (5) before NoPeerAPI (8), and MissingCap (4) for every
+    /// peer when file sharing is off. Source read at tailscale/tailscale
+    /// af9bfa07c3425b144330f6fa61bc0221f930dd95.
+    nonisolated private static func isFullClient(_ node: Node) -> Bool {
+        !(node.peerAPI ?? []).isEmpty
     }
 
     nonisolated private static func peer(from node: Node, id: String, namesResolve: Bool) -> TailscalePeer? {

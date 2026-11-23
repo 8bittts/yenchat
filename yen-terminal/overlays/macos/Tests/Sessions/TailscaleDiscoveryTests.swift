@@ -4,7 +4,9 @@ import Testing
 
 struct TailscaleDiscoveryTests {
     /// Shaped like `tailscale status --json` (ipnstate.Status): Peer is keyed by
-    /// node key, User by numeric user id, and DNS names end with a dot.
+    /// node key, User by numeric user id, and DNS names end with a dot. Every
+    /// peer is a full client with a peer API, so each is kept or dropped by the
+    /// rule its test names (TailscaleEmbeddedNodeTests covers the peer API).
     private static let running = #"""
     {
       "Version": "1.90.0",
@@ -12,26 +14,26 @@ struct TailscaleDiscoveryTests {
       "Self": {"ID": "nSelf", "HostName": "studio", "DNSName": "studio.example-tailnet.ts.net.", "OS": "macOS",
                "UserID": 1001, "TailscaleIPs": ["100.64.0.1", "fd7a:115c:a1e0::1"], "Online": true},
       "Peer": {
-        "nodekey:01": {"ID": "nMini", "HostName": "Mini", "DNSName": "mini.example-tailnet.ts.net.", "OS": "macOS",
+        "nodekey:01": {"ID": "nMini", "HostName": "Mini", "DNSName": "mini.example-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.2", "fd7a:115c:a1e0::2"], "Online": true},
-        "nodekey:02": {"ID": "nLinux", "HostName": "server", "DNSName": "server.example-tailnet.ts.net.", "OS": "linux",
+        "nodekey:02": {"ID": "nLinux", "HostName": "server", "DNSName": "server.example-tailnet.ts.net.", "OS": "linux", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.3"], "Online": true},
-        "nodekey:03": {"ID": "nPhone", "HostName": "phone", "DNSName": "phone.example-tailnet.ts.net.", "OS": "iOS",
+        "nodekey:03": {"ID": "nPhone", "HostName": "phone", "DNSName": "phone.example-tailnet.ts.net.", "OS": "iOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.4"], "Online": true},
-        "nodekey:04": {"ID": "nOther", "HostName": "colleague", "DNSName": "colleague.example-tailnet.ts.net.", "OS": "macOS",
+        "nodekey:04": {"ID": "nOther", "HostName": "colleague", "DNSName": "colleague.example-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 2002, "TailscaleIPs": ["100.64.0.5"], "Online": true},
-        "nodekey:05": {"ID": "nShared", "HostName": "shared-in", "DNSName": "shared-in.other-tailnet.ts.net.", "OS": "macOS",
+        "nodekey:05": {"ID": "nShared", "HostName": "shared-in", "DNSName": "shared-in.other-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.6"], "Online": true, "ShareeNode": true},
-        "nodekey:06": {"ID": "nExpired", "HostName": "old-laptop", "DNSName": "old-laptop.example-tailnet.ts.net.", "OS": "macOS",
+        "nodekey:06": {"ID": "nExpired", "HostName": "old-laptop", "DNSName": "old-laptop.example-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.7"], "Online": false, "Expired": true,
                        "KeyExpiry": "2026-01-01T00:00:00Z"},
-        "nodekey:07": {"ID": "nNoDNS", "HostName": "air", "DNSName": "", "OS": "macOS",
+        "nodekey:07": {"ID": "nNoDNS", "HostName": "air", "DNSName": "", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.8"], "Online": false},
         "nodekey:08": {"ID": "nHostile", "HostName": "evil\u001b]0;pwned\u0007\nname\u200b", "DNSName": "-oProxyCommand=sh.",
-                       "OS": "macOS", "UserID": 1001, "TailscaleIPs": ["100.64.0.9;id", "fd7a:115c:a1e0::9"], "Online": true},
-        "nodekey:09": {"ID": "nUnusable", "HostName": "nothing", "DNSName": "a b.example-tailnet.ts.net.", "OS": "macOS",
+                       "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"], "UserID": 1001, "TailscaleIPs": ["100.64.0.9;id", "fd7a:115c:a1e0::9"], "Online": true},
+        "nodekey:09": {"ID": "nUnusable", "HostName": "nothing", "DNSName": "a b.example-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["-x", "$(id)"], "Online": true},
-        "nodekey:10": {"ID": "nSelf", "HostName": "studio-again", "DNSName": "studio.example-tailnet.ts.net.", "OS": "macOS",
+        "nodekey:10": {"ID": "nSelf", "HostName": "studio-again", "DNSName": "studio.example-tailnet.ts.net.", "OS": "macOS", "PeerAPIURL": ["http://100.64.0.250:60000"],
                        "UserID": 1001, "TailscaleIPs": ["100.64.0.1"], "Online": true}
       },
       "User": {"1001": {"ID": 1001, "LoginName": "dev@example.com", "DisplayName": "Dev"},

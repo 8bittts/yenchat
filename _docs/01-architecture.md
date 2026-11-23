@@ -107,7 +107,9 @@ ssh runs `LocalCommand` only after it authenticates, so the CLI passes `PermitLo
 
 Tailscale discovery is `TailscaleDiscovery` in `Sessions/TailscalePeers.swift`.
 It runs `status --json` off the main thread with a 5-second deadline, from the first executable of `/Applications/Tailscale.app/Contents/MacOS/Tailscale` (with `TAILSCALE_BE_CLI=1`, because the app executable is also the CLI), `/usr/local/bin/tailscale` and `/opt/homebrew/bin/tailscale`.
-It keeps peers whose `OS` is `macOS`, whose `UserID` equals `Self.UserID`, and that are not `ShareeNode` or `Expired`.
+It keeps peers whose `OS` is `macOS`, whose `UserID` equals `Self.UserID`, that are not `ShareeNode` or `Expired`, and that run Tailscale's peer API (a non-empty `PeerAPIURL`).
+A node another app embeds (tsnet) reports the user's `OS` and `UserID` too, but no peer API (`TaildropTarget` 8) and no ssh server, so it is not one of the user's Macs.
+Tailscale fills `PeerAPIURL` from the peer's Hostinfo services, the same Hostinfo that gives `OS`, not from whether the peer is online, so an offline Mac still shows as offline (`TailscaleDiscovery.isFullClient` cites the source).
 The ssh target is `DNSName` without its trailing dot only when `CurrentTailnet.MagicDNSEnabled` is true, because Tailscale fills `DNSName` from the netmap even with MagicDNS off and `CurrentTailnet` is nil when not connected; otherwise it is the first valid entry of `TailscaleIPs`.
 A node started with `--accept-dns=false` still cannot resolve names, and no status field reports that.
 A peer with no valid target is dropped, and the label is `HostName` without control or format characters.

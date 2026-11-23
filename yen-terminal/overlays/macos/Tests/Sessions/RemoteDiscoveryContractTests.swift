@@ -27,7 +27,8 @@ struct RemoteDiscoveryContractTests {
     private static func node(_ id: String, hostName: String, dnsName: String) -> String {
         """
         "nodekey:\(id)": {"ID": "\(id)", "HostName": "\(hostName)", "DNSName": "\(dnsName)", "OS": "macOS",
-                          "UserID": 1, "TailscaleIPs": ["100.64.0.2"], "Online": true}
+                          "UserID": 1, "TailscaleIPs": ["100.64.0.2"], "Online": true,
+                          "PeerAPIURL": ["http://100.64.0.2:60000"]}
         """
     }
 
@@ -189,6 +190,16 @@ struct TailscaleEmbeddedNodeTests {
     @Test func aRealMacThatIsOfflineStillShowsAsOffline() throws {
         let listed = try #require(peers(Self.status([Self.offlineMac, Self.embeddedElsewhere])))
         #expect(listed == [TailscalePeer(id: "nAir", displayName: "air", sshTarget: "air.example-tailnet.ts.net", isOnline: false)])
+    }
+
+    /// An embedded node keeps no peer API while offline either, because
+    /// Tailscale reads it from the node's Hostinfo services, which it never had.
+    @Test func anOfflineEmbeddedNodeIsNotListedEither() throws {
+        let offlineEmbedded = Self.peer(
+            "nOldRex", hostName: "old-rex", ip: "100.64.0.6", online: false, peerAPI: "", taildrop: 5
+        )
+        let listed = try #require(peers(Self.status([Self.offlineMac, offlineEmbedded])))
+        #expect(listed.map(\.id) == ["nAir"])
     }
 
     @Test func aTailnetOfOnlyEmbeddedNodesFindsNoOtherMacs() throws {
