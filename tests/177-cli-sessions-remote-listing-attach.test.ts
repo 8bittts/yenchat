@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -81,4 +81,19 @@ describe("yen sessions list --host: rows", () => {
 			expect(result.stderr).toContain("mini reported a listing error");
 		},
 	);
+});
+
+describe("yen sessions --host: the temporary directory", () => {
+	test("an unusable temporary directory stops before ssh and leaves nothing behind", () => {
+		const scratch = join(harness.root, "with space");
+		mkdirSync(scratch);
+		harness.plan(["1 0"], { 1: `${header}\n` });
+		for (const args of [["attach", "--host", "mini", sessionID], list]) {
+			const result = harness.sessions(args, { TMPDIR: scratch });
+			expect(result.status).toBe(1);
+			expect(result.stderr).toContain("Unusable temporary directory");
+		}
+		expect(harness.calls()).toEqual([]);
+		expect(readdirSync(scratch)).toEqual([]);
+	});
 });
