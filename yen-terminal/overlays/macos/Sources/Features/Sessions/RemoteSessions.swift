@@ -21,11 +21,11 @@ enum RemoteSessionList: Equatable, Sendable {
     case sessions([RemoteSession], complete: Bool)
     /// Offline, unknown to DNS, refusing connections, or too slow to answer.
     case unreachable
-    /// The host key is not known yet or no key signs in under BatchMode; the
-    /// user runs `ssh <host>` once in a terminal.
+    /// The host key is not known yet; the user runs `ssh <host>` once in a
+    /// terminal and accepts it.
     case firstConnectionNeeded
-    /// The host key is trusted but no key signs in without a prompt (the peer
-    /// asks for a password). Stub.
+    /// The host key is trusted but no key signs in without a prompt: the peer
+    /// asks for a password, which a listing under BatchMode never answers.
     case keySignInNeeded
     /// The known host key no longer matches. YEN does not connect until the
     /// user fixes known_hosts.
@@ -52,6 +52,7 @@ enum RemoteSessions {
         static let tooOld: Int32 = 13
         static let noSession: Int32 = 14
         static let hostKeyChanged: Int32 = 15
+        static let keyRequired: Int32 = 16
     }
 
     /// The CLI's own limit is ssh's 10-second connect timeout plus the listing.
@@ -130,6 +131,7 @@ enum RemoteSessions {
         case ExitCode.unreachable: return .unreachable
         case ExitCode.firstConnection: return .firstConnectionNeeded
         case ExitCode.hostKeyChanged: return .hostKeyChanged
+        case ExitCode.keyRequired: return .keySignInNeeded
         case ExitCode.notInstalled: return .yenNotInstalled
         case ExitCode.tooOld: return .yenTooOld
         case 0, 1:

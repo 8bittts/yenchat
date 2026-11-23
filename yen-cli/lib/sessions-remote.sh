@@ -20,6 +20,7 @@ readonly REMOTE_EXIT_NOT_INSTALLED=12
 readonly REMOTE_EXIT_TOO_OLD=13
 readonly REMOTE_EXIT_NO_SESSION=14
 readonly REMOTE_EXIT_HOST_KEY_CHANGED=15
+readonly REMOTE_EXIT_KEY_REQUIRED=16
 
 # The first line of `yen sessions list --porcelain`. Bump the number only for
 # an incompatible change; readers ignore extra trailing fields within a version.
@@ -130,8 +131,14 @@ classify_ssh_failure() {
     if grep -qE 'REMOTE HOST IDENTIFICATION HAS CHANGED|has changed and you have requested strict checking' "$errors"; then
         return "$REMOTE_EXIT_HOST_KEY_CHANGED"
     fi
-    if grep -qE 'Host key verification failed|Permission denied|Too many authentication failures|No more authentication methods' "$errors"; then
+    # ssh checks the host key before it signs in, so an unknown key on a
+    # password-only peer reports 11 first and 16 once the key is trusted.
+    if grep -qE 'Host key verification failed' "$errors"; then
         return "$REMOTE_EXIT_FIRST_CONNECTION"
+    fi
+    # BatchMode never prompts, so a peer that offers only a password fails here.
+    if grep -qE 'Permission denied|Too many authentication failures|No more authentication methods' "$errors"; then
+        return "$REMOTE_EXIT_KEY_REQUIRED"
     fi
     return "$REMOTE_EXIT_UNREACHABLE"
 }
@@ -140,7 +147,8 @@ remote_failure_message() {
     local code="$1" target="$2"
     case "$code" in
         "$REMOTE_EXIT_UNREACHABLE") echo "yen sessions: cannot reach $target" ;;
-        "$REMOTE_EXIT_FIRST_CONNECTION") echo "yen sessions: $target needs a first connection; run 'ssh $target' once to confirm its host key and sign in" ;;
+        "$REMOTE_EXIT_FIRST_CONNECTION") echo "yen sessions: $target needs its host key confirmed; run 'ssh $target' once and accept the key" ;;
+        "$REMOTE_EXIT_KEY_REQUIRED") echo "yen sessions: $target asks for a password; YEN signs in only with an SSH key that works without a prompt; run 'ssh-copy-id $target' once" ;;
         "$REMOTE_EXIT_NOT_INSTALLED") echo "yen sessions: YEN is not installed on $target" ;;
         "$REMOTE_EXIT_TOO_OLD") echo "yen sessions: YEN on $target does not support remote sessions; update YEN there" ;;
         "$REMOTE_EXIT_HOST_KEY_CHANGED") echo "yen sessions: the host key of $target has changed; YEN will not connect until known_hosts is fixed" ;;

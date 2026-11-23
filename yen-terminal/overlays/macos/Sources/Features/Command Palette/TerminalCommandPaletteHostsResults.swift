@@ -164,14 +164,21 @@ enum RemoteHostsPaletteRows {
             case .firstConnectionNeeded:
                 return [row(
                     "first-connection",
-                    "Connect to \(name) Once",
-                    "Run ssh \(target) once in a terminal on this Mac to trust its host key and sign in; select to type the command",
-                    icon: "key",
+                    "Trust the Host Key of \(name)",
+                    "YEN has not seen the host key of \(name) yet. Run ssh \(target) once in a terminal on this Mac and confirm the key; select to type the command",
+                    icon: "lock.shield",
                     action: .insertCommand("ssh \(target)"),
                     subtitle: "ssh \(target)"
                 )]
             case .keySignInNeeded:
-                return [row("key-sign-in", "Connect to \(name) Once", "Stub", icon: "key")]
+                return [row(
+                    "key-sign-in",
+                    "Set Up Key Sign-In for \(name)",
+                    "\(name) asked for a password, and YEN signs in only with an SSH key that needs no prompt. Run ssh-copy-id \(target) once in a terminal on this Mac; select to type the command",
+                    icon: "key",
+                    action: .insertCommand("ssh-copy-id \(target)"),
+                    subtitle: "ssh-copy-id \(target)"
+                )]
             case .hostKeyChanged:
                 return [row("host-key-changed", "Host Key of \(name) Changed", "YEN will not connect: the key \(name) presents no longer matches the one you trusted. If \(name) was reinstalled, remove the old key with ssh-keygen -R \(target); otherwise someone may be intercepting the connection", icon: "exclamationmark.shield")]
             case .yenNotInstalled:

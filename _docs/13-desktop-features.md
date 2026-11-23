@@ -422,8 +422,8 @@ Without Hosts intent the palette shows one row, `Hosts: Show Sessions on Your Ot
 A query without Hosts intent, such as a Mac's name, still finds the rows of the last discovery in this run of the app, without contacting anything.
 `RemoteHostsPaletteRows` owns the copy and `RemoteHostsPaletteRowsTests` pins it.
 - A session row reads `Hosts: <directory> on <Mac>`, with `Detached`, `Attached elsewhere`, `Open in YEN` or `Unavailable` and the start time below. Selecting it attaches in a new tab, or focuses the pane already attached to it.
-- A state row names the problem and the next step: Tailscale not installed, not running, turned off, signed out or starting; no other Macs; a Mac offline or unreachable; a first connection needed; a changed host key; YEN missing or too old there; no sessions there; or a listing that failed.
-- Selecting a state row checks again. `Connect to <Mac> Once` types `ssh <target>` at the prompt and a failed listing types `yen sessions list --host <target>`, without running either, and only into a local pane.
+- A state row names the problem and the next step: Tailscale not installed, not running, turned off, signed out or starting; no other Macs; a Mac offline or unreachable; a host key not trusted yet; a Mac that asks for a password; a changed host key; YEN missing or too old there; no sessions there; or a listing that failed.
+- Selecting a state row checks again. `Trust the Host Key of <Mac>` types `ssh <target>`, `Set Up Key Sign-In for <Mac>` types `ssh-copy-id <target>`, and a failed listing types `yen sessions list --host <target>` at the prompt, without running either, and only into a local pane.
 - A running tailnet adds `Hosts: Refresh Remote Sessions`; a host key change offers no one-click fix.
 
 **Remote pane labels.** A remote pane always shows its host.

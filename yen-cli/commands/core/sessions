@@ -64,9 +64,10 @@ Notes:
   ends or you press Ctrl-C. kill only ends sessions on this Mac.
 
 Exit codes for --host:
-  10 cannot reach the host       11 the host needs a first ssh connection
+  10 cannot reach the host       11 the host key is not trusted yet
   12 YEN is not installed there  13 YEN there is too old for remote sessions
   14 no such session there       15 the host key changed
+  16 sign-in needs an SSH key that works without a password prompt
 EOF
 }
 

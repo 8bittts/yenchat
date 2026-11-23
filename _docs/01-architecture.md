@@ -89,13 +89,14 @@ Without a version 1 header, the peer is too old (13) when it exited 2 (a YEN wit
 | 1 | The peer reported a listing error, sent a malformed row, or failed before its header | `.sessions(_, complete: false)`, or `.failed` without a header |
 | 2 | Usage error: bad target, id or option | `.failed` |
 | 10 | Cannot reach the host: refused, timed out, unknown name, or closed before sign-in | `.unreachable` |
-| 11 | First connection needed: unknown host key under BatchMode, or no key signs in | `.firstConnectionNeeded` |
+| 11 | The host key is not trusted yet (unknown under BatchMode) | `.firstConnectionNeeded` |
 | 12 | YEN is not installed on the peer | `.yenNotInstalled` |
 | 13 | The peer's YEN predates `--porcelain` or speaks another version | `.yenTooOld` |
 | 14 | `attach` only: the peer's CLI refused the attach, almost always because the session ended | not listed |
 | 15 | The host key changed | `.hostKeyChanged` |
+| 16 | The host key is trusted but no key signs in without a prompt, as on a peer that offers only a password | `.keySignInNeeded` |
 
-`ssh` exits 255 for every failure of its own, so the CLI classifies its stderr: `REMOTE HOST IDENTIFICATION HAS CHANGED` is 15, `Host key verification failed` or `Permission denied` is 11, and anything else is 10.
+`ssh` exits 255 for every failure of its own, so the CLI classifies its stderr: `REMOTE HOST IDENTIFICATION HAS CHANGED` is 15, `Host key verification failed` is 11, `Permission denied`, `Too many authentication failures` or `No more authentication methods` is 16, and anything else is 10. ssh checks the host key before it signs in, so a password-only peer with an unknown key reports 11 first and 16 once the key is trusted (measured against a loopback sshd with `PubkeyAuthentication no`). Remote sessions need sign-in to work without a password prompt, with an SSH key; a listing runs with `BatchMode=yes` and never prompts.
 Exit 127 from the remote command is 12, and a remote attach that exits 1 is 14. The peer's `yen sessions attach` exits 1 for a missing socket, for a damaged install (`zmx is not available`, a missing `common.sh`), and when its zmx client fails (measured: zmx attach exits 1 on a connect error and 0 when the shell exits, whatever the shell's status); the peer's own message shows in the pane first.
 
 Reconnect lives in `attach --host`.

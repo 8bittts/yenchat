@@ -126,7 +126,7 @@ listing() {
 echo "== failure classes through the real ssh"
 check "unknown host key under BatchMode" 11 "$(listing unknown)"
 check "changed host key" 15 "$(listing changed)"
-check "no usable key" 11 "$(listing denied)"
+check "no key signs in without a prompt" 16 "$(listing denied)"
 check "connection refused" 10 "$(listing refused)"
 check "YEN not installed on the peer" 12 "$(listing ok Absent)"
 if [[ -n "$old_cli" ]]; then
@@ -140,7 +140,7 @@ check "RemoteCommand in the config" 0 "$(listing remotecommand)"
 check "RequestTTY force in the config" 0 "$(listing tty)"
 check "a LocalForward that cannot bind" 0 "$(listing forward)"
 check "ProxyJump through a jump host" 0 "$(listing jump)"
-check "control: the jump host is on the path (its key refused)" 11 "$(listing badjump)"
+check "control: the jump host is on the path (its key refused)" 16 "$(listing badjump)"
 /usr/bin/ssh -F "$base/ssh_forward" -o BatchMode=yes yen-loop true > /dev/null 2>&1
 check "control: plain ssh with that LocalForward fails" 255 "$?"
 
