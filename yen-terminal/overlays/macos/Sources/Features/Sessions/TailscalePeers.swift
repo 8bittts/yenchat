@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// A Mac on the user's tailnet that may host YEN sessions.
 struct TailscalePeer: Equatable, Sendable, Identifiable {
@@ -7,8 +8,8 @@ struct TailscalePeer: Equatable, Sendable, Identifiable {
     /// The peer's host name, stripped of control characters, for labels.
     let displayName: String
     /// What `ssh` connects to: the MagicDNS name without its trailing dot when
-    /// the tailnet has MagicDNS on, else the first Tailscale IP. Always passes
-    /// `RemoteSessions.isValidTarget`.
+    /// it resolves on this Mac to one of the peer's own Tailscale IPs, else
+    /// the first valid Tailscale IP. Always passes `RemoteSessions.isValidTarget`.
     let sshTarget: String
     let isOnline: Bool
 }
@@ -71,7 +72,7 @@ enum TailscaleDiscovery {
     nonisolated static func status(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         timeout: Duration = .seconds(5),
-        resolve: @escaping Resolver = { _ in [] },
+        resolve: @escaping Resolver = TailscaleDiscovery.resolveOnThisMac,
         resolveTimeout: Duration = .seconds(1)
     ) async -> TailscaleStatus {
         guard let path = cliPath(environment: environment) else { return .notInstalled }
@@ -82,15 +83,119 @@ enum TailscaleDiscovery {
             environment: SessionsProcess.helperEnvironment(environment, adding: ["TAILSCALE_BE_CLI": "1"]),
             timeout: timeout
         )
-        return status(from: outcome)
+        let usable = outcome.timedOut
+            ? []
+            : await usableNames(nameCandidates(outcome.stdout), resolve: resolve, within: resolveTimeout)
+        return status(from: outcome, usableNames: usable)
     }
 
-    nonisolated static func status(from outcome: SessionsProcess.Outcome) -> TailscaleStatus {
+    /// `usableNames` is the set of MagicDNS names that resolve here to their
+    /// peer's own address; nil skips that check (tests of the parser alone).
+    nonisolated static func status(from outcome: SessionsProcess.Outcome, usableNames: Set<String>? = nil) -> TailscaleStatus {
         if outcome.timedOut { return .unavailable }
         // `status --json` prints the state even when stopped or logged out and
         // exits 0; a failure to reach the daemon prints no JSON and exits non-zero.
-        if let parsed = parseStatus(outcome.stdout) { return parsed }
+        if let parsed = parseStatus(outcome.stdout, usableNames: usableNames) { return parsed }
         return outcome.status == 0 ? .unavailable : .notRunning
+    }
+
+    // MARK: Which name is usable
+
+    /// `CurrentTailnet.MagicDNSEnabled` is the tailnet's setting, not this
+    /// Mac's: with "Use Tailscale DNS settings" off in the Tailscale app
+    /// (`CorpDNS: false`) it still reads true and every peer keeps its
+    /// `DNSName`, but the name does not resolve here. So a name becomes the
+    /// ssh target only when it resolves on this Mac to one of the peer's own
+    /// `TailscaleIPs`; an answer with any other address (split-horizon or
+    /// spoofed) is never used. Only online peers are resolved: an offline
+    /// one is never contacted and keeps its IP until a refresh finds it.
+    nonisolated static func nameCandidates(_ data: Data) -> [(name: String, addresses: [String])] {
+        guard let status = try? JSONDecoder().decode(Status.self, from: data),
+              status.backendState == "Running", status.tailnet?.magicDNSEnabled == true,
+              let me = status.me, let owner = me.userID else { return [] }
+        return (status.peers ?? [:]).values.compactMap { node in
+            guard node.online == true, isListed(node, owner: owner, selfID: me.id),
+                  let name = magicDNSName(node) else { return nil }
+            return (name, node.addresses ?? [])
+        }
+    }
+
+    /// The names that resolve, each within `within`, all at once.
+    nonisolated static func usableNames(
+        _ candidates: [(name: String, addresses: [String])],
+        resolve: @escaping Resolver,
+        within: Duration
+    ) async -> Set<String> {
+        await withTaskGroup(of: String?.self) { group in
+            for (name, addresses) in candidates {
+                group.addTask {
+                    let own = Set(addresses.compactMap(numericAddress))
+                    let answer = await firstAnswer(name, resolve: resolve, within: within)
+                    return answer.contains { numericAddress($0).map(own.contains) == true } ? name : nil
+                }
+            }
+            var usable: Set<String> = []
+            for await name in group { if let name { usable.insert(name) } }
+            return usable
+        }
+    }
+
+    /// The resolver's answer, or nothing once `within` has passed. A resolver
+    /// that ignores cancellation keeps running in the background.
+    nonisolated private static func firstAnswer(_ name: String, resolve: @escaping Resolver, within: Duration) async -> [String] {
+        await withCheckedContinuation { continuation in
+            let done = OSAllocatedUnfairLock(initialState: false)
+            func finish(_ answer: [String]) {
+                let first = done.withLock { claimed in
+                    defer { claimed = true }
+                    return !claimed
+                }
+                if first { continuation.resume(returning: answer) }
+            }
+            Task.detached(priority: .utility) { finish(await resolve(name)) }
+            Task.detached(priority: .utility) {
+                try? await Task.sleep(for: within)
+                finish([])
+            }
+        }
+    }
+
+    /// The bytes of a numeric IPv4 or IPv6 address, so two spellings of one
+    /// address compare equal; nil for anything else. A zone suffix is dropped.
+    nonisolated static func numericAddress(_ text: String) -> Data? {
+        let bare = String(text.split(separator: "%", maxSplits: 1).first ?? "")
+        var v4 = in_addr()
+        if inet_pton(AF_INET, bare, &v4) == 1 { return withUnsafeBytes(of: &v4) { Data($0) } }
+        var v6 = in6_addr()
+        if inet_pton(AF_INET6, bare, &v6) == 1 { return withUnsafeBytes(of: &v6) { Data($0) } }
+        return nil
+    }
+
+    /// The system resolver on this Mac, off the main thread.
+    nonisolated static let resolveOnThisMac: Resolver = { name in
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                var hints = addrinfo()
+                hints.ai_family = AF_UNSPEC
+                hints.ai_socktype = SOCK_STREAM
+                var list: UnsafeMutablePointer<addrinfo>?
+                guard getaddrinfo(name, nil, &hints, &list) == 0 else {
+                    continuation.resume(returning: [])
+                    return
+                }
+                defer { freeaddrinfo(list) }
+                var addresses: [String] = []
+                var entry = list
+                while let current = entry {
+                    var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                    if getnameinfo(current.pointee.ai_addr, current.pointee.ai_addrlen, &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
+                        addresses.append(String(cString: host))
+                    }
+                    entry = current.pointee.ai_next
+                }
+                continuation.resume(returning: addresses)
+            }
+        }
     }
 
     private struct Status: Decodable {
@@ -142,7 +247,7 @@ enum TailscaleDiscovery {
     }
 
     /// nil when the data is not Tailscale's status JSON.
-    nonisolated static func parseStatus(_ data: Data) -> TailscaleStatus? {
+    nonisolated static func parseStatus(_ data: Data, usableNames: Set<String>? = nil) -> TailscaleStatus? {
         guard let status = try? JSONDecoder().decode(Status.self, from: data),
               let backend = status.backendState else { return nil }
         switch backend {
@@ -158,9 +263,8 @@ enum TailscaleDiscovery {
         // name does not resolve. `CurrentTailnet` is nil when not connected.
         let namesResolve = status.tailnet?.magicDNSEnabled == true
         let peers = (status.peers ?? [:]).values.compactMap { node -> TailscalePeer? in
-            guard node.os == macOS, node.userID == owner, node.sharee != true, node.expired != true,
-                  isFullClient(node), let id = node.id, !id.isEmpty, id != me.id else { return nil }
-            return peer(from: node, id: id, namesResolve: namesResolve)
+            guard isListed(node, owner: owner, selfID: me.id), let id = node.id else { return nil }
+            return peer(from: node, id: id, namesResolve: namesResolve, usableNames: usableNames)
         }
         return .running(peers: peers.sorted { ($0.displayName.lowercased(), $0.id) < ($1.displayName.lowercased(), $1.id) })
     }
@@ -183,18 +287,33 @@ enum TailscaleDiscovery {
         !(node.peerAPI ?? []).isEmpty
     }
 
-    nonisolated private static func peer(from node: Node, id: String, namesResolve: Bool) -> TailscalePeer? {
+    /// The user's own Macs that run a full Tailscale client, never this Mac.
+    nonisolated private static func isListed(_ node: Node, owner: Int64, selfID: String?) -> Bool {
+        guard node.os == macOS, node.userID == owner, node.sharee != true, node.expired != true,
+              isFullClient(node), let id = node.id, !id.isEmpty, id != selfID else { return false }
+        return true
+    }
+
+    /// The peer's MagicDNS name without its trailing dot, when it is a valid target.
+    nonisolated private static func magicDNSName(_ node: Node) -> String? {
+        guard var name = node.dnsName, !name.isEmpty else { return nil }
+        if name.hasSuffix(".") { name.removeLast() }
+        return RemoteSessions.isValidTarget(name) ? name : nil
+    }
+
+    nonisolated private static func peer(from node: Node, id: String, namesResolve: Bool, usableNames: Set<String>?) -> TailscalePeer? {
         var target: String?
-        if namesResolve, var name = node.dnsName, !name.isEmpty {
-            if name.hasSuffix(".") { name.removeLast() }
-            if RemoteSessions.isValidTarget(name) { target = name }
+        if namesResolve, let name = magicDNSName(node), usableNames?.contains(name) ?? true {
+            target = name
         }
         if target == nil {
             target = (node.addresses ?? []).first(where: RemoteSessions.isValidTarget)
         }
         guard let target else { return nil }
         let label = displayLabel(node.hostName ?? "")
-        let fallback = target.split(separator: ".").first.map(String.init) ?? target
+        // An unnamed peer reachable only by IP still reads as its tailnet name.
+        let named = magicDNSName(node) ?? target
+        let fallback = named.split(separator: ".").first.map(String.init) ?? named
         return TailscalePeer(id: id, displayName: label.isEmpty ? fallback : label, sshTarget: target, isOnline: node.online == true)
     }
 

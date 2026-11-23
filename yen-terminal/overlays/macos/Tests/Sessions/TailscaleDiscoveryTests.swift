@@ -174,7 +174,7 @@ struct TailscaleDiscoveryTests {
             TailscaleDiscovery.binaryEnvironmentKey: script.path,
             "ZMX_SESSION": "6F1D2C3B-0A4E-4F5A-9B8C-1D2E3F4A5B6C",
             "PATH": "/usr/bin:/bin",
-        ])
+        ], resolve: { _ in [] })
         guard case .running(let peers) = status else {
             Issue.record("expected a running status, got \(status)")
             return

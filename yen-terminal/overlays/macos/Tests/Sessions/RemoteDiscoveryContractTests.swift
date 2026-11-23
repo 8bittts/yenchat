@@ -312,6 +312,15 @@ struct TailscaleNameResolutionTests {
         #expect(elapsed < 1.6, "\(elapsed)")
     }
 
+    /// A peer without a host name still reads as its tailnet name, not the
+    /// first number of its IP.
+    @Test func anUnnamedPeerReachedByIPIsLabeledByItsTailnetName() async throws {
+        let unnamed = Self.node("nMini", name: "mini", ips: ["100.64.0.2"])
+            .replacingOccurrences(of: #""HostName": "mini""#, with: #""HostName": """#)
+        let peers = try await discover([unnamed], FakeResolver())
+        #expect(peers == [TailscalePeer(id: "nMini", displayName: "mini", sshTarget: "100.64.0.2", isOnline: true)])
+    }
+
     @Test func aPeerWithNoValidIPAndAnUnresolvableNameIsDropped() async throws {
         let broken = Self.node("nBroken", name: "broken", ips: ["-x", "$(id)"])
         let peers = try await discover([Self.mini, broken], FakeResolver())
@@ -325,6 +334,15 @@ struct TailscaleNameResolutionTests {
         #expect(await fake.asked == ["mini.example-tailnet.ts.net"])
         #expect(peers.first { $0.id == "nAir" }?.sshTarget == "100.64.0.3")
         #expect(peers.first { $0.id == "nMini" }?.sshTarget == "mini.example-tailnet.ts.net")
+    }
+
+    /// The live resolver answers with numeric addresses; localhost needs no network.
+    @Test func theSystemResolverAnswersWithNumericAddresses() async {
+        let answer = await TailscaleDiscovery.resolveOnThisMac("localhost")
+        #expect(!answer.isEmpty)
+        #expect(answer.allSatisfy { TailscaleDiscovery.numericAddress($0) != nil }, "\(answer)")
+        let loopback = Set(["127.0.0.1", "::1"].compactMap(TailscaleDiscovery.numericAddress))
+        #expect(answer.contains { TailscaleDiscovery.numericAddress($0).map(loopback.contains) == true }, "\(answer)")
     }
 
     /// With the IP as target, a Mac whose key is trusted only under its name

@@ -110,8 +110,9 @@ It runs `status --json` off the main thread with a 5-second deadline, from the f
 It keeps peers whose `OS` is `macOS`, whose `UserID` equals `Self.UserID`, that are not `ShareeNode` or `Expired`, and that run Tailscale's peer API (a non-empty `PeerAPIURL`).
 A node another app embeds (tsnet) reports the user's `OS` and `UserID` too, but no peer API (`TaildropTarget` 8) and no ssh server, so it is not one of the user's Macs.
 Tailscale fills `PeerAPIURL` from the peer's Hostinfo services, the same Hostinfo that gives `OS`, not from whether the peer is online, so an offline Mac still shows as offline (`TailscaleDiscovery.isFullClient` cites the source).
-The ssh target is `DNSName` without its trailing dot only when `CurrentTailnet.MagicDNSEnabled` is true, because Tailscale fills `DNSName` from the netmap even with MagicDNS off and `CurrentTailnet` is nil when not connected; otherwise it is the first valid entry of `TailscaleIPs`.
-A node started with `--accept-dns=false` still cannot resolve names, and no status field reports that.
+The ssh target is `DNSName` without its trailing dot only when `CurrentTailnet.MagicDNSEnabled` is true and the name resolves on this Mac to one of that peer's own `TailscaleIPs`; otherwise it is the first valid entry of `TailscaleIPs`.
+Tailscale fills `DNSName` from the netmap even with MagicDNS off, `CurrentTailnet` is nil when not connected, and `MagicDNSEnabled` is the tailnet's setting, not this Mac's: with "Use Tailscale DNS settings" off in the Tailscale app (`CorpDNS: false`, or `--accept-dns=false`) it still reads true while the name does not resolve here.
+Discovery resolves the name of each online peer inside the refresh, all at once with a 1-second deadline each (`TailscaleDiscovery.usableNames`); an answer with any other address, such as a split-horizon or spoofed one, is never used, and an offline peer is not resolved and keeps its IP.
 A peer with no valid target is dropped, and the label is `HostName` without control or format characters.
 No Tailscale, a stopped backend and a logged-out node are states (`TailscaleStatus`), not errors; `status --json` prints the state and exits 0 even when stopped.
 The Mac App Store and standalone Tailscale apps cannot be a Tailscale SSH server; only the open-source `tailscaled` build can (Tailscale's macOS variants page).
