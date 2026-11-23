@@ -267,6 +267,7 @@ case "$MODE" in
                 -only-testing:YENTests/SystemSettingsOpenerTests
                 -only-testing:YENTests/TabSidebarMetadataTests
                 -only-testing:YENTests/TerminalChromeAppearanceTests
+                -only-testing:YENTests/WorkspaceTabPillTests
                 -only-testing:YENTests/TerminalClipboardImagePasteboardTests
                 -only-testing:YENTests/TerminalClipboardShortcutTests
                 -only-testing:YENTests/TerminalCommandPaletteJumpTitleTests
