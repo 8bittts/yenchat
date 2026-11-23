@@ -193,7 +193,7 @@ PY
     # Upstream f5d604e (#316): the daemon frees socket_path with its post-fork
     # C allocator, but the caller allocated it with the process allocator and
     # still owns it. A missing anchor means the pinned tag already carries the
-    # fix: delete this edit, re-vendor, and keep tests/180 green.
+    # fix: delete this edit, re-vendor, and keep tests/181 green.
     patch_anchor "$source_dir/src/loop.zig" \
         '        self.pty_write_buf.deinit(gpa);
         gpa.free(self.socket_path);

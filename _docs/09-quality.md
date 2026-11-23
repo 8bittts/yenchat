@@ -107,7 +107,7 @@ See [11-speech-to-text.md](11-speech-to-text.md) for the audio tap contract.
 It ends N daemons (default 20), alternating `zmx kill` and an attached command that exits, while a counter session started through `zmx attach` stays up and must return with the same shell pid and a higher count.
 Each daemon's exit status comes from kqueue `NOTE_EXITSTATUS`, which macOS reports for the daemon although launchd is its parent, so a clean result is a measured `exit=0`, not a missing crash report.
 It also counts the `.ips` reports naming each daemon pid, and runs the binary as a uniquely named copy under `/tmp/yzs.*` so those reports are told apart from any other zmx.
-The last line is a `SUMMARY` with the counts; `tests/180-zmx-daemon-shutdown.test.ts` runs the same probe with two runs.
+The last line is a `SUMMARY` with the counts; `tests/181-zmx-daemon-shutdown.test.ts` runs the same probe with two runs.
 
 ## Loopback SSH Peer
 
