@@ -30,7 +30,7 @@ struct MessageToast: View {
                         .foregroundColor(tintColor)
                         .accessibilityHidden(true)
                     Text(message)
-                        .settingsScaledSystemFont(size: 13, weight: .medium)
+                        .font(YENTypography.body.weight(.medium))
                         .foregroundColor(.primary)
                     if let actionTitle, let action {
                         Button(actionTitle, action: action)
@@ -77,7 +77,7 @@ struct MessageToast: View {
             if reduceMotion {
                 isVisible = true
             } else {
-                withAnimation(.easeIn(duration: TabSidebarController.defaultTransientAnimationDuration)) {
+                withAnimation(.easeOut(duration: YENMotion.standard)) {
                     isVisible = true
                 }
             }
@@ -92,7 +92,7 @@ struct MessageToast: View {
                 if reduceMotion {
                     isVisible = false
                 } else {
-                    withAnimation(.easeIn(duration: TabSidebarController.defaultTransientAnimationDuration)) {
+                    withAnimation(.easeIn(duration: YENMotion.standard)) {
                         isVisible = false
                     }
                 }

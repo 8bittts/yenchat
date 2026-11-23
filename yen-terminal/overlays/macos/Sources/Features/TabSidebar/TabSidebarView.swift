@@ -140,9 +140,9 @@ private struct SidebarHeaderView: View {
 	var body: some View {
 		HStack(alignment: .center, spacing: 10) {
 			Text("Tabs")
-				.font(.body.weight(.semibold))
+				.font(YENTypography.headline)
 			Text("\(tabCount)")
-				.settingsScaledSystemFont(size: 11, weight: .medium)
+				.font(YENTypography.secondary.weight(.medium))
 				.foregroundColor(.secondary)
 				.accessibilityLabel("\(tabCount) open tabs")
 
@@ -150,7 +150,7 @@ private struct SidebarHeaderView: View {
 
 			Button(action: togglePersistentMode) {
 				Image(systemName: settings.tabSidebarPresentationMode == .persistent ? "pin.fill" : "pin")
-					.settingsScaledSystemFont(size: 12, weight: .semibold)
+					.font(YENTypography.callout.weight(.semibold))
 					.foregroundColor(settings.tabSidebarPresentationMode == .persistent ? Color.overlayAccent : .secondary)
 					.frame(width: 28, height: 28)
 					.contentShape(Rectangle())
@@ -161,7 +161,7 @@ private struct SidebarHeaderView: View {
 
 			Button(action: openWorkspaceSettings) {
 				Image(systemName: "gearshape")
-					.settingsScaledSystemFont(size: 12, weight: .semibold)
+					.font(YENTypography.callout.weight(.semibold))
 					.foregroundColor(.secondary)
 					.frame(width: 28, height: 28)
 					.contentShape(Rectangle())
@@ -200,9 +200,9 @@ private struct SidebarFooterView: View {
 			Button(action: newTab) {
 				HStack(spacing: SettingsSpacing.iconTextSpacing) {
 					Image(systemName: "plus")
-						.settingsScaledSystemFont(size: 11, weight: .semibold)
+						.font(YENTypography.secondary.weight(.semibold))
 					Text("New Tab")
-						.settingsScaledSystemFont(size: 12, weight: .medium)
+						.font(YENTypography.callout.weight(.medium))
 				}
 				.foregroundColor(.secondary)
 				.padding(.horizontal, YENDesignTokens.contentInset)
@@ -328,7 +328,7 @@ private struct TabSidebarRow: View {
 	}
 
 	private var rowAnimation: Animation? {
-		reduceMotion ? nil : .easeOut(duration: 0.12)
+		YENMotion.feedback(reduceMotion: reduceMotion)
 	}
 
 	private var rowCornerRadius: CGFloat {
@@ -358,14 +358,14 @@ private struct TabSidebarRow: View {
 
 				if let sessionState = tab.sessionState {
 					Image(systemName: sessionState.symbolName)
-						.settingsScaledSystemFont(size: 10)
+						.font(YENTypography.caption)
 						.foregroundColor(.secondary)
 						.help(sessionState.label)
 				}
 
 				if let shortcut = tab.shortcut {
 					Text("⌘\(shortcut)")
-						.settingsScaledSystemFont(size: 10, design: .monospaced)
+						.font(YENTypography.caption.monospaced())
 						.foregroundColor(.secondary)
 				}
 			}
@@ -443,7 +443,7 @@ private struct TabSidebarRow: View {
 					.foregroundColor(tab.statusTone.color)
 				}
 			}
-			.settingsScaledSystemFont(size: 11)
+			.font(YENTypography.secondary)
 			.foregroundColor(.secondary)
 		}
 	}
@@ -459,7 +459,7 @@ private struct TabSidebarRow: View {
 		if isEditingTitle {
 			TextField("", text: $draftTitle, prompt: Text("Untitled Tab"))
 				.textFieldStyle(.plain)
-				.settingsScaledSystemFont(size: 12.5, weight: .semibold)
+				.font(YENTypography.body.weight(.medium))
 				.foregroundColor(.primary)
 				.focused($titleFieldFocused)
 				.onSubmit {
@@ -490,7 +490,7 @@ private struct TabSidebarRow: View {
 				.frame(maxWidth: .infinity, alignment: .leading)
 		} else {
 			Text(tab.title)
-				.settingsScaledSystemFont(size: 12.5, weight: tab.isSelected ? .semibold : .medium)
+				.font(YENTypography.body.weight(.medium))
 				.lineLimit(1)
 				.truncationMode(.tail)
 				.foregroundColor(.primary)
@@ -634,7 +634,7 @@ private struct TabSidebarColorControl: View {
 		Group {
 			if color == .none {
 				Image(systemName: "terminal")
-					.settingsScaledSystemFont(size: 13, weight: .medium)
+					.font(YENTypography.body.weight(.medium))
 					.foregroundColor(isSelected || isHovered ? .primary : .secondary)
 			} else {
 				TabSidebarColorSwatch(color: color)

@@ -20,6 +20,7 @@ Intentional deltas, not templates for new windows:
   Horizontal tabs align to the right and expand to the left.
   They prefer 240 points each and compress at the window edge, where AppKit manages overflow.
   The title leads each tab when AppKit exposes its title stack, in the system 13 pt medium face; AppKit alone would draw 11 pt regular.
+  The engine clears the tab's attributed title on every split focus change, so `WorkspaceTabAccessory` observes it and restores the face at once.
   A tab with splits shows its pane count at the trailing edge, as a bare number in the secondary color, and narrow tabs hide the count to keep the title readable.
   The close button follows the count and takes no room until the pointer is over the tab, so the title's ink and the last trailing mark sit the same distance from the pill's ends (`WorkspaceTabAccessory.edgeInset`, `closeTrailingInset`; `WorkspaceTabPillTests`).
   Holding Command alone swaps every count for the tab's `Cmd + 1-9` shortcut; the zoom control also sits at the trailing edge.
@@ -36,7 +37,9 @@ Shared rules:
 - `BaseTerminalController.windowWillResize` caps a standard window's size to `screen.visibleFrame` through `YENGeometryClamp`, because repeated Fill then Center cycles accumulate rounding drift; the origin is never clamped.
 - A disabled feature invoked by shortcut or palette plays the system alert, shows a VoiceOver-announced terminal toast with an Open Settings action, and grays its menu item (`DisabledFeatureToast` over `MessageToast`).
 - Overlay-owned warnings in smoke logs, such as an invalid SF Symbol name, are regressions even when the control renders.
-- Native chrome uses shared tokens, never per-file literals: `YENDesignTokens.terminalFacingCornerRadius` (10pt), `Color.yenBrand` (`#ff5100`, matching web `--brand`), `SettingsCornerRadius`, `SettingsSpacing`, `SettingsTypography`, `ReviewChrome` and `WebPreviewChromeMetrics`. Panel text uses system text styles or `settingsScaledSystemFont`, so it follows Dynamic Type.
+- Native chrome uses shared tokens, never per-file literals: `YENDesignTokens.terminalFacingCornerRadius` (10pt), `Color.yenBrand` (`#ff5100`, matching web `--brand`), `SettingsCornerRadius`, `SettingsSpacing`, `SettingsTypography`, `ReviewChrome` and `WebPreviewChromeMetrics`.
+- Every text uses a `YENTypography` role (system text styles from 10 to 26 pt), never a point size, so it follows Dynamic Type; a weight never depends on focus or selection, and `OverlayTokenLintTests` refuses a fixed size.
+- Overlay transitions use `YENMotion`: `quick` for hover and selection, `standard` for overlays, toasts, borders and split layout changes, easing out on entry and in on exit; edge panels keep the `SlidingUtilityPanel` envelope.
 
 Audit with `rg -n "NSTitlebarAccessory|titlebarAppearsTransparent\\s*=\\s*true|fullSizeContentView|\\.nonactivatingPanel|window\\.level\\s*=" yen-terminal/overlays/macos/Sources`.
 
@@ -305,6 +308,7 @@ The top row shares one edge below the toolbar in single, split, and zoomed layou
 Each outlined pane reserves space for its stroke and corner curve around the terminal grid and header.
 A window outline around framed panes reserves the same space in every pane.
 Changing focus keeps the terminal grid size stable.
+Opening, closing, moving or zooming a pane crossfades the window content for `YENMotion.standard` (`SplitTreeTransition`); divider drags and Reduce Motion change without a fade.
 
 Each split header shows an activity icon, title and working directory above the terminal.
 It uses the pane background and balances the space above and below the icon and title.

@@ -44,13 +44,13 @@ struct MergeConflictResolutionView: View {
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Merge Conflicts")
-                        .settingsScaledSystemFont(size: 20, weight: .semibold)
+                        .font(YENTypography.title.weight(.semibold))
                     Text(
                         model.repositorySummary
                             ?? model.workingDirectorySummary
                             ?? "Open this workspace from a repo-backed terminal tab."
                     )
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
                 }
 
@@ -65,14 +65,14 @@ struct MergeConflictResolutionView: View {
             if let snapshot = model.snapshot, !snapshot.files.isEmpty {
                 HStack(alignment: .center, spacing: 14) {
                     Text("\(snapshot.files.count) conflicted file\(snapshot.files.count == 1 ? "" : "s")")
-                        .settingsScaledSystemFont(size: 12, weight: .medium)
+                        .font(YENTypography.callout.weight(.medium))
                     Text("\(model.totalUnresolvedHunks) unresolved hunk\(model.totalUnresolvedHunks == 1 ? "" : "s")")
-                        .settingsScaledSystemFont(size: 12)
+                        .font(YENTypography.callout)
                         .foregroundColor(.secondary)
                 }
             } else {
                 Text("Load the active repository to inspect text conflict markers and resolve them with explicit ours / theirs / both actions.")
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
             }
 
@@ -97,7 +97,7 @@ struct MergeConflictResolutionView: View {
                 Spacer()
                 ProgressView()
                 Text("Loading conflicted files...")
-                    .settingsScaledSystemFont(size: 13)
+                    .font(YENTypography.body)
                     .foregroundColor(.secondary)
                 Spacer()
             }
@@ -116,12 +116,12 @@ struct MergeConflictResolutionView: View {
             VStack(spacing: 10) {
                 Spacer()
                 Image(systemName: "arrow.triangle.merge")
-                    .settingsScaledSystemFont(size: 28, weight: .medium)
+                    .font(YENTypography.largeTitle.weight(.medium))
                     .foregroundColor(.secondary)
                 Text("No Merge Conflicts Loaded")
-                    .settingsScaledSystemFont(size: 16, weight: .semibold)
+                    .font(YENTypography.sectionTitle.weight(.semibold))
                 Text("Reload after `git merge` or `git rebase` to inspect unresolved text conflicts for the active repository.")
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                 Spacer()
@@ -136,9 +136,9 @@ struct MergeConflictResolutionView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Files")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                     Text("\(snapshot.files.count) conflicted")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
@@ -163,19 +163,19 @@ struct MergeConflictResolutionView: View {
             List(snapshot.files, selection: $model.selectedFilePath) { file in
                 VStack(alignment: .leading, spacing: 3) {
                     Text(file.path)
-                        .settingsScaledSystemFont(size: 12.5, weight: .medium)
+                        .font(YENTypography.body.weight(.medium))
                         .lineLimit(2)
                         .textSelection(.enabled)
 
                     if let unsupportedReason = file.unsupportedReason {
                         Text("Unsupported marker layout")
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(.orange)
                             .help(unsupportedReason)
                     } else {
                         let unresolved = model.unresolvedHunkCount(for: file)
                         Text("\(unresolved) unresolved hunk\(unresolved == 1 ? "" : "s")")
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(unresolved == 0 ? .secondary : .orange)
                     }
                 }
@@ -191,16 +191,16 @@ struct MergeConflictResolutionView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(model.selectedFile?.path ?? "Conflict Hunk")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                         .lineLimit(2)
                     if let location = model.selectedEditorLocation {
                         Text(location.target)
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(.secondary)
                             .textSelection(.enabled)
                     }
                     Text(model.selectedFileStatusSummary)
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
@@ -240,7 +240,7 @@ struct MergeConflictResolutionView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     ReviewChrome.statusBanner(message: unsupportedReason, isError: true)
                     Text("This workspace currently handles marker-based text conflicts. Resolve this file with your external merge tool, then reload.")
-                        .settingsScaledSystemFont(size: 12)
+                        .font(YENTypography.callout)
                         .foregroundColor(.secondary)
                     Spacer(minLength: 0)
                 }
@@ -295,7 +295,7 @@ struct MergeConflictResolutionView: View {
     private func hunkPicker(file: MergeConflictFileSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Hunks")
-                .settingsScaledSystemFont(size: 11, weight: .medium)
+                .font(YENTypography.secondary.weight(.medium))
                 .foregroundColor(.secondary)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -307,9 +307,9 @@ struct MergeConflictResolutionView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Hunk \(hunk.index)")
-                                    .settingsScaledSystemFont(size: 11.5, weight: .semibold)
+                                    .font(YENTypography.secondary.weight(.semibold))
                                 Text(choice?.rawValue.uppercased() ?? "UNRESOLVED")
-                                    .settingsScaledSystemFont(size: 10)
+                                    .font(YENTypography.caption)
                                     .foregroundColor(choice == nil ? .orange : .secondary)
                             }
                             .padding(.horizontal, 10)
@@ -328,7 +328,7 @@ struct MergeConflictResolutionView: View {
     private func resolutionButtons(hunk: MergeConflictHunk) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Resolve hunk \(hunk.index) at line \(hunk.startLine)")
-                .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                .font(YENTypography.body.weight(.semibold))
 
             HStack(spacing: 8) {
                 ForEach(MergeConflictResolutionChoice.allCases) { choice in
@@ -349,9 +349,9 @@ struct MergeConflictResolutionView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Result")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                     Text("\(model.totalUnresolvedHunks) unresolved")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
@@ -406,9 +406,9 @@ struct MergeConflictResolutionView: View {
         VStack(spacing: 8) {
             Spacer(minLength: 40)
             Text("No conflict hunk selected.")
-                .settingsScaledSystemFont(size: 14, weight: .medium)
+                .font(YENTypography.body.weight(.medium))
             Text("Select a conflicted file from the sidebar to inspect its hunks.")
-                .settingsScaledSystemFont(size: 12)
+                .font(YENTypography.callout)
                 .foregroundColor(.secondary)
             Spacer(minLength: 40)
         }
@@ -424,7 +424,7 @@ struct MergeConflictResolutionView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .settingsScaledSystemFont(size: 11, weight: .medium)
+                .font(YENTypography.secondary.weight(.medium))
                 .foregroundColor(.secondary)
 
             // Shared selectable, copy-on-select surface. Conflict file content

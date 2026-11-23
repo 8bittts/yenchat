@@ -44,13 +44,13 @@ struct PullRequestReviewView: View {
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PR Review")
-                        .settingsScaledSystemFont(size: 20, weight: .semibold)
+                        .font(YENTypography.title.weight(.semibold))
                     Text(
                         model.repositorySummary
                             ?? model.workingDirectorySummary
                             ?? "Open this workspace from a repo-backed terminal tab."
                     )
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
                 }
 
@@ -77,7 +77,7 @@ struct PullRequestReviewView: View {
                 Text(
                     "This desktop review workspace loads pull request metadata, changed files, and focused diffs from the active repo, then posts only through explicit confirmed review actions."
                 )
-                .settingsScaledSystemFont(size: 12)
+                .font(YENTypography.callout)
                 .foregroundColor(.secondary)
             }
 
@@ -100,7 +100,7 @@ struct PullRequestReviewView: View {
                 Spacer()
                 ProgressView()
                 Text("Loading pull request review context...")
-                    .settingsScaledSystemFont(size: 13)
+                    .font(YENTypography.body)
                     .foregroundColor(.secondary)
                 Spacer()
             }
@@ -119,12 +119,12 @@ struct PullRequestReviewView: View {
             VStack(spacing: 10) {
                 Spacer()
                 Image(systemName: "doc.text.magnifyingglass")
-                    .settingsScaledSystemFont(size: 28, weight: .medium)
+                    .font(YENTypography.largeTitle.weight(.medium))
                     .foregroundColor(.secondary)
                 Text("No Pull Request Loaded")
-                    .settingsScaledSystemFont(size: 16, weight: .semibold)
+                    .font(YENTypography.sectionTitle.weight(.semibold))
                 Text("Use the active terminal repo context and load the current branch PR or an explicit PR number.")
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                 Spacer()
@@ -139,9 +139,9 @@ struct PullRequestReviewView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Files")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                     Text("\(snapshot.files.count) changed")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
@@ -156,11 +156,11 @@ struct PullRequestReviewView: View {
             List(snapshot.files, selection: $model.selectedFilePath) { file in
                 VStack(alignment: .leading, spacing: 3) {
                     Text(file.path)
-                        .settingsScaledSystemFont(size: 12.5, weight: .medium)
+                        .font(YENTypography.body.weight(.medium))
                         .lineLimit(2)
                         .textSelection(.enabled)
                     Text(file.hunks.isEmpty ? "Focused diff" : "\(file.hunks.count) hunk\(file.hunks.count == 1 ? "" : "s")")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 3)
@@ -175,19 +175,19 @@ struct PullRequestReviewView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(model.selectedReviewLocation?.target ?? model.selectedFile?.path ?? "Focused Diff")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                         .lineLimit(2)
                     Text("Raw Diff")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                     if let selectedHunk = model.selectedHunk {
                         Text(selectedHunk.header)
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(.secondary)
                             .textSelection(.enabled)
                     } else {
                         Text("Drafts stay local until you explicitly post comments, evidence, or a review decision.")
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -229,9 +229,9 @@ struct PullRequestReviewView: View {
                 VStack(spacing: 8) {
                     Spacer(minLength: 40)
                     Text("No focused diff available.")
-                        .settingsScaledSystemFont(size: 14, weight: .medium)
+                        .font(YENTypography.body.weight(.medium))
                     Text("Select a file from the sidebar to inspect its patch or focused hunk preview.")
-                        .settingsScaledSystemFont(size: 12)
+                        .font(YENTypography.callout)
                         .foregroundColor(.secondary)
                     Spacer(minLength: 40)
                 }
@@ -282,7 +282,7 @@ struct PullRequestReviewView: View {
     private func hunkPicker(file: PullRequestReviewFile) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Hunks")
-                .settingsScaledSystemFont(size: 11, weight: .medium)
+                .font(YENTypography.secondary.weight(.medium))
                 .foregroundColor(.secondary)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -293,9 +293,9 @@ struct PullRequestReviewView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Hunk \(hunk.index)")
-                                    .settingsScaledSystemFont(size: 11.5, weight: .semibold)
+                                    .font(YENTypography.secondary.weight(.semibold))
                                 Text(hunk.location.target)
-                                    .settingsScaledSystemFont(size: 10)
+                                    .font(YENTypography.caption)
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
                             }
@@ -317,9 +317,9 @@ struct PullRequestReviewView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Review Actions")
-                        .settingsScaledSystemFont(size: 13, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                     Text("\(model.stagedDrafts.count) staged")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
@@ -365,7 +365,7 @@ struct PullRequestReviewView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Uses the same file + line + side contract as `yen ide pr-review --inline`.")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 8) {
@@ -398,13 +398,13 @@ struct PullRequestReviewView: View {
 
                 if let location = model.currentInlineDraftLocation {
                     Text("Target: \(location.target)")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
                 }
 
                 TextEditor(text: $model.inlineDraftBody)
-                    .settingsScaledSystemFont(size: 12.5)
+                    .font(YENTypography.body)
                     .accessibilityLabel("Inline comment body")
                     .frame(minHeight: 96)
                     .overlay(
@@ -429,7 +429,7 @@ struct PullRequestReviewView: View {
             }
         } label: {
             Text("Inline Comment Draft")
-                .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                .font(YENTypography.body.weight(.semibold))
         }
     }
 
@@ -437,23 +437,23 @@ struct PullRequestReviewView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Preview the same markdown evidence bundle shape the CLI writes under the IDE evidence directory.")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
 
                 if let latestVerifySummaryPath = model.currentEvidenceDraft?.latestVerifySummaryPath {
                     Text("Latest verify summary: \(latestVerifySummaryPath)")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
                 } else {
                     Text("No recent verify summary found in the local IDE state; the preview will still include PR metadata and changed files.")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                 }
 
                 if let latestVerifySemanticPath = model.currentEvidenceDraft?.latestVerifySemanticPath {
                     Text("Latest verify semantic report: \(latestVerifySemanticPath)")
-                        .settingsScaledSystemFont(size: 11)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
                 }
@@ -481,7 +481,7 @@ struct PullRequestReviewView: View {
             }
         } label: {
             Text("Evidence Bundle")
-                .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                .font(YENTypography.body.weight(.semibold))
         }
     }
 
@@ -489,11 +489,11 @@ struct PullRequestReviewView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Compose the review summary body used for comment, approve, or request-changes actions. Staged inline comments are posted first, and staged evidence is referenced from the submitted review when present.")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
 
                 Text("Audit files write to \(model.auditDirectorySummary)")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)
 
@@ -505,7 +505,7 @@ struct PullRequestReviewView: View {
                 .pickerStyle(.segmented)
 
                 TextEditor(text: $model.reviewNote)
-                    .settingsScaledSystemFont(size: 12.5)
+                    .font(YENTypography.body)
                     .accessibilityLabel("Review summary note")
                     .frame(minHeight: 84)
                     .overlay(
@@ -535,12 +535,12 @@ struct PullRequestReviewView: View {
                 }
 
                 Text("PR #\(snapshot.summary.number) reuses the same decision-template shape as `yen ide pr-review --decision`, including focus-file and evidence references when staged.")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
             }
         } label: {
             Text("Review Summary")
-                .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                .font(YENTypography.body.weight(.semibold))
         }
     }
 
@@ -548,7 +548,7 @@ struct PullRequestReviewView: View {
         GroupBox {
             if model.stagedDrafts.isEmpty {
                 Text("No local drafts staged yet.")
-                    .settingsScaledSystemFont(size: 12)
+                    .font(YENTypography.callout)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -558,9 +558,9 @@ struct PullRequestReviewView: View {
                             HStack(alignment: .top, spacing: 8) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(draft.title)
-                                        .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                                        .font(YENTypography.body.weight(.semibold))
                                     Text(draft.subtitle)
-                                        .settingsScaledSystemFont(size: 11)
+                                        .font(YENTypography.secondary)
                                         .foregroundColor(.secondary)
                                         .textSelection(.enabled)
                                 }
@@ -587,14 +587,14 @@ struct PullRequestReviewView: View {
             }
         } label: {
             Text("Staged Queue")
-                .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                .font(YENTypography.body.weight(.semibold))
         }
     }
 
     private func previewBlock(title: String, content: String, minHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .settingsScaledSystemFont(size: 11, weight: .medium)
+                .font(YENTypography.secondary.weight(.medium))
                 .foregroundColor(.secondary)
 
             // Pin readable text to the top-leading corner even when it is
@@ -604,7 +604,7 @@ struct PullRequestReviewView: View {
             GeometryReader { geo in
                 ScrollView([.vertical, .horizontal]) {
                     Text(content)
-                        .settingsScaledSystemFont(size: 11.5, weight: .regular, design: .monospaced)
+                        .font(YENTypography.secondary.monospaced())
                         .foregroundColor(.primary)
                         .textSelection(.enabled)
                         .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
@@ -621,23 +621,23 @@ struct PullRequestReviewView: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("#\(summary.number) \(summary.title)")
-                    .settingsScaledSystemFont(size: 13, weight: .semibold)
+                    .font(YENTypography.body.weight(.semibold))
                     .lineLimit(2)
                 Text("@\(summary.author)  •  \(summary.baseRefName) → \(summary.headRefName)")
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
             }
 
             Spacer(minLength: 0)
 
             Text("+\(summary.additions) / -\(summary.deletions) / \(summary.changedFiles) files")
-                .settingsScaledSystemFont(size: 11, weight: .medium)
+                .font(YENTypography.secondary.weight(.medium))
                 .foregroundColor(.secondary)
 
             if let url = URL(string: summary.url) {
                 Link(destination: url) {
                     Text("Open on GitHub")
-                        .settingsScaledSystemFont(size: 11, weight: .semibold)
+                        .font(YENTypography.secondary.weight(.semibold))
                 }
             }
         }

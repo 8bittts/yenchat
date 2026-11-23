@@ -121,10 +121,10 @@ private struct InstallingAccessoryView: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Restart Required")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(YENTypography.headline)
 
                 Text("The update is ready. Please restart the application to complete the installation.")
-                    .font(.system(size: 11))
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -137,7 +137,7 @@ private struct InstallingAccessoryView: View {
                                     .frame(width: 60, alignment: .trailing)
                                 Text(item.displayVersionString)
                             }
-                            .font(.system(size: 11))
+                            .font(YENTypography.secondary)
                         }
 
                         if let date = item.date {
@@ -147,7 +147,7 @@ private struct InstallingAccessoryView: View {
                                     .frame(width: 60, alignment: .trailing)
                                 Text(date.formatted(date: .abbreviated, time: .omitted))
                             }
-                            .font(.system(size: 11))
+                            .font(YENTypography.secondary)
                         }
                     }
                     .textSelection(.enabled)

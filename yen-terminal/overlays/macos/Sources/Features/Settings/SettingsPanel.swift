@@ -62,15 +62,15 @@ enum SettingsSpacing {
 /// The text styles the Settings window uses, by role. All are Dynamic Type
 /// styles; rows use the form's default body style.
 enum SettingsTypography {
-    static let paneTitle: Font = .title3.weight(.semibold)
+    static let paneTitle: Font = YENTypography.sectionTitle.weight(.semibold)
     /// The second line under a row label.
-    static let hint: Font = .caption
+    static let hint: Font = YENTypography.secondary
     /// Cautions, the status notice and other sentences inside a pane.
-    static let note: Font = .callout
+    static let note: Font = YENTypography.callout
     /// The theme dock header.
-    static let dockTitle: Font = .callout
+    static let dockTitle: Font = YENTypography.callout
     /// The preview caption and the notes under a shortcut row.
-    static let caption = YENDesignTokens.secondaryLabel
+    static let caption = YENTypography.secondary
 }
 
 enum SettingsCornerRadius {

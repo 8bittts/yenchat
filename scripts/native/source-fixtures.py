@@ -12,6 +12,8 @@ def inventory(root):
     swift = sorted(sources.rglob("*.swift"))
     if not swift:
         raise ValueError("native source inventory is empty")
+    # YEN's own sources, for lints that must not read upstream engine files.
+    swift += sorted((root / "yen-terminal/overlays/macos/Sources").rglob("*.swift"))
     paths = swift + [root / name for name in (
         "_docs/12-commands.md", "_docs/13-desktop-features.md",
         "yen-terminal/ghostty/src/config/Config.zig",

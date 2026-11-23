@@ -328,7 +328,7 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .greatestFiniteMagnitude, maxHeight: .greatestFiniteMagnitude)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: shouldShowAnyWindowBorder)
+            .animation(YENMotion.appear(reduceMotion: reduceMotion), value: shouldShowAnyWindowBorder)
             .background(WindowReferenceReader(window: $hostingWindow, frameInWindow: $terminalViewFrameInWindow))
             .onAppear {
                 BrowserSplitController.shared.registerTerminalWindow(borderWindow)
@@ -350,6 +350,8 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                 if shouldShowFocusedSplitBorder { focusedSurfaceFrameTick &+= 1 }
             }
             .onChange(of: viewModel.surfaceTree.structuralIdentity) { _ in
+                // Blend the old layout into the new one instead of cutting in one frame.
+                SplitTreeTransition.crossfade(hostingWindow, reduceMotion: reduceMotion)
                 syncWholeWindowBackgroundRuntime()
             }
             .onChange(of: settingsSnapshot.backgroundImagePath) { _ in

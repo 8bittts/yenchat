@@ -28,6 +28,21 @@ final class OverlayTokenLintTests: XCTestCase {
             .appendingPathComponent("Sources", isDirectory: true)
     }
 
+    /// The overlay `Sources` folder itself, from either tree: the test file sits
+    /// at `yen-terminal/{overlays,ghostty}/macos/Tests/`, and the overlays are
+    /// always at `yen-terminal/overlays/macos/Sources`.
+    private func yenOverlaySourcesURL(file: StaticString = #filePath) -> URL {
+        if let root = ProcessInfo.processInfo.environment["YEN_NATIVE_TEST_SOURCE_ROOT"] {
+            return URL(fileURLWithPath: root).appendingPathComponent("yen-terminal/overlays/macos/Sources", isDirectory: true)
+        }
+        return URL(fileURLWithPath: "\(file)")
+            .deletingLastPathComponent() // Tests
+            .deletingLastPathComponent() // macos
+            .deletingLastPathComponent() // overlays or ghostty
+            .deletingLastPathComponent() // yen-terminal
+            .appendingPathComponent("overlays/macos/Sources", isDirectory: true)
+    }
+
     /// Fails if a 6-digit hex color literal (e.g. #FFAA00) is hardcoded in
     /// overlay Sources outside the allowlisted data files, and never inside a
     /// comment. New hardcoded colors must use a color token instead of raw hex.
@@ -75,6 +90,30 @@ final class OverlayTokenLintTests: XCTestCase {
             let list = offenders.joined(separator: "\n")
             XCTFail("Found hard-coded hex color literals in overlay source files:\n\(list)")
         }
+    }
+
+    /// Fails if a SwiftUI view sets a point size instead of a `YENTypography`
+    /// role. Fixed sizes are how the app drifted to ten sizes, half-points
+    /// included, for text that plays the same role on different surfaces.
+    func test_swiftui_text_uses_the_shared_type_scale() throws {
+        let fileManager = FileManager.default
+        // Only YEN's own sources: upstream engine views change through patches.
+        let basePath = yenOverlaySourcesURL().path
+        let enumerator = try XCTUnwrap(fileManager.enumerator(atPath: basePath))
+        var offenders: [String] = []
+        var scanned = 0
+        while let casePath = enumerator.nextObject() as? String {
+            guard casePath.hasSuffix(".swift") else { continue }
+            let contents = try String(contentsOfFile: basePath + "/" + casePath, encoding: .utf8)
+            scanned += 1
+            for (index, line) in contents.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+                if line.contains(".font(.system(size:") || line.contains("ScaledSystemFont(size:") {
+                    offenders.append("\(casePath):\(index + 1)")
+                }
+            }
+        }
+        XCTAssertGreaterThan(scanned, 0, "No overlay Swift sources were scanned")
+        XCTAssertTrue(offenders.isEmpty, "Use a YENTypography role instead of a point size:\n\(offenders.joined(separator: "\n"))")
     }
 }
 #endif // os(macOS)

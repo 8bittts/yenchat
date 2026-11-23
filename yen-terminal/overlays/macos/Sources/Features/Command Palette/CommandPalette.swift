@@ -409,7 +409,7 @@ private struct CommandPaletteQuery: View {
 
             TextField("Execute a command…", text: $query)
                 .padding()
-                .settingsScaledSystemFont(size: 20, relativeTo: .title3, weight: .light)
+                .font(YENTypography.title)
                 .frame(height: 48)
                 .textFieldStyle(.plain)
                 .focused($isTextFieldFocused)
@@ -493,7 +493,7 @@ private struct CommandRow: View {
                 if let icon = option.leadingIcon {
                     Image(systemName: icon)
                         .foregroundStyle(option.emphasis ? Color.accentColor : .secondary)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(YENTypography.body.weight(.medium))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -502,7 +502,7 @@ private struct CommandRow: View {
 
                     if let subtitle = option.subtitle ?? option.description {
                         Text(subtitle)
-                            .font(.caption)
+                            .font(YENTypography.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -511,7 +511,7 @@ private struct CommandRow: View {
 
                 if let badge = option.badge, !badge.isEmpty {
                     Text(badge)
-                        .font(.caption2.weight(.medium))
+                        .font(YENTypography.caption.weight(.medium))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(

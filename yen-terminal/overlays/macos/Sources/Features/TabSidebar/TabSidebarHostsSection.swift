@@ -124,11 +124,11 @@ struct TabSidebarHostsSectionView: View {
             Button(action: { section.toggleExpanded() }) {
                 HStack(spacing: 8) {
                     Image(systemName: section.isExpanded ? "chevron.down" : "chevron.right")
-                        .settingsScaledSystemFont(size: 10, weight: .semibold)
+                        .font(YENTypography.caption.weight(.semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 16)
                     Text("Hosts")
-                        .settingsScaledSystemFont(size: 12.5, weight: .semibold)
+                        .font(YENTypography.body.weight(.semibold))
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 8)
@@ -149,7 +149,7 @@ struct TabSidebarHostsSectionView: View {
                 }
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: section.isExpanded)
+        .animation(YENMotion.feedback(reduceMotion: reduceMotion), value: section.isExpanded)
     }
 }
 
@@ -162,19 +162,19 @@ private struct TabSidebarHostsRow: View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: row.entry.leadingIcon)
-                    .settingsScaledSystemFont(size: 11)
+                    .font(YENTypography.secondary)
                     .foregroundColor(.secondary)
                     .frame(width: 16)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
-                        .settingsScaledSystemFont(size: 12, weight: .medium)
+                        .font(YENTypography.callout.weight(.medium))
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if let subtitle = row.entry.subtitle {
                         // Middle, so a short session id that tells two
                         // sessions apart stays visible in a narrow rail.
                         Text(subtitle)
-                            .settingsScaledSystemFont(size: 11)
+                            .font(YENTypography.secondary)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)

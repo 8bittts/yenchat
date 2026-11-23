@@ -36,7 +36,7 @@ private struct BrowserSplitHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             Text("Browser")
-                .font(.caption)
+                .font(YENTypography.caption)
                 .foregroundStyle(.secondary)
             Spacer()
             Button(action: onClose) {

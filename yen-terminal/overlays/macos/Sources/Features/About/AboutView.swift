@@ -15,10 +15,10 @@ struct AboutView: View {
 
             VStack(alignment: .center, spacing: 6) {
                 Text("YEN")
-                    .font(.title2.weight(.semibold))
+                    .font(YENTypography.title.weight(.semibold))
 
                 Text("Fast, native, feature-rich terminal emulator.")
-                    .font(.subheadline)
+                    .font(YENTypography.secondary)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: true, vertical: false)
@@ -27,7 +27,7 @@ struct AboutView: View {
             HStack(spacing: 8) {
                 if let version {
                     Text("v\(version)")
-                        .font(.caption.weight(.medium))
+                        .font(YENTypography.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
 
@@ -50,7 +50,7 @@ struct AboutView: View {
 
             if let copy = self.copyright {
                 Text(copy)
-                    .font(.caption2)
+                    .font(YENTypography.caption)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }

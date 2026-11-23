@@ -91,6 +91,7 @@ final class DictationOverlay {
         )
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = fadeInDuration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
         }
     }
@@ -161,6 +162,7 @@ final class DictationOverlay {
         )
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = fadeOutDuration
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
             // Skip orderOut if show() was called during the fade
@@ -319,10 +321,8 @@ final class DictationOverlay {
     ) -> TimeInterval {
         guard !reduceMotionEnabled else { return 0 }
         switch phase {
-        case .show:
-            return 0.2
-        case .hide:
-            return 0.15
+        case .show, .hide:
+            return YENMotion.standard
         }
     }
 
@@ -456,21 +456,21 @@ private struct DictationPillView: View {
             } else {
                 Image(systemName: "mic.fill")
                     .foregroundColor(.overlayAccent)
-                    .settingsScaledSystemFont(size: 13, relativeTo: .body, weight: .medium)
+                    .font(YENTypography.body.weight(.medium))
                     .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: presentation.eyebrowText == nil ? 0 : 4) {
                 if let eyebrowText = presentation.eyebrowText {
                     Text(verbatim: eyebrowText)
-                        .settingsScaledSystemFont(size: 10, relativeTo: .caption, weight: .semibold)
+                        .font(YENTypography.caption.weight(.semibold))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
 
                 Text(verbatim: presentation.bodyText)
-                    .settingsScaledSystemFont(size: 13, relativeTo: .body, weight: .medium)
+                    .font(YENTypography.body.weight(.medium))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(DictationOverlay.maxPreviewLineCount)

@@ -18,10 +18,10 @@ struct OnboardingPanel: View {
                             .accessibilityLabel("YEN app icon")
                     }
                     Text("Welcome to YEN")
-                        .font(.title)
+                        .font(YENTypography.title.weight(.semibold))
                         .fontWeight(.bold)
                     Text("YEN needs three permissions for speech-to-text dictation.")
-                        .font(.subheadline)
+                        .font(YENTypography.secondary)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -58,7 +58,7 @@ struct OnboardingPanel: View {
                 .padding(.horizontal, 24)
 
                 Text("Click Grant for each missing permission. If macOS can prompt directly, YEN requests it first; otherwise YEN opens the exact Privacy pane.")
-                    .font(.caption)
+                    .font(YENTypography.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.leading)
                     .padding(.horizontal, 24)
@@ -68,7 +68,7 @@ struct OnboardingPanel: View {
                 // Footer
                 VStack(spacing: 12) {
                     Text("Option + Space to dictate anywhere")
-                        .font(.caption)
+                        .font(YENTypography.caption)
                         .foregroundColor(.secondary)
 
                     Button(action: { controller.dismiss(markComplete: controller.allGranted) }) {
@@ -107,13 +107,13 @@ private struct PermissionRow: View {
         HStack(spacing: 12) {
             Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .foregroundColor(statusColor)
-                .settingsScaledSystemFont(size: 20, relativeTo: .title3)
+                .font(YENTypography.title)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .settingsScaledSystemFont(size: 13, relativeTo: .body, weight: .medium)
+                    .font(YENTypography.body.weight(.medium))
                 Text(description)
-                    .font(.caption)
+                    .font(YENTypography.caption)
                     .foregroundColor(.secondary)
             }
 

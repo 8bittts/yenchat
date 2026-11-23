@@ -17,7 +17,7 @@ struct LoadingOverlayView: View {
     var body: some View {
         VStack(spacing: 10) {
             Text(message)
-                .font(.headline)
+                .font(YENTypography.headline)
                 .foregroundStyle(.primary)
                 .monospacedDigit()
             if let progress {
@@ -86,7 +86,7 @@ final class LoadingOverlayController {
         } else {
             window.alphaValue = 0
             NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.3
+                ctx.duration = YENMotion.standard
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 window.animator().alphaValue = 1
             }
@@ -109,7 +109,7 @@ final class LoadingOverlayController {
             return
         }
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.25
+            ctx.duration = YENMotion.standard
             ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().alphaValue = 0
         }, completionHandler: {

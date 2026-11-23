@@ -27,6 +27,7 @@ final class WorkspaceTabAccessory: NSStackView {
     private weak var observedGroup: NSWindowTabGroup?
     private var selectionObservation: NSKeyValueObservation?
     private var titleObservation: NSKeyValueObservation?
+    private var tabTitleObservation: NSKeyValueObservation?
     private var revealObservation: AnyCancellable?
     private var hoverArea: NSTrackingArea?
     private var isNarrow = false
@@ -46,8 +47,14 @@ final class WorkspaceTabAccessory: NSStackView {
         }
         self.splitCount = splitCount
         tabWindow = window
-        // The engine resets the tab's attributed title whenever the title changes.
+        // The engine resets the tab's attributed title whenever the title changes,
+        // and clears it on every split focus change (its titlebar font is nil
+        // unless a title font is configured). AppKit then draws the 11 pt default,
+        // so the title shrank as focus moved; restore it as soon as it is reset.
         titleObservation = window.observe(\.title, options: [.new]) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.updateTitleAppearance() }
+        }
+        tabTitleObservation = window.tab.observe(\.attributedTitle, options: [.new]) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.updateTitleAppearance() }
         }
         if splitCount.superview !== self {

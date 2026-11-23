@@ -51,7 +51,7 @@ struct TokenUsageOverview: View {
                 Image(nsImage: mark).renderingMode(.template).resizable().frame(width: 15, height: 15)
                     .foregroundStyle(Color.yenBrand).accessibilityHidden(true)
             }
-            Text(title).font(.headline)
+            Text(title).font(YENTypography.headline)
             Spacer()
             actions()
         }
@@ -73,7 +73,7 @@ struct TokenUsageOverview: View {
                 ScrollView { bodyContent }.frame(height: max(120, heightLimit - 108))
             }.frame(maxHeight: max(120, heightLimit - 108))
             Divider()
-            Text(coverage).font(.caption).foregroundStyle(.secondary)
+            Text(coverage).font(YENTypography.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -98,12 +98,12 @@ struct TokenUsageOverview: View {
             } else {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Reading 90 days of local records…").font(.caption).foregroundStyle(.secondary)
+                    Text("Reading 90 days of local records…").font(YENTypography.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
             Divider()
-            Text("Tokens from local records, today included").font(.caption).foregroundStyle(.secondary)
+            Text("Tokens from local records, today included").font(YENTypography.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -122,7 +122,7 @@ struct TokenUsageOverview: View {
             GridRow {
                 Text("Provider").frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(Self.windows, id: \.self) { Text(String($0) + " days") }
-            }.font(.caption).foregroundStyle(.secondary)
+            }.font(YENTypography.caption).foregroundStyle(.secondary)
             ForEach(Array(TokenTool.allCases.enumerated()), id: \.offset) { index, tool in
                 GridRow {
                     HStack(spacing: 6) {
@@ -167,7 +167,7 @@ struct TokenUsageOverview: View {
                     Text("Daily, last 90 days")
                     Spacer()
                     Text("Busiest day " + peak.formatted(Self.compact))
-                }.font(.caption).foregroundStyle(.secondary)
+                }.font(YENTypography.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -175,10 +175,10 @@ struct TokenUsageOverview: View {
     private var bodyContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Today’s tokens").font(.subheadline).foregroundStyle(.secondary)
+                Text("Today’s tokens").font(YENTypography.secondary).foregroundStyle(.secondary)
                 Spacer()
                 Text(snapshot.counts == nil ? "Reading…" : counts.isEmpty ? "Unavailable" : total.formatted())
-                    .font(.title2.weight(.semibold)).monospacedDigit()
+                    .font(YENTypography.title.weight(.semibold)).monospacedDigit()
 
             }
             TimelineView(.periodic(from: .now, by: 30)) { clock in
@@ -204,7 +204,7 @@ struct TokenUsageOverview: View {
         return VStack(alignment: .leading, spacing: 5) {
             Divider()
             HStack {
-                link(tool.rawValue, tool).font(.headline)
+                link(tool.rawValue, tool).font(YENTypography.headline)
                 Spacer(minLength: 4)
                 Text(count?.formatted() ?? (snapshot.counts == nil ? "Reading…" : "Unavailable")).monospacedDigit()
             }
@@ -213,7 +213,7 @@ struct TokenUsageOverview: View {
                 // Reserve the widest caption so the four tracks end on one line.
                 Text(0.999.formatted(percent) + " of today").hidden()
                     .overlay(alignment: .trailing) { Text(count == nil || total == 0 ? "—" : share.formatted(percent) + " of today") }
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(YENTypography.caption.monospacedDigit()).foregroundStyle(.secondary)
             }.accessibilityElement(children: .ignore)
                 .accessibilityLabel("Share of counted tokens").accessibilityValue(count == nil || total == 0 ? "Unavailable" : share.formatted(.percent))
             ForEach(meters) { meter in
@@ -223,10 +223,10 @@ struct TokenUsageOverview: View {
                     ZStack(alignment: .leading) {
                         ForEach(meters) { Text($0.label).hidden() }
                         link(meter.label, tool)
-                    }.font(.caption).lineLimit(1).fixedSize()
+                    }.font(YENTypography.caption).lineLimit(1).fixedSize()
                     track(meter.percent / 100, color: color.opacity(scheme == .dark ? 0.8 : 1))
                     Text((meter.percent / 100).formatted(percent))
-                        .font(.caption.monospacedDigit()).frame(minWidth: 30, alignment: .trailing)
+                        .font(YENTypography.caption.monospacedDigit()).frame(minWidth: 30, alignment: .trailing)
                 }.accessibilityElement(children: .combine)
                     .help(meter.reset.map { "Plan usage · resets " + $0.formatted() } ?? "Plan usage")
             }

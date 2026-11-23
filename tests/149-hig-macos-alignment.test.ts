@@ -87,7 +87,7 @@ describe("Native macOS HIG alignment guardrails", () => {
 
 	test("About uses Dynamic Type and a system button", () => {
 		const about = readOverlay("Sources/Features/About/AboutView.swift");
-		expect(about).toContain(".font(.title2.weight(.semibold))");
+		expect(about).toContain(".font(YENTypography.title.weight(.semibold))");
 		expect(about).toContain('"https://btc.email"');
 		for (const title of ["Docs", "Bitcoin"]) {
 			const modifiers = about.match(
@@ -101,14 +101,12 @@ describe("Native macOS HIG alignment guardrails", () => {
 		expect(about).not.toContain(".font(.system(size: 24");
 	});
 
-	test("command palette search field uses scaled system font", () => {
+	test("command palette search field uses the shared type scale", () => {
 		const palette = readOverlay(
 			"Sources/Features/Command Palette/CommandPalette.swift",
 		);
-		expect(palette).toContain(
-			".settingsScaledSystemFont(size: 20, relativeTo: .title3, weight: .light)",
-		);
-		expect(palette).not.toContain(".font(.system(size: 20, weight: .light))");
+		expect(palette).toContain(".font(YENTypography.title)");
+		expect(palette).not.toContain(".font(.system(size:");
 	});
 
 	test("onboarding permission status respects Differentiate Without Color", () => {

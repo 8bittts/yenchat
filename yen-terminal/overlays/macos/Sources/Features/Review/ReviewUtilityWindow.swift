@@ -18,9 +18,9 @@
         static func statusBanner(message: String, isError: Bool) -> some View {
             HStack(spacing: 8) {
                 Image(systemName: isError ? "exclamationmark.triangle" : "info.circle")
-                    .settingsScaledSystemFont(size: 11, weight: .semibold)
+                    .font(YENTypography.secondary.weight(.semibold))
                 Text(message)
-                    .settingsScaledSystemFont(size: 11.5)
+                    .font(YENTypography.secondary)
                     .lineLimit(6)
                 Spacer(minLength: 0)
             }

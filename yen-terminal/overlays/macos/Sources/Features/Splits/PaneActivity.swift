@@ -100,7 +100,7 @@ struct PaneActivityIcon: View {
                 Image(nsImage: icon).resizable().scaledToFit()
             } else {
                 Image(systemName: style.symbol)
-                    .font(.caption2.weight(.bold))
+                    .font(YENTypography.caption.weight(.semibold))
                     .foregroundStyle(style.tint)
                     .frame(width: 20, height: 16)
                     .background(Color(nsColor: .windowBackgroundColor), in: badge)
@@ -122,7 +122,7 @@ struct PaneTabSplitCount: View {
     var body: some View {
         if count > 1 {
             Text(count, format: .number)
-                .font(.system(size: NSFont.systemFontSize).monospacedDigit())
+                .font(YENTypography.body.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .fixedSize()
                 .accessibilityLabel("\(count) panes")

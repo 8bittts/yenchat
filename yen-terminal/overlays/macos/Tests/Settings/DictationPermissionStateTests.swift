@@ -925,7 +925,7 @@ struct DictationPermissionStateTests {
             DictationOverlay.animationDuration(
                 reduceMotionEnabled: false,
                 phase: .hide
-            ) == 0.15
+            ) == 0.2
         )
         #expect(
             DictationOverlay.animationDuration(

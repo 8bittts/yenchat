@@ -192,12 +192,12 @@ private struct WebPreviewStatusContent: View {
 
             if model.statusIsError {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption)
+                    .font(YENTypography.caption)
                     .foregroundColor(Color(NSColor.systemRed))
                     .accessibilityHidden(true)
             }
             Text(model.statusMessage ?? model.pageTitle)
-                .font(.caption)
+                .font(YENTypography.caption)
                 .foregroundColor(
                     model.statusIsError
                         ? Color(NSColor.systemRed)
