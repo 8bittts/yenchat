@@ -1,8 +1,8 @@
 {
-  "version": "1.291",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.291/yen-1291.dmg",
-  "sha256": "883bc6d289810ef89094b84613a2c96945f238454f6f908ed15a32577454d706",
-  "notes": "Token limit alerts, folder counts and yen usage",
+  "version": "1.292",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.292/yen-1292.dmg",
+  "sha256": "e96a117cfbf12f7a1644d2de28b914f3acd71c93fc853ba7252c63ad76fa2e3e",
+  "notes": "Moving Wallpaper buttons and a Demo sample",
   "minOS": "27.0",
   "releaseDate": ""
 }
