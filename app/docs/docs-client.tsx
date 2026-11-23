@@ -832,10 +832,12 @@ function SettingsSection() {
 					Open Settings &gt; General &gt; Experimental and turn on Moving
 					Wallpaper.
 				</li>
-				<li>Click Wallpaper Controls.</li>
 				<li>
-					Choose a video or GIF, paste a YouTube link, pick a video from Photos,
-					or choose Shuffle from Photos.
+					Click Demo to try a sample video. Click it again for another one.
+				</li>
+				<li>
+					Or click Choose File, YouTube URL, From Photos, or Shuffle Photos to
+					use your own video or GIF.
 				</li>
 				<li>
 					For a different wallpaper on each desktop, turn on Wallpaper per
@@ -843,8 +845,9 @@ function SettingsSection() {
 				</li>
 			</Steps>
 			<p className="text-body">
-				Playback starts muted. The same menu pauses, unmutes, and removes the
-				wallpaper. A YouTube link downloads at up to 1080p with its sound, and
+				Playback starts muted. The Pause, Sound, and Remove buttons control the
+				wallpaper. Demo downloads each sample from yen.chat the first time it
+				plays. A YouTube link downloads at up to 1080p with its sound, and
 				Shuffle from Photos can ask for access to your library. With Wallpaper
 				per Desktop, a per-desktop wallpaper on an external display comes back
 				when you plug the display in again, even though macOS gives that display

@@ -38,12 +38,13 @@ function DesktopPrivacy() {
 						<strong className="text-text-primary">
 							Experimental wallpaper.
 						</strong>{" "}
-						Choosing a YouTube link can download a verified helper from GitHub
-						and contact YouTube and its media servers. Restoring a selected
-						video can repeat the download if its cached file is missing. Apple’s
-						Photos picker shares the video you select. Shuffle from Photos
-						requests library permission. iCloud Photos can download media. YEN
-						keeps selections and cached media on your Mac.
+						Demo downloads a sample video from yen.chat the first time it picks
+						that video. Choosing a YouTube link can download a verified helper
+						from GitHub and contact YouTube and its media servers. Restoring a
+						selected video can repeat the download if its cached file is
+						missing. Apple’s Photos picker shares the video you select. Shuffle
+						from Photos requests library permission. iCloud Photos can download
+						media. YEN keeps selections and cached media on your Mac.
 					</li>
 				</ul>
 				<p className="text-body-sm text-text-muted mb-4">

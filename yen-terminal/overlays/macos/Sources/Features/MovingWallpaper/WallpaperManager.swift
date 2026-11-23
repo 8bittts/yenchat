@@ -44,6 +44,8 @@ final class WallpaperManager {
     private var screenObserver: Any?
     private var spaceObserver: Any?
     private var restoreTask: Task<Void, Never>?
+    /// Called after anything the Settings controls show may have changed.
+    var onChange: (() -> Void)?
 
     init(
         persistenceStore: WallpaperPersistenceStore = WallpaperPersistenceStore(),
@@ -120,11 +122,11 @@ final class WallpaperManager {
         }
     }
 
-    // MARK: - Menu
+    // MARK: - Controls
 
-    /// Snapshot the controls menu needs without exposing the downloader.
-    func menuInput() -> MenuModelInput {
-        MenuModelInput(
+    /// Snapshot the Settings controls need without exposing the downloader.
+    func controlsInput() -> WallpaperControlsInput {
+        WallpaperControlsInput(
             downloadProgress: youtubeDownloader.progress,
             mode: mode,
             isMuted: isMuted,
@@ -133,10 +135,10 @@ final class WallpaperManager {
             sharedFileName: mode == .allDesktops ? state.sharedLocalURL?.lastPathComponent : nil,
             displays: NSScreen.screens.compactMap { screen in
                 screen.displayID.map { displayID in
-                    DisplayMenuInput(
+                    DisplayControlsInput(
                         id: displayID,
                         name: screen.localizedName,
-                        spaces: spaceMenuInputs(for: displayID)
+                        spaces: spaceControlsInputs(for: displayID)
                     )
                 }
             }
@@ -145,11 +147,11 @@ final class WallpaperManager {
 
     /// Every known Space of a display, sorted by space ID, with and without
     /// wallpapers — we track every Space the user visits.
-    private func spaceMenuInputs(for displayID: CGDirectDisplayID) -> [SpaceMenuInput] {
+    private func spaceControlsInputs(for displayID: CGDirectDisplayID) -> [SpaceControlsInput] {
         let currentSpace = currentSpaceID(for: displayID)
         return (state.knownSpaces[displayID] ?? []).sorted().map { spaceID in
             let key = DesktopKey(displayID: displayID, spaceID: spaceID)
-            return SpaceMenuInput(
+            return SpaceControlsInput(
                 fileName: state.localURL(for: key)?.lastPathComponent,
                 isCurrent: spaceID == currentSpace
             )
@@ -191,6 +193,12 @@ final class WallpaperManager {
 
     func cancelDownload() {
         youtubeDownloader.cancel()
+    }
+
+    /// The file each control acts on: the shared wallpaper, or in Per Desktop
+    /// mode the current desktop's wallpaper on the first display.
+    private var currentFileName: String? {
+        connectedDisplayIDs.first.flatMap { state.localURL(for: desktopKey(for: $0))?.lastPathComponent }
     }
 
     // MARK: - Sources
@@ -278,6 +286,33 @@ final class WallpaperManager {
         }
     }
 
+    /// Set a random demo clip other than the one showing. A clip downloads from
+    /// yen.chat the first time it is picked and plays from the cache after that.
+    func playDemo(for displayID: CGDirectDisplayID? = nil) {
+        var generator = SystemRandomNumberGenerator()
+        let name = DemoWallpapers.next(after: currentFileName, using: &generator)
+        if let cached = DemoWallpapers.cachedURL(name) {
+            setWallpaper(url: cached, for: displayID)
+            return
+        }
+        let target = assignmentTarget(for: displayID)
+        let originSpaceID = displayID.map { currentSpaceID(for: $0) }
+        requestCoordinator.start(for: target) { [weak self] token in
+            guard let self else { return }
+            loadingOverlay.show(message: "Loading Demo…", on: screen(for: displayID))
+            let outcome = await DemoWallpapers.download(name)
+            guard requestCoordinator.isCurrent(token, for: target) else { return }
+            loadingOverlay.hide()
+
+            switch outcome {
+            case .video(let url):
+                applyWallpaper(url: url, for: displayID, spaceID: originSpaceID)
+            case .failed(let message):
+                WallpaperPresentation.showAlert(title: "Demo Unavailable", message: message, style: .warning)
+            }
+        }
+    }
+
     private func applyWallpaper(
         url: URL,
         for displayID: CGDirectDisplayID?,
@@ -314,6 +349,7 @@ final class WallpaperManager {
     /// Drives the overlay for one YouTube download: a fraction while it runs,
     /// nil once it ends. Centered on the display the download is for.
     private func showDownloadProgress(_ progress: Double?, on displayID: CGDirectDisplayID?) {
+        onChange?()
         guard let progress, !isStopped else {
             loadingOverlay.hide()
             return
@@ -343,6 +379,18 @@ final class WallpaperManager {
         state.clearEntry(for: key)
         router.closeController(for: displayID)
         saveState()
+    }
+
+    /// Remove what the controls show: every wallpaper in All Desktops mode, or
+    /// the current desktop's wallpaper on each display in Per Desktop mode.
+    func clearCurrentWallpaper() {
+        guard mode == .perDesktop else {
+            clearAllWallpapers()
+            return
+        }
+        for displayID in connectedDisplayIDs {
+            clearWallpaper(for: displayID)
+        }
     }
 
     /// Remove all wallpapers.
@@ -406,6 +454,7 @@ final class WallpaperManager {
             state: state,
             pendingRedownloads: Array(pendingRedownloads.values)
         )
+        onChange?()
     }
 
     private func restoreState() {
@@ -518,11 +567,13 @@ final class WallpaperManager {
             )
         }
         router.setPlaybackSuspended(systemPaused)
+        onChange?()
     }
 
     private func tearDownWindows() {
         savePlaybackPositions()
         router.closeAll()
+        onChange?()
     }
 
     private func savePlaybackPositions() {
@@ -578,6 +629,7 @@ final class WallpaperManager {
         if mode == .perDesktop {
             rebuildAllWindows()
         }
+        onChange?()
     }
 
     private func observePowerState() {

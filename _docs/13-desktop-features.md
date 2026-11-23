@@ -170,9 +170,10 @@ The alerted windows are saved, so a relaunch inside a window stays quiet; the ne
 Turning the switch off cancels collection, removes the item, clears the sidebar counts and deletes the report.
 The [architecture](01-architecture.md) owns the reader and cache boundaries.
 
-On macOS 27 or newer, General → Experimental → Moving Wallpaper exposes Wallpaper Controls inside Settings.
-Select a local movie or GIF, a YouTube link, a video from Photos or a random Photos video.
-Playback starts muted and supports pause, sound and per-desktop assignments.
+On macOS 27 or newer, turning on General → Experimental → Moving Wallpaper shows its controls as buttons in Settings: Demo, Choose File…, YouTube URL…, From Photos…, Shuffle Photos, Remove, Pause and Sound, plus a Wallpaper per Desktop switch.
+Demo plays a random sample other than the one showing; it downloads that sample from yen.chat/videos (`public/videos`) on first use and keeps it in the `Demo` cache (`DemoWallpapers`), and `tests/186-demo-wallpapers.test.ts` keeps the app's list equal to that folder.
+Playback starts muted.
+In Per Desktop mode each source button and Remove act on the current desktop of every display (`WallpaperManager.clearCurrentWallpaper`); in All Desktops mode Remove clears every wallpaper.
 macOS gives a display new Space ids when it is plugged in again, so a Per Desktop assignment also saves its Space's position in the system's order of that display's Spaces (`WallpaperState.followSpaces`).
 When none of a display's assigned Spaces exists any more, each assignment moves to the Space now at its position, and the first one with no saved position moves to the display's current Space; this runs on a display change, a Space change and at launch.
 An assignment never moves to another display or onto a Space that already has a wallpaper, and while any assigned Space of the display still exists, nothing moves.

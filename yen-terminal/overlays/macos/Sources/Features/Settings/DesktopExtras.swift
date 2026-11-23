@@ -9,6 +9,7 @@ final class DesktopExtras: ObservableObject {
     @Published private(set) var showsUsage = false
     @Published private(set) var showsWallpaper = false
     @Published private(set) var wallpaperSuspended = false
+    @Published private(set) var wallpaperState = WallpaperControlsState()
     private var menu: TokenUsageMenu?
     private var wallpaper: WallpaperControls?
     private let workspace = NSWorkspace.shared
@@ -58,11 +59,22 @@ final class DesktopExtras: ObservableObject {
             wallpaper?.stop()
             wallpaper = nil
         } else if wallpaper == nil {
-            wallpaper = WallpaperControls(defaults: defaults)
+            let controls = WallpaperControls(defaults: defaults)
+            controls.onChange = { [weak self] in self?.refreshWallpaperState() }
+            wallpaper = controls
+            refreshWallpaperState()
         }
     }
 
-    func openWallpaper(_ button: NSButton) { wallpaper?.open(from: button) }
+    private func refreshWallpaperState() {
+        guard let state = wallpaper?.state, state != wallpaperState else { return }
+        wallpaperState = state
+    }
+
+    /// Runs one Settings wallpaper button against the live engine.
+    func wallpaperAction(_ action: (WallpaperControls) -> Void) {
+        if let wallpaper { action(wallpaper) }
+    }
 
     /// A click on a plan limit alert opens the token panel.
     func showUsagePanel() { menu?.showPanel() }
@@ -151,21 +163,75 @@ struct MovingWallpaperPreference: View {
             if extras.wallpaperSuspended {
                 Text("Quit standalone MovingPaper to use YEN’s wallpaper controls.").foregroundStyle(.secondary)
             } else {
-                WallpaperMenuButton().fixedSize()
+                WallpaperControlRows(state: extras.wallpaperState, run: extras.wallpaperAction)
             }
         }
     }
+}
 
-    private struct WallpaperMenuButton: NSViewRepresentable {
-        func makeNSView(context: Context) -> NSButton {
-            let button = NSButton(title: "Wallpaper Controls…", target: context.coordinator, action: #selector(Coordinator.open(_:)))
-            button.bezelStyle = .rounded
-            return button
+/// The wallpaper commands as buttons, shown while Moving Wallpaper is on.
+private struct WallpaperControlRows: View {
+    let state: WallpaperControlsState
+    let run: ((WallpaperControls) -> Void) -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: SettingsSpacing.controlSpacing),
+        GridItem(.flexible(), spacing: SettingsSpacing.controlSpacing),
+    ]
+
+    var body: some View {
+        if state.isDownloading {
+            LabeledContent("Downloading…") {
+                Button("Cancel") { run { $0.cancelDownload() } }
+            }
+        } else if let fileName = state.fileName {
+            LabeledContent("Showing") {
+                Text(fileName)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundStyle(.secondary)
+            }
         }
-        func updateNSView(_ view: NSButton, context: Context) {}
-        func makeCoordinator() -> Coordinator { Coordinator() }
-        @MainActor final class Coordinator: NSObject {
-            @objc func open(_ sender: NSButton) { DesktopExtras.shared.openWallpaper(sender) }
+
+        LazyVGrid(columns: columns, spacing: SettingsSpacing.controlSpacing) {
+            command("Demo", symbol: "sparkles", help: "Play a random sample video from yen.chat.") { $0.playDemo() }
+            command("Choose File…", symbol: "folder", help: "Choose a video or GIF on this Mac.") { $0.chooseFile() }
+            command("YouTube URL…", symbol: "link", help: "Paste a YouTube link to download and play.") { $0.pasteYouTube() }
+            command("From Photos…", symbol: "photo.on.rectangle", help: "Choose a video from Photos.") { $0.choosePhotos() }
+            command("Shuffle Photos", symbol: "shuffle", help: "Play a random video from Photos.") { $0.shufflePhotos() }
+            command("Remove", symbol: "trash", help: removeHelp) { $0.remove() }
+                .disabled(state.fileName == nil)
+            command(state.isPaused ? "Resume" : "Pause",
+                    symbol: state.isPaused ? "play.fill" : "pause.fill",
+                    help: "Pause or resume playback.") { $0.togglePause() }
+                .disabled(!state.hasAnyWallpaper)
+            command(state.isMuted ? "Sound On" : "Sound Off",
+                    symbol: state.isMuted ? "speaker.wave.2" : "speaker.slash",
+                    help: "Turn the wallpaper’s sound on or off.") { $0.toggleMute() }
         }
+
+        Toggle(isOn: Binding(get: { state.perDesktop }, set: { _ in run { $0.togglePerDesktop() } })) {
+            SettingsStudioLabel(title: "Wallpaper per Desktop",
+                                hint: "Each desktop keeps its own wallpaper. The buttons change the desktop you are on.")
+        }
+        .accessibilityLabel("Wallpaper per Desktop")
+    }
+
+    private var removeHelp: String {
+        state.perDesktop ? "Remove the wallpaper from the desktop you are on." : "Remove the moving wallpaper."
+    }
+
+    private func command(
+        _ title: String,
+        symbol: String,
+        help: String,
+        action: @escaping (WallpaperControls) -> Void
+    ) -> some View {
+        Button { run(action) } label: {
+            Label(title, systemImage: symbol)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+        }
+        .help(help)
     }
 }

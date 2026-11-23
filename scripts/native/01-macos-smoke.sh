@@ -190,6 +190,7 @@ case "$MODE" in
                 -only-testing:YENTests/WallpaperStateTests
                 -only-testing:YENTests/WallpaperToggleTests
                 -only-testing:YENTests/WallpaperDisplayReplugTests
+                -only-testing:YENTests/WallpaperControlsTests
                 -only-testing:YENTests/YouTubeDownloaderTests
                 -only-testing:YENTests/KeyboardSettingsStoreTests
                 -only-testing:YENTests/SoundsSettingsStoreTests

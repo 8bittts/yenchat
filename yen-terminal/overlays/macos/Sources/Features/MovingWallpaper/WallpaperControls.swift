@@ -1,7 +1,7 @@
 import AppKit
 
 @MainActor
-final class WallpaperControls: NSObject {
+final class WallpaperControls {
     private let wallpaperManager: WallpaperManager
     private var picker: PhotosPickerController?
     private var active = true
@@ -9,7 +9,6 @@ final class WallpaperControls: NSObject {
 
     init(defaults: UserDefaults = .standard) {
         wallpaperManager = WallpaperManager(persistenceStore: WallpaperPersistenceStore(userDefaults: defaults))
-        super.init()
         let protected = wallpaperManager.referencedLocalPaths
         let start = Date()
         cleanup = Task.detached(priority: .background) {
@@ -26,117 +25,32 @@ final class WallpaperControls: NSObject {
         wallpaperManager.tearDown()
     }
 
-    func open(from button: NSButton) {
-        makeMenu(MenuSnapshot.rows(from: wallpaperManager.menuInput()))
-            .popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.maxY + 3), in: button)
-    }
+    /// The state the Settings buttons show. `onChange` reports each change.
+    var state: WallpaperControlsState { wallpaperManager.controlsInput().state }
 
-    private func append(_ rows: [MenuRow], to menu: NSMenu) {
-        for row in rows {
-            menu.addItem(makeItem(row))
-        }
-    }
-
-    private func makeItem(_ row: MenuRow) -> NSMenuItem {
-        switch row {
-        case .disabled(let title):
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            return item
-        case .separator:
-            return .separator()
-        case .sectionHeader(let title):
-            return NSMenuItem.sectionHeader(title: title)
-        case .command(let command):
-            return makeCommandItem(command)
-        case .submenu(let title, let checked, let rows):
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-            item.state = checked ? .on : .off
-            item.submenu = makeMenu(rows)
-            return item
-        }
-    }
-
-    private func makeMenu(_ rows: [MenuRow]) -> NSMenu {
-        let menu = NSMenu()
-        // Playback state determines which commands are available.
-        menu.autoenablesItems = false
-        append(rows, to: menu)
-        return menu
-    }
-
-    private func makeCommandItem(_ command: MenuCommand) -> NSMenuItem {
-        let item = NSMenuItem(
-            title: command.title,
-            action: selector(for: command.id),
-            keyEquivalent: ""
-        )
-        item.target = self
-        item.state = command.checked ? .on : .off
-        if let displayID = command.displayID {
-            item.tag = Int(displayID)
-        }
-        if let symbolName = command.symbolName {
-            // Decorative: the title already names the action for VoiceOver.
-            item.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
-                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .medium))
-        }
-        return item
-    }
-
-    private func selector(for id: MenuCommandID) -> Selector {
-        switch id {
-        case .cancelDownload: #selector(cancelDownload)
-        case .chooseFile: #selector(chooseFile(_:))
-        case .pasteYouTube: #selector(pasteYouTube(_:))
-        case .choosePhotos: #selector(choosePhotos(_:))
-        case .shufflePhotos: #selector(shufflePhotos(_:))
-        case .clearAll: #selector(clearAllWallpapers)
-        case .clearDisplay: #selector(clearDisplayWallpaper(_:))
-        case .toggleMute: #selector(toggleMute)
-        case .togglePause: #selector(togglePause)
-        case .togglePerDesktop: #selector(togglePerDesktop)
-        }
-    }
-
-    private func optionalDisplayID(_ sender: NSMenuItem) -> CGDirectDisplayID? {
-        sender.tag == 0 ? nil : CGDirectDisplayID(sender.tag)
+    var onChange: (() -> Void)? {
+        get { wallpaperManager.onChange }
+        set { wallpaperManager.onChange = newValue }
     }
 
     // MARK: - Actions
 
-    @objc private func chooseFile(_ sender: NSMenuItem) {
-        wallpaperManager.selectFile(for: optionalDisplayID(sender))
-    }
+    // Each source applies to the current desktop of every display in Per
+    // Desktop mode, and to every desktop otherwise.
 
-    @objc private func clearDisplayWallpaper(_ sender: NSMenuItem) {
-        guard let displayID = optionalDisplayID(sender) else { return }
-        wallpaperManager.clearWallpaper(for: displayID)
-    }
+    func playDemo() { wallpaperManager.playDemo() }
+    func chooseFile() { wallpaperManager.selectFile() }
+    func shufflePhotos() { wallpaperManager.shuffleFromPhotos() }
+    func choosePhotos() { presentPhotosPicker(for: nil) }
+    func remove() { wallpaperManager.clearCurrentWallpaper() }
+    func cancelDownload() { wallpaperManager.cancelDownload() }
+    func togglePause() { wallpaperManager.togglePause() }
+    func toggleMute() { wallpaperManager.toggleMute() }
+    func togglePerDesktop() { wallpaperManager.togglePerDesktop() }
 
-    @objc private func clearAllWallpapers() {
-        wallpaperManager.clearAllWallpapers()
-    }
-
-    @objc private func togglePause() {
-        wallpaperManager.togglePause()
-    }
-
-    @objc private func toggleMute() {
-        wallpaperManager.toggleMute()
-    }
-
-    @objc private func togglePerDesktop() {
-        wallpaperManager.togglePerDesktop()
-    }
-
-    @objc private func pasteYouTube(_ sender: NSMenuItem) {
+    func pasteYouTube() {
         guard let urlString = promptForYouTubeURL() else { return }
-        wallpaperManager.setYouTubeWallpaper(urlString: urlString, for: optionalDisplayID(sender))
-    }
-
-    @objc private func cancelDownload() {
-        wallpaperManager.cancelDownload()
+        wallpaperManager.setYouTubeWallpaper(urlString: urlString)
     }
 
     private func promptForYouTubeURL() -> String? {
@@ -170,10 +84,6 @@ final class WallpaperControls: NSObject {
         }
     }
 
-    @objc private func choosePhotos(_ sender: NSMenuItem) {
-        presentPhotosPicker(for: optionalDisplayID(sender))
-    }
-
     /// Run the Photos picker and assign the pick (nil display = all).
     /// One picker at a time: a second request while one is open does nothing.
     private func presentPhotosPicker(for displayID: CGDirectDisplayID?) {
@@ -187,9 +97,5 @@ final class WallpaperControls: NSObject {
             guard let url else { return }
             self.wallpaperManager.setWallpaper(url: url, for: displayID)
         }
-    }
-
-    @objc private func shufflePhotos(_ sender: NSMenuItem) {
-        wallpaperManager.shuffleFromPhotos(for: optionalDisplayID(sender))
     }
 }

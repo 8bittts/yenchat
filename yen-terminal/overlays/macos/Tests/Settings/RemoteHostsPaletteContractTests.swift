@@ -218,6 +218,8 @@ struct RemoteHostsPaletteContractTests {
         Fixtures.spin()
 
         _ = show(seed: RemoteHostsIntent.tags[0])
+        // A fixed number of yields was too short under full-suite load.
+        Fixtures.waitUntil { store.isSurfaceVisible && store.hasTimer }
         for _ in 0..<20 { await Task.yield() }
         #expect(store.isSurfaceVisible)
         #expect(store.hasTimer)

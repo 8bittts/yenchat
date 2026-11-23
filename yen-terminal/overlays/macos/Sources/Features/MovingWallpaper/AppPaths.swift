@@ -24,6 +24,11 @@ enum MovingWallpaperPaths {
         applicationSupport.appending(path: "PhotosShuffle", directoryHint: .isDirectory)
     }
 
+    /// Cache directory for the demo clips downloaded from yen.chat.
+    static var demoCache: URL {
+        applicationSupport.appending(path: "Demo", directoryHint: .isDirectory)
+    }
+
     /// On-disk location of the yt-dlp binary (downloaded on first use).
     static var ytdlpBinary: URL {
         applicationSupport.appending(path: "yt-dlp", directoryHint: .notDirectory)

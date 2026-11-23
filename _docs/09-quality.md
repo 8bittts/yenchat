@@ -23,7 +23,7 @@ A release build is checked without focus in the verify copy: launch it in the ba
 `scripts/manual/34-measure-key-latency.swift` measures key-to-frame latency in a frontmost copy: it posts a key to that process only and reads the display time of the next frame whose pixels changed.
 Run the two sides in alternating order, at least 5 runs of 150 keys each, with `cat` in the pane so every key echoes at once; the mean of a 150-key run ranged from 17.9 to 19.8 ms across ten identical runs, so a smaller gap is no difference.
 A launch argument the engine does not know, such as `-ApplePersistenceIgnoreState`, opens a Configuration Errors window that takes the keys, so pass only `-com.yenchat.yen.*` arguments.
-The wallpaper's Photos path is checked in the same copy: Wallpaper Controls opens the "Choose a Video from Photos" panel, the operator picks the video, and the pick arrives as a file under the copy's `MovingWallpaper/Photos` folder and becomes the assignment; a panel closed without a pick leaves the assignment as it was.
+The wallpaper's Photos path is checked in the same copy: the From Photos… button opens the "Choose a Video from Photos" panel, the operator picks the video, and the pick arrives as a file under the copy's `MovingWallpaper/Photos` folder and becomes the assignment; a panel closed without a pick leaves the assignment as it was.
 Check the menu anchor before and after expanding a provider row.
 Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
