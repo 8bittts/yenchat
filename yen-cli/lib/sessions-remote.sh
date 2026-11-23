@@ -198,10 +198,12 @@ remote_make_scratch() {
 
 # yen sessions list --host <target> [--porcelain]
 remote_list() {
-    local target="$1" porcelain="$2" status=0 parsed=0 code=0 line options=()
+    local target="$1" porcelain="$2" status=0 parsed=0 code=0 line command options=()
+    # A refusal inside the substitution must stop the CLI, not reach ssh.
+    command="$(remote_command list --porcelain)" || exit "$?"
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
-    remote_run "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$(remote_command list --porcelain)" \
+    remote_run "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$command" \
         < /dev/null > "$remote_scratch/out" 2> "$remote_scratch/err" || status=$?
 
     if [[ $status -eq 255 ]]; then
@@ -254,9 +256,10 @@ remote_list() {
 # is 1 (--retry-unreachable): then an unreachable peer is retried from the
 # first attempt, and every other failure still stops at once.
 remote_attach() {
-    local target="$1" id="$2" retry_unreachable="${3:-0}" status code established=0 attempt=0 delay cap line options=()
+    local target="$1" id="$2" retry_unreachable="${3:-0}" status code established=0 attempt=0 delay cap line command options=()
     cap="${YEN_SSH_RETRY_MAX_DELAY:-30}"
     [[ "$cap" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_RETRY_MAX_DELAY must be a whole number of seconds"
+    command="$(remote_command attach "$id")" || exit "$?"
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
     options+=(-o PermitLocalCommand=yes -o "LocalCommand=/usr/bin/touch $remote_scratch/connected")
@@ -264,7 +267,7 @@ remote_attach() {
     while true; do
         rm -f "$remote_scratch/connected"
         status=0
-        remote_run "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$(remote_command attach "$id")" \
+        remote_run "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$command" \
             2> "$remote_scratch/err" || status=$?
         print_remote_errors "$remote_scratch/err"
         if [[ -e "$remote_scratch/connected" ]]; then
