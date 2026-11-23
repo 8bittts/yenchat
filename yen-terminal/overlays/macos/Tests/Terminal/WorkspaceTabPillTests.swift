@@ -73,6 +73,23 @@ struct WorkspaceTabPillTests {
         }
     }
 
+    /// A split focus change runs the engine's appearance sync, which sets the
+    /// window's titlebar font to nil and with it the tab's attributed title. The
+    /// selected tab then drew AppKit's 11 pt default while its neighbors stayed
+    /// at 13 pt, so the title changed size as focus moved between panes.
+    @available(macOS 27, *)
+    @Test func theTitleKeepsItsFaceWhenTheEngineResetsTheTabTitle() async throws {
+        let tabs = try makeTabs(["Atlas", "Studio"], counts: [2, 1])
+        defer { tabs.forEach { $0.window.close() } }
+        _ = try await layOut(tabs, selecting: tabs[0])
+        // What the engine's appearance sync does on a focus change. No layout
+        // pass follows it in the app, so nothing else restores the title.
+        tabs[0].window.titlebarFont = nil
+        let title = try #require(tabs[0].window.tab.attributedTitle, "The tab title is cleared after a focus change")
+        let font = try #require(title.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)
+        #expect(font.pointSize == NSFont.systemFontSize, "The selected tab draws at \(font.pointSize) pt after a focus change")
+    }
+
     @available(macOS 27, *)
     @Test func theCountTrailsAtTheSameInsetAsTheTitleLeads() async throws {
         let tabs = try makeTabs(["Atlas", "Studio"], counts: [2, 3])
