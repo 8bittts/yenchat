@@ -3,7 +3,10 @@ import {
 	LEDGER_LAST_VERSION,
 	PRE_OPEN_SOURCE_RELEASES,
 } from "@/lib/release-notes/release-ledger";
-import { RELEASE_EXCLUDE } from "@/lib/release-notes/release-notes-copy";
+import {
+	RELEASE_COPY,
+	RELEASE_EXCLUDE,
+} from "@/lib/release-notes/release-notes-copy";
 import { RELEASE_WEEKS } from "@/lib/release-notes/release-notes-data";
 
 // The public git log starts at the open-source squash, so the ledger is the only
@@ -43,6 +46,18 @@ describe("pre-open-source release ledger", () => {
 			if (RELEASE_EXCLUDE[row.version]) continue;
 			expect(published.get(row.version)).toBe(row.shippedOn);
 		}
+	});
+
+	// The generator drops curated copy that names a retired runtime and only
+	// warns about it, so "yen.chat" in a line once hid that build from the page.
+	test("the page shows every public-era build that has curated copy", () => {
+		const missing = Object.keys(RELEASE_COPY).filter(
+			(version) =>
+				!isAtOrBeforeLedger(version) &&
+				!RELEASE_EXCLUDE[version] &&
+				!published.has(version),
+		);
+		expect(missing).toEqual([]);
 	});
 
 	test("the page shows no private-era build the ledger lacks", () => {
