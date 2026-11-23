@@ -59,9 +59,11 @@ struct RemotePaneIdentity: Codable, Equatable, Hashable, Sendable {
 /// (`PersistentSessions.prepare` skips a pane with a command); the session
 /// lives on the peer and the CLI reconnects.
 enum RemotePanes {
-    /// Carries the identity from the code that opens a remote pane to
-    /// `prepare`, which always removes it, so a split or tab that inherits a
-    /// parent's environment never becomes remote by accident.
+    /// Carries a one-time token from `open` to `prepare`, which always removes
+    /// it, so a split or tab that inherits a parent's environment never becomes
+    /// remote. The identity itself never travels in the environment:
+    /// AppleScript and the App Intent can fill a surface's environment, and
+    /// an identity there would let a script label a pane with any host.
     nonisolated static let markerEnvironmentKey = "YEN_REMOTE_PANE"
 
     private struct Registry {
@@ -69,6 +71,9 @@ enum RemotePanes {
         /// Identities read from window restore state, waiting for the restored
         /// pane's surface to be created.
         var pendingRestore: [UUID: RemotePaneIdentity] = [:]
+        /// Identities `open` handed off, by one-time token, until `prepare`
+        /// consumes them.
+        var pendingOpen: [String: RemotePaneIdentity] = [:]
         /// Test hook: the CLI path for attach commands.
         var cliPathOverride: String?
     }
@@ -84,7 +89,9 @@ enum RemotePanes {
     nonisolated static func prepare(_ config: inout YEN.SurfaceConfiguration, paneID: UUID) {
         let marker = config.environmentVariables.removeValue(forKey: markerEnvironmentKey)
         let restored = registry.withLock { $0.pendingRestore.removeValue(forKey: paneID) }
-        let requested = marker.flatMap(decodeMarker)
+        // Only a token this process issued counts, and only once; anything
+        // else in the variable is ignored.
+        let requested = marker.flatMap { token in registry.withLock { $0.pendingOpen.removeValue(forKey: token) } }
         // A marker only counts on a pane that has no command of its own.
         let identity = requested.flatMap { config.command == nil ? $0 : nil } ?? (config.command == nil ? restored : nil)
         // A restored pane may start before the network or Tailscale is up,
@@ -106,13 +113,16 @@ enum RemotePanes {
         registry.withLock { $0.identities[paneID] }
     }
 
+    /// Register `identity` for the next pane created with the returned token
+    /// in `markerEnvironmentKey`. The token is random and works once.
     nonisolated static func marker(for identity: RemotePaneIdentity) -> String? {
-        guard let data = try? JSONEncoder().encode(identity) else { return nil }
-        return String(decoding: data, as: UTF8.self)
+        let token = UUID().uuidString + UUID().uuidString
+        registry.withLock { $0.pendingOpen[token] = identity }
+        return token
     }
 
-    nonisolated private static func decodeMarker(_ text: String) -> RemotePaneIdentity? {
-        try? JSONDecoder().decode(RemotePaneIdentity.self, from: Data(text.utf8))
+    nonisolated static func discardMarker(_ token: String) {
+        registry.withLock { _ = $0.pendingOpen.removeValue(forKey: token) }
     }
 
     /// The bundled CLI's path even when it is missing, so a broken install
@@ -228,6 +238,11 @@ enum RemotePanes {
         return result.isEmpty ? nil : result
     }
 
+    /// Saved identities are validated (`RemotePaneIdentity` rejects an invalid
+    /// target and cleans the label) but not authenticated: the restore state
+    /// is the user's own file, and anything able to rewrite it can already run
+    /// commands as the user.
+    ///
     /// Decode a split tree with its remote identities already registered, so
     /// each restored remote pane is created with its attach command and never
     /// starts as a local shell. Entries for panes the tree does not contain
@@ -362,7 +377,10 @@ enum RemotePanes {
         guard let yen = AppDelegate.shared?.yen, let marker = marker(for: identity) else { return .failed }
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables[markerEnvironmentKey] = marker
-        return TerminalController.newTab(yen, from: window, withBaseConfig: config) == nil ? .failed : .opened
+        let opened = TerminalController.newTab(yen, from: window, withBaseConfig: config) != nil
+        // newTab creates the surface at once; a token it never used must not linger.
+        discardMarker(marker)
+        return opened ? .opened : .failed
     }
 }
 
