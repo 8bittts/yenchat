@@ -971,13 +971,15 @@ function PersistentSessionsSection() {
 				Open the command palette with{" "}
 				<code className="inline-code-brand">Cmd + Shift + P</code> and type{" "}
 				<code className="inline-code-brand">hosts</code>. YEN then checks your
-				Tailscale network and lists each Mac with its sessions. Sessions come
-				first, newest first, then Macs that need a step from you, then Macs that
-				are offline or out of reach. Select a session to attach in a new tab, or
-				to focus the pane that already shows it. YEN looks for your Macs and
-				their sessions only while you have asked for hosts, and Hosts: Refresh
-				Remote Sessions checks again. A remote pane stays connected to its own
-				Mac.
+				Tailscale network and lists each Mac with its sessions. YEN connects to
+				a Mac by its Tailscale name when that name resolves on this Mac to that
+				Mac&apos;s Tailscale address, and by its Tailscale address otherwise, so
+				the first-connection step may name the address. Sessions come first,
+				newest first, then Macs that need a step from you, then Macs that are
+				offline or out of reach. Select a session to attach in a new tab, or to
+				focus the pane that already shows it. YEN looks for your Macs and their
+				sessions only while you have asked for hosts, and Hosts: Refresh Remote
+				Sessions checks again. A remote pane stays connected to its own Mac.
 			</p>
 			<p className="text-body">
 				The tab sidebar has a Hosts section below your tabs, with the same rows

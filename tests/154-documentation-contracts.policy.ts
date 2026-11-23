@@ -40,6 +40,32 @@ describe("documentation contracts", () => {
 		}
 	});
 
+	test("public docs say YEN uses a Tailscale name only when it resolves to that Mac", () => {
+		const discovery = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/TailscalePeers.swift",
+		);
+		// A name counts only when this Mac resolves it to one of the peer's own
+		// addresses within the deadline; otherwise the first valid Tailscale IP is used.
+		expect(discovery).toContain(
+			"answer.contains { numericAddress($0).map(own.contains) == true } ? name : nil",
+		);
+		expect(discovery).toContain("resolveTimeout: Duration = .seconds(1)");
+		expect(discovery).toMatch(
+			/usableNames\?\.contains\(name\) \?\? true \{\s*target = name\s*\}\s*if target == nil \{\s*target = \(node\.addresses \?\? \[\]\)\.first\(where: RemoteSessions\.isValidTarget\)/,
+		);
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		expect(manual).toContain(
+			"YEN connects to a Mac by its Tailscale name when that name resolves on this Mac to that Mac&apos;s Tailscale address, and by its Tailscale address otherwise, so the first-connection step may name the address.",
+		);
+		expect(read("public/llms.txt")).toContain(
+			"YEN connects to a Mac by its Tailscale name when that name resolves on this Mac to that Mac's own Tailscale address, and by the address otherwise",
+		);
+		expect(read("_docs/04-security.md")).toContain(
+			"misses its 1-second deadline is not used, and the peer's first valid Tailscale IP is the target instead",
+		);
+	});
+
 	test("public docs describe the Hosts row order and remote close as the source does", () => {
 		const rows = read(
 			"yen-terminal/overlays/macos/Sources/Features/Command Palette/TerminalCommandPaletteHostsResults.swift",
@@ -169,7 +195,7 @@ describe("documentation contracts", () => {
 		expect(terms).toContain("Tailscale and SSH are third-party");
 		expect(security).toContain("## Remote Attach Threat Model");
 		expect(security).toContain(
-			"It has never run against Tailscale SSH, an ACL `check` rule, a tailnet with MagicDNS off, or the open-source `tailscaled` variant.",
+			"It has never run against an ACL `check` rule that demands a browser approval at connection time, or with discovery on a Mac whose own Tailscale is the open-source daemon: the attaching Mac has only run the Tailscale app.",
 		);
 
 		// No public claim the code and its tests cannot back.
