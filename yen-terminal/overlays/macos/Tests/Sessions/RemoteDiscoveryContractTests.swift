@@ -211,3 +211,129 @@ struct TailscaleEmbeddedNodeTests {
         #expect(rows.map(\.title) == ["Hosts: No Other Macs Found"])
     }
 }
+
+// MARK: - Which ssh target a peer gets
+
+/// Records each name discovery resolves and answers from a fixed table.
+private actor FakeResolver {
+    private(set) var asked: [String] = []
+    private let answers: [String: [String]]
+    private let hang: Bool
+
+    init(_ answers: [String: [String]] = [:], hang: Bool = false) {
+        self.answers = answers
+        self.hang = hang
+    }
+
+    func resolve(_ name: String) async -> [String] {
+        asked.append(name)
+        if hang { try? await Task.sleep(for: .seconds(30)) }
+        return answers[name] ?? []
+    }
+
+    nonisolated var resolver: TailscaleDiscovery.Resolver { { await self.resolve($0) } }
+}
+
+/// `CurrentTailnet.MagicDNSEnabled` is the tailnet's setting, not this Mac's:
+/// with "Use Tailscale DNS settings" off in the Tailscale app (`CorpDNS:
+/// false`) it still reads true and every peer keeps its `DNSName`, but the
+/// name does not resolve here. A name is the ssh target only when it
+/// resolves on this Mac to one of that peer's own `TailscaleIPs`.
+@Suite(.serialized)
+struct TailscaleNameResolutionTests {
+    private static func node(_ id: String, name: String, ips: [String], online: Bool = true) -> String {
+        let quoted = ips.map { "\"\($0)\"" }.joined(separator: ",")
+        return """
+        "nodekey:\(id)": {"ID": "\(id)", "HostName": "\(name)", "DNSName": "\(name).example-tailnet.ts.net.",
+          "OS": "macOS", "UserID": 4242, "TailscaleIPs": [\(quoted)], "Online": \(online),
+          "PeerAPIURL": ["http://100.64.0.250:60000"]}
+        """
+    }
+
+    private static let mini = node("nMini", name: "mini", ips: ["100.64.0.2", "fd7a:115c:a1e0::2"])
+
+    /// A Tailscale CLI that prints a status with these peers and MagicDNS on.
+    private func discover(_ peers: [String], _ fake: FakeResolver, deadline: Duration = .seconds(1)) async throws -> [TailscalePeer] {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("yen-dns-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let json = """
+        {"BackendState": "Running", "Self": {"ID": "nSelf", "HostName": "studio", "OS": "macOS", "UserID": 4242},
+         "Peer": {\(peers.joined(separator: ","))},
+         "MagicDNSSuffix": "example-tailnet.ts.net",
+         "CurrentTailnet": {"Name": "dev@example.com", "MagicDNSSuffix": "example-tailnet.ts.net", "MagicDNSEnabled": true}}
+        """
+        let fixture = directory.appendingPathComponent("status.json")
+        try json.write(to: fixture, atomically: true, encoding: .utf8)
+        let cli = directory.appendingPathComponent("tailscale")
+        try "#!/bin/bash\ncat '\(fixture.path)'\n".write(to: cli, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
+        let status = await TailscaleDiscovery.status(
+            environment: [TailscaleDiscovery.binaryEnvironmentKey: cli.path, "PATH": "/usr/bin:/bin"],
+            resolve: fake.resolver, resolveTimeout: deadline
+        )
+        guard case .running(let listed) = status else {
+            Issue.record("expected a running status, got \(status)")
+            return []
+        }
+        return listed
+    }
+
+    @Test func aNameThatDoesNotResolveUsesTheTailscaleIP() async throws {
+        let fake = FakeResolver()
+        let peers = try await discover([Self.mini], fake)
+        #expect(peers == [TailscalePeer(id: "nMini", displayName: "mini", sshTarget: "100.64.0.2", isOnline: true)])
+        #expect(await fake.asked == ["mini.example-tailnet.ts.net"])
+    }
+
+    @Test func aNameThatResolvesToAnotherAddressUsesTheTailscaleIP() async throws {
+        let fake = FakeResolver(["mini.example-tailnet.ts.net": ["203.0.113.7", "2001:db8::7"]])
+        let peers = try await discover([Self.mini], fake)
+        #expect(peers.map(\.sshTarget) == ["100.64.0.2"])
+    }
+
+    @Test func aNameThatResolvesToThePeersOwnAddressIsKept() async throws {
+        for answer in [["100.64.0.2"], ["fd7a:115c:a1e0:0:0:0:0:2"], ["203.0.113.7", "fd7a:115c:a1e0::2"]] {
+            let fake = FakeResolver(["mini.example-tailnet.ts.net": answer])
+            let peers = try await discover([Self.mini], fake)
+            #expect(peers.map(\.sshTarget) == ["mini.example-tailnet.ts.net"], "\(answer)")
+        }
+    }
+
+    @Test func aResolverThatHangsFallsBackToTheIPWithinItsDeadline() async throws {
+        let others = (3...6).map { Self.node("nMac\($0)", name: "mac-\($0)", ips: ["100.64.0.\($0)"]) }
+        let fake = FakeResolver(hang: true)
+        let started = Date()
+        let peers = try await discover([Self.mini] + others, fake, deadline: .milliseconds(400))
+        let elapsed = Date().timeIntervalSince(started)
+        #expect(peers.count == 5)
+        #expect(peers.allSatisfy { $0.sshTarget.hasPrefix("100.64.0.") })
+        // Names resolve in parallel: five hung names cost one deadline, not five.
+        #expect(elapsed < 1.6, "\(elapsed)")
+    }
+
+    @Test func aPeerWithNoValidIPAndAnUnresolvableNameIsDropped() async throws {
+        let broken = Self.node("nBroken", name: "broken", ips: ["-x", "$(id)"])
+        let peers = try await discover([Self.mini, broken], FakeResolver())
+        #expect(peers.map(\.id) == ["nMini"])
+    }
+
+    @Test func offlinePeersAreNotResolved() async throws {
+        let air = Self.node("nAir", name: "air", ips: ["100.64.0.3"], online: false)
+        let fake = FakeResolver(["mini.example-tailnet.ts.net": ["100.64.0.2"], "air.example-tailnet.ts.net": ["100.64.0.3"]])
+        let peers = try await discover([Self.mini, air], fake)
+        #expect(await fake.asked == ["mini.example-tailnet.ts.net"])
+        #expect(peers.first { $0.id == "nAir" }?.sshTarget == "100.64.0.3")
+        #expect(peers.first { $0.id == "nMini" }?.sshTarget == "mini.example-tailnet.ts.net")
+    }
+
+    /// With the IP as target, a Mac whose key is trusted only under its name
+    /// lists as a first connection, named by its host name, never as unreachable.
+    @Test func anIPTargetIsLabeledByItsHostNameAndOffersSSHToTheIP() {
+        let peer = TailscalePeer(id: "nMini", displayName: "mini", sshTarget: "100.64.0.2", isOnline: true)
+        let rows = RemoteHostsPaletteRows.peerRows(peer, state: .listed(.firstConnectionNeeded), isOpenHere: { _ in false }, now: Date())
+        #expect(rows.map(\.title) == ["Hosts: Trust the Host Key of mini"])
+        #expect(rows.first?.action == .insertCommand("ssh 100.64.0.2"))
+        #expect(!rows.contains { $0.title.contains("Cannot Reach") })
+    }
+}

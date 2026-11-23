@@ -64,9 +64,15 @@ enum TailscaleDiscovery {
         return candidatePaths.first(where: isExecutable)
     }
 
+    /// The addresses a host name resolves to on this Mac, empty when it does
+    /// not resolve. Injected so tests need no network.
+    typealias Resolver = @Sendable (_ name: String) async -> [String]
+
     nonisolated static func status(
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        timeout: Duration = .seconds(5)
+        timeout: Duration = .seconds(5),
+        resolve: @escaping Resolver = { _ in [] },
+        resolveTimeout: Duration = .seconds(1)
     ) async -> TailscaleStatus {
         guard let path = cliPath(environment: environment) else { return .notInstalled }
         // The app executable acts as the CLI only when it is told to; a GUI
