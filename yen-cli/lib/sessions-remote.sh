@@ -25,6 +25,13 @@ readonly REMOTE_EXIT_TOO_OLD=13
 readonly REMOTE_EXIT_NO_SESSION=14
 readonly REMOTE_EXIT_HOST_KEY_CHANGED=15
 readonly REMOTE_EXIT_KEY_REQUIRED=16
+readonly REMOTE_EXIT_CHECK_REQUIRED=17
+
+# Tailscale SSH under a `check` rule whose approval is due holds sign-in for up
+# to 30 minutes and sends the control server's text, with a per-connection
+# approval link, as an SSH auth banner, which ssh prints on stderr
+# (ssh/tailssh/tailssh.go, clientAuth, HoldAndDelegate). This is its first line.
+readonly REMOTE_CHECK_TEXT='Tailscale SSH requires an additional check'
 
 # The first line of `yen sessions list --porcelain`. Bump the number only for
 # an incompatible change; readers ignore extra trailing fields within a version.
@@ -162,9 +169,9 @@ remote_ssh_options() {
         -o ClearAllForwardings=yes
 }
 
-# Replay ssh's stderr without the peer's control characters.
+# Replay ssh's stderr without the peer's control characters, from line $2 (1).
 print_remote_errors() {
-    LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' "$1" >&2
+    tail -n "+${2:-1}" "$1" | LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' >&2
 }
 
 # Map ssh's own failure (exit 255) to a remote exit code from its stderr.
@@ -177,6 +184,10 @@ classify_ssh_failure() {
     # password-only peer reports 11 first and 16 once the key is trusted.
     if grep -qE 'Host key verification failed' "$errors"; then
         return "$REMOTE_EXIT_FIRST_CONNECTION"
+    fi
+    # A denied check, or one nobody approved in time, also fails sign-in.
+    if LC_ALL=C grep -qF "$REMOTE_CHECK_TEXT" "$errors"; then
+        return "$REMOTE_EXIT_CHECK_REQUIRED"
     fi
     # BatchMode never prompts, so a peer that offers only a password fails here.
     if grep -qE 'Permission denied|Too many authentication failures|No more authentication methods' "$errors"; then
@@ -193,6 +204,7 @@ remote_failure_message() {
         "$REMOTE_EXIT_KEY_REQUIRED") echo "yen sessions: $target asks for a password; YEN signs in only with an SSH key that works without a prompt; run 'ssh-copy-id $target' once" ;;
         "$REMOTE_EXIT_NOT_INSTALLED") echo "yen sessions: YEN is not installed on $target" ;;
         "$REMOTE_EXIT_TOO_OLD") echo "yen sessions: YEN on $target does not support remote sessions; update YEN there" ;;
+        "$REMOTE_EXIT_CHECK_REQUIRED") echo "yen sessions: $target asks for a Tailscale SSH check; run 'ssh $target' once in a terminal and approve it in the browser; the approval lasts for the tailnet policy's check period" ;;
         "$REMOTE_EXIT_HOST_KEY_CHANGED") echo "yen sessions: the host key of $target has changed; YEN will not connect until known_hosts is fixed" ;;
     esac
 }
@@ -240,9 +252,15 @@ remote_wait() {
 
 remote_scratch=""
 remote_child=""
+remote_watcher=""
 remote_cleanup() {
     # Runs from traps under the command's set -e, so no step may fail it.
     remote_clear_mark
+    if [[ -n "$remote_watcher" ]]; then
+        kill -TERM "$remote_watcher" 2> /dev/null || true
+        wait "$remote_watcher" 2> /dev/null || true
+        remote_watcher=""
+    fi
     if [[ -n "$remote_child" ]]; then
         kill -TERM "$remote_child" 2> /dev/null || true
         wait "$remote_child" 2> /dev/null || true
@@ -262,6 +280,30 @@ remote_run() {
     remote_child=$!
     wait "$remote_child" || status=$?
     remote_child=""
+    return "$status"
+}
+
+# The Tailscale check watcher runs as its own process beside ssh
+# (lib/sessions-remote-watch.sh), so the CLI's wait stays a plain wait.
+
+# remote_run with ssh's stderr in <scratch>/err and the watcher beside it,
+# which keeps the CLI's own stderr (the terminal, for an attach). $1 is list
+# or attach.
+remote_run_watched() {
+    local mode="$1" status=0
+    shift
+    rm -f "$remote_scratch/check" "$remote_scratch/shown"
+    "$@" 0<&0 2> "$remote_scratch/err" &
+    remote_child=$!
+    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" < /dev/null &
+    remote_watcher=$!
+    wait "$remote_child" || status=$?
+    remote_child=""
+    # A listing's watcher has nothing left to do; an attach's may still be
+    # copying the last lines, and ends on its own once ssh is gone.
+    [[ "$mode" == list ]] && kill -TERM "$remote_watcher" 2> /dev/null
+    wait "$remote_watcher" 2> /dev/null || true
+    remote_watcher=""
     return "$status"
 }
 
@@ -288,12 +330,19 @@ remote_list() {
     command="$(remote_command list --porcelain)" || exit "$?"
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
-    remote_run "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$command" \
-        < /dev/null > "$remote_scratch/out" 2> "$remote_scratch/err" || status=$?
+    remote_run_watched list "$REMOTE_SSH_BIN" "${options[@]}" -o BatchMode=yes -T -- "$target" "$command" \
+        < /dev/null > "$remote_scratch/out" || status=$?
+
+    # A pending check: the watcher ended ssh. The banner carries the approval
+    # link, which a listing never prints; the user approves through `ssh`.
+    if [[ -e "$remote_scratch/check" ]]; then
+        remote_failure_message "$REMOTE_EXIT_CHECK_REQUIRED" "$target" >&2
+        exit "$REMOTE_EXIT_CHECK_REQUIRED"
+    fi
 
     if [[ $status -eq 255 ]]; then
         classify_ssh_failure "$remote_scratch/err" || code=$?
-        print_remote_errors "$remote_scratch/err"
+        [[ $code -eq $REMOTE_EXIT_CHECK_REQUIRED ]] || print_remote_errors "$remote_scratch/err"
         remote_failure_message "$code" "$target" >&2
         exit "$code"
     fi
@@ -361,9 +410,9 @@ remote_attach() {
     while true; do
         rm -f "$remote_scratch/connected"
         status=0
-        remote_run "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$command" \
-            2> "$remote_scratch/err" || status=$?
-        print_remote_errors "$remote_scratch/err"
+        remote_run_watched attach "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$command" || status=$?
+        # Lines the watcher already showed are not shown twice.
+        print_remote_errors "$remote_scratch/err" "$(($(cat "$remote_scratch/shown" 2> /dev/null || echo 0) + 1))"
         if [[ -e "$remote_scratch/connected" ]]; then
             established=1
             attempt=0

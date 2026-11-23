@@ -27,6 +27,10 @@ enum RemoteSessionList: Equatable, Sendable {
     /// The host key is trusted but no key signs in without a prompt: the peer
     /// asks for a password, which a listing under BatchMode never answers.
     case keySignInNeeded
+    /// Tailscale SSH on the peer holds sign-in under a `check` rule until the
+    /// user approves in a browser; a listing cannot, so the user runs
+    /// `ssh <host>` once in a terminal and opens the link it shows.
+    case tailscaleCheckNeeded
     /// The known host key no longer matches. YEN does not connect until the
     /// user fixes known_hosts.
     case hostKeyChanged
@@ -53,6 +57,7 @@ enum RemoteSessions {
         static let noSession: Int32 = 14
         static let hostKeyChanged: Int32 = 15
         static let keyRequired: Int32 = 16
+        static let checkRequired: Int32 = 17
     }
 
     /// The CLI's own limit is ssh's 10-second connect timeout plus the listing.
@@ -132,6 +137,7 @@ enum RemoteSessions {
         case ExitCode.firstConnection: return .firstConnectionNeeded
         case ExitCode.hostKeyChanged: return .hostKeyChanged
         case ExitCode.keyRequired: return .keySignInNeeded
+        case ExitCode.checkRequired: return .tailscaleCheckNeeded
         case ExitCode.notInstalled: return .yenNotInstalled
         case ExitCode.tooOld: return .yenTooOld
         case 0, 1:

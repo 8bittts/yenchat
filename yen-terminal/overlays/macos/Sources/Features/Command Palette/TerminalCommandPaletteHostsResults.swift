@@ -263,6 +263,15 @@ enum RemoteHostsPaletteRows {
                     action: .insertCommand("ssh-copy-id \(target)"),
                     subtitle: "ssh-copy-id \(target)"
                 )]
+            case .tailscaleCheckNeeded:
+                return [row(
+                    "tailscale-check",
+                    "Approve \(name) in Tailscale",
+                    "Tailscale SSH on \(name) asks you to approve this sign-in in a browser. Run ssh \(target) once in a terminal on this Mac and open the link it shows; the approval lasts for your tailnet's check period. Select to type the command",
+                    icon: "checkmark.shield",
+                    action: .insertCommand("ssh \(target)"),
+                    subtitle: "ssh \(target)"
+                )]
             case .hostKeyChanged:
                 return [row("host-key-changed", "Host Key of \(name) Changed", "YEN will not connect: the key \(name) presents no longer matches the one you trusted. If \(name) was reinstalled, remove the old key with ssh-keygen -R \(target); otherwise someone may be intercepting the connection", icon: "exclamationmark.shield")]
             case .yenNotInstalled:

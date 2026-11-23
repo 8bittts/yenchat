@@ -53,6 +53,7 @@ struct RemoteHostsPaletteRowsTests {
             (.listed(.unreachable), "Hosts: Cannot Reach Mini", "Check that Mini is awake and has Remote Login on in System Settings > General > Sharing, then select to check again", .refresh),
             (.listed(.firstConnectionNeeded), "Hosts: Trust the Host Key of Mini", "YEN has not seen the host key of Mini yet. Run ssh mini.example.ts.net once in a terminal on this Mac and confirm the key; select to type the command", .insertCommand("ssh mini.example.ts.net")),
             (.listed(.keySignInNeeded), "Hosts: Set Up Key Sign-In for Mini", "Mini asked for a password, and YEN signs in only with an SSH key that needs no prompt. Run ssh-copy-id mini.example.ts.net once in a terminal on this Mac; select to type the command", .insertCommand("ssh-copy-id mini.example.ts.net")),
+            (.listed(.tailscaleCheckNeeded), "Hosts: Approve Mini in Tailscale", "Tailscale SSH on Mini asks you to approve this sign-in in a browser. Run ssh mini.example.ts.net once in a terminal on this Mac and open the link it shows; the approval lasts for your tailnet's check period. Select to type the command", .insertCommand("ssh mini.example.ts.net")),
             (.listed(.hostKeyChanged), "Hosts: Host Key of Mini Changed", "YEN will not connect: the key Mini presents no longer matches the one you trusted. If Mini was reinstalled, remove the old key with ssh-keygen -R mini.example.ts.net; otherwise someone may be intercepting the connection", .refresh),
             (.listed(.yenNotInstalled), "Hosts: YEN Is Not Installed on Mini", "Install YEN in the Applications folder on Mini, then select to check again", .refresh),
             (.listed(.yenTooOld), "Hosts: Update YEN on Mini", "Mini runs a YEN without remote sessions; update it there, then select to check again", .refresh),
@@ -202,10 +203,10 @@ struct RemoteHostsPaletteRowsTests {
         func peer(_ name: String) -> TailscalePeer {
             TailscalePeer(id: "n\(name)", displayName: name, sshTarget: "\(name.lowercased()).example.ts.net", isOnline: true)
         }
-        let air = peer("Air"), box = peer("Box"), cube = peer("Cube"), desk = peer("Desk"), edge = peer("Edge"), fold = peer("Fold"), gate = peer("Gate")
+        let air = peer("Air"), box = peer("Box"), cube = peer("Cube"), desk = peer("Desk"), edge = peer("Edge"), fold = peer("Fold"), gate = peer("Gate"), hub = peer("Hub")
         let one = session("A0000000-0000-4000-8000-000000000000", minutesAgo: 10, directory: "/Users/dev/one")
         let two = session("B0000000-0000-4000-8000-000000000000", minutesAgo: 10, directory: "/Users/dev/two")
-        let titles = rows(.running(peers: [air, box, cube, desk, edge, fold, gate]), [
+        let titles = rows(.running(peers: [air, box, cube, desk, edge, fold, gate, hub]), [
             air.id: .listed(.unreachable),
             box.id: .listed(.sessions([one], complete: true)),
             cube.id: .listed(.firstConnectionNeeded),
@@ -213,6 +214,7 @@ struct RemoteHostsPaletteRowsTests {
             edge.id: .listed(.yenTooOld),
             fold.id: .listed(.sessions([two], complete: true)),
             gate.id: .listed(.keySignInNeeded),
+            hub.id: .listed(.tailscaleCheckNeeded),
         ]).map(\.title)
         #expect(titles == [
             "Hosts: ~/one on Box",
@@ -220,6 +222,7 @@ struct RemoteHostsPaletteRowsTests {
             "Hosts: Trust the Host Key of Cube",
             "Hosts: Update YEN on Edge",
             "Hosts: Set Up Key Sign-In for Gate",
+            "Hosts: Approve Hub in Tailscale",
             "Hosts: Cannot Reach Air",
             "Hosts: Desk Is Offline",
             "Hosts: Refresh Remote Sessions",

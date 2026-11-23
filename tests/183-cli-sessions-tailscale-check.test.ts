@@ -70,10 +70,13 @@ function sshPid(call: number) {
 function settled(pid: number, tmp: string) {
 	const end = Date.now() + 2_000;
 	while (Date.now() < end) {
-		const watchers = spawnSync("ps", ["-axo", "command"], { encoding: "utf8" })
+		const watchers = spawnSync("ps", ["-axww", "-o", "command"], {
+			encoding: "utf8",
+		})
 			.stdout.split("\n")
 			.filter(
-				(line) => line.includes("yen-remote-watch") && line.includes(tmp),
+				(line) =>
+					line.includes("sessions-remote-watch.sh") && line.includes(tmp),
 			);
 		if (!alive(pid) && readdirSync(tmp).length === 0 && watchers.length === 0) {
 			return true;

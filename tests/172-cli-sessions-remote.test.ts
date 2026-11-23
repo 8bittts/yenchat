@@ -403,6 +403,9 @@ describe("yen sessions: the app bundle", () => {
 		);
 		expect(phase.status, phase.stderr).toBe(0);
 		expect(existsSync(join(resources, "lib/sessions-remote.sh"))).toBe(true);
+		expect(existsSync(join(resources, "lib/sessions-remote-watch.sh"))).toBe(
+			true,
+		);
 		writeFileSync(
 			join(resources, "bin/yen"),
 			readFileSync(join(repoRoot, "yen-cli/bin/yen")),
