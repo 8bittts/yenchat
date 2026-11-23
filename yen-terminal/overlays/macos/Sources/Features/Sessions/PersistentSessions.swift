@@ -205,6 +205,15 @@ enum PersistentSessions {
         }
     }
 
+    /// The environment for running zmx against `socketDirectory`. Stub.
+    nonisolated static func zmxEnvironment(socketDirectory: String) -> [String: String] {
+        [socketDirectoryEnvironmentKey: socketDirectory]
+    }
+
+    /// Make an existing session directory and its logs and bin folders 0700.
+    /// Stub.
+    nonisolated static func secureSocketDirectory(_ socketDirectory: String) {}
+
     nonisolated static func ownerRecordPath(for paneID: UUID, socketDirectory: String) -> String {
         socketPath(for: paneID, socketDirectory: socketDirectory) + ownerRecordSuffix
     }

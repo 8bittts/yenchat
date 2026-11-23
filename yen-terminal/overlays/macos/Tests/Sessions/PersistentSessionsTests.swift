@@ -325,6 +325,77 @@ struct PersistentSessionsTests {
         #expect(calls.count == 1)
         #expect(calls.first?.0 == "/z/zmx")
         #expect(calls.first?.1 == ["kill", paneID.uuidString])
-        #expect(calls.first?.2 == [PersistentSessions.socketDirectoryEnvironmentKey: directory.path])
+        // zmx creates logs/ with its own default (0750) unless told otherwise.
+        #expect(calls.first?.2 == [
+            PersistentSessions.socketDirectoryEnvironmentKey: directory.path,
+            PersistentSessions.socketDirectoryModeEnvironmentKey: "0700",
+        ])
+    }
+
+    @Test func everyAppSideZmxRunGetsTheDirectoryMode() {
+        #expect(PersistentSessions.zmxEnvironment(socketDirectory: "/tmp/yz") == ["ZMX_DIR": "/tmp/yz", "ZMX_DIR_MODE": "0700"])
+    }
+
+    /// A short /tmp path, as the socket limit needs, never the user's state.
+    private func scratchDirectory() throws -> String {
+        let path = "/tmp/yps-\(UUID().uuidString.prefix(8))"
+        try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+        return path
+    }
+
+    private func mode(_ path: String) -> Int? {
+        (try? FileManager.default.attributesOfItem(atPath: path)[.posixPermissions] as? NSNumber)?.intValue
+    }
+
+    @Test func anExistingSessionDirectoryIsMadePrivate() throws {
+        let root = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(atPath: root) }
+        let directory = root + "/zmx"
+        for path in [directory, directory + "/logs", directory + "/bin"] {
+            try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+            chmod(path, 0o750)
+        }
+        PersistentSessions.secureSocketDirectory(directory)
+        #expect(mode(directory) == 0o700)
+        #expect(mode(directory + "/logs") == 0o700)
+        #expect(mode(directory + "/bin") == 0o700)
+    }
+
+    @Test func theRepairNeverFollowsASymlinkAndNeverFails() throws {
+        let root = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(atPath: root) }
+        let elsewhere = root + "/elsewhere"
+        let logsElsewhere = root + "/logs-elsewhere"
+        for path in [elsewhere, logsElsewhere, root + "/real"] {
+            try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+            chmod(path, 0o755)
+        }
+        // The session directory itself is a symlink: leave both alone.
+        try FileManager.default.createSymbolicLink(atPath: root + "/linked", withDestinationPath: elsewhere)
+        PersistentSessions.secureSocketDirectory(root + "/linked")
+        #expect(mode(elsewhere) == 0o755)
+        // logs/ is a symlink inside a real directory: repair the directory only.
+        try FileManager.default.createSymbolicLink(atPath: root + "/real/logs", withDestinationPath: logsElsewhere)
+        PersistentSessions.secureSocketDirectory(root + "/real")
+        #expect(mode(root + "/real") == 0o700)
+        #expect(mode(logsElsewhere) == 0o755)
+        // A missing directory is not an error.
+        PersistentSessions.secureSocketDirectory(root + "/missing")
+        #expect(!FileManager.default.fileExists(atPath: root + "/missing"))
+    }
+
+    @Test func claimingAPaneCreatesAPrivateDirectory() throws {
+        let root = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(atPath: root) }
+        let directory = root + "/zmx"
+        PersistentSessions.claim(paneID, socketDirectory: directory)
+        #expect(mode(directory) == 0o700)
+        try? FileManager.default.removeItem(atPath: directory)
+        try FileManager.default.createDirectory(atPath: directory + "/logs", withIntermediateDirectories: true)
+        chmod(directory, 0o750)
+        chmod(directory + "/logs", 0o750)
+        PersistentSessions.claim(paneID, socketDirectory: directory)
+        #expect(mode(directory) == 0o700)
+        #expect(mode(directory + "/logs") == 0o700)
     }
 }
