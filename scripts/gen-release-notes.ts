@@ -63,7 +63,9 @@ const BUMP = /^v(\d+\.\d+(?:\.\d+)?):\s*(.+?)\s*(?:\[deploy\])?\s*$/;
 // `email`/`gmail` are deliberately listed in addition to `\bmail\b` because a
 // word boundary does not fall inside "email"/"gmail", so the bare `mail` token
 // would miss them and leak retired mail-era copy onto the public page.
-const RETIRED = /\b(chat|mail|email|gmail|calendar|messaging|inbox|weather)\b/i;
+// "yen.chat" is the product's own domain, not the retired chat runtime.
+const RETIRED =
+	/\b(?<!yen\.)(chat|mail|email|gmail|calendar|messaging|inbox|weather)\b/i;
 
 // Weekly stories are authored as blank-line-separated paragraphs, so sanitize
 // each paragraph independently — the `\s{2,}` collapse below would otherwise
