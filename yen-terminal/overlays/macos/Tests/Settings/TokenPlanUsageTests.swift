@@ -93,11 +93,16 @@ struct TokenPlanUsageTests {
         #expect(try index.read(tools: [.claude])[.claude] == 5)
     }
 
-    @MainActor @Test func menuBarMarkFollowsTheTokenCount() {
+    @MainActor @Test func menuBarMarkFollowsTheTokenCount() throws {
         let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let menu = TokenUsageMenu(index: TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache")))
         defer { menu.stop() }
         #expect(menu.statusButton?.imagePosition == .imageTrailing)
+        // The space separates the count from the mark that follows it, never the
+        // count from the menu bar item before it.
+        let title = try #require(menu.statusButton?.title)
+        #expect(title.first?.isWhitespace == false, "Title \"\(title)\" starts with a space")
+        #expect(title.hasSuffix(" ") && !title.hasSuffix("  "), "Title \"\(title)\" needs one space before the mark")
     }
 
     @MainActor @Test func resetForgetsTheDisplayChoices() throws {
