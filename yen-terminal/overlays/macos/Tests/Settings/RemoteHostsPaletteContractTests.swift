@@ -27,6 +27,24 @@ private actor CountingHostServices {
     }
 }
 
+/// One online peer whose listing is fixed.
+private actor OnePeerServices {
+    let peer: TailscalePeer
+    let listing: RemoteSessionList
+
+    init(peer: TailscalePeer, listing: RemoteSessionList) {
+        self.peer = peer
+        self.listing = listing
+    }
+
+    nonisolated var services: RemoteHostsStore.Services {
+        RemoteHostsStore.Services(
+            status: { .running(peers: [self.peer]) },
+            list: { _ in self.listing }
+        )
+    }
+}
+
 @MainActor
 private final class NoTimer: RemoteHostsTimer {
     nonisolated func invalidate() {}
@@ -82,6 +100,51 @@ struct RemoteHostsPaletteContractTests {
         section.perform(row, in: controller.window)
         Fixtures.spin(0.4)
         #expect(NSPasteboard.general.changeCount == before)
+    }
+
+    /// A peer whose install is broken (no zmx there) prints its porcelain
+    /// header and exits 1, so its listing is incomplete with no rows. That is
+    /// a failure to list, not a Mac without sessions: the row must not tell
+    /// the user to turn on Keep Sessions Running.
+    @Test func anIncompleteListingWithNoRowsIsAListingFailure() {
+        let failed = RemoteHostsPaletteRows.peerRows(mini, state: .listed(.failed), isOpenHere: { _ in false }, now: Date())
+        let empty = RemoteHostsPaletteRows.peerRows(
+            mini, state: .listed(.sessions([], complete: false)), isOpenHere: { _ in false }, now: Date()
+        )
+        #expect(empty == failed)
+        #expect(empty.map(\.title) == ["Hosts: Could Not List Sessions on Mini"])
+        #expect(empty.first?.action == .insertCommand("yen sessions list --host mini.example.ts.net"))
+        #expect(!empty.contains { $0.title.contains("No Sessions") })
+    }
+
+    @Test func anIncompleteListingWithRowsKeepsThemAndSaysSomeCouldNotBeRead() {
+        let session = RemoteSession(id: Fixtures.sessionID, state: .detached, started: nil, directory: "/Users/dev/src")
+        let rows = RemoteHostsPaletteRows.peerRows(
+            mini, state: .listed(.sessions([session], complete: false)), isOpenHere: { _ in false }, now: Date()
+        )
+        #expect(rows.map(\.title) == [
+            "Hosts: ~/src on Mini",
+            "Hosts: Some Sessions on Mini Could Not Be Read",
+        ])
+        let complete = RemoteHostsPaletteRows.peerRows(
+            mini, state: .listed(.sessions([], complete: true)), isOpenHere: { _ in false }, now: Date()
+        )
+        #expect(complete.map(\.title) == ["Hosts: No Sessions on Mini"])
+    }
+
+    /// The tab sidebar reads the same rows, so it inherits the rule.
+    @Test func theSidebarShowsABrokenPeerAsAListingFailure() async {
+        let fake = OnePeerServices(peer: mini, listing: .sessions([], complete: false))
+        let store = RemoteHostsStore(services: fake.services, scheduler: { _, _ in NoTimer() })
+        let section = TabSidebarHostsSection(store: store, isOpenHere: { _ in false })
+        section.setExpanded(true)
+        section.setShowing(true)
+        await store.refresh().value
+        for _ in 0..<20 { await Task.yield() }
+        let titles = section.rows.map(\.title)
+        #expect(titles.contains("Could Not List Sessions on Mini"), "\(titles)")
+        #expect(!titles.contains { $0.contains("No Sessions") || $0.contains("Could Not Be Read") }, "\(titles)")
+        section.setExpanded(false)
     }
 
     @Test func eachRowActionReachesItsEffect() {
