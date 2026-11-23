@@ -7,6 +7,7 @@ import {
 	readFileSync,
 	realpathSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -177,6 +178,7 @@ describe("CLI alias parity guards", () => {
 		expect(output).toContain("System Tools:");
 		expect(output).toContain("web  Native browser commands");
 		expect(output).toContain("browse (files, fm)");
+		expect(output).toContain("fastfetch (fetch, fast)");
 		expect(output).toContain("yengit (lazygit, gitlazy, gityen)");
 		expect(output).not.toContain("Alias for yengit");
 	});
@@ -483,6 +485,51 @@ describe("CLI alias parity guards", () => {
 		});
 	});
 
+	test("fetch and fast route the yen CLI to fastfetch", () => {
+		const root = mkdtempSync(join(tmpdir(), "yen-cli-route-"));
+		try {
+			const logFile = join(root, "calls.log");
+			mkdirSync(join(root, "bin"), { recursive: true });
+			mkdirSync(join(root, "commands", "core"), { recursive: true });
+			writeFileSync(
+				join(root, "bin", "yen"),
+				readFileSync(yenBinPath, "utf8"),
+				"utf8",
+			);
+			chmodSync(join(root, "bin", "yen"), 0o755);
+			symlinkSync(join(repoRoot, "yen-cli/lib"), join(root, "lib"));
+			writeFileSync(
+				join(root, "commands", "core", "fastfetch"),
+				`#!/bin/bash
+printf 'fastfetch\\t%s\\n' "$*" >> "${logFile}"
+`,
+				"utf8",
+			);
+			chmodSync(join(root, "commands", "core", "fastfetch"), 0o755);
+
+			const env = { ...process.env };
+			delete env.YEN_LIB;
+			for (const args of [
+				["fetch", "--logo"],
+				["fast", "--brief"],
+			]) {
+				const res = spawnSync(join(root, "bin", "yen"), args, {
+					cwd: root,
+					encoding: "utf8",
+					env,
+				});
+				expect(res.stderr).toBe("");
+				expect(res.status).toBe(0);
+			}
+			expect(readLog(logFile)).toEqual([
+				"fastfetch\t--logo",
+				"fastfetch\t--brief",
+			]);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
 	test("shell integrations route representative aliases back through the YEN CLI", () => {
 		withSandbox(({ binDir, logFile }) => {
 			const commonEnv = {
@@ -495,6 +542,7 @@ YEN_BIN_DIR=${JSON.stringify(binDir)}
 source ${JSON.stringify(zshIntegrationPath)}
 files repo
 monitor --cpu
+fast --brief
 gitlazy status
 `;
 			const zshRes = spawnSync("zsh", ["-f", "-c", zshScript], {
@@ -509,6 +557,7 @@ YEN_BIN_DIR=${JSON.stringify(binDir)}
 source ${JSON.stringify(bashIntegrationPath)}
 fm docs
 fetch --logo
+fast --logo
 gityen diff
 `;
 			const bashRes = spawnSync(
@@ -528,6 +577,8 @@ gityen diff
 			expect(log).toContain("yen\tgitlazy status");
 			expect(log).toContain("yen\tbrowse docs");
 			expect(log).toContain("yen\tfetch --logo");
+			expect(log).toContain("yen\tfast --brief");
+			expect(log).toContain("yen\tfast --logo");
 			expect(log).toContain("yen\tgityen diff");
 			expect(log.every((entry) => entry.startsWith("yen\t"))).toBe(true);
 		});
