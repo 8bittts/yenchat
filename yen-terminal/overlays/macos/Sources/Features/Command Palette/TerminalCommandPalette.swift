@@ -284,10 +284,7 @@ struct TerminalCommandPaletteView: View {
     /// The Hosts rows for the query and the store's last state. A session that
     /// a pane here is attached to reads "Open in YEN" and focuses that pane.
     var hostsEntries: [RemoteHostsPaletteEntry] {
-        let open = jumpTargetsModel.snapshots.compactMap { snapshot -> RemotePaneIdentity? in
-            guard let identity = snapshot.surface.remotePaneIdentity, RemotePanes.isAttached(snapshot.surface) else { return nil }
-            return identity
-        }
+        let open = RemoteHostsPaletteActions.openHere(jumpTargetsModel.snapshots.map(\.surface))
         return RemoteHostsPaletteRows.catalogEntries(
             query: searchModel.query,
             snapshot: hostsStore.snapshot,

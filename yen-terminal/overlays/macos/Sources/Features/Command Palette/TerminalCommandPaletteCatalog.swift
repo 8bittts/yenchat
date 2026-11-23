@@ -327,24 +327,23 @@ extension TerminalCommandPaletteView {
     }
 
     private func performHostsAction(_ action: RemoteHostsPaletteAction) {
-        switch action {
-        case .attach(let identity):
-            _ = RemotePanes.open(identity, from: surfaceView.window)
-        case .refresh:
-            hostsStore.refresh()
-        case .showHosts:
-            // Selecting a row always closes the palette; reopen it on the
-            // Hosts query once this one is gone.
-            guard let controller = activeTerminalController else { return }
-            DispatchQueue.main.async {
-                RemoteHostsPaletteSeed.set(RemoteHostsIntent.tags[0])
-                controller.commandPaletteIsShowing = true
-            }
-        case .insertCommand(let command):
-            // The command is for this Mac; never type it into a remote shell.
-            guard surfaceView.remotePaneIdentity == nil else { return }
-            insertHistoryCommand(command)
-        }
+        let window = surfaceView.window
+        let store = hostsStore
+        let controller = activeTerminalController
+        RemoteHostsPaletteActions.perform(action, overRemotePane: surfaceView.remotePaneIdentity != nil, effects: .init(
+            open: { _ = RemotePanes.open($0, from: window) },
+            refresh: { store.refresh() },
+            showHosts: {
+                // Selecting a row always closes the palette; reopen it on the
+                // Hosts query once this one is gone.
+                guard let controller else { return }
+                DispatchQueue.main.async {
+                    RemoteHostsPaletteSeed.set(RemoteHostsIntent.tags[0])
+                    controller.commandPaletteIsShowing = true
+                }
+            },
+            insert: { insertHistoryCommand($0) }
+        ))
     }
 
     /// Layout presets dispatched through the same SettingsController path as Cmd + Option + 1-0.

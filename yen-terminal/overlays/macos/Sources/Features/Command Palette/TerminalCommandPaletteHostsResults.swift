@@ -34,6 +34,43 @@ enum RemoteHostsIntent {
     }
 }
 
+/// What selecting a Hosts row does. The effects are passed in so the routing,
+/// including the rule that a command is only typed into a local pane, is
+/// testable without a palette window.
+@MainActor
+enum RemoteHostsPaletteActions {
+    struct Effects {
+        var open: (RemotePaneIdentity) -> Void
+        var refresh: () -> Void
+        var showHosts: () -> Void
+        var insert: (String) -> Void
+    }
+
+    static func perform(_ action: RemoteHostsPaletteAction, overRemotePane: Bool, effects: Effects) {
+        switch action {
+        case .attach(let identity):
+            effects.open(identity)
+        case .refresh:
+            effects.refresh()
+        case .showHosts:
+            effects.showHosts()
+        case .insertCommand(let command):
+            // The command is for this Mac; never type it into a remote shell.
+            guard !overRemotePane else { return }
+            effects.insert(command)
+        }
+    }
+
+    /// The sessions a palette shows as Open in YEN: remote panes whose client
+    /// still runs. A pane whose client ended does not count.
+    static func openHere(_ surfaces: [YEN.SurfaceView]) -> [RemotePaneIdentity] {
+        surfaces.compactMap { surface -> RemotePaneIdentity? in
+            guard let identity = surface.remotePaneIdentity, RemotePanes.isAttached(surface) else { return nil }
+            return identity
+        }
+    }
+}
+
 /// The query a palette opened by the static Hosts row starts with.
 @MainActor
 enum RemoteHostsPaletteSeed {
