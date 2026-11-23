@@ -13,125 +13,121 @@ export function LegalPrivacyContent() {
 
 function DesktopPrivacy() {
 	return (
-		<>
-			<DocSection id="desktop" title="Desktop Application">
-				<div>
-					<h3 className="text-heading-sm mb-2">What we collect</h3>
-					<p className="text-body-sm text-text-muted mb-3">
-						YEN does not collect terminal content, shell history, files,
-						settings, or desktop usage analytics. The desktop app only contacts
-						external services for explicit product functions:
-					</p>
-					<ul className="list-disc pl-6 text-body-sm text-text-muted space-y-1 mb-4">
-						<li>
-							<strong className="text-text-primary">Update checks</strong> —
-							when you manually check for updates or enable automatic Sparkle
-							checks, YEN requests update metadata from yen.chat. Standard
-							update requests can include app version and macOS version.
-						</li>
-						<li>
-							<strong className="text-text-primary">Native browser</strong> —
-							when you open a URL in YEN Browser, WebKit connects directly to
-							the site you selected. YEN uses a non-persistent WebKit data store
-							and does not receive your browsing activity.
-						</li>
-						<li>
-							<strong className="text-text-primary">
-								Experimental wallpaper.
-							</strong>{" "}
-							Choosing a YouTube link can download a verified helper from GitHub
-							and contact YouTube and its media servers. Restoring a selected
-							video can repeat the download if its cached file is missing.
-							Apple’s Photos picker shares the video you select. Shuffle from
-							Photos requests library permission. iCloud Photos can download
-							media. YEN keeps selections and cached media on your Mac.
-						</li>
-					</ul>
-					<p className="text-body-sm text-text-muted mb-4">
-						If you enable Show Token Usage, YEN reads local tool records and
-						keeps a daily index of counts, record identifiers, source paths and
-						read positions in its cache. Its analytics view also keeps each
-						tool’s token total for each of the last 90 days. Conversation text
-						stays out of both. Claude, Codex, and Grok Build plan readings come
-						from local tool records. When YEN reads Claude&apos;s own usage
-						cache, it checks that the reading belongs to the signed-in account
-						by matching the account ID in Claude&apos;s local settings. The
-						OpenCode billing link uses the workspace ID in OpenCode&apos;s local
-						log. If you also turn on Claude Plan Limits, YEN adds a marked block
-						to your Claude Code statusline script that saves Claude’s plan
-						limits to a file on your Mac; turning it off removes the block and
-						the file. The token menu makes no network request, and YEN’s servers
-						receive no usage data.
-					</p>
-				</div>
+		<DocSection id="desktop" title="Desktop Application">
+			<div>
+				<h3 className="text-heading-sm mb-2">What we collect</h3>
+				<p className="text-body-sm text-text-muted mb-3">
+					YEN does not collect terminal content, shell history, files, settings,
+					or desktop usage analytics. The desktop app only contacts external
+					services for explicit product functions:
+				</p>
+				<ul className="list-disc pl-6 text-body-sm text-text-muted space-y-1 mb-4">
+					<li>
+						<strong className="text-text-primary">Update checks</strong> — when
+						you manually check for updates or enable automatic Sparkle checks,
+						YEN requests update metadata from yen.chat. Standard update requests
+						can include app version and macOS version.
+					</li>
+					<li>
+						<strong className="text-text-primary">Native browser</strong> — when
+						you open a URL in YEN Browser, WebKit connects directly to the site
+						you selected. YEN uses a non-persistent WebKit data store and does
+						not receive your browsing activity.
+					</li>
+					<li>
+						<strong className="text-text-primary">
+							Experimental wallpaper.
+						</strong>{" "}
+						Choosing a YouTube link can download a verified helper from GitHub
+						and contact YouTube and its media servers. Restoring a selected
+						video can repeat the download if its cached file is missing. Apple’s
+						Photos picker shares the video you select. Shuffle from Photos
+						requests library permission. iCloud Photos can download media. YEN
+						keeps selections and cached media on your Mac.
+					</li>
+				</ul>
+				<p className="text-body-sm text-text-muted mb-4">
+					If you enable Show Token Usage, YEN reads local tool records and keeps
+					a daily index of counts, record identifiers, source paths and read
+					positions in its cache. Its analytics view also keeps each tool’s
+					token total for each of the last 90 days. Conversation text stays out
+					of both. Claude, Codex, and Grok Build plan readings come from local
+					tool records. When YEN reads Claude&apos;s own usage cache, it checks
+					that the reading belongs to the signed-in account by matching the
+					account ID in Claude&apos;s local settings. The OpenCode billing link
+					uses the workspace ID in OpenCode&apos;s local log. If you also turn
+					on Claude Plan Limits, YEN adds a marked block to your Claude Code
+					statusline script that saves Claude’s plan limits to a file on your
+					Mac; turning it off removes the block and the file. The token menu
+					makes no network request, and YEN’s servers receive no usage data.
+				</p>
+			</div>
 
-				<div>
-					<h3 className="text-heading-sm mb-2">Speech-to-text</h3>
-					<p className="text-body-sm text-text-muted mb-4">
-						Voice dictation uses Apple&apos;s macOS Speech frameworks. YEN does
-						not receive audio or transcripts and does not run a YEN speech
-						service. YEN uses Apple&apos;s on-device SpeechAnalyzer when
-						available. Its fallback uses the legacy recognizer, which requests
-						on-device recognition when Apple reports support; otherwise
-						Apple&apos;s Speech framework can use Apple&apos;s network service.
-						Apple controls its processing and speech assets.
-					</p>
-				</div>
+			<div>
+				<h3 className="text-heading-sm mb-2">Speech-to-text</h3>
+				<p className="text-body-sm text-text-muted mb-4">
+					Voice dictation uses Apple&apos;s macOS Speech frameworks. YEN does
+					not receive audio or transcripts and does not run a YEN speech
+					service. YEN uses Apple&apos;s on-device SpeechAnalyzer when
+					available. Its fallback uses the legacy recognizer, which requests
+					on-device recognition when Apple reports support; otherwise
+					Apple&apos;s Speech framework can use Apple&apos;s network service.
+					Apple controls its processing and speech assets.
+				</p>
+			</div>
 
-				<div>
-					<h3 className="text-heading-sm mb-2">Configuration</h3>
-					<p className="text-body-sm text-text-muted">
-						Your settings are stored locally at{" "}
-						<code className="inline-code-brand">
-							~/Library/Application Support/com.yenchat.yen/config.yen
-						</code>
-						. This file never leaves your machine.
-					</p>
-				</div>
-				<div>
-					<h3 className="text-heading-sm mb-2">Crash records</h3>
-					<p className="text-body-sm text-text-muted mb-4">
-						If YEN crashes, it writes a crash record to{" "}
-						<code className="inline-code-brand">~/.local/state/yen/crash</code>{" "}
-						on your Mac. The record holds the app version, system details, and a
-						snapshot of part of the app&apos;s memory, which can contain
-						fragments of terminal text. It stays on your Mac: YEN does not
-						upload crash reports, and you choose whether to send one. You can
-						delete the folder at any time.
-					</p>
-				</div>
-				<div>
-					<h3 className="text-heading-sm mb-2">Persistent sessions</h3>
-					<p className="text-body-sm text-text-muted">
-						With Keep Sessions Running on, a persistent pane runs its shell in a
-						local helper on your Mac. Its sockets and small session records live
-						in <code className="inline-code-brand">~/.local/state/yen/zmx</code>
-						. The helper also keeps local diagnostic logs with working
-						directories and connection details. These logs can remain after a
-						session ends. The screen and scrollback it restores stay in memory.
-						The helper sends nothing over the network.
-					</p>
-				</div>
-				<div>
-					<h3 className="text-heading-sm mb-2">Remote sessions</h3>
-					<p className="text-body-sm text-text-muted">
-						Starting in YEN 1.285, you can attach to a session on another of
-						your Macs. When you ask for hosts in the command palette or open
-						Hosts in the tab sidebar, YEN reads the status of the Tailscale
-						software on this Mac to find your other Macs. It then connects to
-						them with the system <code className="inline-code-brand">ssh</code>{" "}
-						over your Tailscale network, so the session&apos;s screen and your
-						typing travel only between your Macs. Tailscale is software and a
-						network you install and control under your own Tailscale account and
-						its terms; it is not a YEN service provider. Sign-in uses your own
-						SSH keys and settings, and YEN stores no passwords. To reattach
-						after a restart, a remote pane keeps the other Mac&apos;s name and
-						session ID in its saved window state on this Mac. None of this is
-						sent to YEN.
-					</p>
-				</div>
-			</DocSection>
-		</>
+			<div>
+				<h3 className="text-heading-sm mb-2">Configuration</h3>
+				<p className="text-body-sm text-text-muted">
+					Your settings are stored locally at{" "}
+					<code className="inline-code-brand">
+						~/Library/Application Support/com.yenchat.yen/config.yen
+					</code>
+					. This file never leaves your machine.
+				</p>
+			</div>
+			<div>
+				<h3 className="text-heading-sm mb-2">Crash records</h3>
+				<p className="text-body-sm text-text-muted mb-4">
+					If YEN crashes, it writes a crash record to{" "}
+					<code className="inline-code-brand">~/.local/state/yen/crash</code> on
+					your Mac. The record holds the app version, system details, and a
+					snapshot of part of the app&apos;s memory, which can contain fragments
+					of terminal text. It stays on your Mac: YEN does not upload crash
+					reports, and you choose whether to send one. You can delete the folder
+					at any time.
+				</p>
+			</div>
+			<div>
+				<h3 className="text-heading-sm mb-2">Persistent sessions</h3>
+				<p className="text-body-sm text-text-muted">
+					With Keep Sessions Running on, a persistent pane runs its shell in a
+					local helper on your Mac. Its sockets and small session records live
+					in <code className="inline-code-brand">~/.local/state/yen/zmx</code>.
+					The helper also keeps local diagnostic logs with working directories
+					and connection details. These logs can remain after a session ends.
+					The screen and scrollback it restores stay in memory. The helper sends
+					nothing over the network.
+				</p>
+			</div>
+			<div>
+				<h3 className="text-heading-sm mb-2">Remote sessions</h3>
+				<p className="text-body-sm text-text-muted">
+					Starting in YEN 1.285, you can attach to a session on another of your
+					Macs. When you ask for hosts in the command palette or open Hosts in
+					the tab sidebar, YEN reads the status of the Tailscale software on
+					this Mac to find your other Macs. It then connects to them with the
+					system <code className="inline-code-brand">ssh</code> over your
+					Tailscale network, so the session&apos;s screen and your typing travel
+					only between your Macs. Tailscale is software and a network you
+					install and control under your own Tailscale account and its terms; it
+					is not a YEN service provider. Sign-in uses your own SSH keys and
+					settings, and YEN stores no passwords. To reattach after a restart, a
+					remote pane keeps the other Mac&apos;s name and session ID in its
+					saved window state on this Mac. None of this is sent to YEN.
+				</p>
+			</div>
+		</DocSection>
 	);
 }
 
