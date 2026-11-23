@@ -306,7 +306,9 @@ The evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fak
 - `<ZMX_DIR>/logs` holds zmx's diagnostic logs. They keep working directories and environment payloads after the session ends, and YEN never deletes them.
 - A local process running as the same user can connect to any socket and attach, list, or end sessions, and can rewrite the records. The `.zmx` record names a binary that `yen sessions attach` and `kill` run (`session_zmx`), while the listing helper runs only a digest-named copy whose SHA-256 matches its name (`yen-cli/lib/list-pane-sessions.sh`). This is not a boundary: that process can already run anything as the user.
 - Another local account cannot attach: the sockets have no group or other write bit, and macOS `connect(2)` needs write access to the socket.
-- YEN creates the directory 0700 (`PersistentSessions.claim`, `PersistentSessions.currentBinaryCopy`) and passes `ZMX_DIR_MODE=0700` to the zmx the engine starts (`PersistentSessions.prepare`). It never corrects the mode of a directory that already exists, and the CLI runs zmx `attach` and `kill` without `ZMX_DIR_MODE`, so a `logs` directory that zmx creates there gets zmx's default 0750. Log files are 0640, so where the directory chain is group-readable, other members of the `staff` group can read the logs and records. This is an open weakness, not a guarantee.
+- The directory, `logs/` and `bin/` are private to the user. Every path that runs zmx passes `ZMX_DIR_MODE=0700`: the engine's pane (`PersistentSessions.prepare`), the app's own zmx calls (`PersistentSessions.zmxEnvironment`), and the CLI and its listing helper (`export ZMX_DIR_MODE=0700` in `yen-cli/commands/core/sessions` and `yen-cli/lib/list-pane-sessions.sh`). zmx's own default would be 0750.
+- An existing directory is repaired: `PersistentSessions.secureSocketDirectory` (run from `PersistentSessions.claim` and the reaper's sweep) and the CLI's `secure_sessions_dir` take group and other access off the directory, `logs/` and `bin/`. Both skip a symlink and anything the user does not own, never add a permission, and never stop a session when the repair fails.
+- Log files are 0640 and the `.zmx` and `.owner` records 0644, so the directory mode is the only thing that keeps other accounts out of them.
 
 ### How Tailscale gates it
 
@@ -325,7 +327,7 @@ The evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fak
 | Remote listing | The CLI table and the palette | Only rows after the `yen-sessions<TAB>1` header that pass `read_porcelain` survive, re-sanitized by `porcelain_row`; the app parses them again (`RemoteSessions.parsePorcelain`) and replaces control and format characters (`RemoteSessions.sanitized`) |
 | ssh and peer stderr | The terminal | `print_remote_errors` replaces C0 and C1 control characters; an attached pane shows the remote terminal's output as ssh would |
 | Saved window state | A restored remote pane's command | `RemotePaneIdentity` re-validates the target and label when decoding; a bad entry is dropped on its own (`RemotePanes.SavedIdentities`) |
-| `YEN_REMOTE_PANE` | A new pane's command | `RemotePanes.prepare` always removes it, ignores it on a pane with its own command, and decodes it through `RemotePaneIdentity`; AppleScript and the New Terminal App Intent can also set it (Residual risks) |
+| `YEN_REMOTE_PANE` | A new pane's command | Carries only a random one-time token that `RemotePanes.open` registered in this process; `RemotePanes.prepare` always removes the variable and ignores a token it did not issue or already used, so AppleScript or the New Terminal App Intent cannot create a labeled remote pane with it |
 | `YEN_SSH_BIN`, `YEN_REMOTE_APP`, `YEN_SSH_RETRY_MAX_DELAY`, `YEN_TAILSCALE_BIN` | Which ssh and Tailscale CLI run, which YEN.app the peer runs, the backoff cap | Test hooks the app never sets; `YEN_REMOTE_APP` must be an absolute path of safe characters and the delay a whole number |
 
 Whoever can set the app's environment, write its preferences or saved state, or drive it through Automation already runs code as the user, so these inputs are checked for robustness, not as a privilege boundary.
@@ -343,17 +345,17 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 - An explicit refresh (`Hosts: Refresh Remote Sessions`) runs once at once.
 - Selecting a session row opens a pane that runs `yen sessions attach --host` (`RemotePanes.open`).
 - At launch, a remote pane restored from saved window state runs its attach with `--retry-unreachable` (`RemotePanes.prepare`). This is the only ssh YEN starts at launch, and only for panes the user opened.
-- `Connect to <Mac> Once` types `ssh <target>` at a local prompt and runs nothing.
+- `Connect to <Mac> Once` types `ssh <target>` and `Hosts: Set Up Key Sign-In for <Mac>` types `ssh-copy-id <target>` at a local prompt; neither runs anything, and neither types into a remote pane.
 
 ### Residual risks and non-goals
 
 - Unverified: no test has used a real tailnet, a second Mac, Tailscale SSH, or a `check` rule.
-- A listing runs under `BatchMode=yes`, so a peer that accepts only passwords never lists and stays at first connection needed (exit 11); remote sessions need key sign-in or Tailscale SSH.
+- A listing runs under `BatchMode=yes`, so a peer that accepts only passwords never lists: the CLI reports it as needing key sign-in (exit 16, `REMOTE_EXIT_KEY_REQUIRED`), and remote sessions need an SSH key that signs in without a prompt, or Tailscale SSH.
 - First connection is trust on first use: the user confirms the peer's host key in `ssh <target>`. If name resolution is redirected at that moment, the user can trust the wrong key; YEN never sees or pins the key.
 - Remote Login turns on the macOS ssh server for every network the Mac uses, not only the tailnet, because macOS's `sshd_config` sets no `ListenAddress`. Its Allow access for setting (All users or Only these users) decides which accounts may sign in ([Apple: allow a remote computer to access your Mac](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac)). YEN does not narrow either.
 - The user's `~/.ssh/config` still applies (`ProxyJump`, `ProxyCommand`, `Match exec`, identity files), and so do the peer user's shell startup files.
-- A host label is display text, not identity: the ssh target and its host key are what authenticate. Any surface configuration without a command can carry `YEN_REMOTE_PANE`, so AppleScript (`ScriptSurfaceConfiguration` environment variables) or the New Terminal App Intent can open a pane that runs ssh to any valid target under a label of its choice.
-- The session directory and its logs can be readable by other accounts in `staff` (What the session directory exposes).
+- A host label is display text, not identity: the ssh target and its host key are what authenticate. A caller with Automation permission for YEN can still open a pane that runs any command, including `ssh`, though not a labeled remote pane. Saved window state is validated but not authenticated, so whoever can write it as the user chooses what a restored remote pane connects to.
+- A session directory written by an older YEN stays group-readable until a YEN with the repair runs on that Mac: a persistent pane, the reaper's sweep, or any `yen sessions` command.
 - Discovery runs the first executable of `/Applications/Tailscale.app/Contents/MacOS/Tailscale`, `/usr/local/bin/tailscale` and `/opt/homebrew/bin/tailscale` (`TailscaleDiscovery.candidatePaths`). Whoever can write those paths chooses what YEN runs on Hosts intent.
 - `tailscale status --json` is a format Tailscale marks as subject to change ([Tailscale CLI](https://tailscale.com/kb/1080/cli)); a change shows as `.unavailable` or an empty list, never as a crash.
 

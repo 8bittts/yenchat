@@ -964,8 +964,11 @@ function PersistentSessionsSection() {
 				The first time, the palette asks you to connect once. Select{" "}
 				<strong>Connect to &lt;Mac&gt; Once</strong> to type{" "}
 				<code className="inline-code-brand">ssh &lt;Mac&gt;</code> at your
-				prompt, run it, check the host key, and sign in. If the other Mac&apos;s
-				host key changes, YEN stops connecting to it until you fix{" "}
+				prompt, then run it and check the host key. If the other Mac asks for a
+				password, select <strong>Set Up Key Sign-In for &lt;Mac&gt;</strong> to
+				type <code className="inline-code-brand">ssh-copy-id &lt;Mac&gt;</code>,
+				and run it once. If the other Mac&apos;s host key changes, YEN stops
+				connecting to it until you fix{" "}
 				<code className="inline-code-brand">~/.ssh/known_hosts</code>.
 			</p>
 			<p className="text-body">
@@ -977,7 +980,9 @@ function PersistentSessionsSection() {
 				press <code className="inline-code-brand">Ctrl + C</code>. The session
 				keeps running on the other Mac, and its screen comes back when YEN
 				reattaches. Quit YEN and a restored remote pane reattaches at the next
-				launch.
+				launch, waiting for the network if it is not up yet. When the session
+				ends, its pane closes; if YEN cannot attach, the pane shows why until
+				you press Return.
 			</p>
 			<TerminalCodeBlock
 				title="Terminal"
