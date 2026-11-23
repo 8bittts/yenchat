@@ -10,6 +10,20 @@ export type ReleaseWeek = { iso: string; label: string; month: string; summary: 
 
 export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 	{
+		"iso": "2026-11-23",
+		"label": "Week of Nov 23–29, 2026",
+		"month": "Nov 2026",
+		"summary": "Your sessions now follow you between Macs. Open the command palette, type hosts, and YEN lists the sessions running on your other Macs on Tailscale. Pick one and it opens in a new tab, still running where you left it. The tab sidebar shows the same Macs under Hosts, and a remote tab leads with its Mac's name, so you always know where you are typing.\n\nWhen the connection drops, the tab says it is reconnecting instead of going quiet. When Tailscale SSH asks you to confirm, YEN stops and shows you the link. Closing a remote pane never asks, because the session keeps running on the other Mac and waits there as detached, and ending a session now exits cleanly without leaving a crash report behind.",
+		"builds": 1,
+		"latestVersion": "1.285",
+		"versions": [
+			{
+				"version": "1.285",
+				"shippedOn": "2026-11-23"
+			}
+		]
+	},
+	{
 		"iso": "2026-11-16",
 		"label": "Week of Nov 16–22, 2026",
 		"month": "Nov 2026",

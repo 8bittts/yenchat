@@ -1,8 +1,8 @@
 {
-  "version": "1.284",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.284/yen-1284.dmg",
-  "sha256": "0faae5b8373da1f1464f6441a9e05e0a2d204388518cf508182668995cff206c",
-  "notes": "Agent counts and screenshots on macOS 27",
+  "version": "1.285",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.285/yen-1285.dmg",
+  "sha256": "ab526f54454bd546fd59dfca67d2d5cc976c9117c560359a6ecdad92b84279e6",
+  "notes": "Steadier remote sessions and clean session shutdown",
   "minOS": "27.0",
   "releaseDate": ""
 }

@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.285":
+		"Type hosts in the command palette to see the sessions running on your other Macs on Tailscale, and pick one to attach in a new tab. The tab sidebar lists the same Macs and sessions under Hosts. A remote tab shows when its connection is reconnecting, and an attach that needs a Tailscale SSH check stops and shows its link. Closing a remote pane no longer asks, because its session keeps running on the other Mac. Ending a session no longer leaves a crash report, Per Desktop wallpapers stay put when a display reconnects, and the token menu no longer fails when two reads overlap.",
 	"1.284":
 		"Your daily OpenCode total can include older session records. Screenshots of newly opened windows use the window’s dimensions when macOS has not yet reported its frame. This release requires Apple silicon and macOS 27 or later.",
 	"1.283":
@@ -756,6 +758,8 @@ export const RELEASE_COPY: Record<string, string> = {
 // Keep these proportional to the version evidence above. The weekly story is the
 // reader-facing release note; individual versions remain generated provenance.
 export const RELEASE_WEEK_COPY: Record<string, string> = {
+	"2026-11-23":
+		"Your sessions now follow you between Macs. Open the command palette, type hosts, and YEN lists the sessions running on your other Macs on Tailscale. Pick one and it opens in a new tab, still running where you left it. The tab sidebar shows the same Macs under Hosts, and a remote tab leads with its Mac's name, so you always know where you are typing.\n\nWhen the connection drops, the tab says it is reconnecting instead of going quiet. When Tailscale SSH asks you to confirm, YEN stops and shows you the link. Closing a remote pane never asks, because the session keeps running on the other Mac and waits there as detached, and ending a session now exits cleanly without leaving a crash report behind.",
 	"2026-11-16":
 		"Start a dev server in a split, quit YEN, and reopen it. The server keeps its port, and your shell comes back with its scrollback. The focused outline now runs around the pane’s header and leaves room for the first and last characters on each line. Pick Comfortable for a gutter or Compact for a thin divider.\n\nPress Cmd + Shift + J for a note that floats over the terminal and remembers its size. For Git, run yengit in the repo or open PR Review from the command palette. The bottom Git drawer has been retired.\n\nOpen the menu bar to see today’s local counts for Claude Code, Codex, Grok Build, and OpenCode. Version 1.284 includes older OpenCode session records and captures newly opened windows at their proper size. It runs on Apple silicon with macOS 27 or later, where you can also turn on Moving Wallpaper. Version 1.283 remains available for Intel Macs and macOS 13 through 26.\n\nDigital Onigiri now opens with its original rice-ball cover and a month-by-month archive. Terms opens with a desktop privacy receipt and links to each policy section.",
 	"2026-11-09":
