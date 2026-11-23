@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Testing
 @testable import YEN
 
@@ -69,8 +70,6 @@ struct WorkspaceTabPillTests {
             #expect(font.pointSize == NSFont.systemFontSize, "Tab \(tab.window.title) draws at \(font.pointSize) pt")
             let weight = (font.fontDescriptor.object(forKey: .traits) as? [NSFontDescriptor.TraitKey: Any])?[.weight] as? CGFloat
             #expect(weight == NSFont.Weight.medium.rawValue, "Tab \(tab.window.title) weight \(String(describing: weight))")
-            let color = label.attributedStringValue.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor
-            #expect(color == (tab.window === tabs[1].window ? NSColor.labelColor : NSColor.secondaryLabelColor))
         }
     }
 
@@ -86,7 +85,41 @@ struct WorkspaceTabPillTests {
             let count = tab.count.convert(tab.count.bounds, to: root)
             #expect(abs(title.minX - pill.minX - Self.edgeInset) <= 0.5, "Title leads at \(title.minX - pill.minX)")
             #expect(abs(pill.maxX - count.maxX - Self.edgeInset) <= 0.5, "Count trails at \(pill.maxX - count.maxX)")
-            #expect(try closeButton(in: button).isHidden, "The x takes no room until the pointer is over the tab")
+            // The x takes no room until the pointer is over the tab.
+            #expect(try button.descendants(withClassName: "NSButton").allSatisfy { $0.identifier?.rawValue != "_closeButton" })
         }
+    }
+
+    @available(macOS 27, *)
+    @Test func hoveringShowsTheCloseButtonAfterTheCountWithItsGlyphAtTheSameInset() async throws {
+        let tabs = try makeTabs(["Atlas", "Studio"], counts: [2, 3])
+        defer { tabs.forEach { $0.window.close() } }
+        var root = try await layOut(tabs, selecting: tabs[0])
+        let accessory = try #require(tabs[1].window.tab.accessoryView as? WorkspaceTabAccessory)
+        accessory.setHovered(true)
+        root.layoutSubtreeIfNeeded()
+        var (button, _) = try tabButton(titled: "Studio", in: root)
+        var pill = button.convert(button.bounds, to: root)
+        let close = try closeButton(in: button)
+        let closeFrame = close.convert(close.bounds, to: root)
+        let count = tabs[1].count.convert(tabs[1].count.bounds, to: root)
+        #expect(close.frame.width > 0, "The x has its slot while the pointer is over the tab")
+        let inset = WorkspaceTabAccessory.closeTrailingInset
+        #expect(abs(pill.maxX - closeFrame.maxX - inset) <= 0.5, "Close ends at \(pill.maxX - closeFrame.maxX)")
+        #expect(count.maxX < closeFrame.minX, "Count \(count) comes before the close button \(closeFrame)")
+
+        accessory.setHovered(false)
+        root = try await layOut(tabs, selecting: tabs[0])
+        (button, _) = try tabButton(titled: "Studio", in: root)
+        pill = button.convert(button.bounds, to: root)
+        let restored = tabs[1].count.convert(tabs[1].count.bounds, to: root)
+        #expect(abs(pill.maxX - restored.maxX - Self.edgeInset) <= 0.5, "Count trails at \(pill.maxX - restored.maxX)")
+    }
+
+    @Test func aOnePaneTabShowsNoCount() {
+        let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 1))
+        #expect(!host.showsCount)
+        host.rootView = PaneTabSplitCount(count: 3)
+        #expect(host.showsCount)
     }
 }

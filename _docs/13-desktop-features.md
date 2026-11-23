@@ -19,8 +19,9 @@ Intentional deltas, not templates for new windows:
 - Standard terminal windows default to native titlebar tabs.
   Horizontal tabs align to the right and expand to the left.
   They prefer 240 points each and compress at the window edge, where AppKit manages overflow.
-  The title leads each tab when AppKit exposes its title stack.
-  A tab with splits shows its pane count at the trailing edge, and narrow tabs hide the count to keep the title readable.
+  The title leads each tab when AppKit exposes its title stack, in the system 13 pt medium face; AppKit alone would draw 11 pt regular.
+  A tab with splits shows its pane count at the trailing edge, as a bare number in the secondary color, and narrow tabs hide the count to keep the title readable.
+  The close button follows the count and takes no room until the pointer is over the tab, so the title's ink and the last trailing mark sit the same distance from the pill's ends (`WorkspaceTabAccessory.edgeInset`, `closeTrailingInset`; `WorkspaceTabPillTests`).
   Holding Command alone swaps every count for the tab's `Cmd + 1-9` shortcut; the zoom control also sits at the trailing edge.
   The selected tab uses a muted pill tinted from the theme's label color, and other titles use the secondary label color.
   An explicit `macos-titlebar-style` overrides either default.
@@ -437,9 +438,10 @@ A query without Hosts intent, such as a Mac's name, still finds the rows of the 
 - Two sessions of one Mac that would read the same (same directory, state and start minute) end their subtitles with the first eight characters of their session ids, for example `Detached · started 35 minutes ago · 77F56127`; rows that already differ stay as they are. The sidebar truncates a Hosts subtitle in the middle, so the id stays visible in a narrow rail.
 
 **Session state in tabs.** A tab's session state comes from its panes (`TabSessionState`): **remote** when any pane is attached to another Mac, **live** when every pane runs in a persistent session and so keeps running when YEN quits, and nothing otherwise, including a tab that mixes live and ordinary panes. **Detached**, a session no pane shows, belongs to the Hosts session rows, never to a tab.
-- The horizontal tab shows the state as an icon before the split count, the sidebar row as an icon before the shortcut: `network` for remote (the SSH pane icon) and `rectangle.stack` for live (the Persistent Sessions icon), in the secondary color, so the shape alone carries the state under Differentiate Without Color.
-- The tooltip and accessibility label read `Remote session on <Mac>` (`Remote sessions on <Mac> and <Mac>` for several) or `Live session: keeps running when YEN quits`; the sidebar row appends it to its accessibility label. A narrow tab that drops its split count for the title keeps the state icon.
-- While a remote pane's client waits to reconnect, the marker turns to `network.slash` and reads `Reconnecting to <Mac>` (`Reconnecting to <Mac> and <Mac>` when several panes of the tab wait), in the tab and the sidebar row, until the client reattaches or ends; a tab with any reconnecting pane shows only that state and names only the Macs it waits for. The sidebar does not also show the mark as a paused task. Nothing animates. The signal is the CLI's progress report ([01-architecture.md](01-architecture.md) → Reconnecting mark).
+- The sidebar row shows the state as an icon before the shortcut; the horizontal tab shows only its title and pane count.
+  The icons are `network` for remote (the SSH pane icon) and `rectangle.stack` for live (the Persistent Sessions icon), in the secondary color, so the shape alone carries the state under Differentiate Without Color.
+- The tooltip and accessibility label read `Remote session on <Mac>` (`Remote sessions on <Mac> and <Mac>` for several) or `Live session: keeps running when YEN quits`; the sidebar row appends it to its accessibility label.
+- While a remote pane's client waits to reconnect, the marker turns to `network.slash` and reads `Reconnecting to <Mac>` (`Reconnecting to <Mac> and <Mac>` when several panes of the tab wait), in the sidebar row, until the client reattaches or ends; a tab with any reconnecting pane shows only that state and names only the Macs it waits for. The sidebar does not also show the mark as a paused task. Nothing animates. The signal is the CLI's progress report ([01-architecture.md](01-architecture.md) → Reconnecting mark).
 
 **Closing a remote pane.** Closing a remote pane, its tab, its window, or other tabs around it never asks, because only the local client ends and the session keeps running on the other Mac; it then shows as detached in Hosts. A local pane keeps the engine's confirmation, so a tab that also holds a local pane with a running process still asks. Patch `remote-pane-close-confirm` routes the surface's `needsConfirmQuit`, and `remote-pane-close-confirm-pane` the pane close, through `RemotePanes.closeNeedsConfirmation`. Closing a local live pane still warns, because closing a pane ends its session.
 

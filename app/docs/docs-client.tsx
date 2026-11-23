@@ -837,9 +837,10 @@ function TabSidebarSection() {
 				<a href="#remote-sessions" className="link-brand underline">
 					Remote sessions
 				</a>
-				. Tabs and rows also show a session icon: a globe for a tab with a pane
-				attached to another Mac, and stacked rectangles for a tab whose panes
-				all keep running when YEN quits. Hover the icon to read its meaning.
+				. Each tab row in the sidebar also shows a session icon: a globe for a
+				tab with a pane attached to another Mac, and stacked rectangles for a
+				tab whose panes all keep running when YEN quits. Hover the icon to read
+				its meaning.
 			</p>
 		</DocSection>
 	);

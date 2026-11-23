@@ -70,13 +70,6 @@ struct SessionStateTests {
         #expect(PaneSessionState.of(paneID: live) == .local)
     }
 
-    @Test @MainActor func theTabAccessoryShowsTheStateAndKeepsItWhenNarrow() {
-        let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 1, session: .remote(hosts: ["Studio"])))
-        #expect(host.showsSessionMarker)
-        host.rootView = PaneTabSplitCount(count: 3)
-        #expect(!host.showsSessionMarker)
-    }
-
     @Test @MainActor func aSidebarRowReadsTheStateAloud() {
         let window = NSWindow()
         let item = TabSidebarItem(

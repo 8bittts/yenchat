@@ -114,39 +114,23 @@ struct PaneActivityIcon: View {
     }
 }
 
-/// The trailing accessory on a horizontal tab: the tab's session state
-/// (`TabSessionState`) and the split count. A one-pane tab shows no count.
+/// The trailing accessory on a horizontal tab: the pane count alone, in the title's
+/// size and the secondary color. A one-pane tab shows no count.
 struct PaneTabSplitCount: View {
     let count: Int
-    var session: TabSessionState? = nil
 
     var body: some View {
-        HStack(spacing: 6) {
-            if let session {
-                Image(systemName: session.symbolName)
-                    .imageScale(.small)
-                    .accessibilityLabel(session.label)
-                    .help(session.label)
-            }
-            if count > 1 {
-                HStack(spacing: 3) {
-                    Image(systemName: "rectangle.split.2x1")
-                        .imageScale(.small)
-                    Text(count, format: .number)
-                        .monospacedDigit()
-                }
-                .accessibilityElement(children: .ignore)
+        if count > 1 {
+            Text(count, format: .number)
+                .font(.system(size: NSFont.systemFontSize).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .fixedSize()
                 .accessibilityLabel("\(count) panes")
-                .help("\(count) panes")
-            }
         }
-        .font(.system(size: NSFont.smallSystemFontSize))
-        .foregroundStyle(.secondary)
-        .fixedSize()
     }
 }
 
-/// Hosts the split count in the native tab's accessory stack. The name predates the
+/// Hosts the pane count in the native tab's accessory stack. The name predates the
 /// count and stays because the engine patch calls `install`. Let mouse clicks
 /// through to AppKit so selecting or dragging a tab still works.
 final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
@@ -156,39 +140,17 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
         guard let stack = window.tab.accessoryView as? WorkspaceTabAccessory else { return }
         let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 0))
         stack.install(host, for: window)
-        // Recomputed when panes are added, removed or moved, and when a
-        // pane's progress report changes (a remote pane's reconnecting mark).
-        // @Published fires before it stores, so the read waits one main-queue
-        // turn for the new report.
+        // Recomputed when panes are added, removed or moved.
         host.observation = controller.$surfaceTree
-            .map { tree -> AnyPublisher<PaneTabSplitCount, Never> in
-                let leaves: [YEN.SurfaceView] = tree.root?.leaves() ?? []
-                let reports = leaves.map { $0.$progressReport.dropFirst().map { _ in () }.eraseToAnyPublisher() }
-                return Publishers.MergeMany(reports)
-                    .receive(on: DispatchQueue.main)
-                    .prepend(())
-                    .map { Self.accessoryContent(for: leaves) }
-                    .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .removeDuplicates(by: Self.sameContent)
-            .sink { [weak host] in
-                host?.rootView = $0
-                // A narrow tab drops the count for its title but keeps a
-                // session marker, the one cue a truncated title can lose.
+            .map { $0.root?.leaves().count ?? 0 }
+            .removeDuplicates()
+            .sink { [weak host] count in
+                host?.rootView = PaneTabSplitCount(count: count)
                 (host?.superview as? WorkspaceTabAccessory)?.updateTrailingContent()
             }
     }
 
-    static func accessoryContent(for leaves: [YEN.SurfaceView]) -> PaneTabSplitCount {
-        PaneTabSplitCount(count: leaves.count, session: TabSessionState.of(surfaces: leaves))
-    }
-
-    static func sameContent(_ lhs: PaneTabSplitCount, _ rhs: PaneTabSplitCount) -> Bool {
-        lhs.count == rhs.count && lhs.session == rhs.session
-    }
-
-    var showsSessionMarker: Bool { rootView.session != nil }
+    var showsCount: Bool { rootView.count > 1 }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
