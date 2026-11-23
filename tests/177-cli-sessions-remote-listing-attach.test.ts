@@ -152,13 +152,11 @@ describe("yen sessions attach --host: statuses and backoff", () => {
 
 	test("an unset cap is 30 seconds and a lower cap holds", () => {
 		harness.plan([dropped, ...Array(6).fill(refused), "1 0"]);
-		const environment = withFakeSleep();
-		delete (environment as Record<string, string | undefined>)
-			.YEN_SSH_RETRY_MAX_DELAY;
-		const unset = harness.sessions(attach, {
-			...environment,
-			YEN_SSH_RETRY_MAX_DELAY: "",
-		});
+		// The harness sets a 0 cap; an empty value reads as unset (`${VAR:-30}`).
+		const unset = harness.sessions(
+			attach,
+			withFakeSleep({ YEN_SSH_RETRY_MAX_DELAY: "" }),
+		);
 		expect(unset.status, unset.stderr).toBe(0);
 		expect(sleeps().at(-1)).toBe("30");
 
