@@ -289,9 +289,10 @@ Bundle one of them only with a caller inside YEN that fails without it.
 
 Who can reach a persistent session from another Mac, what each input is trusted for, and what is left over.
 The mechanics live in [01-architecture.md](01-architecture.md) → Persistent sessions (Remote attach, Hosts store, Remote panes); this section cites them and does not restate them.
-The feature has run between two real Macs over the LAN and over a real tailnet with the Tailscale app on both: discovery, listing, attach, typing, a killed connection, a frozen connection, a Wi-Fi outage on the peer, and a pane that a YEN app on the peer created, attached before and after that app ended.
+Between two real Macs over the LAN, listing, attach, typing, a window resize, a killed connection, a frozen connection, a Wi-Fi outage on the peer, every `--host` exit code from 10 to 16 except 15, and a pane that a YEN app on the peer created (attached before and after that app ended) have run.
+Over a real tailnet with the Tailscale app on both Macs, discovery, the first-connection step, listing, attach from the CLI and from the app (palette and sidebar), typing, and a killed connection have run, and the peer's older installed YEN showed the update-YEN-there state; a frozen connection and an outage have not run over the tailnet.
 It has never run against Tailscale SSH, an ACL `check` rule, a tailnet with MagicDNS off, or the open-source `tailscaled` variant.
-The automated evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fake-ssh.sh`, `scripts/manual/35-verify-remote-attach-loopback.sh` against a private loopback sshd, and the Swift suites `RemoteSessionsTests`, `TailscaleDiscoveryTests`, `RemoteHostsStoreTests`, `RemotePanesTests` and `RemoteHostsPaletteRowsTests`.
+The automated evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fake-ssh.sh`, `tests/176-cli-sessions-remote-contract.test.ts`, `tests/177-cli-sessions-remote-listing-attach.test.ts`, `tests/178-cli-sessions-directory-repair.test.ts`, `tests/179-cli-sessions-inherited-zmx-session.test.ts`, `scripts/manual/35-verify-remote-attach-loopback.sh` against a private loopback sshd, and the Swift suites `RemoteSessionsTests`, `TailscaleDiscoveryTests`, `RemoteHostsStoreTests`, `RemotePanesTests`, `RemoteHostsPaletteRowsTests`, `RemoteDiscoveryContractTests`, `RemoteHostsStoreContractTests`, `RemotePanesContractTests`, `RemoteHostsPaletteContractTests`, `SessionDirectoryRepairTests`, `SessionStateTests` and `TabSidebarHostsSectionTests`.
 
 ### Who can attach
 
@@ -351,7 +352,7 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 
 ### Residual risks and non-goals
 
-- Unverified: Tailscale SSH, an ACL `check` rule, MagicDNS off (the IP-address target), and the open-source `tailscaled` variant have never been run; the two-Mac runs used the Tailscale app on both Macs.
+- Unverified: Tailscale SSH, an ACL `check` rule, MagicDNS off (the IP-address target), and the open-source `tailscaled` variant have never been run; the tailnet runs used the Tailscale app on both Macs and did not include a frozen connection or an outage.
 - A listing runs under `BatchMode=yes`, so a peer that accepts only passwords never lists: the CLI reports it as needing key sign-in (exit 16, `REMOTE_EXIT_KEY_REQUIRED`), and remote sessions need an SSH key that signs in without a prompt, or Tailscale SSH.
 - First connection is trust on first use: the user confirms the peer's host key in `ssh <target>`. If name resolution is redirected at that moment, the user can trust the wrong key; YEN never sees or pins the key.
 - Remote Login turns on the macOS ssh server for every network the Mac uses, not only the tailnet, because macOS's `sshd_config` sets no `ListenAddress`. Its Allow access for setting (All users or Only these users) decides which accounts may sign in ([Apple: allow a remote computer to access your Mac](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac)). YEN does not narrow either.
