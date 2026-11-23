@@ -77,15 +77,22 @@ struct RemotePanesContractTests {
 
     // MARK: The attach command
 
-    /// The engine runs a pane command with `exec -l`; the command must not
-    /// make sh a login shell that reads the user's profile.
-    @Test func theAttachCommandUnderExecDashLReadsNoProfile() throws {
+    /// The engine runs a pane command with `exec -l`, which starts the first
+    /// word with a dash in argv[0]. Run bare, /bin/sh would then be a login
+    /// shell: bash 3.2 as sh runs ~/.bash_logout when the wrapper calls
+    /// `exit`, and dash or ksh as /bin/sh read ~/.profile (measured on macOS
+    /// 27). `/usr/bin/env` takes the dash, so sh starts plainly.
+    @Test func theAttachCommandUnderExecDashLRunsNoLoginFiles() throws {
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("yen-remote-home-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: home) }
-        let marker = home.appendingPathComponent("profile-ran").path
-        try "touch '\(marker)'\n".write(to: home.appendingPathComponent(".profile"), atomically: true, encoding: .utf8)
+        let files = [".profile", ".bash_profile", ".bash_login", ".bash_logout"]
+        for name in files {
+            let marker = home.appendingPathComponent("ran\(name)").path
+            try "touch '\(marker)'\n".write(to: home.appendingPathComponent(name), atomically: true, encoding: .utf8)
+        }
 
+        // The stand-in CLI exits 0, so the wrapper ends through `exit`.
         RemotePanes._testSetCLIPath("/usr/bin/true")
         defer { RemotePanes._testSetCLIPath(nil) }
         let command = try #require(RemotePanes.attachCommand(for: identity))
@@ -99,7 +106,9 @@ struct RemotePanesContractTests {
         try process.run()
         process.waitUntilExit()
         #expect(process.terminationStatus == 0)
-        #expect(!FileManager.default.fileExists(atPath: marker))
+        for name in files {
+            #expect(!FileManager.default.fileExists(atPath: home.appendingPathComponent("ran\(name)").path), "\(name)")
+        }
     }
 
     // MARK: Titles
