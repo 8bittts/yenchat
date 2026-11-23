@@ -1,9 +1,9 @@
 # Ghostty Baseline Tracking
 upstream_repo=https://github.com/ghostty-org/ghostty.git
-upstream_commit=74241405fe457d6a569a110cffe9d75a1c9a53b7
-upstream_version=74241405fe457d6a569a110cffe9d75a1c9a53b7
+upstream_commit=3e9b1cca3775bc31dcc055b5172832a3dcd1d66c
+upstream_version=3e9b1cca3775bc31dcc055b5172832a3dcd1d66c
 last_sync=2026-11-23
-source_archive_url=https://github.com/ghostty-org/ghostty/archive/74241405fe457d6a569a110cffe9d75a1c9a53b7.tar.gz
-source_archive_sha256=84dc3c46c569acef1b04e8f46a50d4bb4a9343d84b0fcb9ece533cd7dfcb38e8
+source_archive_url=https://github.com/ghostty-org/ghostty/archive/3e9b1cca3775bc31dcc055b5172832a3dcd1d66c.tar.gz
+source_archive_sha256=04417a871ef303eff3790b43f792bf43c835e73812127b6deffa8d4bcc54143f
 provenance_verification=github-verified-commit
-provenance_recorded_at_utc=2026-11-23T13:40:16Z
+provenance_recorded_at_utc=2026-11-23T15:09:12Z
