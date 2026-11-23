@@ -295,7 +295,7 @@ remote_run_watched() {
     rm -f "$remote_scratch/check" "$remote_scratch/shown"
     "$@" 0<&0 2> "$remote_scratch/err" &
     remote_child=$!
-    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" < /dev/null &
+    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" "$remote_marked" < /dev/null &
     remote_watcher=$!
     wait "$remote_child" || status=$?
     remote_child=""

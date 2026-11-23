@@ -215,7 +215,8 @@ describe("yen sessions attach --host: a pending check and the reconnecting mark"
 	});
 
 	test("a check on the first attempt is not a reconnect and writes no mark", () => {
-		harness.plan(["1 check-pass1"]);
+		// Held past the 10-second renewal, so a renewal would show.
+		harness.plan(["1 check-pass11"]);
 		const result = marked(attach);
 		expect(result.status, result.stderr).toBe(0);
 		expect(reports(result.stdout)).not.toContain(MARK);
