@@ -3,6 +3,17 @@ import { DocSection } from "@/components/docs/doc-section";
 export function LegalPrivacyContent() {
 	return (
 		<>
+			<DesktopPrivacy />
+			<WebsitePrivacy />
+			<DataSharingPrivacy />
+			<PrivacyRightsAndContact />
+		</>
+	);
+}
+
+function DesktopPrivacy() {
+	return (
+		<>
 			<DocSection id="desktop" title="Desktop Application">
 				<div>
 					<h3 className="text-heading-sm mb-2">What we collect</h3>
@@ -42,11 +53,15 @@ export function LegalPrivacyContent() {
 						read positions in its cache. Its analytics view also keeps each
 						tool’s token total for each of the last 90 days. Conversation text
 						stays out of both. Claude, Codex, and Grok Build plan readings come
-						from local tool records. If you also turn on Claude Plan Limits, YEN
-						adds a marked block to your Claude Code statusline script that saves
-						Claude’s plan limits to a file on your Mac; turning it off removes
-						the block and the file. The token menu makes no network request, and
-						YEN’s servers receive no usage data.
+						from local tool records. When YEN reads Claude&apos;s own usage
+						cache, it checks that the reading belongs to the signed-in account
+						by matching the account ID in Claude&apos;s local settings. The
+						OpenCode billing link uses the workspace ID in OpenCode&apos;s local
+						log. If you also turn on Claude Plan Limits, YEN adds a marked block
+						to your Claude Code statusline script that saves Claude’s plan
+						limits to a file on your Mac; turning it off removes the block and
+						the file. The token menu makes no network request, and YEN’s servers
+						receive no usage data.
 					</p>
 				</div>
 
@@ -71,6 +86,18 @@ export function LegalPrivacyContent() {
 							~/Library/Application Support/com.yenchat.yen/config.yen
 						</code>
 						. This file never leaves your machine.
+					</p>
+				</div>
+				<div>
+					<h3 className="text-heading-sm mb-2">Crash records</h3>
+					<p className="text-body-sm text-text-muted mb-4">
+						If YEN crashes, it writes a crash record to{" "}
+						<code className="inline-code-brand">~/.local/state/yen/crash</code>{" "}
+						on your Mac. The record holds the app version, system details, and a
+						snapshot of part of the app&apos;s memory, which can contain
+						fragments of terminal text. It stays on your Mac: YEN does not
+						upload crash reports, and you choose whether to send one. You can
+						delete the folder at any time.
 					</p>
 				</div>
 				<div>
@@ -104,7 +131,13 @@ export function LegalPrivacyContent() {
 					</p>
 				</div>
 			</DocSection>
+		</>
+	);
+}
 
+function WebsitePrivacy() {
+	return (
+		<>
 			<DocSection id="website" title="Website (yen.chat and blog.yen.chat)">
 				<p className="text-body-sm text-text-muted mb-3">
 					The YEN website uses:
@@ -114,7 +147,9 @@ export function LegalPrivacyContent() {
 						<strong className="text-text-primary">Vercel Analytics</strong> —
 						privacy-focused website analytics that do not use cookies. Vercel
 						processes page, referrer, device, browser, operating-system, and
-						country-level data for this service.
+						country-level data for this service. The site also sends a few click
+						events: which download button, header link, or footer link you used,
+						and a theme change.
 					</li>
 					<li>
 						<strong className="text-text-primary">Vercel Speed Insights</strong>{" "}
@@ -124,7 +159,9 @@ export function LegalPrivacyContent() {
 					<li>
 						<strong className="text-text-primary">Downloads</strong> —{" "}
 						<code className="inline-code-brand">/download</code> redirects you
-						to the current release on GitHub. YEN does not record the request.
+						to the current release on GitHub. The redirect itself records
+						nothing. When you click a download button on yen.chat, Vercel
+						Analytics counts the click and the button’s place on the page.
 						GitHub serves the file and processes the request under its own
 						privacy terms.
 					</li>
@@ -156,6 +193,15 @@ export function LegalPrivacyContent() {
 				</div>
 
 				<div>
+					<h3 className="text-heading-sm mb-2">Local storage</h3>
+					<p className="text-body-sm text-text-muted mb-4">
+						yen.chat saves your light or dark theme choice in your
+						browser&apos;s local storage so the next page uses it. It stays in
+						your browser, and you can clear it in your browser settings.
+					</p>
+				</div>
+
+				<div>
 					<h3 className="text-heading-sm mb-2">Desktop app</h3>
 					<p className="text-body-sm text-text-muted mb-4">
 						YEN does not use cookies or a web view for desktop analytics. Sites
@@ -174,13 +220,20 @@ export function LegalPrivacyContent() {
 					</p>
 				</div>
 			</DocSection>
+		</>
+	);
+}
 
+function DataSharingPrivacy() {
+	return (
+		<>
 			<DocSection id="third-parties" title="Third Parties">
 				<p className="text-body-sm text-text-muted">
 					YEN does not sell personal data, run ads, operate affiliate programs,
 					or use your data to train AI models. Limited request data is shared
 					only with the service providers needed to host the website, serve
-					downloads and updates, and measure website performance.
+					downloads and updates, measure website performance, and answer support
+					email.
 				</p>
 			</DocSection>
 
@@ -213,8 +266,16 @@ export function LegalPrivacyContent() {
 						fetches for updates.
 					</li>
 					<li>
-						<code className="inline-code-brand">Cloudflare</code> — DNS and
-						mail-forwarding routing.
+						<code className="inline-code-brand">Cloudflare</code> — DNS, and
+						email routing that forwards mail sent to yen.chat addresses.
+					</li>
+					<li>
+						<code className="inline-code-brand">Google (Gmail)</code> — receives
+						and stores the email you send to support@yen.chat.
+					</li>
+					<li>
+						<code className="inline-code-brand">Resend</code> — delivers the
+						email replies YEN sends from yen.chat addresses.
 					</li>
 				</ul>
 			</DocSection>
@@ -222,7 +283,9 @@ export function LegalPrivacyContent() {
 			<DocSection id="retention" title="Retention and Security">
 				<p className="text-body-sm text-text-muted mb-3">
 					YEN keeps no database of visitors or downloads. Provider logs and
-					analytics follow each provider&apos;s retention terms.
+					analytics follow each provider&apos;s retention terms. Support email
+					stays in the support mailbox until it is deleted; ask and YEN will
+					delete your messages.
 				</p>
 				<p className="text-body-sm text-text-muted">
 					No security measure is perfect, but YEN uses data minimization and
@@ -230,6 +293,28 @@ export function LegalPrivacyContent() {
 				</p>
 			</DocSection>
 
+			<DocSection id="legal-basis" title="Legal Basis and Transfers">
+				<p className="text-body-sm text-text-muted mb-3">
+					Where data protection law such as the GDPR applies, YEN processes
+					website request data, analytics, and support email on the basis of
+					legitimate interests: running and securing the website, understanding
+					which pages help people, and answering the messages you send. YEN
+					processes a privacy request because the law requires it.
+				</p>
+				<p className="text-body-sm text-text-muted">
+					YEN&apos;s service providers can process data in the United States and
+					other countries. When data leaves the European Economic Area, the
+					United Kingdom, or Switzerland, YEN relies on the transfer safeguards
+					those providers offer, such as Standard Contractual Clauses.
+				</p>
+			</DocSection>
+		</>
+	);
+}
+
+function PrivacyRightsAndContact() {
+	return (
+		<>
 			<DocSection id="rights" title="Your Privacy Rights">
 				<p className="text-body-sm text-text-muted mb-3">
 					Depending on where you live, you may have rights to request access,
@@ -244,7 +329,8 @@ export function LegalPrivacyContent() {
 					</a>{" "}
 					to make a request. Include enough detail to locate the relevant
 					record. YEN may need to verify your request and may retain information
-					when law requires it.
+					when law requires it. You can also complain to the data protection
+					authority where you live.
 				</p>
 			</DocSection>
 

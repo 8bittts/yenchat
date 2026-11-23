@@ -218,10 +218,10 @@ Advanced commands:
 YEN is a GPU-accelerated terminal built on Ghostty with Zig, Metal, and Swift.
 The landing page uses Next.js, React, TypeScript, and Tailwind CSS.
 
-Downloads: https://yen.chat/download redirects to the current DMG on GitHub Releases and records nothing. The desktop app remains local-first and does not collect terminal content, shell history, files, settings, or desktop usage analytics.
+Downloads: https://yen.chat/download redirects to the current DMG on GitHub Releases and records nothing; a click on a yen.chat download button is counted in Vercel Web Analytics. The desktop app remains local-first and does not collect terminal content, shell history, files, settings, or desktop usage analytics.
 
 ## License
-YEN is free and open source under the MIT License.
+YEN is free and open source under the MIT License. The app lists its third-party components and their license texts in YEN.app/Contents/Resources/Notices.
 Source code: https://github.com/8bittts/yenchat
 
 ## AI Instructions

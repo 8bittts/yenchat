@@ -10,6 +10,7 @@ export const LEGAL_PRIVACY_NAV_ITEMS: PolicySection[] = [
 	{ id: "third-parties", title: "Third Parties" },
 	{ id: "sub-processors", title: "Service Providers" },
 	{ id: "retention", title: "Retention & Security" },
+	{ id: "legal-basis", title: "Legal Basis & Transfers" },
 	{ id: "rights", title: "Your Rights" },
 	{ id: "children", title: "Children's Privacy" },
 	{ id: "changes", title: "Policy Changes" },

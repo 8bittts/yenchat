@@ -77,8 +77,9 @@ export function TermsPageClient({
 					<DocSection id="agreement" title="Agreement">
 						<p className="text-body-sm text-text-muted">
 							By downloading, installing, or using YEN ("the Software"), you
-							agree to these terms. If you don't agree, don't use YEN. It's that
-							simple.
+							agree to these terms. If you don't agree, don't use YEN. Nothing
+							in these terms limits the rights the MIT License gives you to
+							YEN&apos;s source code.
 						</p>
 					</DocSection>
 
@@ -114,10 +115,13 @@ export function TermsPageClient({
 							>
 								source repository
 							</a>
-							. YEN is built on Ghostty, which is also MIT licensed. Use
-							wallpaper media you have permission to display. Third-party
-							components remain governed by their own licenses. The YEN name and
-							logo are not licensed under the MIT License.
+							. YEN is built on Ghostty, which is also MIT licensed. Third-party
+							components remain governed by their own licenses; the app lists
+							them, with their license texts, in{" "}
+							<code className="inline-code-brand">
+								YEN.app/Contents/Resources/Notices
+							</code>
+							. The YEN name and logo are not licensed under the MIT License.
 						</p>
 					</DocSection>
 
@@ -140,15 +144,24 @@ export function TermsPageClient({
 								who else can reach them. Tailscale and SSH are third-party
 								software under their own terms.
 							</li>
+							<li>
+								Use only wallpaper media you have permission to display. If you
+								choose a YouTube link, you are responsible for following
+								YouTube&apos;s Terms of Service. YEN grants no rights to any
+								video.
+							</li>
 						</ul>
 					</DocSection>
 
 					<DocSection id="ip" title="Intellectual Property">
 						<p className="text-body-sm text-text-muted">
-							8BIT owns YEN&apos;s source code, names, logos, and original
-							branding. These terms do not transfer any ownership rights. Do not
-							use YEN&apos;s marks in a way that implies sponsorship,
-							affiliation, or endorsement.
+							8BIT owns the YEN name, logos, and branding, and the copyright in
+							its own original code. Code derived from Ghostty belongs to the
+							Ghostty contributors, and each outside contributor keeps the
+							copyright in their contribution, all under the MIT License. These
+							terms do not transfer any ownership rights. Do not use YEN&apos;s
+							marks in a way that implies sponsorship, affiliation, or
+							endorsement.
 						</p>
 					</DocSection>
 
@@ -163,11 +176,14 @@ export function TermsPageClient({
 
 					<DocSection id="liability" title="Limitation of Liability">
 						<p className="text-body-sm text-text-muted">
-							To the maximum extent permitted by law, YEN and its licensors
-							shall not be liable for any indirect, incidental, special,
-							consequential, or punitive damages arising from your use of the
-							Software, including but not limited to data loss, system damage,
-							or loss of profits.
+							To the maximum extent permitted by law, 8BIT, YEN&apos;s
+							contributors, and its licensors shall not be liable for any
+							indirect, incidental, special, consequential, or punitive damages
+							arising from your use of the Software, including but not limited
+							to data loss, system damage, or loss of profits. Because YEN is
+							free, our total liability for any claim about the Software is
+							limited to US$50. Some places do not allow these limits, so they
+							apply to you only as far as your local law allows.
 						</p>
 					</DocSection>
 
