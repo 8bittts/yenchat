@@ -1,8 +1,8 @@
 {
-  "version": "1.285",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.285/yen-1285.dmg",
-  "sha256": "ab526f54454bd546fd59dfca67d2d5cc976c9117c560359a6ecdad92b84279e6",
-  "notes": "Steadier remote sessions and clean session shutdown",
+  "version": "1.286",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.286/yen-1286.dmg",
+  "sha256": "4dc07a9aa24817568c7cfd8970dbf9acf7045574556ec9c256217e0b35516de7",
+  "notes": "Cleaner tabs and update status in the titlebar",
   "minOS": "27.0",
   "releaseDate": ""
 }

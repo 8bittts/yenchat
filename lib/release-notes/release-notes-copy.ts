@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.286":
+		"Horizontal tabs show their names in the standard 13-point medium face, with only the pane count on the right and the close button appearing when you point at the tab. Session icons, including the reconnecting mark, now appear in the tab sidebar instead of the tab bar. The update status sits beside the window buttons at the start of the tab row, and the menu bar token count now comes before the YEN mark. Type fast in the terminal to run fastfetch. Scrolling styled text inside left and right margins takes less work.",
 	"1.285":
 		"Type hosts in the command palette to see the sessions running on your other Macs on Tailscale, and pick one to attach in a new tab. The tab sidebar lists the same Macs and sessions under Hosts. A remote tab shows when its connection is reconnecting, and an attach that needs a Tailscale SSH check stops and shows its link. Closing a remote pane no longer asks, because its session keeps running on the other Mac. Ending a session no longer leaves a crash report, Per Desktop wallpapers stay put when a display reconnects, and the token menu no longer fails when two reads overlap.",
 	"1.284":
