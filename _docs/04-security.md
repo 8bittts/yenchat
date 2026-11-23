@@ -23,8 +23,8 @@ Hand-edit only the tables and watch items.
 
 ```
 snapshot_date=2026-11-23
-ghostty_commit=24741298a98489a1c5beb621ee271eb8b3675a27
-ghostty_version=24741298a98489a1c5beb621ee271eb8b3675a27
+ghostty_commit=0cc1fc64e1e7a4c5b841ed4f16fb106d9411c0ec
+ghostty_version=0cc1fc64e1e7a4c5b841ed4f16fb106d9411c0ec
 ghostty_upstream_repo=https://github.com/ghostty-org/ghostty.git
 yazi_version=v26.9.1
 fd_version=v10.5.2
@@ -56,7 +56,7 @@ Delete a row once the range has re-landed cleanly.
 
 ## Upstream Ghostty Overlap Assessment
 
-Audit of YEN customizations against upstream Ghostty (commit `24741298`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
+Audit of YEN customizations against upstream Ghostty (commit `0cc1fc64`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
 
 Per-bump assessments live in the vendor commit messages, not here.
 
