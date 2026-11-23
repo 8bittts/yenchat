@@ -457,4 +457,43 @@ struct TokenUsageIndexTests {
         }
         #expect(failures.isEmpty, "\(failures.count) of 160 reads failed: \(Set(failures))")
     }
+
+    /// The menu's worker reads the Codex plan through a read-only connection
+    /// after its read, and a cancelled worker still does it. The next read of
+    /// the index must not fail while that connection is open.
+    @Test func aReadBesideThePlanReaderSucceeds() async throws {
+        let fm = FileManager.default
+        let line = """
+            {"type":"assistant","timestamp":"\(Date().ISO8601Format())","requestId":"r","message":{"id":"m","model":"claude-sonnet","usage":{"input_tokens":4,"output_tokens":1}}}
+
+            """
+        var failures: [String] = []
+        for _ in 0..<40 {
+            let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? fm.removeItem(at: home) }
+            let file = TokenTool.claude.root(home: home).appendingPathComponent("project/session.jsonl")
+            try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(line.utf8).write(to: file)
+            let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+            _ = try index.read(tools: [.claude])
+            let planReaders = (0..<3).map { _ in
+                Task.detached { for _ in 0..<20 { _ = try? index.latestCodexPlan() } }
+            }
+            let reads = (0..<3).map { _ in
+                Task.detached { () -> String? in
+                    do {
+                        let counts = try index.read(tools: [.claude])
+                        return counts[.claude] == 5 ? nil : "counted \(String(describing: counts[.claude]))"
+                    } catch {
+                        return "\(error)"
+                    }
+                }
+            }
+            for read in reads {
+                if let failure = await read.value { failures.append(failure) }
+            }
+            for reader in planReaders { await reader.value }
+        }
+        #expect(failures.isEmpty, "\(failures.count) of 120 reads failed: \(Set(failures))")
+    }
 }
