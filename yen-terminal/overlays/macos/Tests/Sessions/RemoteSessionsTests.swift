@@ -54,6 +54,7 @@ struct RemoteSessionsTests {
         #expect(result(0, Data("yen-sessions\t1\n".utf8)) == .sessions([], complete: true))
         #expect(result(10) == .unreachable)
         #expect(result(11) == .firstConnectionNeeded)
+        #expect(result(16) == .keySignInNeeded)
         #expect(result(12) == .yenNotInstalled)
         #expect(result(13) == .yenTooOld)
         #expect(result(15) == .hostKeyChanged)

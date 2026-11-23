@@ -28,6 +28,7 @@ const EXIT = {
 	usage: 2,
 	unreachable: 10,
 	firstConnection: 11,
+	keyRequired: 16,
 	notInstalled: 12,
 	tooOld: 13,
 	noSession: 14,
@@ -240,9 +241,36 @@ describe("yen sessions --host: the ssh command", () => {
 });
 
 describe("yen sessions --host: failure classes", () => {
+	test("an unknown host key and a missing key sign-in say what to do", () => {
+		plan(["0 255 Host key verification failed."]);
+		const hostKey = sessions(["list", "--host", "mini"]);
+		expect(hostKey.status).toBe(EXIT.firstConnection);
+		expect(hostKey.stderr).toContain(
+			"mini needs its host key confirmed; run 'ssh mini' once and accept the key",
+		);
+		writeFileSync(join(sshDir, "count"), "0");
+		plan(["0 255 dev@mini: Permission denied (password)."]);
+		const password = sessions(["list", "--host", "mini"]);
+		expect(password.status).toBe(EXIT.keyRequired);
+		expect(password.stderr).toContain(
+			"mini asks for a password; YEN signs in only with an SSH key that works without a prompt; run 'ssh-copy-id mini' once",
+		);
+		expect(sessions(["--help"]).stdout).toContain(
+			"16 sign-in needs an SSH key",
+		);
+	});
+
 	test.each([
 		["Host key verification failed.", EXIT.firstConnection],
-		["dev@mini: Permission denied (publickey).", EXIT.firstConnection],
+		// Measured against a loopback sshd with PubkeyAuthentication no: an
+		// unknown host key fails first, a trusted one then asks for a password.
+		["dev@mini: Permission denied (password).", EXIT.keyRequired],
+		["dev@mini: Permission denied (publickey).", EXIT.keyRequired],
+		[
+			"Received disconnect from 100.64.0.2 port 22:2: Too many authentication failures",
+			EXIT.keyRequired,
+		],
+		["dev@mini: No more authentication methods to try.", EXIT.keyRequired],
 		["ssh: connect to host mini port 22: Connection refused", EXIT.unreachable],
 		[
 			"ssh: connect to host mini port 22: Operation timed out",
@@ -587,7 +615,8 @@ describe("yen sessions attach --host: reconnect", () => {
 
 	test("--retry-unreachable still stops at once on every other first-attempt failure", () => {
 		const cases: [string, number][] = [
-			["0 255 user@mini: Permission denied (publickey).", EXIT.firstConnection],
+			["0 255 user@mini: Permission denied (publickey).", EXIT.keyRequired],
+			["0 255 Host key verification failed.", EXIT.firstConnection],
 			[
 				"0 255 Host key for mini has changed and you have requested strict checking.",
 				EXIT.hostKeyChanged,

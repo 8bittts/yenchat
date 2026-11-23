@@ -170,6 +170,8 @@ enum RemoteHostsPaletteRows {
                     action: .insertCommand("ssh \(target)"),
                     subtitle: "ssh \(target)"
                 )]
+            case .keySignInNeeded:
+                return [row("key-sign-in", "Connect to \(name) Once", "Stub", icon: "key")]
             case .hostKeyChanged:
                 return [row("host-key-changed", "Host Key of \(name) Changed", "YEN will not connect: the key \(name) presents no longer matches the one you trusted. If \(name) was reinstalled, remove the old key with ssh-keygen -R \(target); otherwise someone may be intercepting the connection", icon: "exclamationmark.shield")]
             case .yenNotInstalled:

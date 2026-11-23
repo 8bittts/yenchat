@@ -24,6 +24,9 @@ enum RemoteSessionList: Equatable, Sendable {
     /// The host key is not known yet or no key signs in under BatchMode; the
     /// user runs `ssh <host>` once in a terminal.
     case firstConnectionNeeded
+    /// The host key is trusted but no key signs in without a prompt (the peer
+    /// asks for a password). Stub.
+    case keySignInNeeded
     /// The known host key no longer matches. YEN does not connect until the
     /// user fixes known_hosts.
     case hostKeyChanged
