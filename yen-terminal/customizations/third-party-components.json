@@ -103,7 +103,7 @@
 			"name": "GNU gettext runtime (libintl)",
 			"license": "LGPL-2.1-or-later",
 			"home": "https://www.gnu.org/software/gettext/",
-			"note": "YEN links libintl statically. You may modify libintl and relink YEN with your version: the complete source of YEN, including the build scripts that link libintl, is at https://github.com/8bittts/yenchat, and the libintl source is at the archive address in this section.",
+			"note": "YEN links libintl statically. You may modify libintl and rebuild YEN with your version. YEN's source and build scripts are at https://github.com/8bittts/yenchat. The engine build that links libintl is upstream Ghostty (https://github.com/ghostty-org/ghostty) at the commit named in yen-terminal/.ghostty-baseline of that repository, and the libintl source is at the archive address in this section.",
 			"source": { "zon": "pkg/libintl/build.zig.zon" },
 			"files": ["gettext-runtime/intl/COPYING.LIB"]
 		},

@@ -194,7 +194,7 @@ The vendored tools' notices do not cover the libraries those tools link.
 The engine is different: it compiles libraries and fonts into the `yen` binary, and the app ships `Sparkle.framework`, so `ThirdPartyComponents.txt` carries their license texts.
 `yen-terminal/customizations/third-party-components.json` lists each engine dependency as shipped, covered by another entry, or excluded with a reason, and `bun scripts/gen-third-party-notices.ts` writes the notice from the archives the engine pins.
 `tests/171-third-party-notices.test.ts` fails when an engine dependency is in no list or a pin no longer matches the notice; regenerate the notice after a vendor update that trips it.
-libintl is LGPL-2.1 and linked statically; its section points to the public YEN source and build scripts so a user can relink it, and that pointer must stay while YEN links libintl.
+libintl is LGPL-2.1 and linked statically; its section points to the public YEN source, the pinned upstream engine commit (`yen-terminal/.ghostty-baseline`) and the libintl archive so a user can rebuild with a modified libintl, and that pointer must stay while YEN links libintl.
 
 ### High-Priority Watch Items
 
@@ -387,4 +387,4 @@ Its cache holds record identifiers, source paths, read positions and counts.
 The desktop wallpaper picker grants access to selected media, while random Photos selection requests library permission.
 YouTube playback fetches its downloader from a pinned GitHub release and verifies its SHA-256 before execution.
 Only a chosen YouTube video or restoration of that choice can start a media download.
-The app bundles the MIT notices for the adapted JP the Cat readers and MovingPaper engine, beside the notices that Third-Party License Notices describes.
+The app bundles the MovingPaper engine's MIT notice, beside the notices that Third-Party License Notices describes; the token readers are the operator's own code and need none.

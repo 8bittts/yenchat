@@ -19,7 +19,9 @@ Design, quality, growth, and release procedures belong to their owners in `00-do
 
 [CRITICAL] Homepage copy is locked: the hero and every tagline in `app/home-client.tsx` change only when the operator asks.
 
-- Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS. Never claim "no third parties".
+- Privacy and terms match the real service map: Sparkle update checks, Apple Speech, Vercel Analytics and Speed Insights, GitHub source and release downloads, YouTube privacy-enhanced embeds, Cloudflare DNS and email routing, Gmail and Resend for support email ([07-email.md](07-email.md)). Never claim "no third parties".
+  The policy also discloses the website's custom click events, the local theme setting, local crash records and what the token menu reads; a change to any of them changes the policy in the same commit.
+  The operator decided the policy names the operator only as 8BIT with support@yen.chat, the terms carry no governing-law clause, and liability is capped at US$50; do not add a legal name, address or jurisdiction unless the operator asks.
   Remote sessions name Tailscale as software and a network the user installs and controls, never as a YEN service provider, because YEN only reads the local Tailscale status and connects the user's own Macs with ssh ([04-security.md](04-security.md#remote-attach-threat-model)).
 - The header links to Docs at `/#guide`, GitHub, and @yenFTW.
 - The footer links to Blog, Email, and Terms and displays the YEN copyright.
