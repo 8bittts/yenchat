@@ -231,6 +231,12 @@ enum RemoteHostsPaletteRows {
                     action: .insertCommand("yen sessions list --host \(target)")
                 )]
             case .sessions(let sessions, let complete):
+                // An incomplete listing with no rows is a peer that failed
+                // before listing anything (a YEN there without zmx prints its
+                // header and exits 1), not a Mac without sessions.
+                if sessions.isEmpty && !complete {
+                    return peerRows(peer, state: .listed(.failed), isOpenHere: isOpenHere, now: now)
+                }
                 var rows: [RemoteHostsPaletteEntry] = []
                 if sessions.isEmpty {
                     rows.append(row("no-sessions", "No Sessions on \(name)", "Turn on Keep Sessions Running in YEN on \(name) and open a terminal there, then select to check again", icon: "rectangle.stack"))
