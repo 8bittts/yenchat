@@ -13,7 +13,8 @@ bash $HOME/Documents/yenchat/scripts/14-vendor.sh > "$OUT" 2>&1; echo "exit=$?"
 
 ### Ghostty (source vendor)
 
-`14-vendor.sh` first resolves a verified target commit and checks its incoming Zig pin.
+`14-vendor.sh` first resolves the newest signed commit on `main` and checks its incoming Zig pin.
+A rebase merge leaves `main`'s head unsigned, so the target can trail the head; the remaining unsigned commits arrive on a later run, and the release window accepts the pushed baseline.
 It passes that same commit to the updater; missing pins or failed reads stop before archive download.
 Install the reported Zig version before retrying.
 

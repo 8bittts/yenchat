@@ -177,8 +177,9 @@ function newestSigned(commits: Array<{ sha: string; verified: boolean }>) {
 			"-c",
 			`
 source "$1"
+exec 3>&2
 forge_github_auth_header() { :; }
-curl() { printf '%s\\n' "$*" >&2; printf '%s' "$BODY"; }
+curl() { printf '%s\\n' "$*" >&3; printf '%s' "$BODY"; }
 upstream_newest_verified_commit_sha main
 `,
 			"fixture",

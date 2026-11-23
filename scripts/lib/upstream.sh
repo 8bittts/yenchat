@@ -81,6 +81,13 @@ upstream_verified_commit_sha() {
     "forge_${UPSTREAM_FORGE}_verified_commit_sha" "$1"
 }
 
+# Newest commit on a branch whose forge signature verifies, or empty output.
+# A rebase merge leaves a branch head unsigned while older commits stay
+# signed, so the vendor gate targets this commit instead of the head.
+upstream_newest_verified_commit_sha() {
+    "forge_${UPSTREAM_FORGE}_newest_verified_commit_sha" "$1"
+}
+
 # Curl auth header for the configured forge, or empty output when no token is
 # available. Anonymous requests are rate-limited far more aggressively, and a
 # rate-limited status probe is the most common way a vendor script reports
@@ -139,6 +146,24 @@ forge_github_verified_commit_sha() {
 d=json.load(sys.stdin)
 v=d.get("commit", {}).get("verification", {})
 print(d.get("sha", "") if v.get("verified") is True else "")'
+}
+
+forge_github_newest_verified_commit_sha() {
+    local ref="$1"
+    local auth_header
+    local -a curl_opts
+    auth_header="$(forge_github_auth_header)"
+    curl_opts=(-H "Accept: application/vnd.github+json")
+    [ -n "$auth_header" ] && curl_opts+=(-H "$auth_header")
+    curl --retry 3 --retry-delay 1 --max-time 30 --connect-timeout 10 -sfL \
+        "${curl_opts[@]}" \
+        "https://api.$UPSTREAM_HOST/repos/$UPSTREAM_OWNER/$UPSTREAM_REPO/commits?sha=$ref&per_page=100" 2>/dev/null \
+      | python3 -c 'import json,re,sys
+for c in json.load(sys.stdin):
+    sha=c.get("sha", "")
+    if c.get("commit", {}).get("verification", {}).get("verified") is True and re.fullmatch(r"[0-9a-f]{40}", sha):
+        print(sha)
+        break'
 }
 
 forge_github_auth_header() {

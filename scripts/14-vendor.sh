@@ -1017,9 +1017,9 @@ if [ -z "$TARGET" ] || [ "$TARGET" = "ghostty" ]; then
                 else
                     # Preflight gates (abort before download on toolchain/rollback issues).
                     GHOSTTY_PREFLIGHT_OK=true
-                    GHOSTTY_TARGET_COMMIT="$(upstream_verified_commit_sha main || true)"
+                    GHOSTTY_TARGET_COMMIT="$(upstream_newest_verified_commit_sha main || true)"
                     if ! [[ "$GHOSTTY_TARGET_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-                        echo "  ! Cannot resolve a verified incoming Ghostty commit"
+                        echo "  ! No signed Ghostty commit in the newest 100 on main"
                         ERROR_COUNT=$((ERROR_COUNT + 1))
                         GHOSTTY_PREFLIGHT_OK=false
                     fi
