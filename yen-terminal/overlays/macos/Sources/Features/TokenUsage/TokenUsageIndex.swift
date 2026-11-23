@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import os
 
 /// The worker opens its private day index only during a refresh. Cursors and
 /// contributions commit together so a cancelled refresh can resume safely.
@@ -8,11 +9,34 @@ struct TokenUsageIndex: Sendable {
     let directory: URL
     typealias Counts = [TokenTool: Int]
 
+    /// One connection at a time per cache file in this process. Two refreshes of one index can
+    /// overlap (the menu switched off and on while a read runs), and SQLite answers "database is
+    /// locked" without waiting where waiting could deadlock: switching a new file to WAL, or a
+    /// connection that read and now wants to write. busy_timeout alone does not cover those.
+    private static let fileLocks = OSAllocatedUnfairLock<[String: NSLock]>(initialState: [:])
+
+    private static func serialized<T>(_ path: String, _ body: () throws -> T) rethrows -> T {
+        let lock = fileLocks.withLock { locks in
+            if let lock = locks[path] { return lock }
+            let lock = NSLock()
+            locks[path] = lock
+            return lock
+        }
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
+
     func read(now: Date = Date(), tools: Set<TokenTool>, changes: [TokenTool: Set<URL>] = [:]) throws -> Counts {
+        let path = directory.appendingPathComponent("today.sqlite").path
+        return try Self.serialized(path) { try readLocked(path: path, now: now, tools: tools, changes: changes) }
+    }
+
+    private func readLocked(path: String, now: Date, tools: Set<TokenTool>, changes: [TokenTool: Set<URL>]) throws -> Counts {
         guard let day = Calendar.current.dateInterval(of: .day, for: now) else { return [:] }
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let db = try SQLiteDatabase(path: directory.appendingPathComponent("today.sqlite").path)
+        let db = try SQLiteDatabase(path: path)
         try prepareIndex(db)
         let start = Int(day.start.timeIntervalSince1970)
         let stored = try db.prepare("SELECT start FROM day")
@@ -49,10 +73,15 @@ struct TokenUsageIndex: Sendable {
     /// Tokens for each local day before today, oldest first. An unreadable source has no entry.
     /// A finished day never changes, so its total is kept and its source is not read again.
     func history(now: Date = Date()) throws -> [TokenTool: [Int]] {
+        let path = directory.appendingPathComponent("history.sqlite").path
+        return try Self.serialized(path) { try historyLocked(path: path, now: now) }
+    }
+
+    private func historyLocked(path: String, now: Date) throws -> [TokenTool: [Int]] {
         let calendar = Calendar.current, today = calendar.startOfDay(for: now)
         let days = (1...Self.historyDays).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }.map(TokenRecord.localDay)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let db = try SQLiteDatabase(path: directory.appendingPathComponent("history.sqlite").path)
+        let db = try SQLiteDatabase(path: path)
         try db.execute("CREATE TABLE IF NOT EXISTS totals(tool TEXT,day INTEGER,n INTEGER,PRIMARY KEY(tool,day)) WITHOUT ROWID")
         var result: [TokenTool: [Int]] = [:]
         for tool in TokenTool.allCases {
