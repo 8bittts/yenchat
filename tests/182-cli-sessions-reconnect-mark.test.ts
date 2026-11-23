@@ -39,13 +39,22 @@ const CLEAR = "0";
 
 /// Every OSC 9;4 the CLI wrote, as its state and value ("4;0" or "0").
 function reports(stdout: string): string[] {
-	const pattern = new RegExp(String.raw`\x1b\]9;4;([0-9;]*)(?:\x07|\x1b\\)`, "g");
-	return [...stdout.matchAll(pattern)].map((match) => match[1] ?? "");
+	const ESC = String.fromCharCode(0x1b);
+	const BEL = String.fromCharCode(0x07);
+	return stdout
+		.split(`${ESC}]9;4;`)
+		.slice(1)
+		.map((rest) => {
+			const end = rest.indexOf(BEL);
+			return end < 0 ? "" : rest.slice(0, end);
+		});
 }
 
 /// The reports with repeats folded, so a refresh of the same state reads once.
 function transitions(stdout: string): string[] {
-	return reports(stdout).filter((state, index, all) => state !== all[index - 1]);
+	return reports(stdout).filter(
+		(state, index, all) => state !== all[index - 1],
+	);
 }
 
 const fakeBin = join(harness.root, "fake-bin");
@@ -101,10 +110,9 @@ describe("yen sessions attach --host: the reconnecting mark", () => {
 
 	test("--retry-unreachable marks the wait for a peer that never answered yet", () => {
 		harness.plan([refused, refused, "1 0"]);
-		const result = harness.sessions(
-			[...attach, "--retry-unreachable"],
-			{ ...flag },
-		);
+		const result = harness.sessions([...attach, "--retry-unreachable"], {
+			...flag,
+		});
 		expect(result.status, result.stderr).toBe(0);
 		expect(transitions(result.stdout)).toEqual([MARK, CLEAR]);
 	});
@@ -113,15 +121,12 @@ describe("yen sessions attach --host: the reconnecting mark", () => {
 		["an unconfirmed host key", hostKeyUnknown, EXIT.firstConnection],
 		["a password prompt", askedPassword, EXIT.keyRequired],
 		["an ended session", "1 1", EXIT.noSession],
-	])(
-		"a stop on %s after a drop leaves no mark",
-		(_name, failure, code) => {
-			harness.plan([dropped, failure]);
-			const result = harness.sessions(attach, { ...flag });
-			expect(result.status, result.stderr).toBe(code);
-			expect(transitions(result.stdout)).toEqual([CLEAR, MARK, CLEAR]);
-		},
-	);
+	])("a stop on %s after a drop leaves no mark", (_name, failure, code) => {
+		harness.plan([dropped, failure]);
+		const result = harness.sessions(attach, { ...flag });
+		expect(result.status, result.stderr).toBe(code);
+		expect(transitions(result.stdout)).toEqual([CLEAR, MARK, CLEAR]);
+	});
 
 	test("without the app's flag nothing is written, whatever happens", () => {
 		harness.plan([dropped, refused, "1 0"]);
@@ -131,7 +136,9 @@ describe("yen sessions attach --host: the reconnecting mark", () => {
 		const local = harness
 			.firstCall()
 			.find((argument) => argument.startsWith("LocalCommand="));
-		expect(local).toMatch(/^LocalCommand=\/usr\/bin\/touch \/[A-Za-z0-9._/-]+$/);
+		expect(local).toMatch(
+			/^LocalCommand=\/usr\/bin\/touch \/[A-Za-z0-9._/-]+$/,
+		);
 
 		harness.next();
 		harness.plan([refused, "1 0"]);
