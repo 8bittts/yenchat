@@ -949,8 +949,9 @@ function PersistentSessionsSection() {
 			<ul className="list-disc pl-5 space-y-2 text-body">
 				<li>
 					<strong>Both Macs:</strong> YEN 1.285 or later, and Tailscale signed
-					in to the same Tailscale account. YEN lists only your own Macs, not
-					devices shared with you or devices whose Tailscale key expired.
+					in to the same Tailscale account. YEN lists only your own Macs that
+					run the Tailscale app or daemon, not devices shared with you, devices
+					whose Tailscale key expired, or Tailscale nodes that other apps embed.
 				</li>
 				<li>
 					<strong>The other Mac:</strong> Keep Sessions Running on, and an SSH

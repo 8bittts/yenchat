@@ -40,6 +40,28 @@ describe("documentation contracts", () => {
 		}
 	});
 
+	test("public docs say embedded Tailscale nodes are not listed, as discovery decides", () => {
+		const discovery = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/TailscalePeers.swift",
+		);
+		// The rule: a listed peer must run Tailscale's peer API (`PeerAPIURL`),
+		// which a node another app embeds (tsnet) does not.
+		expect(discovery).toContain('case peerAPI = "PeerAPIURL"');
+		expect(discovery).toMatch(/node\.expired != true,\s*isFullClient\(node\)/);
+		expect(discovery).toContain("!(node.peerAPI ?? []).isEmpty");
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		expect(manual).toContain(
+			"YEN lists only your own Macs that run the Tailscale app or daemon, not devices shared with you, devices whose Tailscale key expired, or Tailscale nodes that other apps embed.",
+		);
+		expect(read("public/llms.txt")).toContain(
+			"not a Tailscale node that another app embeds",
+		);
+		expect(read("_docs/04-security.md")).toContain(
+			"it runs Tailscale's peer API (a non-empty `PeerAPIURL`)",
+		);
+	});
+
 	test("public docs name the tab session icons and the sidebar Hosts rule as the source does", () => {
 		const stateSource = read(
 			"yen-terminal/overlays/macos/Sources/Features/Sessions/PaneSessionState.swift",
