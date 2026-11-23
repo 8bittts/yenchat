@@ -99,6 +99,38 @@ struct RemotePanesTests {
         #expect(RemotePanes.identity(for: paneID) == nil)
     }
 
+    // MARK: Hand-off from open to prepare
+
+    /// AppleScript and the App Intent fill a new surface's environment, so a
+    /// script can set YEN_REMOTE_PANE. Whatever it writes there must start a
+    /// plain local pane with no identity and no host label.
+    @Test func aHandWrittenMarkerStartsALocalPane() throws {
+        let json = String(decoding: try JSONEncoder().encode(identity), as: UTF8.self)
+        for forged in [json, UUID().uuidString, "studio", ""] {
+            let paneID = UUID()
+            var config = YEN.SurfaceConfiguration()
+            config.environmentVariables[RemotePanes.markerEnvironmentKey] = forged
+            withFakeCLI { RemotePanes.prepare(&config, paneID: paneID) }
+            #expect(config.command == nil, "\(forged)")
+            #expect(config.environmentVariables[RemotePanes.markerEnvironmentKey] == nil)
+            #expect(RemotePanes.identity(for: paneID) == nil, "\(forged)")
+        }
+    }
+
+    @Test func aHandOffWorksOnce() {
+        let config = markedConfig(identity)
+        var first = config, second = config
+        let firstID = UUID(), secondID = UUID()
+        withFakeCLI {
+            RemotePanes.prepare(&first, paneID: firstID)
+            RemotePanes.prepare(&second, paneID: secondID)
+        }
+        #expect(RemotePanes.identity(for: firstID) == identity)
+        #expect(first.command?.contains(expectedCommand) == true)
+        #expect(RemotePanes.identity(for: secondID) == nil)
+        #expect(second.command == nil)
+    }
+
     @Test func persistentSessionsLeaveARemotePaneEphemeral() {
         let paneID = UUID()
         var config = markedConfig(identity)
