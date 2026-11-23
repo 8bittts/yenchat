@@ -422,4 +422,39 @@ struct TokenUsageIndexTests {
         try db.execute("DROP TABLE message; DROP TABLE session_message")
         #expect(try index.read(tools: [.openCode])[.openCode] == nil)
     }
+
+    /// Two reads of one index can overlap in the shipped menu: switching the
+    /// menu off and on while a read runs starts a new read before the
+    /// cancelled one has stopped. Neither may fail with "database is locked",
+    /// including the first reads of a new index, which create its tables.
+    @Test func overlappingReadsOfOneIndexAllSucceed() async throws {
+        let fm = FileManager.default
+        let line = """
+            {"type":"assistant","timestamp":"\(Date().ISO8601Format())","requestId":"r","message":{"id":"m","model":"claude-sonnet","usage":{"input_tokens":4,"output_tokens":1}}}
+
+            """
+        var failures: [String] = []
+        for _ in 0..<40 {
+            let home = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            defer { try? fm.removeItem(at: home) }
+            let file = TokenTool.claude.root(home: home).appendingPathComponent("project/session.jsonl")
+            try fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(line.utf8).write(to: file)
+            let index = TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache"))
+            let reads = (0..<4).map { _ in
+                Task.detached { () -> String? in
+                    do {
+                        let counts = try index.read(tools: [.claude])
+                        return counts[.claude] == 5 ? nil : "counted \(String(describing: counts[.claude]))"
+                    } catch {
+                        return "\(error)"
+                    }
+                }
+            }
+            for read in reads {
+                if let failure = await read.value { failures.append(failure) }
+            }
+        }
+        #expect(failures.isEmpty, "\(failures.count) of 160 reads failed: \(Set(failures))")
+    }
 }
