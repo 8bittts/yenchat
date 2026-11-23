@@ -161,3 +161,63 @@ describe("yen sessions attach --host: a pending Tailscale SSH check", () => {
 		expect(harness.calls()).toHaveLength(2);
 	});
 });
+
+/// Every OSC 9;4 report on stdout ("4;0" is the reconnecting mark, "0" its
+/// clear), as tests/183 reads them; repeats folded in `transitions`.
+function reports(stdout: string): string[] {
+	const ESC = String.fromCharCode(0x1b);
+	const BEL = String.fromCharCode(0x07);
+	return stdout
+		.split(`${ESC}]9;4;`)
+		.slice(1)
+		.map((rest) => rest.slice(0, Math.max(rest.indexOf(BEL), 0)));
+}
+const transitions = (stdout: string) =>
+	reports(stdout).filter((state, index, all) => state !== all[index - 1]);
+const MARK = "4;0";
+const CLEAR = "0";
+
+describe("yen sessions attach --host: a pending check and the reconnecting mark", () => {
+	const marked = (args: string[], timeout?: number) => {
+		const tmp = join(harness.sshDir, "tmp");
+		mkdirSync(tmp);
+		return spawnSync(yen, ["sessions", ...args], {
+			encoding: "utf8",
+			env: cliEnvironment(harness.sshDir, {
+				TMPDIR: tmp,
+				YEN_REMOTE_RECONNECT_MARK: "1",
+			}),
+			input: "",
+			timeout,
+		});
+	};
+
+	test("a check during a reconnect keeps the mark up past the engine's 15 seconds, then clears it on sign-in", () => {
+		// The approval comes after 14 seconds, past the 10-second renewal.
+		harness.plan(["1 255", "1 check-pass14"]);
+		const result = marked(attach);
+		expect(result.status, result.stderr).toBe(0);
+		expect(result.stderr.split(link)).toHaveLength(2);
+		expect(transitions(result.stdout)).toEqual([CLEAR, MARK, CLEAR]);
+		// Two from the backoff wait, and at least one while the check held.
+		expect(
+			reports(result.stdout).filter((s) => s === MARK).length,
+		).toBeGreaterThanOrEqual(3);
+		expect(reports(result.stdout).at(-1)).toBe(CLEAR);
+	});
+
+	test("a denied check after a drop clears the mark and exits 17", () => {
+		harness.plan(["1 255", "1 check-deny"]);
+		const result = marked(attach);
+		expect(result.status, result.stderr).toBe(CHECK_REQUIRED);
+		expect(result.stderr).toContain(advice);
+		expect(transitions(result.stdout)).toEqual([CLEAR, MARK, CLEAR]);
+	});
+
+	test("a check on the first attempt is not a reconnect and writes no mark", () => {
+		harness.plan(["1 check-pass1"]);
+		const result = marked(attach);
+		expect(result.status, result.stderr).toBe(0);
+		expect(reports(result.stdout)).not.toContain(MARK);
+	});
+});
