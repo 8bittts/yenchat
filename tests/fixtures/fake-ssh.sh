@@ -11,6 +11,10 @@
 # peer's login shell would, and exits with its status; $FAKE_SSH_REMOTE_YEN_LIB
 # stands for a YEN_LIB the peer's shell startup files export, and each
 # NAME=VALUE line of $FAKE_SSH_REMOTE_EXPORTS for any other exported variable.
+# status=exec-login does the same through a parent named /usr/bin/login that
+# exits 0 whatever the command's status was, as Tailscale SSH on a macOS peer
+# does: its incubator runs commands under macOS login, which waits for the
+# program and then exits 0. The peer's stdout and stderr still arrive intact.
 # status=sleep<seconds> records its pid in $FAKE_SSH_DIR/pid-<n> and hangs,
 # like ssh waiting on a dead link.
 # $FAKE_SSH_DIR/stdout-<n>, when present, is printed as the remote output, and
@@ -48,11 +52,15 @@ if [[ "$status" == sleep* ]]; then
     echo "$$" > "$dir/pid-$count"
     exec /bin/sleep "${status#sleep}"
 fi
-if [[ "$status" == exec ]]; then
+if [[ "$status" == exec || "$status" == exec-login ]]; then
     [[ -z "${FAKE_SSH_REMOTE_YEN_LIB:-}" ]] || export YEN_LIB="$FAKE_SSH_REMOTE_YEN_LIB"
     while IFS= read -r assignment; do
         [[ -n "$assignment" ]] && export "${assignment?}"
     done <<< "${FAKE_SSH_REMOTE_EXPORTS:-}"
+    if [[ "$status" == exec-login ]]; then
+        # ps reports this process as /usr/bin/login, the parent of the login shell.
+        exec -a /usr/bin/login /bin/bash -c '"$1" -c "$2"; exit 0' login "${FAKE_SSH_LOGIN_SHELL:-/bin/zsh}" "$remote"
+    fi
     exec "${FAKE_SSH_LOGIN_SHELL:-/bin/zsh}" -c "$remote"
 fi
 exit "$status"
