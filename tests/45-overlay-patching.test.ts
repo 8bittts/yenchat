@@ -1078,6 +1078,17 @@ ${patchBlock}`;
 			const driftRun = run("bash", ["-lc", command]);
 			expect(driftRun.status).toBe(1);
 			expect(output(driftRun)).toContain("patch anchor not found");
+
+			// The typed-title anchor drifting fails closed too, and leaves the
+			// sink unpatched rather than half-applied.
+			const overrideDrift = `${sink}\n${compute}\n${override.replace("title: titleOverride,", 'title: titleOverride ?? "",')}\n`;
+			writeFileSync(controllerPath, overrideDrift, "utf8");
+			const overrideRun = run("bash", ["-lc", command]);
+			expect(overrideRun.status).toBe(1);
+			expect(output(overrideRun)).toContain("anchor not found");
+			expect(readFileSync(controllerPath, "utf8")).not.toContain(
+				"RemotePanes.tabTitle(titleOverride, in: self)",
+			);
 		});
 	});
 

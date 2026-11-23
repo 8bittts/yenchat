@@ -370,15 +370,31 @@ enum RemotePanes {
     /// Show a remote session: focus the pane that already shows it, else open
     /// it in a new tab beside `window`. A second client of the same session in
     /// one app only mirrors the first and resizes it, so YEN focuses instead.
-    @MainActor static func open(_ identity: RemotePaneIdentity, from window: NSWindow?) -> OpenResult {
-        if let surface = existingPane(for: identity) {
+    ///
+    /// `controllers` and `newTab` are test seams: the windows to search and
+    /// the call that creates the tab; nil means every terminal window and
+    /// `TerminalController.newTab`.
+    @MainActor static func open(
+        _ identity: RemotePaneIdentity,
+        from window: NSWindow?,
+        controllers: [BaseTerminalController]? = nil,
+        newTab: ((YEN.SurfaceConfiguration) -> Bool)? = nil
+    ) -> OpenResult {
+        if let surface = existingPane(for: identity, in: controllers) {
             NotificationCenter.default.post(name: YEN.Notification.yenPresentTerminal, object: surface)
             return .focused
         }
-        guard let yen = AppDelegate.shared?.yen, let marker = marker(for: identity) else { return .failed }
+        let createTab: (YEN.SurfaceConfiguration) -> Bool
+        if let newTab {
+            createTab = newTab
+        } else {
+            guard let yen = AppDelegate.shared?.yen else { return .failed }
+            createTab = { TerminalController.newTab(yen, from: window, withBaseConfig: $0) != nil }
+        }
+        guard let marker = marker(for: identity) else { return .failed }
         var config = YEN.SurfaceConfiguration()
         config.environmentVariables[markerEnvironmentKey] = marker
-        let opened = TerminalController.newTab(yen, from: window, withBaseConfig: config) != nil
+        let opened = createTab(config)
         // newTab creates the surface at once; a token it never used must not linger.
         discardMarker(marker)
         return opened ? .opened : .failed

@@ -255,6 +255,7 @@ case "$MODE" in
                 -only-testing:YENTests/SessionDirectoryRepairTests
                 -only-testing:YENTests/RemoteDiscoveryContractTests
                 -only-testing:YENTests/RemoteHostsStoreContractTests
+                -only-testing:YENTests/RemotePanesContractTests
                 -only-testing:YENTests/ShellTests
                 -only-testing:YENTests/SplitTreeTests
                 -only-testing:YENTests/SurfaceRouteEnvironmentTests
