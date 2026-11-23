@@ -1039,6 +1039,30 @@ describe("vendor manifest is the single roster", () => {
 		}
 	});
 
+	test("the project gates are one VB-03 check, so a failed gate cannot be masked", () => {
+		// eval-phase.sh summary keeps the latest result per check ID. Recording each
+		// gate as its own VB-03 line let a later passing gate hide an earlier failure.
+		const buildRef = readFileSync(
+			join(repoRoot, ".agents/skills/update-yen/references/vendor-build.md"),
+			"utf8",
+		);
+		const row = buildRef
+			.split("\n")
+			.find((line) => line.startsWith("| VB-03 |"));
+		expect(row).toBeDefined();
+		expect(row).not.toContain("recorded separately");
+		for (const gate of [
+			"bun run check &&",
+			"bun run build &&",
+			"bun run test:policy &&",
+			"bun run test:prod &&",
+			"react-doctor",
+			"bun test --parallel=8",
+		]) {
+			expect(row).toContain(gate);
+		}
+	});
+
 	test("vendor summary template has a row for every manifest vendor", () => {
 		const commitRef = readFileSync(vendorCommitRefPath, "utf8");
 		expectRowPerVendor(commitRef, "## Vendor Summary");

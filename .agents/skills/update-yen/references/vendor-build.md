@@ -26,7 +26,7 @@ echo $! > "$LOG.pid"
 
 `--local` builds incrementally with no signing, notarization, or DMG, defaults `YEN_PREBUILD_COMPONENT_GATE_MODE=off`, and skips the vendor gate (pass `--vendor` to re-check). Invoke it by absolute path from the repo root; never `cd yen-terminal`. It holds the shared `yen-workflow` lock, so `14-vendor.sh` cannot run until it finishes.
 
-While it runs, in separate parallel calls from the repo root:
+While it runs, record the project gates as the single VB-03 check from the repo root (the command is in the Eval Checks table):
 
 ```bash
 bun run check
@@ -36,6 +36,8 @@ bun run test:prod
 bunx react-doctor@latest . --verbose --scope changed --base main
 bun test --parallel=8 $(/bin/ls tests/*.test.ts tests/*.test.tsx | /usr/bin/grep -v '76-theme-contrast-gates')
 ```
+
+Chain them with `&&` in one check; never record each gate as its own VB-03 line. `eval-phase.sh summary` keeps only the latest result per check ID, so a failed gate followed by a passing one under the same ID reads `Result: PASS`.
 
 `tests/76-theme-contrast-gates.test.ts` runs after the build, with the other Build Verification steps; every other suite is independent of the build tree. The glob must name both `*.test.ts` and `*.test.tsx`, or the three `.tsx` suites are skipped without any error. Confirm the run reports one file fewer than `/bin/ls tests/*.test.ts tests/*.test.tsx | wc -l`. Do not run `apply-overlays.sh` or anything else that writes `yen-terminal/ghostty/` while the build is running.
 
@@ -73,6 +75,6 @@ bash $HOME/Documents/yenchat/scripts/13-scan-artifact-fingerprints.sh --app $HOM
 |----------|-------------|---------|
 | VB-01 | Components verified, with a `result=PASS` receipt saved for VB-05 | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/03-verify-components.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-vendor-components.out` |
 | VB-02 | Compile gate passed in this run and the app is fresh | `RUN=$HOME/Documents/yenchat/tmp/skill-telemetry/yen-vendor-eval-run.id; LOG=$HOME/Documents/yenchat/tmp/skill-telemetry/yen-vendor-smoke.out; test "$LOG" -nt "$RUN" && /usr/bin/grep -q 'SMOKE_EXIT_CODE=0' "$LOG" && test $HOME/Documents/yenchat/yen-terminal/ghostty/zig-out/YEN.app/Contents/MacOS/yen -nt "$RUN"` |
-| VB-03 | Project gates passed | each project gate above, recorded separately |
+| VB-03 | Every project gate passed, in one check | `cd $HOME/Documents/yenchat && bun run check && bun run build && bun run test:policy && bun run test:prod && bunx react-doctor@latest . --verbose --scope changed --base main && bun test --parallel=8 $(/bin/ls tests/*.test.ts tests/*.test.tsx \| /usr/bin/grep -v '76-theme-contrast-gates')` |
 | VB-04 | AppleScript verifier (no-op unless contract paths changed), receipt saved | `set -o pipefail; bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh 2>&1 \| tee $HOME/Documents/yenchat/tmp/skill-telemetry/yen-vendor-applescript.out` |
 | VB-05 | Native slice covered exactly once: forced after the build only when VB-01's saved receipt shows it did not run | `bash $HOME/Documents/yenchat/.agents/skills/update-yen/scripts/run-native-slice-if-needed.sh yen-vendor` |
