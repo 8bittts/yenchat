@@ -1,8 +1,8 @@
 {
-  "version": "1.289",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.289/yen-1289.dmg",
-  "sha256": "b440d321d0b9762c7fb01f10b6634d52f705552352b4def1400f097da20565f8",
-  "notes": "Rotating plan limits and a right-click menu",
+  "version": "1.290",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.290/yen-1290.dmg",
+  "sha256": "2183266b564060bf428725509e503b7cbf65323977eaef5b01422ddd28cb1dda",
+  "notes": "Steadier tab titles and smoother split changes",
   "minOS": "27.0",
   "releaseDate": ""
 }
