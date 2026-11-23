@@ -661,8 +661,11 @@ function AgentTokenUsageSection() {
 			<p className="text-body">
 				Plan bars show the percentage used in each named pool. Claude, Codex,
 				and Grok Build show current plan readings when their local tools record
-				them. YEN reads no other app’s data and makes no network request for
-				these numbers.
+				them. Claude Code shares its live limits only with its statusline, so
+				turn on Claude Plan Limits to add a marked block to your statusline
+				script that saves them for YEN. Turning it off removes the block. YEN
+				reads no other app’s data and makes no network request for these
+				numbers.
 			</p>
 			<p className="text-body">
 				An asterisk marks a partial total. Unavailable means the source could

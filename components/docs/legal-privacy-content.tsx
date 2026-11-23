@@ -42,8 +42,11 @@ export function LegalPrivacyContent() {
 						read positions in its cache. Its analytics view also keeps each
 						tool’s token total for each of the last 90 days. Conversation text
 						stays out of both. Claude, Codex, and Grok Build plan readings come
-						from local tool records. The token menu makes no network request,
-						and YEN’s servers receive no usage data.
+						from local tool records. If you also turn on Claude Plan Limits, YEN
+						adds a marked block to your Claude Code statusline script that saves
+						Claude’s plan limits to a file on your Mac; turning it off removes
+						the block and the file. The token menu makes no network request, and
+						YEN’s servers receive no usage data.
 					</p>
 				</div>
 

@@ -85,6 +85,40 @@ struct TokenUsagePreference: View {
             SettingsStudioLabel(title: "Show Token Usage", hint: "Experimental. Count local agent tokens in the menu bar.")
         }
         .accessibilityLabel("Show Token Usage")
+        if extras.showsUsage { ClaudePlanLimitsPreference() }
+    }
+}
+
+/// Claude Code shows its live plan limits only to its statusline command, so this adds or
+/// removes YEN's marked block in that script (`TokenClaudeLimits`). The script is the state.
+struct ClaudePlanLimitsPreference: View {
+    private let home = FileManager.default.homeDirectoryForCurrentUser
+    @State private var state = TokenClaudeLimits.State.unavailable
+    @State private var failed = false
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { state == .active }, set: change)) {
+            SettingsStudioLabel(title: "Claude Plan Limits", hint: hint)
+        }
+        .disabled(state == .unavailable)
+        .accessibilityLabel("Claude Plan Limits")
+        .onAppear { state = TokenClaudeLimits.state(home: home) }
+    }
+
+    private var hint: String {
+        if failed { return "YEN could not change your Claude Code statusline script." }
+        if state == .unavailable {
+            return "Needs a Claude Code statusline script that reads its input, such as input=$(cat)."
+        }
+        return "Adds a marked block to your Claude Code statusline script that saves Claude’s live limits for this menu."
+    }
+
+    private func change(_ on: Bool) {
+        do {
+            if on { try TokenClaudeLimits.install(home: home) } else { try TokenClaudeLimits.uninstall(home: home) }
+            failed = false
+        } catch { failed = true }
+        state = TokenClaudeLimits.state(home: home)
     }
 }
 

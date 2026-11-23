@@ -187,7 +187,8 @@ final class TokenUsageMenu: NSObject {
             let now = Date()
             return TokenMenuReading(counts: counts,
                                     workspace: tools.contains(.openCode) ? TokenLocalPlans.openCodeWorkspace(home: index.home) : nil, plans: [
-                .claude: TokenLocalPlans.claude(home: index.home, now: now),
+                .claude: TokenClaudeLimits.merged(TokenClaudeLimits.meters(home: index.home, now: now),
+                                                  cache: TokenLocalPlans.claude(home: index.home, now: now)),
                 .codex: (try? index.latestCodexPlan()) ?? [],
                 .grok: TokenLocalPlans.grok(home: index.home, now: now)
             ])

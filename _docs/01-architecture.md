@@ -241,7 +241,11 @@ Only a gap in the saved days starts a new read, from the first missing day.
 That first read runs on one core: of a 12 GB record history, 6.8 GB fell inside the 89 days, and reading it with a warm file cache takes about 10 seconds and peaks near 70 MB; later reads take under 0.1 seconds.
 The scratch index has no secondary index except for Codex, whose corrections look rows up.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
-Claude Code refreshes `cachedUsageUtilization` in `~/.claude.json` only occasionally, not on every turn, so Claude’s bars disappear once the cached window resets even while the official window is current; the per-turn reading exists only in Claude Code’s statusline input, which YEN does not read.
+Claude Code refreshes `cachedUsageUtilization` in `~/.claude.json` only occasionally, not on every turn, so a cached window can expire while the official one is current.
+Claude Code passes its current limits (`rate_limits`) only to the statusline command, so the opt-in Claude Plan Limits switch adds a marked block to the user's statusline script (`TokenClaudeLimits`).
+The block reuses the variable the script already read its input into, because reading standard input again would leave the statusline empty, and it writes only `~/.local/state/yen/claude-limits.json`; a script with no such variable cannot take it.
+Saved windows win over cached ones of the same name, a turn without limits writes nothing, and a turn that omits `model_scoped` keeps the saved per-model rows.
+Turning the switch off removes the block byte for byte and deletes the saved file; the script, not a preference, records whether it is on.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
 The token menu depends on no other app: it reads only the four tools’ own records, holds no credential and opens no network connection, so Cursor and Grok Bot plan pools are not shown.

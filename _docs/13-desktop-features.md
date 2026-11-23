@@ -139,6 +139,7 @@ Click the status item to open the local day’s overview beneath it on the same 
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count and share of counted tokens.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
+Claude Plan Limits, below Show Token Usage, adds a marked block to the Claude Code statusline script so Claude's bars follow every turn ([01-architecture.md](01-architecture.md) → token menu); it is off by default and disabled when the script does not read its input into a variable.
 A plan reading stays until its reset time.
 A provider name or a pool label opens the dashboard that owns its numbers, and the pointer tints it; the panel has no separate link row.
 The tint is brand orange, darkened on a light theme so small text keeps 4.5:1 (`TokenBarTone.link`); the system accent is not used, because it changes with the user’s choice and falls below that ratio on a white panel.
@@ -151,7 +152,7 @@ It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.
-Plan readings come only from records the four tools write on the Mac; the menu reads no other app’s data, stores no credential and makes no network request.
+Plan readings come only from records the four tools write on the Mac and the file YEN's statusline block saves; the menu reads no other app’s data, stores no credential and makes no network request.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.
 Turning the switch off cancels collection and removes the item.
