@@ -155,6 +155,73 @@ struct TailscaleDiscoveryTests {
         #expect(status == .notInstalled)
     }
 
+    /// A fake CLI that logs its arguments and answers like a Mac with the
+    /// Tailscale app turned off beside a running open-source `tailscaled`:
+    /// the default query reaches the app's stopped backend, and only
+    /// `--socket=<socket>` reaches the open-source daemon.
+    private func fakeCLI(socketAnswer: String) throws -> (directory: URL, cli: String, log: URL) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("yen-tailscale-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let running = directory.appendingPathComponent("running.json")
+        try Self.running.write(to: running, atomically: true, encoding: .utf8)
+        let other = directory.appendingPathComponent("socket.json")
+        try socketAnswer.write(to: other, atomically: true, encoding: .utf8)
+        let log = directory.appendingPathComponent("calls.log")
+        let script = directory.appendingPathComponent("tailscale")
+        try """
+        #!/bin/bash
+        printf '%s\\n' "$*" >> '\(log.path)'
+        [[ "$TAILSCALE_BE_CLI" == 1 ]] || exit 3
+        case "$*" in
+          "status --json") printf '%s' '{"BackendState": "Stopped"}' ;;
+          "--socket=/Users/dev/tailscaled.socket status --json") cat '\(other.path)' ;;
+          *) exit 3 ;;
+        esac
+        """.write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        return (directory, script.path, log)
+    }
+
+    @Test func asksTheOpenSourceDaemonWhenTheAppIsStopped() async throws {
+        let fake = try fakeCLI(socketAnswer: Self.running)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let status = await TailscaleDiscovery.status(
+            environment: [TailscaleDiscovery.binaryEnvironmentKey: fake.cli, "PATH": "/usr/bin:/bin"],
+            resolve: { _ in [] },
+            openSourceSocket: "/Users/dev/tailscaled.socket"
+        )
+        guard case .running(let peers) = status else {
+            Issue.record("expected the open-source daemon's running status, got \(status)")
+            return
+        }
+        #expect(peers.count == 3)
+    }
+
+    @Test func keepsTheFirstAnswerWhenTheOpenSourceDaemonIsNotRunning() async throws {
+        let fake = try fakeCLI(socketAnswer: #"{"BackendState": "NeedsLogin"}"#)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let status = await TailscaleDiscovery.status(
+            environment: [TailscaleDiscovery.binaryEnvironmentKey: fake.cli, "PATH": "/usr/bin:/bin"],
+            resolve: { _ in [] },
+            openSourceSocket: "/Users/dev/tailscaled.socket"
+        )
+        #expect(status == .stopped)
+    }
+
+    @Test func asksNoSocketWithoutAnOpenSourceDaemon() async throws {
+        let fake = try fakeCLI(socketAnswer: Self.running)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let status = await TailscaleDiscovery.status(
+            environment: [TailscaleDiscovery.binaryEnvironmentKey: fake.cli, "PATH": "/usr/bin:/bin"],
+            resolve: { _ in [] },
+            openSourceSocket: nil
+        )
+        #expect(status == .stopped)
+        let calls = try String(contentsOf: fake.log, encoding: .utf8)
+        #expect(calls == "status --json\n")
+    }
+
     @Test func runsTheCLIAsACLIWithoutZmxVariables() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("yen-tailscale-\(UUID().uuidString)", isDirectory: true)
