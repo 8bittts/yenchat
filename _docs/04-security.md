@@ -345,7 +345,7 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 - An explicit refresh (`Hosts: Refresh Remote Sessions`) runs once at once.
 - Selecting a session row opens a pane that runs `yen sessions attach --host` (`RemotePanes.open`).
 - At launch, a remote pane restored from saved window state runs its attach with `--retry-unreachable` (`RemotePanes.prepare`). This is the only ssh YEN starts at launch, and only for panes the user opened.
-- `Connect to <Mac> Once` types `ssh <target>` and `Hosts: Set Up Key Sign-In for <Mac>` types `ssh-copy-id <target>` at a local prompt; neither runs anything, and neither types into a remote pane.
+- `Hosts: Trust the Host Key of <Mac>` types `ssh <target>` and `Hosts: Set Up Key Sign-In for <Mac>` types `ssh-copy-id <target>` at a local prompt; neither runs anything, and neither types into a remote pane.
 
 ### Residual risks and non-goals
 

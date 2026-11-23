@@ -6,6 +6,40 @@ const repoRoot = process.cwd();
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 describe("documentation contracts", () => {
+	test("public docs name the Hosts palette rows as the Swift source titles them", () => {
+		const rowsSource = read(
+			"yen-terminal/overlays/macos/Sources/Features/Command Palette/TerminalCommandPaletteHostsResults.swift",
+		);
+		// A row is `row("<key>", "<title>", ...)` or `statusRow("<key>", "<title>", ...)`,
+		// and the palette shows it under the `Hosts: ` prefix. `\\(name)` in a title is
+		// the Mac the row names, written <Mac> in the docs.
+		const title = (key: string) => {
+			const match = rowsSource.match(
+				new RegExp(`(?:row|Row)\\(\\s*"${key}",\\s*"([^"]+)"`),
+			);
+			expect(match, `palette row ${key}`).not.toBeNull();
+			return `Hosts: ${(match?.[1] ?? "").replace("\\(name)", "<Mac>")}`;
+		};
+		const manual = read("app/docs/docs-client.tsx").replaceAll(
+			"&lt;Mac&gt;",
+			"<Mac>",
+		);
+		const llms = read("public/llms.txt");
+		const security = read("_docs/04-security.md");
+		const desktop = read("_docs/13-desktop-features.md");
+
+		for (const key of ["first-connection", "key-sign-in", "refresh"]) {
+			const name = title(key);
+			const bare = name.slice("Hosts: ".length);
+			expect(manual, key).toContain(bare);
+			expect(llms, key).toContain(bare);
+			expect(desktop, key).toContain(bare);
+		}
+		for (const key of ["first-connection", "key-sign-in"]) {
+			expect(security, key).toContain(`\`${title(key)}\``);
+		}
+	});
+
 	test("public docs, privacy and terms carry the remote sessions contract", () => {
 		const manual = read("app/docs/docs-client.tsx");
 		const start = manual.indexOf('<h3 id="remote-sessions"');

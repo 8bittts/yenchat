@@ -957,14 +957,15 @@ function PersistentSessionsSection() {
 				<code className="inline-code-brand">hosts</code>. YEN then checks your
 				Tailscale network and lists each Mac with its sessions. Select a session
 				to attach in a new tab, or to focus the pane that already shows it. YEN
-				contacts your Macs only while the palette query asks for hosts, and
-				Hosts: Refresh Remote Sessions checks again.
+				looks for your Macs and their sessions only while you have asked for
+				hosts, and Hosts: Refresh Remote Sessions checks again. A remote pane
+				stays connected to its own Mac.
 			</p>
 			<p className="text-body">
-				The first time, the palette asks you to connect once. Select{" "}
-				<strong>Connect to &lt;Mac&gt; Once</strong> to type{" "}
+				The first time, the palette asks you to trust the other Mac&apos;s host
+				key. Select <strong>Trust the Host Key of &lt;Mac&gt;</strong> to type{" "}
 				<code className="inline-code-brand">ssh &lt;Mac&gt;</code> at your
-				prompt, then run it and check the host key. If the other Mac asks for a
+				prompt, then run it and confirm the key. If the other Mac asks for a
 				password, select <strong>Set Up Key Sign-In for &lt;Mac&gt;</strong> to
 				type <code className="inline-code-brand">ssh-copy-id &lt;Mac&gt;</code>,
 				and run it once. If the other Mac&apos;s host key changes, YEN stops
