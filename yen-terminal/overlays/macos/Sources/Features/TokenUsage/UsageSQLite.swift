@@ -23,10 +23,12 @@ public final class SQLiteDatabase {
 			handle = nil
 			throw SQLiteError.open(message)
 		}
+		// Set the wait before anything that takes a lock: PRAGMA journal_mode needs one, and another
+		// connection (the read-only Codex plan reader) can hold the file at that moment.
+		try execute("PRAGMA busy_timeout=500;")
 		// WAL keeps reads non-blocking during the ingest write; NORMAL is durable enough for a cache.
 		try execute("PRAGMA journal_mode=WAL;")
 		try execute("PRAGMA synchronous=NORMAL;")
-		try execute("PRAGMA busy_timeout=500;")
 		sqlite3_progress_handler(handle, 2000, { _ in Task.isCancelled ? 1 : 0 }, nil)
 	}
 

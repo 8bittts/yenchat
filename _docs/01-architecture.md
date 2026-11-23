@@ -205,6 +205,7 @@ Native test rules (TCC, real config, green-but-empty runs): `_docs/09-quality.md
 The token status item owns a cancelable utility worker and filesystem notifications for local Claude Code, Codex, Grok Build and OpenCode records.
 Counts belong to the recording tool and use the local calendar day.
 JSONL cursors and event contributions commit together in a YEN-owned SQLite cache.
+Two reads of one cache file can overlap (the menu switched off and on while a read runs, or a cancelled worker still reading the Codex plan), so `TokenUsageIndex` runs one read or history pass at a time per file in the process, and every connection sets `busy_timeout` before any statement that takes a lock; SQLite answers "database is locked" without waiting where waiting could deadlock (`TokenUsageIndexTests`).
 The reader parses only the lines that carry a tool's usage marker (`TokenTool.marker`).
 A Claude Code record carries the whole reply beside its usage, so `TokenRecordProjection` copies the members the counter reads out of the record and only those are parsed; a record it cannot walk is parsed whole.
 The reader skips a record over 8 MB for Claude Code and over 1 MB for Codex and Grok without holding it in memory (`TokenTool.recordLimit`), because usage records are small and image, tool and compaction payloads are not.
