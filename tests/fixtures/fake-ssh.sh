@@ -15,6 +15,14 @@
 # exits 0 whatever the command's status was, as Tailscale SSH on a macOS peer
 # does: its incubator runs commands under macOS login, which waits for the
 # program and then exits 0. The peer's stdout and stderr still arrive intact.
+# status=check-hold<seconds>, check-pass<seconds> and check-deny stand for a
+# Tailscale SSH `check` rule whose approval is due: the server sends the
+# control server's text as an SSH auth banner before sign-in, which OpenSSH
+# prints on stderr, and holds sign-in for up to 30 minutes until the user
+# approves in a browser (ssh/tailssh/tailssh.go, clientAuth, HoldAndDelegate).
+# check-hold records its pid like sleep and waits; check-pass waits, then signs
+# in (LocalCommand runs only then) and exits 0; check-deny is the denial or the
+# 30-minute timeout: a banner, then sign-in fails and ssh exits 255.
 # status=sleep<seconds> records its pid in $FAKE_SSH_DIR/pid-<n> and hangs,
 # like ssh waiting on a dead link.
 # $FAKE_SSH_DIR/stdout-<n>, when present, is printed as the remote output, and
@@ -44,6 +52,25 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ "$status" == check* ]]; then
+    printf '%s\n' "# Tailscale SSH requires an additional check." \
+        "# To authenticate, visit: https://login.tailscale.com/a/0123456789ab" >&2
+    case "$status" in
+        check-hold*)
+            echo "$$" > "$dir/pid-$count"
+            exec /bin/sleep "${status#check-hold}"
+            ;;
+        check-pass*)
+            /bin/sleep "${status#check-pass}"
+            status=0
+            ;;
+        check-deny)
+            echo "tailscale: access denied" >&2
+            echo "dev@mini: Permission denied ()." >&2
+            exit 255
+            ;;
+    esac
+fi
 [[ "$connected" == 1 && -n "$local_command" ]] && /bin/sh -c "$local_command"
 [[ -f "$dir/stdout-$count" ]] && cat "$dir/stdout-$count"
 [[ -f "$dir/stderr-$count" ]] && cat "$dir/stderr-$count" >&2
