@@ -270,15 +270,13 @@ describe("web client UI smoke", () => {
 		expect(shaLink?.getAttribute("href")).toBe("/stable/yen-1032.dmg.sha256");
 	});
 
-	test("Split preview draws Spark and Aura on the focused pane only, and each toggle removes one", async () => {
+	test("Split preview draws Spark and Aura on the focused pane only, and each switch removes one", async () => {
 		await render(<HomeClient version="1.032" />);
 		const pane = (name: string) =>
 			document.querySelector(`[aria-label="Focus ${name} pane"]`);
 		const slot = (name: string) => pane(name)?.parentElement ?? null;
 		const toggle = (name: string) =>
-			Array.from(document.querySelectorAll("#splits button")).find(
-				(el) => el.textContent === name,
-			) ?? null;
+			document.querySelector(`#splits [role="switch"][aria-label="${name}"]`);
 
 		// Both effects start on, and only the focused pane carries them.
 		expect(slot("Editor")?.querySelector(".ph-spark")).toBeTruthy();
@@ -295,18 +293,73 @@ describe("web client UI smoke", () => {
 
 		await click(toggle("Spark"));
 		expect(document.querySelector(".ph-spark")).toBeNull();
-		expect(toggle("Spark")?.getAttribute("aria-pressed")).toBe("false");
+		expect(toggle("Spark")?.getAttribute("aria-checked")).toBe("false");
 		expect(document.querySelectorAll(".ph-aura")).toHaveLength(1);
 
 		await click(toggle("Aura"));
 		expect(document.querySelector(".ph-aura")).toBeNull();
-		expect(toggle("Aura")?.getAttribute("aria-pressed")).toBe("false");
+		expect(toggle("Aura")?.getAttribute("aria-checked")).toBe("false");
 
 		// The spark comes back, and it is decoration: assistive tech skips it.
 		await click(toggle("Spark"));
 		expect(
 			document.querySelector(".ph-spark")?.getAttribute("aria-hidden"),
 		).toBe("true");
+	});
+
+	test("Split preview offers the app's Border choices, and each one reaches the panes", async () => {
+		await render(<HomeClient version="1.032" />);
+		const splits = () => document.querySelector("#splits .ph-splits");
+		const row = (label: string) =>
+			Array.from(document.querySelectorAll("#splits .ph-setting")).find(
+				(el) => (el.querySelector("legend, span")?.textContent ?? "") === label,
+			) ?? null;
+		const option = (label: string, name: string) =>
+			Array.from(row(label)?.querySelectorAll("button") ?? []).find(
+				(el) =>
+					el.textContent === name || el.getAttribute("aria-label") === name,
+			) ?? null;
+		const labels = (label: string) =>
+			Array.from(row(label)?.querySelectorAll("button") ?? []).map(
+				(el) => el.textContent || el.getAttribute("aria-label"),
+			);
+
+		// The same labels as the app's Settings, in the same order.
+		expect(labels("Weight")).toEqual(["Thin", "Regular", "Thick"]);
+		expect(labels("Spark Speed")).toEqual([
+			"Slowww",
+			"Slow",
+			"Medium",
+			"Fast",
+			"Fffast",
+		]);
+		expect(labels("Aura Pulse")).toEqual(["Slow", "Medium", "Fast"]);
+
+		await click(option("Spark Speed", "Slowww"));
+		expect(splits()?.getAttribute("data-spark-speed")).toBe("slowww");
+		expect(option("Spark Speed", "Slowww")?.getAttribute("aria-pressed")).toBe(
+			"true",
+		);
+		await click(option("Weight", "Thick"));
+		expect(splits()?.getAttribute("data-weight")).toBe("thick");
+		await click(option("Aura Pulse", "Fast"));
+		expect(splits()?.getAttribute("data-aura-pulse")).toBe("fast");
+		await click(option("Aura Color", "Orange"));
+		expect(splits()?.getAttribute("data-aura-color")).toBe("orange");
+		expect(
+			document.querySelector("#splits [role=status]")?.textContent,
+		).toContain("Thick · Spark Slowww · Aura Fast");
+
+		// Like the app, a speed row shows only while its effect is on.
+		await click(
+			document.querySelector('#splits [role="switch"][aria-label="Spark"]'),
+		);
+		expect(row("Spark Speed")).toBeNull();
+		await click(
+			document.querySelector('#splits [role="switch"][aria-label="Aura"]'),
+		);
+		expect(row("Aura Pulse")).toBeNull();
+		expect(row("Aura Color")).toBeNull();
 	});
 
 	test("static page trees stay Server Components", () => {

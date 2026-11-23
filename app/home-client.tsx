@@ -12,6 +12,16 @@ const releaseNotes = "https://blog.yen.chat/releases";
 const repository = "https://github.com/8bittts/yenchat";
 const milestones = [
 	[
+		"1.286",
+		"Cleaner tabs, status by the buttons.",
+		"Tab names use the standard 13-point face, the pane count sits alone on the right, and update status waits beside the window buttons.",
+	],
+	[
+		"1.285",
+		"Your sessions follow you between Macs.",
+		"Type hosts in the command palette to open a session still running on another Mac on Tailscale. Spark and Aura arrive on the focused outline.",
+	],
+	[
 		"1.284",
 		"Older agent sessions count, too.",
 		"The menu bar can read OpenCode’s older session counters when assistant usage is missing. This release requires Apple silicon and macOS 27.",
@@ -30,16 +40,6 @@ const milestones = [
 		"1.279",
 		"Move the pane by its name.",
 		"Drag a split by its header. Click the pencil to call it “server” and keep that name as you rearrange the window.",
-	],
-	[
-		"1.277",
-		"An update can find the old shell.",
-		"Each session records which backend started it. A newer YEN can reconnect to a shell still running under the previous build.",
-	],
-	[
-		"1.275",
-		"Quitting detaches the shell.",
-		"Ordinary panes keep running by default. When YEN opens again, a restored pane reattaches with its screen and scrollback.",
 	],
 ];
 
@@ -155,9 +155,11 @@ export function HomeClient({ version }: { version: string }) {
 							Switch to Compact to trade the gutter for a thin divider.
 						</p>
 						<p className="ph-instruction">
-							Starting in YEN 1.285, Spark sends a light around the focused
-							outline and Aura gives it a soft glow that pulses in a color you
-							pick. Turn each one off and on in the preview.
+							Spark sends a light around the focused outline, and Aura gives it
+							a soft glow that pulses in a color you pick. The preview carries
+							the same Border rows as the app’s Settings: set the weight, run
+							the spark from Slowww to Fffast, and pick the aura’s color and
+							pulse.
 						</p>
 					</div>
 					<SplitDemo />
@@ -196,7 +198,7 @@ export function HomeClient({ version }: { version: string }) {
 							usage telemetry to YEN.
 						</p>
 						<Link className="ph-text-link" href="#settings">
-							Explore the settings →
+							Read the Settings guide ↓
 						</Link>
 					</div>
 				</div>
@@ -212,7 +214,7 @@ export function HomeClient({ version }: { version: string }) {
 							including work you did outside YEN.
 						</p>
 						<a className="ph-text-link" href="#agent-token-usage">
-							See how each tool counts →
+							Read how each tool counts ↓
 						</a>
 					</div>
 					<figure className="ph-token-figure">
@@ -239,7 +241,7 @@ export function HomeClient({ version }: { version: string }) {
 							wallpaper.
 						</p>
 						<a className="ph-text-link" href="#moving-wallpaper">
-							Open the wallpaper controls guide →
+							Read the Moving Wallpaper guide ↓
 						</a>
 					</div>
 				</div>

@@ -110,12 +110,93 @@ function Spark() {
 	);
 }
 
+// The same choices the app offers under Settings > Appearance > Border.
+const weights = ["Thin", "Regular", "Thick"] as const;
+const sparkSpeeds = ["Slowww", "Slow", "Medium", "Fast", "Fffast"] as const;
+const auraPulses = ["Slow", "Medium", "Fast"] as const;
+const auraColors = [
+	{ name: "Phosphor", id: "phosphor" },
+	{ name: "Orange", id: "orange" },
+	{ name: "Sky", id: "sky" },
+	{ name: "Violet", id: "violet" },
+] as const;
+
+type Weight = (typeof weights)[number];
+type SparkSpeed = (typeof sparkSpeeds)[number];
+type AuraPulse = (typeof auraPulses)[number];
+type AuraColor = (typeof auraColors)[number]["id"];
+
+/** One row of the preview's settings: a label and a set of pressed buttons. */
+function Choice<T extends string>({
+	label,
+	options,
+	value,
+	onChange,
+}: {
+	label: string;
+	options: readonly T[];
+	value: T;
+	onChange: (value: T) => void;
+}) {
+	return (
+		<fieldset className="ph-setting">
+			<legend>{label}</legend>
+			<div className="ph-segment">
+				{options.map((option) => (
+					<button
+						key={option}
+						type="button"
+						aria-pressed={value === option}
+						onClick={() => onChange(option)}
+					>
+						{option}
+					</button>
+				))}
+			</div>
+		</fieldset>
+	);
+}
+
+function Switch({
+	label,
+	on,
+	onChange,
+}: {
+	label: string;
+	on: boolean;
+	onChange: (on: boolean) => void;
+}) {
+	return (
+		<div className="ph-setting">
+			<span>{label}</span>
+			<button
+				type="button"
+				role="switch"
+				aria-checked={on}
+				aria-label={label}
+				className="ph-switch"
+				onClick={() => onChange(!on)}
+			>
+				<span className="ph-switch-knob" aria-hidden="true" />
+			</button>
+		</div>
+	);
+}
+
 export function SplitDemo() {
 	const [focus, setFocus] = useState<0 | 1>(0);
 	const [compact, setCompact] = useState(false);
+	const [weight, setWeight] = useState<Weight>("Regular");
 	const [spark, setSpark] = useState(true);
+	const [sparkSpeed, setSparkSpeed] = useState<SparkSpeed>("Medium");
 	const [aura, setAura] = useState(true);
+	const [auraPulse, setAuraPulse] = useState<AuraPulse>("Medium");
+	const [auraColor, setAuraColor] = useState<AuraColor>("phosphor");
 	const pane = panes[focus];
+	const effects = [
+		spark ? `Spark ${sparkSpeed}` : null,
+		aura ? `Aura ${auraPulse}` : null,
+	].filter(Boolean);
 	return (
 		<div className="ph-demo">
 			<div className="ph-demo-bar">
@@ -134,7 +215,13 @@ export function SplitDemo() {
 					))}
 				</fieldset>
 			</div>
-			<div className={`ph-splits ${compact ? "ph-splits-compact" : ""}`}>
+			<div
+				className={`ph-splits ${compact ? "ph-splits-compact" : ""}`}
+				data-weight={weight.toLowerCase()}
+				data-spark-speed={sparkSpeed.toLowerCase()}
+				data-aura-pulse={auraPulse.toLowerCase()}
+				data-aura-color={auraColor}
+			>
 				{panes.map((p, i) => (
 					<div
 						key={p.name}
@@ -161,30 +248,63 @@ export function SplitDemo() {
 					</div>
 				))}
 			</div>
-			<div className="ph-demo-bar ph-effects-bar">
-				<span>Outline effects · YEN 1.285</span>
-				<fieldset className="ph-segment">
-					<legend className="sr-only">Outline effects</legend>
-					<button
-						type="button"
-						aria-pressed={spark}
-						onClick={() => setSpark(!spark)}
-					>
-						Spark
-					</button>
-					<button
-						type="button"
-						aria-pressed={aura}
-						onClick={() => setAura(!aura)}
-					>
-						Aura
-					</button>
-				</fieldset>
+			<div className="ph-settings">
+				<p className="ph-settings-head">
+					Settings › Appearance › Border{" "}
+					<span className="ph-settings-version">YEN 1.287</span>
+				</p>
+				<Choice
+					label="Weight"
+					options={weights}
+					value={weight}
+					onChange={setWeight}
+				/>
+				<Switch label="Spark" on={spark} onChange={setSpark} />
+				{spark ? (
+					<Choice
+						label="Spark Speed"
+						options={sparkSpeeds}
+						value={sparkSpeed}
+						onChange={setSparkSpeed}
+					/>
+				) : null}
+				<Switch label="Aura" on={aura} onChange={setAura} />
+				{aura ? (
+					<>
+						<fieldset className="ph-setting">
+							<legend>Aura Color</legend>
+							<div className="ph-swatches">
+								{auraColors.map((color) => (
+									<button
+										key={color.id}
+										type="button"
+										aria-label={color.name}
+										aria-pressed={auraColor === color.id}
+										data-color={color.id}
+										onClick={() => setAuraColor(color.id)}
+									/>
+								))}
+							</div>
+						</fieldset>
+						<Choice
+							label="Aura Pulse"
+							options={auraPulses}
+							value={auraPulse}
+							onChange={setAuraPulse}
+						/>
+					</>
+				) : null}
 			</div>
 			<div className="ph-drawer" role="status">
 				<span>Keyboard focus</span>
-				<strong>{pane.name}</strong>
-				<span>{pane.path}</span>
+				<span>
+					<strong>{pane.name}</strong> {pane.path}
+				</span>
+				<span>Outline</span>
+				<span>
+					{weight}
+					{effects.length > 0 ? ` · ${effects.join(" · ")}` : ""}
+				</span>
 			</div>
 		</div>
 	);
