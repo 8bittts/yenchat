@@ -21,6 +21,8 @@ final class WallpaperManager {
     /// must not put a window back on the desktop.
     private var isStopped = false
     private var activeSpaceIDs: [CGDirectDisplayID: UInt64] = [:]
+    /// Each listed display's Spaces in the system's order, from the last snapshot.
+    private var orderedSpaceIDs: [CGDirectDisplayID: [UInt64]] = [:]
     /// YouTube redownloads still outstanding this session, keyed by desktop.
     /// Re-persisted on every save so an unrelated save can't erase them before
     /// the download finishes; dropped when resolved or the desktop is cleared.
@@ -91,10 +93,17 @@ final class WallpaperManager {
     private func refreshManagedDisplaySpaces() {
         let snapshot = spacesSnapshot()
         activeSpaceIDs = snapshot.activeSpaceByDisplayID
+        orderedSpaceIDs = snapshot.orderedSpacesByDisplayID
 
         for (displayID, spaces) in snapshot.knownSpacesByDisplayID {
             state.knownSpaces[displayID, default: []].formUnion(spaces)
         }
+    }
+
+    /// Move Per Desktop assignments onto a display's new Space ids
+    /// (`WallpaperState.followSpaces`). Returns whether there is something to save.
+    private func followLiveSpaces() -> Bool {
+        state.followSpaces(orderedSpaceIDs) { [self] displayID in currentSpaceID(for: displayID) }
     }
 
     private func currentSpaceID(for displayID: CGDirectDisplayID) -> UInt64 {
@@ -296,6 +305,7 @@ final class WallpaperManager {
         for key in keys {
             pendingRedownloads[key] = nil
         }
+        _ = followLiveSpaces()
 
         saveState()
         rebuildAllWindows()
@@ -359,6 +369,7 @@ final class WallpaperManager {
             }
         case .perDesktop:
             state.migrateToPerDesktop { [self] displayID in currentSpaceID(for: displayID) }
+            _ = followLiveSpaces()
         }
 
         mode = newMode
@@ -402,6 +413,8 @@ final class WallpaperManager {
         mode = persisted.mode
         isMuted = persisted.isMuted
         state.adopt(persisted: persisted.state)
+        // A display's Space ids can change while the app is not running too.
+        let followed = followLiveSpaces()
 
         for request in persisted.needsRedownload {
             pendingRedownloads[request.key] = request
@@ -410,6 +423,9 @@ final class WallpaperManager {
 
         // The displays can change while the app is not running, and no screen
         // notification reports that.
+        if followed {
+            saveState()
+        }
         reconcileAllDesktopsIfNeeded()
         if !state.isEmpty {
             rebuildAllWindows()
@@ -531,6 +547,9 @@ final class WallpaperManager {
 
     private func handleScreenChange() {
         refreshManagedDisplaySpaces()
+        if followLiveSpaces() {
+            saveState()
+        }
         reconcileAllDesktopsIfNeeded()
         rebuildAllWindows()
     }
@@ -552,6 +571,9 @@ final class WallpaperManager {
         // active-Space table moves on.
         savePlaybackPositions()
         refreshManagedDisplaySpaces()
+        if followLiveSpaces() {
+            saveState()
+        }
         // In allDesktops mode the panels have .canJoinAllSpaces — no rebuild needed.
         if mode == .perDesktop {
             rebuildAllWindows()

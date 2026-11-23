@@ -18,6 +18,10 @@ struct WallpaperState: Equatable {
     /// Every Space we've ever observed on each display. macOS exposes no API to
     /// enumerate Spaces, so we accumulate them as the user visits.
     var knownSpaces: [CGDirectDisplayID: Set<UInt64>] = [:]
+    /// Each Per Desktop assignment's position among its display's Spaces, in
+    /// the system's order, the last time that display listed the Space. Saved,
+    /// because it is what finds the desktop again once the ids change.
+    var spacePositions: [DesktopKey: Int] = [:]
 
     var isEmpty: Bool { entries.isEmpty }
 
@@ -58,6 +62,7 @@ struct WallpaperState: Equatable {
     mutating func clearEntry(for key: DesktopKey) {
         entries.removeValue(forKey: key)
         playbackPositions.removeValue(forKey: key)
+        spacePositions.removeValue(forKey: key)
     }
 
     /// Replace all assignments with a single shared entry across the given displays.
@@ -160,5 +165,65 @@ struct WallpaperState: Equatable {
             playbackPositions[newKey] = positions[oldKey]
             knownSpaces[oldKey.displayID, default: []].insert(space)
         }
+    }
+    /// Keep Per Desktop assignments on their desktops when macOS renumbers a
+    /// display's Spaces, which it does when the display is plugged in again.
+    ///
+    /// `liveSpaces` holds each listed display's Spaces in the system's order.
+    /// When none of a display's assigned Spaces is live any more, each of its
+    /// assignments moves to the live Space at its saved position, and the
+    /// first one with no usable position goes to the display's current Space
+    /// (records from older builds carry no position). A live Space that
+    /// already has a wallpaper is never overwritten, nothing moves to another
+    /// display, and an assignment that finds no Space is kept for later. While
+    /// any assigned Space is still live, a missing one was removed by the user
+    /// and nothing moves. Returns whether anything to save changed.
+    @discardableResult
+    mutating func followSpaces(
+        _ liveSpaces: [CGDirectDisplayID: [UInt64]],
+        currentSpace: (CGDirectDisplayID) -> UInt64
+    ) -> Bool {
+        var changed = false
+        for (displayID, live) in liveSpaces where !live.isEmpty {
+            let assigned = entries.keys.filter { $0.displayID == displayID && !$0.isAllDesktops }
+            if !assigned.isEmpty, !assigned.contains(where: { live.contains($0.spaceID) }) {
+                changed = moveOrphans(assigned, onto: live, currentSpace: currentSpace(displayID)) || changed
+            }
+            for key in entries.keys where key.displayID == displayID && !key.isAllDesktops {
+                guard let position = live.firstIndex(of: key.spaceID), spacePositions[key] != position else { continue }
+                spacePositions[key] = position
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    private mutating func moveOrphans(_ orphans: [DesktopKey], onto live: [UInt64], currentSpace: UInt64) -> Bool {
+        var changed = false
+        var unplaced: [DesktopKey] = []
+        for key in orphans.sorted(by: { $0.spaceID < $1.spaceID }) {
+            if let position = spacePositions[key], live.indices.contains(position),
+               move(key, to: live[position]) {
+                changed = true
+            } else {
+                unplaced.append(key)
+            }
+        }
+        if let first = unplaced.first, live.contains(currentSpace), move(first, to: currentSpace) {
+            changed = true
+        }
+        return changed
+    }
+
+    /// Move one assignment, with its playback position, to another Space of
+    /// the same display. Refuses a Space that already has a wallpaper.
+    private mutating func move(_ key: DesktopKey, to spaceID: UInt64) -> Bool {
+        let target = DesktopKey(displayID: key.displayID, spaceID: spaceID)
+        guard entries[target] == nil, let entry = entries.removeValue(forKey: key) else { return false }
+        entries[target] = entry
+        playbackPositions[target] = playbackPositions.removeValue(forKey: key)
+        spacePositions.removeValue(forKey: key)
+        knownSpaces[key.displayID, default: []].insert(spaceID)
+        return true
     }
 }

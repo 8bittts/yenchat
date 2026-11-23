@@ -157,6 +157,10 @@ The [architecture](01-architecture.md) owns the reader and cache boundaries.
 On macOS 27 or newer, General → Experimental → Moving Wallpaper exposes Wallpaper Controls inside Settings.
 Select a local movie or GIF, a YouTube link, a video from Photos or a random Photos video.
 Playback starts muted and supports pause, sound and per-desktop assignments.
+macOS gives a display new Space ids when it is plugged in again, so a Per Desktop assignment also saves its Space's position in the system's order of that display's Spaces (`WallpaperState.followSpaces`).
+When none of a display's assigned Spaces exists any more, each assignment moves to the Space now at its position, and the first one with no saved position moves to the display's current Space; this runs on a display change, a Space change and at launch.
+An assignment never moves to another display or onto a Space that already has a wallpaper, and while any assigned Space of the display still exists, nothing moves.
+All Desktops keeps one wallpaper per display whatever the Space ids are.
 A YouTube link downloads as H.264 video up to 1080p with its sound, and needs no ffmpeg.
 YEN owns only its background windows and saved selections.
 Turning it off reveals the system wallpaper and keeps assignments for the next enable.

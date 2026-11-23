@@ -10,6 +10,10 @@ private func CGSCopyManagedDisplaySpaces(_: CGSConnectionID) -> Unmanaged<CFArra
 struct ManagedDisplaySpacesSnapshot: Equatable {
     let activeSpaceByDisplayID: [CGDirectDisplayID: UInt64]
     let knownSpacesByDisplayID: [CGDirectDisplayID: Set<UInt64>]
+    /// Each display's Spaces in the order the system lists them (Mission
+    /// Control order), for the displays the system actually listed. A display
+    /// that fell back to the global Space has no entry here.
+    let orderedSpacesByDisplayID: [CGDirectDisplayID: [UInt64]]
 
     static func current(screens: [NSScreen] = NSScreen.screens) -> ManagedDisplaySpacesSnapshot {
         let rawEntries = (CGSCopyManagedDisplaySpaces(CGSMainConnectionID())?.takeRetainedValue() as? [[String: Any]]) ?? []
@@ -40,6 +44,7 @@ struct ManagedDisplaySpacesSnapshot: Equatable {
             screensByDisplayIdentifier.values.map { ($0, Set<UInt64>()) },
             uniquingKeysWith: { first, _ in first }
         )
+        var orderedSpacesByDisplayID: [CGDirectDisplayID: [UInt64]] = [:]
 
         for entry in rawEntries {
             guard
@@ -56,10 +61,10 @@ struct ManagedDisplaySpacesSnapshot: Equatable {
             knownSpaces.insert(currentSpace)
 
             if let spaces = entry["Spaces"] as? [Any] {
-                for space in spaces {
-                    if let parsedSpaceID = spaceID(from: space) {
-                        knownSpaces.insert(parsedSpaceID)
-                    }
+                let ordered = spaces.compactMap(spaceID(from:))
+                knownSpaces.formUnion(ordered)
+                if !ordered.isEmpty {
+                    orderedSpacesByDisplayID[displayID] = ordered
                 }
             }
 
@@ -72,7 +77,8 @@ struct ManagedDisplaySpacesSnapshot: Equatable {
 
         return ManagedDisplaySpacesSnapshot(
             activeSpaceByDisplayID: activeSpaceByDisplayID,
-            knownSpacesByDisplayID: knownSpacesByDisplayID
+            knownSpacesByDisplayID: knownSpacesByDisplayID,
+            orderedSpacesByDisplayID: orderedSpacesByDisplayID
         )
     }
 

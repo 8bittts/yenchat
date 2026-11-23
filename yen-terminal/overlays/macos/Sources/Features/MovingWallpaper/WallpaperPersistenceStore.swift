@@ -12,7 +12,9 @@ struct WallpaperRedownloadRequest: Equatable {
 /// One on-disk wallpaper record. Schema v1 keys are `displayID`, `spaceID`,
 /// `path` and optional `youtubeURL`; v2 adds optional `displayUUID`, which
 /// survives a restart where `displayID` may not, and optional `bookmark`, which
-/// finds a user's file after it is moved or renamed. Keys must stay stable unless
+/// finds a user's file after it is moved or renamed; v3 adds optional
+/// `spaceIndex`, the Space's position on its display, which finds the desktop
+/// again after macOS gives the display new Space ids. Keys must stay stable unless
 /// `currentSchemaVersion` bumps. `displayID` is still written, so an older build
 /// can read a v2 record.
 struct WallpaperPersistedRecord: Equatable {
@@ -22,14 +24,23 @@ struct WallpaperPersistedRecord: Equatable {
     var youtubeURL: String?
     var displayUUID: String?
     var bookmark: Data?
+    var spaceIndex: Int?
 
-    init(key: DesktopKey, path: String, youtubeURL: String?, displayUUID: String? = nil, bookmark: Data? = nil) {
+    init(
+        key: DesktopKey,
+        path: String,
+        youtubeURL: String?,
+        displayUUID: String? = nil,
+        bookmark: Data? = nil,
+        spaceIndex: Int? = nil
+    ) {
         self.displayID = key.displayID
         self.spaceID = key.spaceID
         self.path = path
         self.youtubeURL = youtubeURL
         self.displayUUID = displayUUID
         self.bookmark = bookmark
+        self.spaceIndex = spaceIndex
     }
 
     init?(plistObject: [String: Any]) {
@@ -46,6 +57,7 @@ struct WallpaperPersistedRecord: Equatable {
         self.youtubeURL = plistObject["youtubeURL"] as? String
         self.displayUUID = plistObject["displayUUID"] as? String
         self.bookmark = plistObject["bookmark"] as? Data
+        self.spaceIndex = (plistObject["spaceIndex"] as? NSNumber)?.intValue
     }
 
     var key: DesktopKey {
@@ -66,6 +78,9 @@ struct WallpaperPersistedRecord: Equatable {
         }
         if let bookmark {
             record["bookmark"] = bookmark
+        }
+        if let spaceIndex {
+            record["spaceIndex"] = NSNumber(value: spaceIndex)
         }
         return record
     }
@@ -95,7 +110,7 @@ struct WallpaperPersistenceStore {
 
     /// Bump this when the on-disk schema for any of the persisted keys changes,
     /// and add a migration step in `runMigrationsIfNeeded`.
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
 
     private let userDefaults: UserDefaults
     private let fileExists: (String) -> Bool
@@ -111,7 +126,7 @@ struct WallpaperPersistenceStore {
         self.displayIdentity = displayIdentity
     }
 
-    private func record(key: DesktopKey, path: URL, youtubeURL: String?) -> [String: Any] {
+    private func record(key: DesktopKey, path: URL, youtubeURL: String?, spaceIndex: Int? = nil) -> [String: Any] {
         WallpaperPersistedRecord(
             key: key,
             path: path.path(percentEncoded: false),
@@ -120,7 +135,8 @@ struct WallpaperPersistenceStore {
             // A YouTube file is fetched again from its URL, so only other files
             // need a bookmark. Apple: a bookmark "offers a more sure way of
             // locating the file or directory later."
-            bookmark: youtubeURL == nil ? try? path.bookmarkData() : nil
+            bookmark: youtubeURL == nil ? try? path.bookmarkData() : nil,
+            spaceIndex: spaceIndex
         ).plistObject()
     }
 
@@ -157,6 +173,9 @@ struct WallpaperPersistenceStore {
         // v1 → v2: v1 records carry no `displayUUID` or `bookmark`. They need no
         // rewrite: `load` keys a record without a UUID by its saved `displayID`
         // and finds its file by path, and the next save adds both.
+        // v2 → v3: v2 records carry no `spaceIndex`. They need no rewrite: a
+        // record without one falls back to its display's current Space when
+        // its Space id is gone, and the next save adds it.
 
         userDefaults.set(Self.currentSchemaVersion, forKey: Defaults.schemaVersion)
     }
@@ -168,7 +187,7 @@ struct WallpaperPersistenceStore {
         pendingRedownloads: [WallpaperRedownloadRequest] = []
     ) {
         var encoded: [[String: Any]] = state.entries.map { key, entry in
-            record(key: key, path: entry.localURL, youtubeURL: entry.youtubeOrigin)
+            record(key: key, path: entry.localURL, youtubeURL: entry.youtubeOrigin, spaceIndex: state.spacePositions[key])
         }
 
         // Re-emit still-pending YouTube redownloads (cache file missing, not yet
@@ -205,6 +224,10 @@ struct WallpaperPersistenceStore {
             let key = currentKey(for: parsed)
             if !key.isAllDesktops {
                 persisted.state.knownSpaces[key.displayID, default: []].insert(key.spaceID)
+            }
+
+            if let spaceIndex = parsed.spaceIndex, !key.isAllDesktops {
+                persisted.state.spacePositions[key] = spaceIndex
             }
 
             if let file = resolvedFile(for: parsed) {
