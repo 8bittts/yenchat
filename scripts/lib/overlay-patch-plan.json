@@ -1268,5 +1268,35 @@
 			"--extra-replace",
 			"@$PATCHES_DIR/remote-pane-tab-title-override.old:::@$PATCHES_DIR/remote-pane-tab-title-override.new"
 		]
+	},
+	"remote-pane-close-confirm": {
+		"target": "ghostty/macos/Sources/YEN/Surface View/SurfaceView_AppKit.swift",
+		"arguments": [
+			"--label",
+			"Remote pane close confirmation",
+			"--mode",
+			"exact",
+			"--marker",
+			"RemotePanes.closeNeedsConfirmation(paneID: id,",
+			"--old-block",
+			"@$PATCHES_DIR/remote-pane-close-confirm.old",
+			"--new-block",
+			"@$PATCHES_DIR/remote-pane-close-confirm.new"
+		]
+	},
+	"remote-pane-close-confirm-pane": {
+		"target": "ghostty/macos/Sources/Features/Terminal/BaseTerminalController.swift",
+		"arguments": [
+			"--label",
+			"Remote pane close confirmation (pane)",
+			"--mode",
+			"exact",
+			"--marker",
+			"RemotePanes.closeNeedsConfirmation(paneID: target.id,",
+			"--old-block",
+			"@$PATCHES_DIR/remote-pane-close-confirm-pane.old",
+			"--new-block",
+			"@$PATCHES_DIR/remote-pane-close-confirm-pane.new"
+		]
 	}
 }

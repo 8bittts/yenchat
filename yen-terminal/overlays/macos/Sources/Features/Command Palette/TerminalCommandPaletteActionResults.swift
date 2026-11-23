@@ -29,7 +29,7 @@ enum TerminalCommandPaletteActionResults {
                 TerminalCommandPaletteSearchResult(
                 source: .action,
                 score: TerminalCommandPaletteResultSource.action.weight + bestMatch + contextBonus,
-                targetKey: action.title,
+                targetKey: action.orderKey ?? action.title,
                 previewKey: preview,
                 title: action.title,
                 subtitle: action.subtitle ?? action.description,

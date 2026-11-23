@@ -1,0 +1,1 @@
+            return yen_surface_needs_confirm_quit(surface)

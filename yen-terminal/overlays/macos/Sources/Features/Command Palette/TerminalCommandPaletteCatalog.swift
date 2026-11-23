@@ -319,7 +319,7 @@ extension TerminalCommandPaletteView {
         _ entries: [RemoteHostsPaletteEntry],
         perform: @escaping (RemoteHostsPaletteAction) -> Void
     ) -> [PaletteActionDescriptor] {
-        entries.map { entry in
+        entries.enumerated().map { index, entry in
             PaletteActionDescriptor(
                 id: entry.id,
                 title: entry.title,
@@ -331,7 +331,8 @@ extension TerminalCommandPaletteView {
                 badge: nil,
                 emphasis: false,
                 sortKey: nil,
-                searchTags: entry.searchTags
+                searchTags: entry.searchTags,
+                orderKey: RemoteHostsPaletteRows.orderKey(index)
             ) {
                 perform(entry.action)
             }

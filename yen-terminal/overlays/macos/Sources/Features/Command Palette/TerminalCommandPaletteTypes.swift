@@ -116,6 +116,7 @@ extension TerminalCommandPaletteView {
         let emphasis: Bool
         let sortKey: ObjectIdentifier?
         let searchTags: [String]
+        var orderKey: String? = nil
         let execute: () -> Void
 
         var searchDescriptor: TerminalCommandPaletteActionSearchDescriptor {
@@ -124,7 +125,8 @@ extension TerminalCommandPaletteView {
                 title: title,
                 subtitle: subtitle,
                 description: description,
-                searchTags: searchTags
+                searchTags: searchTags,
+                orderKey: orderKey
             )
         }
 

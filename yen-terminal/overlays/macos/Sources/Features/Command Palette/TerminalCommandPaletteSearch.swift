@@ -57,6 +57,9 @@ struct TerminalCommandPaletteActionSearchDescriptor: Sendable {
     let subtitle: String?
     let description: String?
     let searchTags: [String]
+    /// Breaks score ties in place of the title. Only the Hosts rows set it,
+    /// to keep their shared order (`RemoteHostsPaletteRows.orderKey`).
+    var orderKey: String? = nil
 }
 
 enum TerminalCommandPaletteExecutionTarget: Sendable {

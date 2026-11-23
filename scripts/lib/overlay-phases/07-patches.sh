@@ -519,6 +519,11 @@ apply_overlay_patch persistent-session-window-close
 # the same computeTitle that adds the bell, so a typed tab title keeps it too.
 apply_overlay_patch remote-pane-tab-title
 
+# Closing a remote pane, tab or window never asks: only the local client ends,
+# and the session keeps running on the other Mac (RemotePanes.closeNeedsConfirmation).
+apply_overlay_patch remote-pane-close-confirm
+apply_overlay_patch remote-pane-close-confirm-pane
+
 # ============================================================================
 # Remove unsafe Sendable conformance from C-pointer wrapper classes
 # ============================================================================

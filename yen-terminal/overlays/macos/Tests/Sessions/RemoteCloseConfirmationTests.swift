@@ -69,6 +69,14 @@ struct RemoteCloseConfirmationTests {
         }
     }
 
+    @Test func theRuleAsksOnlyForALocalPaneTheEngineAsksFor() throws {
+        let remote = try remoteSurface()
+        #expect(!RemotePanes.closeNeedsConfirmation(paneID: remote.id, engineNeedsConfirm: true))
+        #expect(!RemotePanes.closeNeedsConfirmation(paneID: remote.id, engineNeedsConfirm: false))
+        #expect(RemotePanes.closeNeedsConfirmation(paneID: UUID(), engineNeedsConfirm: true))
+        #expect(!RemotePanes.closeNeedsConfirmation(paneID: UUID(), engineNeedsConfirm: false))
+    }
+
     @Test func aRemoteTabClosesWithoutAsking() async throws {
         let controller = try controller(remoteConfig())
         let surface = try #require(controller.surfaceTree.first)
@@ -106,13 +114,26 @@ struct RemoteCloseConfirmationTests {
         #expect(!controller.surfaceTree.contains(remote))
         #expect(controller.window?.attachedSheet == nil)
 
+        // The local pane raises the "Close Terminal?" alert and stays until
+        // the user answers.
+        func alertPanels() -> [NSWindow] {
+            NSApp.windows.filter { String(describing: type(of: $0)).contains("Alert") }
+        }
+        let before = Set(alertPanels().map(ObjectIdentifier.init))
         NotificationCenter.default.post(name: YEN.Notification.yenCloseSurface, object: local, userInfo: ["process_alive": true])
-        await waitUntil { controller.window?.attachedSheet != nil }
-        #expect(controller.window?.attachedSheet != nil)
+        await waitUntil { alertPanels().contains { !before.contains(ObjectIdentifier($0)) } }
+        let raised = alertPanels().filter { !before.contains(ObjectIdentifier($0)) }
+        #expect(raised.count == 1)
+        try? await Task.sleep(for: .milliseconds(300))
         #expect(controller.surfaceTree.contains(local))
         // Cancel, which keeps the pane.
-        if let window = controller.window, let sheet = window.attachedSheet {
-            window.endSheet(sheet, returnCode: .alertSecondButtonReturn)
+        for panel in raised {
+            if let parent = panel.sheetParent {
+                parent.endSheet(panel, returnCode: .alertSecondButtonReturn)
+            } else {
+                NSApp.stopModal(withCode: .alertSecondButtonReturn)
+                panel.orderOut(nil)
+            }
         }
     }
 }

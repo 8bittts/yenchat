@@ -1,0 +1,1 @@
+            withConfirmation: RemotePanes.closeNeedsConfirmation(paneID: target.id, engineNeedsConfirm: (notification.userInfo?["process_alive"] as? Bool) ?? false))

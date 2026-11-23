@@ -223,6 +223,16 @@ enum RemotePanes {
         }
     }
 
+    /// Whether closing a pane must ask first. The engine asks for any pane
+    /// with a running process; a remote pane's process is only the local
+    /// client, and its session keeps running on the other Mac, so closing
+    /// it never asks. Every close path routes through this: the surface's
+    /// `needsConfirmQuit` (window, tab, close other tabs) and the pane close
+    /// (`BaseTerminalController.yenDidCloseSurface`), both patched to call it.
+    nonisolated static func closeNeedsConfirmation(paneID: UUID, engineNeedsConfirm: Bool) -> Bool {
+        engineNeedsConfirm && identity(for: paneID) == nil
+    }
+
     nonisolated static func _testSetCLIPath(_ path: String?) {
         registry.withLock { $0.cliPathOverride = path }
     }

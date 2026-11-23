@@ -1115,8 +1115,14 @@ ${patchBlock}`;
 		].join("\n");
 
 		withTempDir((fixtureRoot) => {
-			const surfaceDir = join(fixtureRoot, "ghostty/macos/Sources/YEN/Surface View");
-			const terminalDir = join(fixtureRoot, "ghostty/macos/Sources/Features/Terminal");
+			const surfaceDir = join(
+				fixtureRoot,
+				"ghostty/macos/Sources/YEN/Surface View",
+			);
+			const terminalDir = join(
+				fixtureRoot,
+				"ghostty/macos/Sources/Features/Terminal",
+			);
 			mkdirSync(surfaceDir, { recursive: true });
 			mkdirSync(terminalDir, { recursive: true });
 			const surfacePath = join(surfaceDir, "SurfaceView_AppKit.swift");
@@ -1131,8 +1137,12 @@ PATCHES_DIR="${patchesDir}"
 ${patchBlock}`;
 			const firstRun = run("bash", ["-lc", command]);
 			expect(firstRun.status, output(firstRun)).toBe(0);
-			expect(output(firstRun)).toContain("Applied Remote pane close confirmation");
-			expect(output(firstRun)).toContain("Applied Remote pane close confirmation (pane)");
+			expect(output(firstRun)).toContain(
+				"Applied Remote pane close confirmation",
+			);
+			expect(output(firstRun)).toContain(
+				"Applied Remote pane close confirmation (pane)",
+			);
 			// Every window, tab and close-other-tabs path reads the property;
 			// a pane close reads the engine's process_alive flag.
 			expect(readFileSync(surfacePath, "utf8")).toContain(

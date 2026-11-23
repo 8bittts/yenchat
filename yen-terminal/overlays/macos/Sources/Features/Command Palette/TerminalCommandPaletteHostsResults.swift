@@ -128,9 +128,16 @@ enum RemoteHostsPaletteRows {
             guard !peers.isEmpty else {
                 return [statusRow("no-peers", "No Other Macs Found", "Sign in to Tailscale with the same account on your other Macs, then select to check again", icon: "desktopcomputer")]
             }
-            var rows = peers.flatMap { peer in
-                peerRows(peer, state: snapshot.peerStates[peer.id] ?? .loading, isOpenHere: isOpenHere, now: now)
+            // One order for the palette and the sidebar: every Mac's sessions,
+            // then Macs with something to do, then Macs that are offline or
+            // cannot be reached, then Refresh. Peers keep Tailscale's name order
+            // within each group.
+            var groups = [[RemoteHostsPaletteEntry]](repeating: [], count: PeerGroup.allCases.count)
+            for peer in peers {
+                let state = snapshot.peerStates[peer.id] ?? .loading
+                groups[PeerGroup(state).rawValue] += peerRows(peer, state: state, isOpenHere: isOpenHere, now: now)
             }
+            var rows = groups.flatMap { $0 }
             rows.append(statusRow(
                 "refresh",
                 "Refresh Remote Sessions",
@@ -139,6 +146,46 @@ enum RemoteHostsPaletteRows {
                 subtitle: snapshot.isRefreshing ? "Refreshing" : nil
             ))
             return rows
+        }
+    }
+
+    /// The palette's tie-break key for the Hosts row at `index` in this
+    /// order. It replaces the title only between rows with the same score and
+    /// starts with the title prefix, so against any other row it compares
+    /// exactly as the "Hosts: " title did.
+    static func orderKey(_ index: Int) -> String {
+        titlePrefix + String(format: "%05d", index)
+    }
+
+    /// Where a Mac's rows go in the Hosts order.
+    enum PeerGroup: Int, CaseIterable {
+        /// Sessions, or a listing still in flight.
+        case sessions
+        /// The user can fix it: trust the key, set up key sign-in, update or
+        /// install YEN, start a session, read the error.
+        case toDo
+        /// Offline or cannot be reached.
+        case problem
+
+        init(_ state: RemoteHostsStore.PeerState) {
+            switch state {
+            case .loading: self = .sessions
+            case .offline: self = .problem
+            case .listed(.unreachable): self = .problem
+            case .listed(.sessions(let sessions, _)): self = sessions.isEmpty ? .toDo : .sessions
+            case .listed: self = .toDo
+            }
+        }
+    }
+
+    /// Newest first; a session with no start time last; the id breaks ties,
+    /// so a listing in any order shows the same rows in the same order.
+    static func sessionOrder(_ lhs: RemoteSession, _ rhs: RemoteSession) -> Bool {
+        switch (lhs.started, rhs.started) {
+        case let (l?, r?) where l != r: return l > r
+        case (.some, nil): return true
+        case (nil, .some): return false
+        default: return lhs.id.uuidString < rhs.id.uuidString
         }
     }
 
@@ -241,7 +288,9 @@ enum RemoteHostsPaletteRows {
                 if sessions.isEmpty {
                     rows.append(row("no-sessions", "No Sessions on \(name)", "Turn on Keep Sessions Running in YEN on \(name) and open a terminal there, then select to check again", icon: "rectangle.stack"))
                 }
-                rows += sessions.compactMap { sessionRow($0, peer: peer, isOpenHere: isOpenHere, now: now) }
+                rows += distinguished(sessions.sorted(by: sessionOrder).compactMap { session in
+                    sessionRow(session, peer: peer, isOpenHere: isOpenHere, now: now).map { ($0, session.id) }
+                })
                 if !complete {
                     rows.append(row("incomplete", "Some Sessions on \(name) Could Not Be Read", "Run yen sessions list on \(name) to see them all; select to check again", icon: "exclamationmark.triangle"))
                 }
@@ -285,6 +334,28 @@ enum RemoteHostsPaletteRows {
             searchTags: baseTags + [name.lowercased(), peer.sshTarget.lowercased()],
             action: action
         )
+    }
+
+    /// Two sessions of one Mac that would read the same (same place, same
+    /// state, started the same minute) end their subtitles with the first
+    /// eight characters of their session id, so one press never picks the
+    /// other by mistake. Rows that already differ stay short.
+    static func distinguished(_ rows: [(RemoteHostsPaletteEntry, UUID)]) -> [RemoteHostsPaletteEntry] {
+        func reading(_ entry: RemoteHostsPaletteEntry) -> String { entry.title + "\n" + (entry.subtitle ?? "") }
+        var counts: [String: Int] = [:]
+        for (entry, _) in rows { counts[reading(entry), default: 0] += 1 }
+        return rows.map { entry, id in
+            guard counts[reading(entry), default: 0] > 1 else { return entry }
+            return RemoteHostsPaletteEntry(
+                id: entry.id,
+                title: entry.title,
+                subtitle: [entry.subtitle, String(id.uuidString.prefix(8))].compactMap { $0 }.joined(separator: " · "),
+                description: entry.description,
+                leadingIcon: entry.leadingIcon,
+                searchTags: entry.searchTags,
+                action: entry.action
+            )
+        }
     }
 
     private static func statusRow(_ key: String, _ title: String, _ description: String, icon: String, subtitle: String? = nil) -> RemoteHostsPaletteEntry {
