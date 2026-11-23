@@ -172,6 +172,7 @@ enum PersistentSessionReaper {
         let interval = positive(UserDefaults.standard.double(forKey: intervalDefaultsKey)) ?? defaultInterval
 
         Task.detached(priority: .utility) {
+            PersistentSessions.secureSocketDirectory(directory)
             cleanRecoveryFiles(in: directory, bundled: zmx)
             guard let resources = Bundle.main.resourceURL else { return }
             let helper = resources.appendingPathComponent("lib/list-pane-sessions.sh").path
@@ -273,7 +274,7 @@ enum PersistentSessionReaper {
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
         process.environment = ProcessInfo.processInfo.environment.merging(
-            [PersistentSessions.socketDirectoryEnvironmentKey: directory]
+            PersistentSessions.zmxEnvironment(socketDirectory: directory)
         ) { _, new in new }
         let pipe = Pipe()
         process.standardOutput = pipe

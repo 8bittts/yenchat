@@ -16,6 +16,22 @@ UUID_PATTERN='^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A
 
 source "${YEN_LIB}/sessions-remote.sh"
 
+# The directory holds sockets and zmx logs that record working directories and
+# environment values: zmx creates it and logs/ 0700 only when told, and an
+# existing directory loses group and other access. Never follow a symlink, change only what the
+# user owns, and never fail because the repair did.
+export ZMX_DIR_MODE=0700
+secure_sessions_dir() {
+    local path
+    [[ -d "$SESSIONS_DIR" && ! -L "$SESSIONS_DIR" && -O "$SESSIONS_DIR" ]] || return 0
+    for path in "$SESSIONS_DIR" "$SESSIONS_DIR/logs" "$SESSIONS_DIR/bin"; do
+        [[ -d "$path" && ! -L "$path" && -O "$path" ]] || continue
+        # Remove group and other access; never add any.
+        chmod go-rwx "$path" 2> /dev/null || true
+    done
+}
+secure_sessions_dir
+
 # Byte-wise, whatever the caller's locale.
 valid_session_id() {
     local LC_ALL=C

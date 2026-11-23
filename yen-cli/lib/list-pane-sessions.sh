@@ -4,6 +4,8 @@
 # so give each build a private directory containing only its own sockets.
 set -eu
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin
+# zmx creates the listing directory's logs/ with 0750 unless told.
+export ZMX_DIR_MODE=0700
 directory=$1
 bundled=$2
 uuid='^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$'

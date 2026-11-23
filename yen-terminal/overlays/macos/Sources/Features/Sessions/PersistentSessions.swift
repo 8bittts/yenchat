@@ -205,14 +205,38 @@ enum PersistentSessions {
         }
     }
 
-    /// The environment for running zmx against `socketDirectory`. Stub.
+    /// The environment for running zmx against `socketDirectory`. zmx creates
+    /// the directory and logs/ with 0750 unless ZMX_DIR_MODE says otherwise,
+    /// and its logs record working directories and environment values.
     nonisolated static func zmxEnvironment(socketDirectory: String) -> [String: String] {
-        [socketDirectoryEnvironmentKey: socketDirectory]
+        [socketDirectoryEnvironmentKey: socketDirectory, socketDirectoryModeEnvironmentKey: socketDirectoryMode]
     }
 
-    /// Make an existing session directory and its logs and bin folders 0700.
-    /// Stub.
-    nonisolated static func secureSocketDirectory(_ socketDirectory: String) {}
+    /// Take group and other access off an existing session directory and its
+    /// `logs/` and `bin/`, as zmx with ZMX_DIR_MODE would have created them. Each is opened
+    /// without following a symlink and changed only when the user owns it;
+    /// a failure leaves it as it was and never stops a session.
+    nonisolated static func secureSocketDirectory(_ socketDirectory: String) {
+        guard makePrivate(socketDirectory) else { return }
+        for name in ["logs", "bin"] {
+            _ = makePrivate((socketDirectory as NSString).appendingPathComponent(name))
+        }
+    }
+
+    /// True when `path` is now a private directory the user owns.
+    nonisolated private static func makePrivate(_ path: String) -> Bool {
+        let descriptor = open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFDIR else { return false }
+        // Remove group and other access; never add any (a 0700 result for the
+        // usual 0750, and a deliberately locked 0000 stays 0000).
+        if info.st_mode & 0o077 != 0 {
+            guard fchmod(descriptor, info.st_mode & 0o700) == 0 else { return false }
+        }
+        return true
+    }
 
     nonisolated static func ownerRecordPath(for paneID: UUID, socketDirectory: String) -> String {
         socketPath(for: paneID, socketDirectory: socketDirectory) + ownerRecordSuffix
@@ -227,6 +251,8 @@ enum PersistentSessions {
             withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700]
         )
+        // A directory an older YEN, the CLI or zmx's default made is 0750.
+        secureSocketDirectory(socketDirectory)
         try? owner.record.write(
             toFile: ownerRecordPath(for: paneID, socketDirectory: socketDirectory),
             atomically: true,
@@ -340,7 +366,7 @@ enum PersistentSessions {
         guard !terminating, let zmxPath else { return }
         guard hasSession(paneID, socketDirectory: socketDirectory) else { return }
         let binary = recordedBinary(for: paneID, socketDirectory: socketDirectory) ?? zmxPath
-        run(binary, ["kill", sessionName(for: paneID)], [socketDirectoryEnvironmentKey: socketDirectory])
+        run(binary, ["kill", sessionName(for: paneID)], zmxEnvironment(socketDirectory: socketDirectory))
         // The reaper removes recovery records after the daemon releases its socket.
     }
 
