@@ -62,6 +62,28 @@ struct RemoteHostsPaletteContractTests {
         #expect(remote.opened.isEmpty && remote.refreshes == 0 && remote.showHosts == 0)
     }
 
+    /// The tab sidebar's Hosts rows (TabSidebarHostsSection.perform) carry the
+    /// same rule: a command row over a remote pane types nothing. The paste
+    /// path writes the general pasteboard first, so an unchanged change count
+    /// shows nothing was typed, without touching the clipboard when it holds.
+    @Test func theSidebarTypesNoCommandIntoARemotePane() throws {
+        let controller = try Fixtures.controller(Fixtures.markedConfig())
+        let remote = try #require(controller.surfaceTree.first)
+        controller.focusedSurfaceDidChange(to: remote)
+        try #require(controller.focusedSurface?.remotePaneIdentity != nil)
+        let rows = RemoteHostsPaletteRows.peerRows(
+            mini, state: .listed(.keySignInNeeded), isOpenHere: { _ in false }, now: Date()
+        ).map(TabSidebarHostsSection.Row.init)
+        let row = try #require(rows.first)
+        #expect(row.entry.action == .insertCommand("ssh-copy-id mini.example.ts.net"))
+
+        let section = TabSidebarHostsSection(store: RemoteHostsStore(services: CountingHostServices().services, scheduler: { _, _ in NoTimer() }), isOpenHere: { _ in false })
+        let before = NSPasteboard.general.changeCount
+        section.perform(row, in: controller.window)
+        Fixtures.spin(0.4)
+        #expect(NSPasteboard.general.changeCount == before)
+    }
+
     @Test func eachRowActionReachesItsEffect() {
         let identity = Fixtures.identity
         for overRemotePane in [false, true] {
