@@ -20,10 +20,10 @@ describe("documentation contracts", () => {
 			expect(match, `palette row ${key}`).not.toBeNull();
 			return `Hosts: ${(match?.[1] ?? "").replace("\\(name)", "<Mac>")}`;
 		};
-		const manual = read("app/docs/docs-client.tsx").replaceAll(
-			"&lt;Mac&gt;",
-			"<Mac>",
-		);
+		// JSX wraps prose at any word, so compare its text with whitespace collapsed.
+		const manual = read("app/docs/docs-client.tsx")
+			.replaceAll("&lt;Mac&gt;", "<Mac>")
+			.replace(/\s+/g, " ");
 		const llms = read("public/llms.txt");
 		const security = read("_docs/04-security.md");
 		const desktop = read("_docs/13-desktop-features.md");
@@ -38,6 +38,41 @@ describe("documentation contracts", () => {
 		for (const key of ["first-connection", "key-sign-in"]) {
 			expect(security, key).toContain(`\`${title(key)}\``);
 		}
+	});
+
+	test("public docs describe the Hosts row order and remote close as the source does", () => {
+		const rows = read(
+			"yen-terminal/overlays/macos/Sources/Features/Command Palette/TerminalCommandPaletteHostsResults.swift",
+		);
+		const panes = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/RemotePanes.swift",
+		);
+		// Sessions, then Macs that need a step, then offline or unreachable Macs.
+		const groups = rows
+			.match(/enum PeerGroup: Int, CaseIterable \{([\s\S]*?)init\(/)?.[1]
+			?.match(/case (\w+)/g);
+		expect(groups).toEqual(["case sessions", "case toDo", "case problem"]);
+		// Newest session first.
+		expect(rows).toContain("case let (l?, r?) where l != r: return l > r");
+		// A remote pane never asks before it closes; a local one keeps the engine's rule.
+		expect(panes).toContain(
+			"engineNeedsConfirm && identity(for: paneID) == nil",
+		);
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		const llms = read("public/llms.txt");
+		expect(manual).toContain(
+			"Sessions come first, newest first, then Macs that need a step from you, then Macs that are offline or out of reach.",
+		);
+		expect(manual).toContain(
+			"Closing a remote pane, tab, or window only detaches: YEN does not ask, and the session keeps running on the other Mac.",
+		);
+		expect(llms).toContain(
+			"listed sessions first (newest first), then Macs that need a step from you, then Macs that are offline or out of reach",
+		);
+		expect(llms).toContain(
+			"closing a remote pane, tab or window only detaches, without asking, and the session keeps running on the other Mac",
+		);
 	});
 
 	test("public docs say embedded Tailscale nodes are not listed, as discovery decides", () => {

@@ -971,11 +971,13 @@ function PersistentSessionsSection() {
 				Open the command palette with{" "}
 				<code className="inline-code-brand">Cmd + Shift + P</code> and type{" "}
 				<code className="inline-code-brand">hosts</code>. YEN then checks your
-				Tailscale network and lists each Mac with its sessions. Select a session
-				to attach in a new tab, or to focus the pane that already shows it. YEN
-				looks for your Macs and their sessions only while you have asked for
-				hosts, and Hosts: Refresh Remote Sessions checks again. A remote pane
-				stays connected to its own Mac.
+				Tailscale network and lists each Mac with its sessions. Sessions come
+				first, newest first, then Macs that need a step from you, then Macs that
+				are offline or out of reach. Select a session to attach in a new tab, or
+				to focus the pane that already shows it. YEN looks for your Macs and
+				their sessions only while you have asked for hosts, and Hosts: Refresh
+				Remote Sessions checks again. A remote pane stays connected to its own
+				Mac.
 			</p>
 			<p className="text-body">
 				The tab sidebar has a Hosts section below your tabs, with the same rows
@@ -1008,7 +1010,8 @@ function PersistentSessionsSection() {
 				reattaches. Quit YEN and a restored remote pane reattaches at the next
 				launch, waiting for the network if it is not up yet. When the session
 				ends, its pane closes; if YEN cannot attach, the pane shows why until
-				you press Return.
+				you press Return. Closing a remote pane, tab, or window only detaches:
+				YEN does not ask, and the session keeps running on the other Mac.
 			</p>
 			<TerminalCodeBlock
 				title="Terminal"
