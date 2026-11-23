@@ -27,10 +27,25 @@ enum PaneSessionState: Equatable, Sendable {
     case live
     /// Attached to a session on another Mac.
     case remote(RemotePaneIdentity)
+    /// A remote pane whose client waits to reconnect to the other Mac.
+    case reconnecting(RemotePaneIdentity)
 
     nonisolated static func of(paneID: UUID) -> PaneSessionState {
+        of(paneID: paneID, report: nil)
+    }
+
+    nonisolated static func of(paneID: UUID, report: YEN.Action.ProgressReport?) -> PaneSessionState {
         if let identity = RemotePanes.identity(for: paneID) { return .remote(identity) }
         return PaneSessionRecords.isLive(paneID) ? .live : .local
+    }
+}
+
+extension RemotePanes {
+    /// Set in a remote pane's environment, so its CLI writes the reconnecting mark.
+    nonisolated static let reconnectMarkEnvironmentKey = "YEN_REMOTE_RECONNECT_MARK"
+
+    nonisolated static func isReconnectReport(_ report: YEN.Action.ProgressReport?) -> Bool {
+        false
     }
 }
 
@@ -46,6 +61,8 @@ enum TabSessionState: Equatable, Sendable {
     case live
     /// The distinct host display names, in tree order.
     case remote(hosts: [String])
+    /// The Macs of the tab's reconnecting panes, in tree order.
+    case reconnecting(hosts: [String])
 
     nonisolated static func of(_ panes: [PaneSessionState]) -> TabSessionState? {
         var hosts: [String] = []
@@ -61,12 +78,17 @@ enum TabSessionState: Equatable, Sendable {
         of(paneIDs.map(PaneSessionState.of(paneID:)))
     }
 
+    @MainActor
+    static func of(surfaces: [YEN.SurfaceView]) -> TabSessionState? {
+        of(surfaces.map { PaneSessionState.of(paneID: $0.id, report: $0.progressReport) })
+    }
+
     /// The same symbols the app already uses: Persistent Sessions in the
     /// palette, and the SSH pane activity. The shape is the non-color cue.
     var symbolName: String {
         switch self {
         case .live: "rectangle.stack"
-        case .remote: "network"
+        case .remote, .reconnecting: "network"
         }
     }
 
@@ -75,7 +97,7 @@ enum TabSessionState: Equatable, Sendable {
         switch self {
         case .live:
             return "Live session: keeps running when YEN quits"
-        case .remote(let hosts):
+        case .remote(let hosts), .reconnecting(let hosts):
             let names = hosts.count <= 2
                 ? hosts.joined(separator: " and ")
                 : hosts.dropLast().joined(separator: ", ") + " and " + (hosts.last ?? "")

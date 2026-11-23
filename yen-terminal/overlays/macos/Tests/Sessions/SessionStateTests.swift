@@ -87,4 +87,65 @@ struct SessionStateTests {
         let descriptor = TabSidebarRowAccessibilityDescriptor(tab: item, isEditingTitle: false)
         #expect(descriptor.label == "Studio · ~, Remote session on Studio, Command 1")
     }
+
+    // MARK: Reconnecting
+
+    private func report(_ state: YEN.Action.ProgressReport.State, _ progress: UInt8?) -> YEN.Action.ProgressReport {
+        YEN.Action.ProgressReport(state: state, progress: progress)
+    }
+
+    @Test func onlyTheCLIsPausedAtZeroReportMeansReconnecting() {
+        #expect(RemotePanes.isReconnectReport(report(.pause, 0)))
+        for other in [report(.pause, nil), report(.pause, 1), report(.pause, 100), report(.indeterminate, nil),
+                      report(.set, 0), report(.error, 0), report(.remove, nil)] {
+            #expect(!RemotePanes.isReconnectReport(other))
+        }
+        #expect(!RemotePanes.isReconnectReport(nil))
+    }
+
+    @Test func aRemotePaneWithTheReportIsReconnectingAndALocalPaneNeverIs() {
+        let remote = UUID(), local = UUID()
+        var config = YEN.SurfaceConfiguration()
+        config.environmentVariables[RemotePanes.markerEnvironmentKey] = RemotePanes.marker(for: studio)
+        RemotePanes._testSetCLIPath("/usr/bin/true")
+        PersistentSessions.prepare(
+            &config, paneID: remote, enabled: false, zmxAvailable: true,
+            socketDirectory: "/tmp/yss", resolveBinary: { _, _ in nil }, recordOwner: { _, _ in }
+        )
+        RemotePanes._testSetCLIPath(nil)
+        // The app asks the pane's CLI for the mark; a local pane gets nothing.
+        #expect(config.environmentVariables[RemotePanes.reconnectMarkEnvironmentKey] == "1")
+        var localConfig = YEN.SurfaceConfiguration()
+        PersistentSessions.prepare(
+            &localConfig, paneID: local, enabled: false, zmxAvailable: true,
+            socketDirectory: "/tmp/yss", resolveBinary: { _, _ in nil }, recordOwner: { _, _ in }
+        )
+        #expect(localConfig.environmentVariables[RemotePanes.reconnectMarkEnvironmentKey] == nil)
+
+        #expect(PaneSessionState.of(paneID: remote, report: report(.pause, 0)) == .reconnecting(studio))
+        #expect(PaneSessionState.of(paneID: remote, report: report(.indeterminate, nil)) == .remote(studio))
+        #expect(PaneSessionState.of(paneID: remote, report: nil) == .remote(studio))
+        #expect(PaneSessionState.of(paneID: local, report: report(.pause, 0)) == .local)
+    }
+
+    @Test func aTabIsReconnectingWhenAnyRemotePaneIsAndNamesThoseMacs() {
+        #expect(TabSessionState.of([.reconnecting(studio)]) == .reconnecting(hosts: ["Studio"]))
+        #expect(TabSessionState.of([.live, .reconnecting(studio), .remote(mini)]) == .reconnecting(hosts: ["Studio"]))
+        #expect(TabSessionState.of([.reconnecting(studio), .remote(mini), .reconnecting(air), .reconnecting(studio)])
+            == .reconnecting(hosts: ["Studio", "Air"]))
+        #expect(TabSessionState.of([.remote(studio), .remote(mini)]) == .remote(hosts: ["Studio", "Mini"]))
+    }
+
+    @Test func reconnectingHasItsOwnSymbolAndLabel() {
+        #expect(TabSessionState.reconnecting(hosts: ["Studio"]).symbolName == "network.slash")
+        #expect(TabSessionState.reconnecting(hosts: ["Studio"]).label == "Reconnecting to Studio")
+        #expect(TabSessionState.reconnecting(hosts: ["Studio", "Mini"]).label == "Reconnecting to Studio and Mini")
+        #expect(TabSessionState.reconnecting(hosts: ["Studio", "Mini", "Air"]).label == "Reconnecting to Studio, Mini and Air")
+    }
+
+    @Test func theSidebarShowsTheReconnectingStateNotAPausedTask() {
+        #expect(TabSidebarController.terminalStatusSignal(for: report(.pause, 0), isRemote: true) == nil)
+        #expect(TabSidebarController.terminalStatusSignal(for: report(.pause, 0), isRemote: false)?.summary == "Task paused")
+        #expect(TabSidebarController.terminalStatusSignal(for: report(.pause, 40), isRemote: true)?.summary == "Task paused")
+    }
 }

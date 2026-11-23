@@ -692,7 +692,11 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
     }
 
     private static func terminalStatusSignal(for surface: YEN.SurfaceView?) -> TabSidebarStatusSignal? {
-        guard let report = surface?.progressReport else { return nil }
+        terminalStatusSignal(for: surface?.progressReport, isRemote: surface?.remotePaneIdentity != nil)
+    }
+
+    nonisolated static func terminalStatusSignal(for report: YEN.Action.ProgressReport?, isRemote: Bool) -> TabSidebarStatusSignal? {
+        guard let report else { return nil }
         switch report.state {
         case .error:
             return TabSidebarStatusSignal(summary: "Task error", tone: .error)
