@@ -133,7 +133,7 @@ Tried and reverted, do not retry without new evidence:
 
 ### Optional menu and desktop features
 
-General → Menu Bar → Show Token Usage enables the experimental agent token counter.
+General → Experimental → Show Token Usage enables the experimental agent token counter.
 The menu bar shows the count first and the YEN mark after it (`TokenUsageMenu`).
 Click the status item to open the local day’s overview beneath it on the same display.
 Right-click or Control-click it for a menu with YEN and its version, Refresh, Check for Updates and Quit YEN (`TokenUsageMenu.contextMenu`).

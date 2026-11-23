@@ -21,6 +21,57 @@ function DocSection({
 	);
 }
 
+// A short numbered how-to that opens a chapter: one action per step.
+function Steps({
+	title,
+	children,
+}: {
+	title: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="callout-card">
+			<h3 className="text-heading-sm mb-3">{title}</h3>
+			<ol className="list-decimal list-outside pl-5 space-y-2 text-body">
+				{children}
+			</ol>
+		</div>
+	);
+}
+
+// A product screenshot with a one-line caption.
+function Shot({
+	src,
+	alt,
+	caption,
+	width,
+	height,
+	sizes = "(min-width: 768px) 720px, 100vw",
+	className = "w-full h-auto",
+}: {
+	src: string;
+	alt: string;
+	caption: string;
+	width: number;
+	height: number;
+	sizes?: string;
+	className?: string;
+}) {
+	return (
+		<figure>
+			<Image
+				src={src}
+				alt={alt}
+				width={width}
+				height={height}
+				sizes={sizes}
+				className={className}
+			/>
+			<figcaption className="media-caption">{caption}</figcaption>
+		</figure>
+	);
+}
+
 import { TerminalCodeBlock } from "@/components/docs/terminal-code-block";
 import { TerminalPanel } from "@/components/docs/terminal-panel";
 import { DOWNLOAD_HREF } from "@/lib/analytics/download-cta";
@@ -29,71 +80,31 @@ import { DOWNLOAD_HREF } from "@/lib/analytics/download-cta";
 function GetStartedSection() {
 	return (
 		<DocSection id="install" title="Get Started">
-			<TerminalPanel className="mb-6">
-				<table className="w-full text-body table-fixed">
-					<thead>
-						<tr className="border-b border-border bg-card-header">
-							<th
-								scope="col"
-								className="text-left py-3 pl-4 pr-4 font-bold text-text-primary"
-							>
-								Step
-							</th>
-							<th
-								scope="col"
-								className="text-left py-3 pr-4 font-bold text-text-primary"
-							>
-								Action
-							</th>
-						</tr>
-					</thead>
-					<tbody className="text-body bg-card">
-						<tr className="border-b border-border-light">
-							<td className="align-top py-2 pl-4 pr-4">
-								1.{" "}
-								<Link href={DOWNLOAD_HREF} className="link-brand underline">
-									Download
-								</Link>
-							</td>
-							<td className="align-top py-2 pr-4 text-left">
-								Open the .dmg file
-							</td>
-						</tr>
-						<tr className="border-b border-border-light">
-							<td className="align-top py-2 pl-4 pr-4">2. Install</td>
-							<td className="align-top py-2 pr-4 text-left">
-								Drag YEN to Applications
-							</td>
-						</tr>
-						<tr className="border-b border-border-light">
-							<td className="align-top py-2 pl-4 pr-4">3. First launch</td>
-							<td className="align-top py-2 pr-4 text-left">
-								Open YEN from Applications
-							</td>
-						</tr>
-						<tr>
-							<td className="align-top py-2 pl-4 pr-4">4. Updates</td>
-							<td className="align-top py-2 pr-4 text-left">
-								Choose Check for Updates in YEN; automatic checks are optional
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</TerminalPanel>
+			<Steps title="Install YEN">
+				<li>
+					<Link href={DOWNLOAD_HREF} className="link-brand underline">
+						Download YEN
+					</Link>{" "}
+					and open the .dmg file.
+				</li>
+				<li>Drag YEN to Applications.</li>
+				<li>Open YEN from Applications.</li>
+				<li>
+					To update, choose YEN &gt; Check for Updates. Automatic checks are
+					optional.
+				</li>
+			</Steps>
 			<p id="requirements" className="text-body">
-				YEN 1.284 requires macOS 27.0 or later on Apple silicon. For an Intel
-				Mac or macOS 13 through 26, download{" "}
+				YEN requires macOS 27 or later on Apple silicon. No YEN account is
+				required. For an Intel Mac or macOS 13 through 26, download{" "}
 				<a
 					className="link-brand underline"
 					href="https://github.com/8bittts/yenchat/releases/tag/v1.283"
 				>
 					YEN 1.283
 				</a>
-				. In 1.283, YEN’s actions in Apple Shortcuts require macOS 14 or later.
-				On macOS 13 through 15, dictation uses the legacy recognizer and
-				dictation translation is unavailable. No YEN account is required.
-				Dictation needs Accessibility, Microphone, and Speech Recognition
-				permissions; see{" "}
+				, the last release for those Macs. Dictation needs extra permissions;
+				see{" "}
 				<a href="#voice-dictation" className="link-brand underline">
 					dictation setup
 				</a>
@@ -107,63 +118,85 @@ function GetStartedSection() {
 function TerminalIDESection() {
 	return (
 		<DocSection id="terminal-ide" title="Workspace">
-			<p className="text-body mb-4">
-				YEN starts with a native macOS terminal and layers IDE workflows around
-				it. Settings and workspace panels use native macOS UI; browser preview
-				uses Apple WebKit. Editor commands can open your configured external
-				editor.
-			</p>
-
-			<p className="text-body mb-4">
-				The terminal renders with Metal. Windows, tabs, split layouts, and
-				positions restore on relaunch. With{" "}
+			<p className="text-body">
+				YEN is a native macOS terminal with IDE tools around it. Windows, tabs,
+				and splits come back when you relaunch. With{" "}
 				<a href="#persistent-sessions" className="link-brand underline">
 					Keep Sessions Running
 				</a>{" "}
-				enabled, restored shell panes also reconnect to their live processes.
-				Use the{" "}
-				<a href="#commands" className="link-brand underline">
-					shortcut reference
-				</a>{" "}
-				for tabs, splits, Quick Terminal, and window screenshots.
+				on, the programs in your panes keep running too.
 			</p>
-			<ul className="list-disc list-outside pl-5 space-y-3 text-body mb-6">
+			<Steps title="Split the window">
 				<li>
-					<strong>Scratchpad:</strong> one locally saved notes buffer shared
-					across windows. The panel opens in the center of the terminal. Drag
-					its title bar to move it or an edge to resize it. YEN remembers the
-					size. It supports copy, paste, and copy-on-select when enabled.
+					Press <code className="inline-code-brand">Cmd + D</code> to split
+					right, or <code className="inline-code-brand">Cmd + Shift + D</code>{" "}
+					to split down.
 				</li>
 				<li>
-					<strong>Layouts:</strong> ten presets from the File menu, the command
-					palette, or{" "}
-					<code className="inline-code-brand">Cmd + Option + 1-0</code>. Single
-					Pane requires a second invocation to confirm closing other panes.
+					Press <code className="inline-code-brand">Cmd + Option + Arrow</code>{" "}
+					to move between panes.
 				</li>
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + Enter</code>{" "}
+					to zoom the focused pane. Press it again to restore the layout.
+				</li>
+				<li>
+					For a preset layout, press{" "}
+					<code className="inline-code-brand">Cmd + Option + 1-0</code>, or
+					choose one from the File menu or the command palette. Single Pane asks
+					for a second press before it closes the other panes.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/splits.png"
+				alt="Three split panes in one tab: Git status on the left, a folder listing top right, and package.json bottom right. Each pane has a header with its folder."
+				width={1738}
+				height={1314}
+				caption="One tab split three ways. The focused pane has the outline."
+			/>
+			<Steps title="Keep notes in the scratchpad">
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + J</code>.
+				</li>
+				<li>
+					Type. The notes save on your Mac and are the same in every window.
+				</li>
+				<li>
+					Drag the title bar to move the panel, or an edge to resize it. YEN
+					remembers the size.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/scratchpad.png"
+				alt="The Scratchpad panel with a short release checklist and a list of ideas."
+				width={1388}
+				height={764}
+				sizes="(min-width: 768px) 480px, 100vw"
+				className="w-full h-auto max-w-md"
+				caption="The scratchpad keeps quick notes beside your terminal."
+			/>
+			<ul className="list-disc list-outside pl-5 space-y-3 text-body">
 				<li>
 					<strong>Bundled tools:</strong> fd and rg for file-browser search,
-					lazygit, btop, and fastfetch. Starting in YEN 1.285, YEN no longer
-					bundles fzf, zoxide, bat, or jq. IDE integrations can require
-					additional tools; see{" "}
+					lazygit, btop, and fastfetch. Some IDE commands need tools you
+					install; see{" "}
 					<a href="#ide-workflows" className="link-brand underline">
 						IDE Workflows
 					</a>
 					.
 				</li>
 				<li>
-					<strong>Shell integration:</strong> automatic detection supports bash,
-					zsh, fish, elvish, and nushell. YEN command wrappers and cd-on-quit
-					are supplied for bash and zsh.
+					<strong>Shell integration:</strong> bash, zsh, fish, elvish, and
+					nushell are detected automatically. YEN command wrappers and
+					cd-on-quit are for bash and zsh.
 				</li>
 			</ul>
-
-			<h3 id="git-drawer" className="text-heading-sm mb-3">
+			<h3 id="git-drawer" className="text-heading-sm">
 				Local Git changes
 			</h3>
 			<p className="text-body">
-				YEN 1.283 removed the bottom Git drawer and its shortcut. Run{" "}
-				<code className="inline-code-brand">yengit</code> for Git operations, or
-				the command palette for PR review and merge-conflict workspaces.
+				Run <code className="inline-code-brand">yengit</code> for Git. Use the
+				command palette for PR review and merge-conflict workspaces.
 			</p>
 		</DocSection>
 	);
@@ -535,67 +568,66 @@ function VoiceDictationSection() {
 					/>
 				</div>
 				<p className="media-caption">
-					Recorded dictation demonstration. Use the setup instructions below for
-					current permissions and platform requirements.
+					Dictation demo. Follow the steps below to set it up.
 				</p>
 			</div>
 
-			<p className="text-body">
-				In Settings &gt; Dictation &gt; Permissions, grant Accessibility,
-				Microphone, and Speech Recognition. Focus a text field, hold
-				<code className="inline-code-brand"> Option + Space</code>, speak, and
-				release to paste. Use no extra modifiers.
-			</p>
-			<p className="text-body">
-				Apple&apos;s SpeechAnalyzer transcribes on-device after language assets
-				are installed. Prepare missing assets in Settings. YEN imposes no
-				60-second timer on this path, but system or input errors can end a
-				session. Runtime fallback uses Apple&apos;s legacy recognizer: it stops
-				after 60 seconds and may use Apple&apos;s service when on-device
-				recognition is unavailable. YEN receives no audio or transcripts.
-			</p>
-			<p className="text-body">
-				Turn on Show Live Transcript in Settings &gt; Dictation to see partial
-				text. Translate Dictation is off by default and requires an installed
-				language pair. A translation failure inserts the original transcript.
-			</p>
-			<p className="text-body">
-				Successful in-app paste restores the previous clipboard; cross-app paste
-				leaves the transcript there.
-			</p>
-
-			{/* Recording Indicator Preview */}
-			<div className="flex items-center gap-3 callout-card mb-6">
+			<Steps title="Dictate into any app">
+				<li>
+					Open Settings &gt; Dictation and grant Accessibility, Microphone, and
+					Speech Recognition.
+				</li>
+				<li>Click into a text field in any app.</li>
+				<li>
+					Hold <code className="inline-code-brand">Option + Space</code>, with
+					no other modifier keys, and speak. A dot blinks in the menu bar while
+					YEN listens.
+				</li>
+				<li>Release the keys. YEN pastes the text.</li>
+			</Steps>
+			<div className="flex items-center gap-3 callout-card">
 				<span className="status-indicator" aria-hidden="true">
 					<span className="status-indicator-ping" aria-hidden="true" />
 					<span className="status-indicator-dot" aria-hidden="true" />
 				</span>
-				<div>
-					<h3 className="text-heading-sm mb-3">Recording indicator</h3>
-					<p className="text-body">
-						A recording dot blinks in the menu bar while listening. Release to
-						paste.
-					</p>
-				</div>
+				<p className="text-body">
+					The recording dot in the menu bar. Release to paste.
+				</p>
 			</div>
-
-			<p className="text-body mb-4">
-				Choose a microphone in Settings &gt; Dictation. System Default follows
-				macOS; an unavailable selected device falls back to it. A change during
-				recording stops that capture; select a device before restarting.
-			</p>
-			<p className="text-body mb-4">
-				Secure Input blocks both clipboard writes and automatic insertion. If
-				the target changes or automatic paste fails, YEN leaves the transcript
-				on the clipboard for manual paste and shows a recovery notification.
-			</p>
-
-			<p className="text-body">
-				<strong>Pro tip:</strong> With the fallback recognizer, release and
-				press again for longer content. Enable{" "}
-				<code className="inline-code-brand">Open YEN at Login</code> in Settings
-				{">"} General for dictation without a terminal window open.
-			</p>
+			<ul className="list-disc list-outside pl-5 space-y-3 text-body">
+				<li>
+					<strong>On your Mac:</strong> Apple&apos;s SpeechAnalyzer transcribes
+					on-device once its language assets are installed. Prepare missing
+					assets in Settings. YEN receives no audio or transcripts.
+				</li>
+				<li>
+					<strong>Fallback:</strong> when SpeechAnalyzer is unavailable, YEN
+					uses Apple&apos;s legacy recognizer. It stops after 60 seconds and may
+					use Apple&apos;s service. For longer text, release and press again.
+				</li>
+				<li>
+					<strong>Live transcript and translation:</strong> turn on Show Live
+					Transcript to see partial text. Translate Dictation is off by default
+					and needs an installed language pair. If translation fails, YEN
+					inserts the original text.
+				</li>
+				<li>
+					<strong>Microphone:</strong> System Default follows macOS. If the
+					selected device is unavailable, YEN uses System Default. Changing the
+					device stops the current recording.
+				</li>
+				<li>
+					<strong>Clipboard:</strong> a paste into YEN restores your previous
+					clipboard. A paste into another app leaves the text on the clipboard.
+					Secure Input blocks both the paste and the clipboard. If the target
+					changes or the paste fails, YEN keeps the text on the clipboard and
+					shows a notification.
+				</li>
+				<li>
+					<strong>No window open:</strong> turn on Open YEN at Login in Settings
+					&gt; General to dictate without a terminal window.
+				</li>
+			</ul>
 		</DocSection>
 	);
 }
@@ -605,75 +637,89 @@ function AgentTokenUsageSection() {
 	return (
 		<DocSection id="agent-token-usage" title="Agent token usage">
 			<p className="text-body">
-				This experiment shows how many tokens your local coding agents used
-				today. Open Settings → General → Menu Bar and turn on Show Token Usage.
-				The switch is off by default.
+				An experiment that shows how many tokens your local coding agents used
+				today. It is off by default.
 			</p>
-			<p className="text-body">
-				Click the YEN icon to see each tool’s exact daily count and share. Click
-				a provider name or a plan label to open its official dashboard. Use the
-				column button to change the layout. Click the menu bar button in the
-				header to cycle the menu bar through total tokens, the top provider,
-				rotating limits, and the icon alone. Rotating limits shows today’s total
-				with each plan reading in turn, such as 514M · Claude 64%. Right-click
-				the menu bar item to refresh, check for updates, or quit YEN.
-			</p>
-			<p className="text-body">
-				The chart button turns the panel over to show token totals for the last
-				7, 30, and 90 days for each tool, with a daily chart. The first read of
-				90 days can take half a minute. YEN keeps each finished day’s total on
-				your Mac.
-			</p>
-			<figure>
-				<Image
-					src="/doc-images/agent-token-usage.png"
-					alt="Example token menu with 10,000 daily tokens, inline provider counts and a plan bar under each tool that recorded one."
-					width={730}
-					height={812}
-					sizes="(max-width: 360px) 100vw, 320px"
-					className="h-auto w-full max-w-xs"
-				/>
-				<figcaption className="media-caption">
-					Example readings in YEN 1.285. Each provider’s top bar shows its share
-					of today’s tokens. The smaller bars show usage within each named plan
-					window.
-				</figcaption>
-			</figure>
-			<ul className="list-disc space-y-2 pl-5 text-body">
+			<Steps title="See today&apos;s token usage">
 				<li>
-					<strong>Claude Code</strong> counts input, output, cache reads and
-					cache writes. Streamed copies of a reply count once.
+					Open Settings &gt; General &gt; Experimental and turn on Show Token
+					Usage.
 				</li>
 				<li>
-					<strong>Codex</strong> counts changes in rollout totals. Its input
-					already includes cached tokens, and its output includes reasoning.
+					Click the YEN item in the menu bar. Each tool shows its daily count
+					and share.
 				</li>
 				<li>
-					<strong>Grok Build</strong> counts completed turns, including each
-					model in a turn. An active turn appears after Grok records its
-					completion.
+					Click the chart button to see the last 7, 30, and 90 days. The first
+					90-day read can take half a minute.
 				</li>
 				<li>
-					<strong>OpenCode</strong> counts assistant usage across gateways in
-					its local database. If only session counters are available, usage
-					belongs to the day the session started. Older installations can supply
-					a usage log instead.
+					Right-click the menu bar item to refresh, check for updates, or quit
+					YEN.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/agent-token-usage.png"
+				alt="Example token menu with 10,000 daily tokens, inline provider counts and a plan bar under each tool that recorded one."
+				width={730}
+				height={812}
+				sizes="(max-width: 360px) 100vw, 320px"
+				className="h-auto w-full max-w-xs"
+				caption="The top bar is each tool&apos;s share of today&apos;s tokens. The smaller bars are plan usage."
+			/>
+			<ul className="list-disc list-outside pl-5 space-y-3 text-body">
+				<li>
+					<strong>Links:</strong> click a provider name or a plan label to open
+					its official dashboard.
+				</li>
+				<li>
+					<strong>Menu bar text:</strong> click the menu bar button in the panel
+					header to cycle through total tokens, the top provider, rotating
+					limits (for example 514M · Claude 64%), and the icon alone. The column
+					button changes the layout.
+				</li>
+				<li>
+					<strong>Plan bars:</strong> show the percentage used in each named
+					pool for Claude, Codex, and Grok Build when their tools record it.
+					Claude Code shares its limits only with its statusline, so turn on
+					Claude Plan Limits to add a marked block to your statusline script.
+					Turning it off removes the block.
+				</li>
+				<li>
+					<strong>Readings:</strong> an asterisk marks a partial total.
+					Unavailable means YEN could not read the source. Zero means the source
+					recorded no tokens today.
 				</li>
 			</ul>
+			<details>
+				<summary className="text-body cursor-pointer focus-ring">
+					What each tool counts
+				</summary>
+				<ul className="list-disc list-outside pl-5 space-y-2 text-body">
+					<li>
+						<strong>Claude Code:</strong> input, output, cache reads, and cache
+						writes. Streamed copies of a reply count once.
+					</li>
+					<li>
+						<strong>Codex:</strong> changes in rollout totals. Input already
+						includes cached tokens, and output includes reasoning.
+					</li>
+					<li>
+						<strong>Grok Build:</strong> completed turns, including each model
+						in a turn. An active turn appears after Grok records it.
+					</li>
+					<li>
+						<strong>OpenCode:</strong> assistant usage across gateways in its
+						local database. With only session counters, usage belongs to the day
+						the session started. Older installations can supply a usage log
+						instead.
+					</li>
+				</ul>
+			</details>
 			<p className="text-body">
-				Plan bars show the percentage used in each named pool. Claude, Codex,
-				and Grok Build show current plan readings when their local tools record
-				them. Claude Code shares its live limits only with its statusline, so
-				turn on Claude Plan Limits to add a marked block to your statusline
-				script that saves them for YEN. Turning it off removes the block. YEN
-				reads no other app’s data and makes no network request for these
-				numbers.
-			</p>
-			<p className="text-body">
-				An asterisk marks a partial total. Unavailable means the source could
-				not be read. Zero means it was readable and recorded no tokens today.
-				YEN reads these records locally. Turn the switch off to stop collection
-				and remove the menu item.
+				YEN reads these records on your Mac, keeps each finished day&apos;s
+				total there, and makes no network request for these numbers. Turn the
+				switch off to stop and remove the menu item.
 			</p>
 		</DocSection>
 	);
@@ -682,76 +728,69 @@ function AgentTokenUsageSection() {
 function SettingsSection() {
 	return (
 		<DocSection id="settings" title="Settings">
-			<p className="text-body">
-				Press <code className="inline-code-brand">Cmd + ,</code>. The window is
-				a live terminal preview: every appearance change shows in it at once.
-				Five panes float beside it. Changes apply immediately except background
-				opacity, which applies the next time you open YEN.
-			</p>
-			<figure>
-				<Image
-					src="/doc-images/settings-appearance.png"
-					alt="YEN Settings on the Appearance pane: a live terminal preview on the left, the theme dock below it, and the Appearance controls in a glass panel on the right."
+			<Steps title="Change a setting">
+				<li>
+					Press <code className="inline-code-brand">Cmd + ,</code>.
+				</li>
+				<li>
+					Choose a pane: Appearance, General, Notifications, Dictation, or
+					Shortcuts.
+				</li>
+				<li>
+					Change the setting. The terminal preview shows it at once. Background
+					opacity applies the next time you open YEN.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/settings-appearance.png"
+				alt="YEN Settings on the Appearance pane: a live terminal preview on the left, the theme dock below it, and the Appearance controls in a glass panel on the right."
+				width={2200}
+				height={1380}
+				caption="Appearance: the preview shows each change as you make it."
+			/>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<Shot
+					src="/doc-images/settings-appearance-light.png"
+					alt="The same Settings window after picking a light theme from the dock: the preview and the Settings panel switch to the light colors."
 					width={2200}
 					height={1380}
-					sizes="(min-width: 768px) 720px, 100vw"
-					className="w-full h-auto"
+					sizes="(min-width: 768px) 360px, 100vw"
+					caption="Pick a theme from the dock to preview it."
 				/>
-				<figcaption className="media-caption">
-					Appearance: the preview shows each change as you make it.
-				</figcaption>
-			</figure>
-			<div className="grid gap-4 sm:grid-cols-2">
-				<figure>
-					<Image
-						src="/doc-images/settings-appearance-light.png"
-						alt="The same Settings window after picking a light theme from the dock: the preview and the Settings panel switch to the light colors."
-						width={2200}
-						height={1380}
-						sizes="(min-width: 768px) 360px, 100vw"
-						className="w-full h-auto"
-					/>
-					<figcaption className="media-caption">
-						Pick a theme from the dock to preview it.
-					</figcaption>
-				</figure>
-				<figure>
-					<Image
-						src="/doc-images/settings-shortcuts.png"
-						alt="The Shortcuts pane: shortcut groups across the top and each shortcut as a button you click to record new keys."
-						width={2200}
-						height={1380}
-						sizes="(min-width: 768px) 360px, 100vw"
-						className="w-full h-auto"
-					/>
-					<figcaption className="media-caption">
-						Shortcuts: click a shortcut, then press the new keys.
-					</figcaption>
-				</figure>
+				<Shot
+					src="/doc-images/settings-shortcuts.png"
+					alt="The Shortcuts pane: shortcut groups across the top and each shortcut as a button you click to record new keys."
+					width={2200}
+					height={1380}
+					sizes="(min-width: 768px) 360px, 100vw"
+					caption="Shortcuts: click a shortcut, then press the new keys."
+				/>
 			</div>
 			<ul className="list-disc pl-6 space-y-3 text-body">
 				<li>
-					<strong>Appearance:</strong> pick one of the bundled themes from the
-					theme dock, then set the font, cursor, opacity, padding, a PNG or JPEG
-					background image, and a border. To follow the active split, turn on
-					Border and choose Focused Pane under Outline. Starting in YEN 1.285,
-					Spark sends a light around the focused outline, and Aura adds a soft
-					glow that pulses in a color and at a speed you pick. Spark Speed sets
-					how fast the light travels, from Slowww to Fffast.
+					<strong>Appearance:</strong> the theme, font, cursor, opacity,
+					padding, a PNG or JPEG background image, and a border. To outline the
+					active split, turn on Border and choose Focused Pane under Outline.
+					Spark sends a light around that outline, and Spark Speed sets how fast
+					it travels, from Slowww to Fffast. Aura adds a soft glow that pulses
+					in the color and at the speed you pick.
 				</li>
 				<li>
 					<strong>General:</strong> open at login, copy on select, the scroll
-					bar, the tab sidebar, pane labels, the scratchpad, and how terminal
-					links open. Under Menu Bar, you can enable{" "}
+					bar, the tab sidebar, panes, and how terminal links open. Under
+					Experimental, you can turn on{" "}
 					<a href="#agent-token-usage" className="link-brand underline">
-						experimental agent token usage
+						agent token usage
+					</a>{" "}
+					and{" "}
+					<a href="#moving-wallpaper" className="link-brand underline">
+						moving wallpaper
 					</a>
 					.
 				</li>
 				<li>
-					<strong>Notifications:</strong> command-finish alerts, one alert sound
-					each for General and Build notifications, and what happens while YEN
-					is active.
+					<strong>Notifications:</strong> command-finish alerts, one sound each
+					for General and Build alerts, and what happens while YEN is active.
 				</li>
 				<li>
 					<strong>Dictation:</strong> permissions, the microphone, the live
@@ -766,22 +805,34 @@ function SettingsSection() {
 			<h3 id="moving-wallpaper" className="text-heading-sm">
 				Experimental moving wallpaper
 			</h3>
+			<Steps title="Set a moving wallpaper">
+				<li>
+					Open Settings &gt; General &gt; Experimental and turn on Moving
+					Wallpaper.
+				</li>
+				<li>Click Wallpaper Controls.</li>
+				<li>
+					Choose a video or GIF, paste a YouTube link, pick a video from Photos,
+					or choose Shuffle from Photos.
+				</li>
+				<li>
+					For a different wallpaper on each desktop, turn on Wallpaper per
+					Desktop.
+				</li>
+			</Steps>
 			<p className="text-body">
-				On macOS 27 or later, open General, then Experimental. Turn on Moving
-				Wallpaper and click Wallpaper Controls. Choose a video or GIF, paste a
-				YouTube link, pick a video from Photos, or shuffle from Photos. Use
-				Wallpaper per Desktop to choose separate assignments. Starting in YEN
-				1.285, a per-desktop wallpaper on an external display comes back when
-				you plug the display in again, even though macOS gives that display new
-				desktops. The same menu controls pause, sound, and removal. Starting in
-				YEN 1.285, Shuffle from Photos can ask for access to your library, and a
-				YouTube link downloads at up to 1080p with its sound.
+				Playback starts muted. The same menu pauses, unmutes, and removes the
+				wallpaper. A YouTube link downloads at up to 1080p with its sound, and
+				Shuffle from Photos can ask for access to your library. With Wallpaper
+				per Desktop, a per-desktop wallpaper on an external display comes back
+				when you plug the display in again, even though macOS gives that display
+				new desktops.
 			</p>
 			<p className="text-body">
-				Playback starts muted. YEN draws behind desktop icons and preserves your
-				Mac’s wallpaper. Switch the feature off to reveal it immediately. YEN
-				keeps your selections for next time. Standalone MovingPaper takes
-				priority while it runs. Moving Wallpaper is off by default.
+				YEN draws behind your desktop icons and keeps your Mac&apos;s own
+				wallpaper. Turn the feature off to see it again at once. YEN keeps your
+				choices for next time. Standalone MovingPaper takes priority while it
+				runs.
 			</p>
 			<p className="text-body">
 				Reset All Settings in General restores every setting and shortcut;
@@ -810,43 +861,49 @@ function SettingsSection() {
 function TabSidebarSection() {
 	return (
 		<DocSection id="tab-sidebar" title="Tab Sidebar">
+			<Steps title="Use the tab sidebar">
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + B</code>.
+				</li>
+				<li>Click a row to switch to that tab.</li>
+				<li>Click a row&apos;s terminal icon to give the tab a color.</li>
+				<li>
+					To rename a tab, right-click its row and choose Change Title. Custom
+					titles come back when you relaunch.
+				</li>
+				<li>
+					Click the pin button to keep the sidebar docked. Unpinned, it closes
+					when you press Esc.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/tab-sidebar.png"
+				alt="The docked tab sidebar with three tabs named acme-web, dev server, and tests. Each row shows the folder, the Git branch, and its Command-number shortcut. A collapsed Hosts section sits below."
+				width={1440}
+				height={760}
+				caption="Each row shows the tab&apos;s folder, Git state, and shortcut."
+			/>
 			<p className="text-body">
-				Tabs share the titlebar by default. Set{" "}
-				<code className="inline-code-brand">
-					macos-titlebar-style = transparent
-				</code>{" "}
-				to place them below it.
-			</p>
-			<p className="text-body">
-				Press <code className="inline-code-brand">Cmd + Shift + B</code> to open
-				the sidebar. Click a row to switch tabs. Click its terminal icon or
-				color swatch to choose a color. To rename a tab, right-click its row and
-				choose Change Title. Custom titles restore on relaunch. Press Esc to
-				dismiss the transient sidebar when not editing.
-			</p>
-			<p className="text-body">
-				The pin button switches between a transient overlay and a docked rail.
-				In native fullscreen, the upper-left sidebar button opens a rail for
-				that tab group. The adjacent arrows exit fullscreen. Your windowed
-				sidebar preference resumes when you leave fullscreen. Quick Terminal
-				does not support docking. The gear opens General settings, and New Tab
-				opens another tab.
-			</p>
-			<p className="text-body">
-				Rows show the focused split&apos;s directory, Git state, and recent task
-				status when available. Untrusted local paths, remote sessions, and
-				multiplexers can leave directory and Git details blank.
-			</p>
-			<p className="text-body">
-				Starting in YEN 1.285, a Hosts section below the tabs lists your other
-				Macs and their sessions; see{" "}
+				Each row shows the focused split&apos;s folder, Git state, and recent
+				task status. Untrusted local paths, remote sessions, and multiplexers
+				can leave the folder and Git details blank. A globe icon marks a tab
+				attached to another Mac, and stacked rectangles mark a tab whose panes
+				keep running when YEN quits. Hover an icon to read what it means. The
+				Hosts section below the tabs lists your other Macs; see{" "}
 				<a href="#remote-sessions" className="link-brand underline">
 					Remote sessions
 				</a>
-				. Each tab row in the sidebar also shows a session icon: a globe for a
-				tab with a pane attached to another Mac, and stacked rectangles for a
-				tab whose panes all keep running when YEN quits. Hover the icon to read
-				its meaning.
+				.
+			</p>
+			<p className="text-body">
+				In native fullscreen, the sidebar button in the upper left opens a rail
+				for that window, and the arrows beside it exit fullscreen. Quick
+				Terminal cannot dock the sidebar. The gear opens General settings, and
+				New Tab opens a tab. Tabs share the titlebar by default; set{" "}
+				<code className="inline-code-brand">
+					macos-titlebar-style = transparent
+				</code>{" "}
+				to put them below it.
 			</p>
 		</DocSection>
 	);
@@ -857,54 +914,46 @@ function SplitPaneLabelsSection() {
 	return (
 		<DocSection id="split-pane-labels" title="Split Pane Labels">
 			<p className="text-body">
-				In YEN 1.282, open Settings &gt; General &gt; Panes. Comfortable gives
-				each split a rounded border and space around it. Choose Compact for
-				edge-to-edge panes with a thin divider. Pane Labels works with either
-				style. In Appearance, set the border scope to Focused Pane to outline
-				the active pane and its header.
+				Each split has a header with its icon and name. Pane Labels is on by
+				default in Settings &gt; General &gt; Panes.
 			</p>
-			<p className="text-body">
-				Horizontal tabs line up on the right and expand to the left. Comfortable
-				keeps the same gap below the tabs when you add the first split.
-			</p>
-			<p className="text-body">
-				In YEN 1.277 and 1.278, enable Settings &gt; General &gt; Pane Labels to
-				show a name above each split. Run{" "}
-				<code className="inline-code-brand">Rename Split Label</code> to set a
-				custom name. Clear it to return to automatic naming.
-			</p>
-			<p className="text-body">
-				Turn on Name Panes After Worktree to use the worktree folder or branch.
-				An agent can report its directory with{" "}
-				<code className="inline-code-brand">yen pane cwd</code>. Your shell and
-				new splits keep their working directory. A custom label overrides
-				automatic naming and survives session restore.
-			</p>
-			<p className="text-body">
-				Starting in YEN 1.279, split headers are on by default. Click the icon,
-				name, or empty header space to focus a pane. Drag it to a highlighted
-				edge to move it, or click the pencil to rename it. Headers hide in small
-				or zoomed panes.
-			</p>
-			<p className="text-body">
-				Starting in YEN 1.285, horizontal tabs show the name on the left and,
-				for a tab with splits, its pane count on the right. Hold Command to see
-				each tab&apos;s Cmd + 1-9 shortcut. When a tab gets narrow, the count
-				hides to leave room for its name.
-			</p>
-			<figure>
-				<Image
-					src="/doc-images/split-headers.png"
-					alt="Claude Code and Codex in adjacent panes. Each pane header shows its own icon and title."
-					width={1600}
-					height={258}
-					sizes="(min-width: 768px) 720px, 100vw"
-					className="w-full h-auto"
-				/>
-				<figcaption className="media-caption">
-					The selected tab shows the two tools running in its split panes.
-				</figcaption>
-			</figure>
+			<Shot
+				src="/doc-images/split-headers.png"
+				alt="Claude Code and Codex in adjacent panes. Each pane header shows its own icon and title."
+				width={1600}
+				height={258}
+				caption="Two split panes, each with its own header."
+			/>
+			<Steps title="Work with split headers">
+				<li>Click a header to focus its pane.</li>
+				<li>Drag a header to a highlighted edge to move the pane.</li>
+				<li>
+					Click the pencil to rename the pane. Clear the name to go back to
+					automatic naming. You can also run{" "}
+					<code className="inline-code-brand">Rename Split Label</code> from the
+					command palette.
+				</li>
+			</Steps>
+			<ul className="list-disc list-outside pl-5 space-y-3 text-body">
+				<li>
+					<strong>Pane style:</strong> Comfortable gives each split a rounded
+					border and space around it. Compact puts panes edge to edge with a
+					thin divider. To outline the active pane, set the border to Focused
+					Pane in Appearance.
+				</li>
+				<li>
+					<strong>Worktree names:</strong> turn on Name Panes After Their
+					Worktree to name a pane after its worktree folder or branch. An agent
+					can report its folder with{" "}
+					<code className="inline-code-brand">yen pane cwd</code>. A custom name
+					wins over automatic naming and survives session restore.
+				</li>
+				<li>
+					<strong>Tabs:</strong> a tab with splits shows its pane count on the
+					right. Hold Command to see each tab&apos;s Cmd + 1-9 shortcut. Headers
+					hide in small or zoomed panes.
+				</li>
+			</ul>
 		</DocSection>
 	);
 }
@@ -914,53 +963,72 @@ function PersistentSessionsSection() {
 	return (
 		<DocSection id="persistent-sessions" title="Persistent Sessions">
 			<p className="text-body">
-				With Settings &gt; General &gt; Keep Sessions Running on, the default,
-				ordinary shell panes keep running when you quit YEN, when it updates, or
-				if it crashes. Reopen YEN and a restored session reattaches with its
-				screen and scrollback, so a build, a server, or an SSH connection
-				carries on where you left it. Panes opened for an explicit command and
-				panes whose session socket path exceeds 103 bytes run without
-				persistence.
+				Your shell panes keep running when you quit YEN, when it updates, or if
+				it crashes. Reopen YEN and each pane comes back with its screen and
+				scrollback, so a build, a dev server, or an SSH connection carries on.
+				Keep Sessions Running in Settings &gt; General is on by default.
+			</p>
+			<Steps title="Manage running sessions">
+				<li>
+					To end one session, close its pane or window. Quitting YEN does not
+					end it.
+				</li>
+				<li>
+					To see what runs, open Settings &gt; General, or run{" "}
+					<code className="inline-code-brand">yen sessions</code> in a shell.
+				</li>
+				<li>
+					To end sessions, click End All Sessions in Settings &gt; General, or
+					run{" "}
+					<code className="inline-code-brand">
+						yen sessions kill &lt;id&gt;
+					</code>
+					.
+				</li>
+			</Steps>
+			<p className="text-body">
+				A tab whose panes all run in sessions shows a stacked-rectangles icon,
+				labeled Live session: keeps running when YEN quits. Panes opened for an
+				explicit command, and panes whose session socket path exceeds 103 bytes,
+				do not persist. Turning the setting off affects new panes only.
 			</p>
 			<p className="text-body">
-				Quitting no longer stops what runs in your panes: a dev server keeps its
-				port. Close a pane or its window to end its session. Settings &gt;
-				General shows how many sessions run and has End All Sessions to stop
-				them at once. In a shell,{" "}
-				<code className="inline-code-brand">yen sessions</code> lists sessions
-				and{" "}
-				<code className="inline-code-brand">yen sessions kill &lt;id&gt;</code>{" "}
-				ends one. Turning the setting off affects new panes only.
-			</p>
-			<p className="text-body">
-				Starting in YEN 1.285, a tab whose panes all run in sessions shows a
-				stacked-rectangles icon, labeled Live session: keeps running when YEN
-				quits. A tab that mixes live and ordinary panes shows no icon.
-			</p>
-			<p className="text-body">
-				Sessions stay on your Mac and end when it restarts. With Keep Sessions
-				Running on, YEN can reopen up to eight detached sessions that window
-				restore missed. Use{" "}
+				Sessions stay on your Mac and end when it restarts. YEN can reopen up to
+				eight detached sessions that window restore missed; use{" "}
 				<code className="inline-code-brand">yen sessions</code> to find the
 				others. A detached session that no window holds ends after YEN has
-				watched it continuously for a day.
+				watched it for a day.
 			</p>
 			<h3 id="remote-sessions" className="text-heading-sm">
 				Remote sessions
 			</h3>
 			<p className="text-body">
-				Starting in YEN 1.285, you can attach to a persistent session that runs
-				on another of your Macs. YEN connects with the system{" "}
-				<code className="inline-code-brand">ssh</code> over your Tailscale
-				network. It runs no relay, needs no YEN account, and sends nothing to
-				YEN.
+				Attach to a persistent session that runs on another of your Macs. YEN
+				connects with the system <code className="inline-code-brand">ssh</code>{" "}
+				over your Tailscale network. It runs no relay, needs no YEN account, and
+				sends nothing to YEN.
 			</p>
+			<Steps title="Attach to a session on another Mac">
+				<li>Sign in to the same Tailscale account on both Macs.</li>
+				<li>
+					On the other Mac, turn on Remote Login in System Settings &gt; General
+					&gt; Sharing, and keep Keep Sessions Running on.
+				</li>
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + P</code> and
+					type <code className="inline-code-brand">hosts</code>.
+				</li>
+				<li>
+					Select a session. YEN opens it in a new tab, or focuses the pane that
+					already shows it.
+				</li>
+			</Steps>
 			<ul className="list-disc pl-5 space-y-2 text-body">
 				<li>
-					<strong>Both Macs:</strong> YEN 1.285 or later, and Tailscale signed
-					in to the same Tailscale account. YEN lists only your own Macs that
-					run the Tailscale app or daemon, not devices shared with you, devices
-					whose Tailscale key expired, or Tailscale nodes that other apps embed.
+					<strong>Both Macs:</strong> YEN, and Tailscale signed in to the same
+					Tailscale account. YEN lists only your own Macs that run the Tailscale
+					app or daemon, not devices shared with you, devices whose Tailscale
+					key expired, or Tailscale nodes that other apps embed.
 				</li>
 				<li>
 					<strong>The other Mac:</strong> Keep Sessions Running on, and an SSH
@@ -979,16 +1047,13 @@ function PersistentSessionsSection() {
 				</li>
 			</ul>
 			<p className="text-body">
-				Open the command palette with{" "}
-				<code className="inline-code-brand">Cmd + Shift + P</code> and type{" "}
-				<code className="inline-code-brand">hosts</code>. YEN then checks your
-				Tailscale network and lists each Mac with its sessions. YEN connects to
-				a Mac by its Tailscale name when that name resolves on this Mac to that
-				Mac&apos;s Tailscale address, and by its Tailscale address otherwise, so
-				the first-connection step may name the address. Sessions come first,
-				newest first, then Macs that need a step from you, then Macs that are
-				offline or out of reach. Select a session to attach in a new tab, or to
-				focus the pane that already shows it. YEN looks for your Macs and their
+				When you type <code className="inline-code-brand">hosts</code>, YEN
+				checks your Tailscale network and lists each Mac with its sessions. YEN
+				connects to a Mac by its Tailscale name when that name resolves on this
+				Mac to that Mac&apos;s Tailscale address, and by its Tailscale address
+				otherwise, so the first-connection step may name the address. Sessions
+				come first, newest first, then Macs that need a step from you, then Macs
+				that are offline or out of reach. YEN looks for your Macs and their
 				sessions only while you have asked for hosts, and Hosts: Refresh Remote
 				Sessions checks again. A remote pane stays connected to its own Mac.
 			</p>
@@ -1064,31 +1129,39 @@ yen sessions attach --host studio <id>`}
 function FileBrowserSection() {
 	return (
 		<DocSection id="file-browser" title="File Browser">
-			<p className="text-body mb-4">
-				Press <code className="inline-code-brand">Cmd + Shift + O</code> to open
-				the file browser in the active terminal. It does not open as a floating
-				window or global sidebar, and it will not steal focus from another
-				window. Browse directories, preview files, and manage the project
-				without leaving the terminal.
+			<Steps title="Browse files">
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + O</code>, or
+					type <code className="inline-code-brand">y</code> in a bash or zsh
+					pane. The browser opens inside the active terminal.
+				</li>
+				<li>
+					Move with the arrow keys, h / j / k / l, or the mouse. The right
+					column previews the selected file.
+				</li>
+				<li>
+					Press <code className="inline-code-brand">Enter</code> on a code file
+					to read it, <code className="inline-code-brand">e</code> to edit it,
+					or <code className="inline-code-brand">Space</code> for Quick Look.
+				</li>
+				<li>
+					Press <code className="inline-code-brand">q</code> to quit. Your shell
+					moves to the last folder you visited.
+				</li>
+			</Steps>
+			<Shot
+				src="/doc-images/file-browser.png"
+				alt="The file browser in a terminal pane: the folder list on the left, the files in the middle, and a syntax-highlighted preview of cart.tsx on the right."
+				width={1736}
+				height={1312}
+				caption="Folders on the left, files in the middle, and a preview on the right."
+			/>
+			<p className="text-body">
+				The <code className="inline-code-brand">browse</code> command opens the
+				same browser without changing your shell&apos;s folder. Press{" "}
+				<code className="inline-code-brand">O</code> to open a file with another
+				app.
 			</p>
-
-			<div className="callout-card mb-6">
-				<h3 className="text-heading-sm mb-3">
-					Terminal-native with cd-on-quit
-				</h3>
-				<p className="text-body">
-					Launch with the shortcut or{" "}
-					<code className="inline-code-brand">y</code> in a YEN bash or zsh
-					shell. Press <code className="inline-code-brand">q</code> to exit and
-					your shell follows the last directory you visited. The{" "}
-					<code className="inline-code-brand">browse</code> command opens the
-					same browser without changing the shell directory. Press{" "}
-					<code className="inline-code-brand">Enter</code> on a code file for a
-					read-only view, or <code className="inline-code-brand">O</code> for
-					open-with.
-				</p>
-			</div>
-
 			{/* File browser features table */}
 			<TerminalPanel className="mb-6">
 				<table className="w-full min-w-[36rem] text-body table-fixed">
@@ -1132,8 +1205,8 @@ function FileBrowserSection() {
 								<code className="inline-code-brand">S</code> to search file
 								contents. <code className="inline-code-brand">z</code> opens
 								fuzzy search and <code className="inline-code-brand">Z</code>{" "}
-								lists frequent directories. Starting in YEN 1.285, these two
-								need your own fzf and zoxide
+								lists frequent directories; these two need fzf and zoxide
+								installed
 							</td>
 						</tr>
 						<tr className="border-b border-border-light">
@@ -1194,19 +1267,37 @@ function FileBrowserSection() {
 function BrowserPreviewSection() {
 	return (
 		<DocSection id="browser-preview" title="Browser Preview">
-			<p className="text-body mb-4">
-				Open the command palette with{" "}
-				<code className="inline-code-brand">Cmd + Shift + P</code>, search{" "}
-				<code className="inline-code-brand">Browser</code>,{" "}
-				<code className="inline-code-brand">web preview</code>,{" "}
-				<code className="inline-code-brand">localhost</code>, or{" "}
-				<code className="inline-code-brand">dev server</code>, and press Enter.
-				Search <code className="inline-code-brand">terminal browser</code> for{" "}
-				<code className="inline-code-brand">Browser Split</code>. YEN opens a
-				native WebKit window or explicit split for docs, HTTPS pages, and
-				localhost/loopback development servers.
+			<Steps title="Preview a page beside your terminal">
+				<li>
+					Press <code className="inline-code-brand">Cmd + Shift + P</code>.
+				</li>
+				<li>
+					Type <code className="inline-code-brand">Browser Split</code> to open
+					the page in a split, or{" "}
+					<code className="inline-code-brand">Browser</code> for a window.
+					Searching <code className="inline-code-brand">localhost</code>,{" "}
+					<code className="inline-code-brand">dev server</code>, or{" "}
+					<code className="inline-code-brand">web preview</code> finds them too.
+				</li>
+				<li>Press Enter, then type an HTTPS or localhost address.</li>
+			</Steps>
+			<Shot
+				src="/doc-images/command-palette.png"
+				alt="The command palette open over a terminal, with Browser and Browser Split at the top of the list."
+				width={1160}
+				height={580}
+				sizes="(min-width: 768px) 560px, 100vw"
+				className="w-full h-auto max-w-xl"
+				caption="Browser and Browser Split in the command palette."
+			/>
+			<p className="text-body">
+				From a shell,{" "}
+				<code className="inline-code-brand">
+					yen web open --split http://localhost:3000
+				</code>{" "}
+				does the same. YEN opens docs, HTTPS pages, and localhost or loopback
+				development servers in a native WebKit window or split.
 			</p>
-
 			<div className="callout-card mb-6">
 				<h3 className="text-heading-sm mb-3">Native and isolated</h3>
 				<p className="text-body">
@@ -1774,8 +1865,7 @@ function CommandsSection() {
 								<a href="#persistent-sessions" className="link-brand underline">
 									Persistent Sessions
 								</a>
-								. Starting in YEN 1.285,{" "}
-								<code className="inline-code-brand">--host &lt;mac&gt;</code>{" "}
+								. <code className="inline-code-brand">--host &lt;mac&gt;</code>{" "}
 								lists and attaches sessions on another Mac; see{" "}
 								<a href="#remote-sessions" className="link-brand underline">
 									Remote sessions
@@ -1863,8 +1953,8 @@ function TroubleshootingSection() {
 		<DocSection id="troubleshooting" title="Troubleshooting">
 			<ul className="list-disc list-outside pl-5 space-y-3 text-body mb-6">
 				<li>
-					<strong>App won&apos;t open:</strong> Right-click YEN.app, then Open,
-					or allow in System Settings &gt; Privacy & Security.
+					<strong>App won&apos;t open:</strong> Open System Settings &gt;
+					Privacy & Security and click Open Anyway.
 				</li>
 				<li>
 					<strong>Commands not found:</strong> Follow the{" "}

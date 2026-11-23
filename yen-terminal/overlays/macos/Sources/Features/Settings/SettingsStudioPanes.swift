@@ -762,8 +762,6 @@ struct SettingsGeneralPane: View {
                 }
             }
 
-            Section("Menu Bar") { TokenUsagePreference() }
-
             Section("Links") {
                 Toggle(
                     isOn: Binding(
@@ -783,7 +781,10 @@ struct SettingsGeneralPane: View {
                 )
             }
 
-            Section("Experimental") { MovingWallpaperPreference() }
+            Section("Experimental") {
+                TokenUsagePreference()
+                MovingWallpaperPreference()
+            }
 
             Section {
                 LabeledContent("Reset All Settings") {
