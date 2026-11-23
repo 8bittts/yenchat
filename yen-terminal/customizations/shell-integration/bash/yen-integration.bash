@@ -188,6 +188,7 @@ function btop { _yen_run_app_command btop "$@"; }
 function monitor { _yen_run_app_command monitor "$@"; }
 function fastfetch { _yen_run_app_command fastfetch "$@"; }
 function fetch { _yen_run_app_command fetch "$@"; }
+function fast { _yen_run_app_command fast "$@"; }
 function bios { _yen_run_app_command bios "$@"; }
 function resources { _yen_run_app_command resources "$@"; }
 function browse { _yen_run_app_command browse "$@"; }

@@ -32,7 +32,7 @@ Run as `yen <command>`; in YEN shells the app commands (`browse`, `btop`, ...) a
 | `browse` (`files`, `fm`) | File browser without cd-on-quit; works without shell integration | Yes |
 | `y` | File browser with cd-on-quit; only in YEN-launched shells | Yes |
 | `btop` (`monitor`, `resources`) | System monitor | Yes |
-| `fastfetch` (`fetch`) | System info | Yes |
+| `fastfetch` (`fetch`, `fast`) | System info | Yes |
 | `bios` | System info with the YEN BIOS-style logo | Yes |
 | `yengit` (`lazygit`, `gitlazy`, `gityen`) | Git TUI | Yes |
 | `config` (`settings`, `prefs`, `preferences`), `config reset` | Show the config location; reset the config file, not UserDefaults | Yes |
@@ -41,7 +41,7 @@ Run as `yen <command>`; in YEN shells the app commands (`browse`, `btop`, ...) a
 
 Write aliases as `primary (alias1, alias2)` in every help table and list.
 
-Integrated shells wrap `btop`, `monitor`, `resources`, `fastfetch`, `fetch`, `bios`, `browse`, `files`, `fm`, `yengit`, `lazygit`, `gitlazy` and `gityen` so they reach YEN, not a system binary.
+Integrated shells wrap `btop`, `monitor`, `resources`, `fastfetch`, `fetch`, `fast`, `bios`, `browse`, `files`, `fm`, `yengit`, `lazygit`, `gitlazy` and `gityen` so they reach YEN, not a system binary.
 The retired names `chat`, `mail`, `email` and `calendar` print a retirement error; `cal` and `top` stay system commands.
 
 `yengit` uses bundled `lazygit`; `yengit review` and `yen ide pr-review` print plain unified diffs through `less` on a terminal; the desktop PR Review and merge-conflict previews color raw diffs natively.

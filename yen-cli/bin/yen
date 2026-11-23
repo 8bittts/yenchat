@@ -144,7 +144,7 @@ Apps:
 
 System Tools:
   btop (monitor, resources)  System monitor (bundled btop)
-  fastfetch (fetch)  System info display (bundled fastfetch)
+  fastfetch (fetch, fast)  System info display (bundled fastfetch)
   bios  System info display (YEN BIOS logo)
 
 Git:
@@ -214,6 +214,7 @@ _YEN_ALIASES='btop btop
 monitor monitor
 fastfetch fastfetch
 fetch fetch
+fast fast
 bios bios
 resources resources
 browse browse
@@ -405,7 +406,7 @@ suggest_command() {
     fi
 
     # Add built-in commands and app binaries
-    commands+=(help version init ide agents web pane sessions config reload update btop monitor fastfetch fetch bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
+    commands+=(help version init ide agents web pane sessions config reload update btop monitor fastfetch fetch fast bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
 
     # Prefix/substring matching; case-insensitivity via `nocasematch` (bash 3.1+,
     # still Bash 3.x compatible) — no subshell per candidate on this path.
@@ -536,8 +537,8 @@ main() {
             # Alias: monitor/resources → btop
             route_command "btop" "$@"
             ;;
-        fetch)
-            # Alias: fetch → fastfetch
+        fetch|fast)
+            # Alias: fetch/fast → fastfetch
             route_command "fastfetch" "$@"
             ;;
         bios)

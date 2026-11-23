@@ -182,7 +182,7 @@ Apps:
 
 System Tools:
 - yen btop (yen monitor, yen resources) — System monitor TUI (bundled btop)
-- yen fastfetch (yen fetch) — System info snapshot (bundled fastfetch)
+- yen fastfetch (yen fetch, yen fast) — System info snapshot (bundled fastfetch)
 - yen bios — System info snapshot with YEN BIOS branding
 
 Git:
@@ -194,7 +194,7 @@ Settings & Updates:
 - yen reload — Reload terminal configuration
 - yen update — Check signed release metadata and report update availability
 
-Alias map: yen commands → help, yen files/fm → browse, yen monitor/resources → btop, yen fetch → fastfetch, yen lazygit/gitlazy/gityen → yengit, yen settings/prefs/preferences → config
+Alias map: yen commands → help, yen files/fm → browse, yen monitor/resources → btop, yen fetch/fast → fastfetch, yen lazygit/gitlazy/gityen → yengit, yen settings/prefs/preferences → config
 
 Information commands:
 - yen --version — Show YEN version

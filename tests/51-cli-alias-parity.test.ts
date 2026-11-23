@@ -507,8 +507,8 @@ printf 'fastfetch\\t%s\\n' "$*" >> "${logFile}"
 			);
 			chmodSync(join(root, "commands", "core", "fastfetch"), 0o755);
 
-			const env = { ...process.env };
-			delete env.YEN_LIB;
+			// Development mode: an unset YEN_LIB makes yen resolve lib/ beside bin/.
+			const { YEN_LIB: _appLib, ...env } = process.env;
 			for (const args of [
 				["fetch", "--logo"],
 				["fast", "--brief"],

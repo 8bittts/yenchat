@@ -32,7 +32,7 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 printf "${ORANGE}System Tools${RESET}\n"
 printf "  ${BOLD}btop (monitor, resources)${RESET}           System monitor (bundled btop)\n"
-printf "  ${BOLD}fastfetch (fetch)${RESET}                   System info display (bundled fastfetch)\n"
+printf "  ${BOLD}fastfetch (fetch, fast)${RESET}             System info display (bundled fastfetch)\n"
 printf "  ${BOLD}bios${RESET}                                System info display (YEN BIOS logo)\n"
 echo ""
 

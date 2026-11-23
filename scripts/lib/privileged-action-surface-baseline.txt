@@ -13,9 +13,10 @@ app-intent-guard:deny-plus-prefix
 app-intent-scope:control
 app-intent-scope:input
 app-intent-scope:read
-cli-builtins:commands+=(help version init ide agents web pane sessions config reload update btop monitor fastfetch fetch bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
+cli-builtins:commands+=(help version init ide agents web pane sessions config reload update btop monitor fastfetch fetch fast bios resources browse files fm lazygit gitlazy yengit gityen settings prefs preferences commands)
 cli-case:bios->route:bios
 cli-case:commands->show-usage
+cli-case:fast->route:fastfetch
 cli-case:fetch->route:fastfetch
 cli-case:files->route:browse
 cli-case:fm->route:browse

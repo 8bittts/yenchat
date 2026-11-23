@@ -87,6 +87,7 @@ btop() { _yen_run_app_command btop "$@"; }
 monitor() { _yen_run_app_command monitor "$@"; }
 fastfetch() { _yen_run_app_command fastfetch "$@"; }
 fetch() { _yen_run_app_command fetch "$@"; }
+fast() { _yen_run_app_command fast "$@"; }
 bios() { _yen_run_app_command bios "$@"; }
 resources() { _yen_run_app_command resources "$@"; }
 browse() { _yen_run_app_command browse "$@"; }

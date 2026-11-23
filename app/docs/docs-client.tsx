@@ -1661,7 +1661,8 @@ function CommandsSection() {
 						<tr className="border-b border-border-light">
 							<td className="align-top py-2 pl-4 pr-4">
 								<code className="inline-code-brand">fastfetch</code> (
-								<code className="inline-code-brand">fetch</code>)
+								<code className="inline-code-brand">fetch</code>,{" "}
+								<code className="inline-code-brand">fast</code>)
 							</td>
 							<td className="align-top py-2 pr-4 text-left">
 								System info snapshot (bundled fastfetch)
