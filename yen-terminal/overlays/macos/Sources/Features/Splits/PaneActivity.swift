@@ -114,25 +114,35 @@ struct PaneActivityIcon: View {
     }
 }
 
-/// The trailing split count on a horizontal tab. A tab with one pane shows nothing.
+/// The trailing accessory on a horizontal tab: the tab's session state
+/// (`TabSessionState`) and the split count. A one-pane tab shows no count.
 struct PaneTabSplitCount: View {
     let count: Int
+    var session: TabSessionState? = nil
 
     var body: some View {
-        if count > 1 {
-            HStack(spacing: 3) {
-                Image(systemName: "rectangle.split.2x1")
+        HStack(spacing: 6) {
+            if let session {
+                Image(systemName: session.symbolName)
                     .imageScale(.small)
-                Text(count, format: .number)
-                    .monospacedDigit()
+                    .accessibilityLabel(session.label)
+                    .help(session.label)
             }
-            .font(.system(size: NSFont.smallSystemFontSize))
-            .foregroundStyle(.secondary)
-            .fixedSize()
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(count) panes")
-            .help("\(count) panes")
+            if count > 1 {
+                HStack(spacing: 3) {
+                    Image(systemName: "rectangle.split.2x1")
+                        .imageScale(.small)
+                    Text(count, format: .number)
+                        .monospacedDigit()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(count) panes")
+                .help("\(count) panes")
+            }
         }
+        .font(.system(size: NSFont.smallSystemFontSize))
+        .foregroundStyle(.secondary)
+        .fixedSize()
     }
 }
 
@@ -146,10 +156,30 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
         guard let stack = window.tab.accessoryView as? WorkspaceTabAccessory else { return }
         let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 0))
         stack.install(host, for: window)
-        host.observation = controller.$surfaceTree.map { $0.root?.leaves().count ?? 0 }
-            .removeDuplicates()
-            .sink { [weak host] in host?.rootView = PaneTabSplitCount(count: $0) }
+        // Session state is fixed for a pane's life, so the tree is the only
+        // input: recomputed when panes are added, removed or moved.
+        host.observation = controller.$surfaceTree
+            .map(Self.accessoryContent(for:))
+            .removeDuplicates(by: Self.sameContent)
+            .sink { [weak host] in
+                host?.rootView = $0
+                // A narrow tab drops the count for its title but keeps a
+                // session marker, the one cue a truncated title can lose.
+                (host?.superview as? WorkspaceTabAccessory)?.updateTrailingContent()
+            }
     }
+
+    static func accessoryContent(for tree: SplitTree<YEN.SurfaceView>) -> PaneTabSplitCount {
+        let leaves: [YEN.SurfaceView] = tree.root?.leaves() ?? []
+        let ids: [UUID] = leaves.map { $0.id }
+        return PaneTabSplitCount(count: leaves.count, session: TabSessionState.of(paneIDs: ids))
+    }
+
+    static func sameContent(_ lhs: PaneTabSplitCount, _ rhs: PaneTabSplitCount) -> Bool {
+        lhs.count == rhs.count && lhs.session == rhs.session
+    }
+
+    var showsSessionMarker: Bool { rootView.session != nil }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

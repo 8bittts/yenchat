@@ -50,6 +50,9 @@ struct TabSidebarItem: Identifiable, Equatable {
     let gitSummary: String?
     let statusSummary: String?
     let statusTone: TabSidebarStatusTone
+    /// Live or remote, from the tab's panes (`TabSessionState`); nil for an
+    /// ordinary tab.
+    var sessionState: TabSessionState? = nil
 
     static func == (lhs: TabSidebarItem, rhs: TabSidebarItem) -> Bool {
         lhs.id == rhs.id &&
@@ -61,13 +64,19 @@ struct TabSidebarItem: Identifiable, Equatable {
         lhs.cwdSummary == rhs.cwdSummary &&
         lhs.gitSummary == rhs.gitSummary &&
         lhs.statusSummary == rhs.statusSummary &&
-        lhs.statusTone == rhs.statusTone
+        lhs.statusTone == rhs.statusTone &&
+        lhs.sessionState == rhs.sessionState
     }
 }
 
 @MainActor
 class TabSidebarDataSource: NSObject, ObservableObject {
     @Published var tabs: [TabSidebarItem] = []
+    /// Collapsed in every new sidebar; discovers only while expanded and showing.
+    let hostsSection = TabSidebarHostsSection()
+
+    /// The terminal window this sidebar describes, for Hosts actions.
+    var commandTargetWindow: NSWindow? { nil }
 
     func updateTabsIfNeeded(_ updatedTabs: [TabSidebarItem]) {
         guard tabs != updatedTabs else { return }

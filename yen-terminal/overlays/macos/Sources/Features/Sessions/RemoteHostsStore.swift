@@ -116,7 +116,12 @@ final class RemoteHostsStore: ObservableObject {
     /// A Hosts surface closed. The last one stops the timer; a refresh already
     /// running finishes, because its processes have their own deadlines.
     func surfaceDidDisappear(_ surface: AnyObject) {
-        guard visibleSurfaces.remove(ObjectIdentifier(surface)) != nil, visibleSurfaces.isEmpty else { return }
+        surfaceDidDisappear(id: ObjectIdentifier(surface))
+    }
+
+    /// For a surface that is going away (its deinit cannot pass itself).
+    func surfaceDidDisappear(id: ObjectIdentifier) {
+        guard visibleSurfaces.remove(id) != nil, visibleSurfaces.isEmpty else { return }
         timer?.invalidate()
         timer = nil
     }

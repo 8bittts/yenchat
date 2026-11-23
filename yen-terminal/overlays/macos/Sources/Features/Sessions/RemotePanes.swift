@@ -209,16 +209,17 @@ enum RemotePanes {
     }
 
     /// A pane left its tree; once undo can no longer bring it back and no
-    /// window holds it, forget its identity.
+    /// window holds it, forget its identity and its live record.
     static func paneLeftTree(
         _ paneID: UUID,
         after delay: Duration,
         isStillPresent: @escaping @MainActor (UUID) -> Bool
     ) {
-        guard identity(for: paneID) != nil else { return }
+        guard identity(for: paneID) != nil || PaneSessionRecords.isLive(paneID) else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + PersistentSessions.seconds(delay)) {
             guard !isStillPresent(paneID) else { return }
             registry.withLock { $0.identities[paneID] = nil }
+            PaneSessionRecords.setLive(paneID, false)
         }
     }
 

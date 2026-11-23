@@ -169,7 +169,23 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
         )
     }
 
-    private(set) var visible: Bool = false
+    private(set) var visible: Bool = false {
+        didSet { syncHostsShowing() }
+    }
+
+    /// The transient panel hides itself while YEN is inactive
+    /// (`hidesOnDeactivate`) but stays logically open, so the Hosts section
+    /// counts as showing only while the panel is open and YEN is active.
+    nonisolated static func transientPanelShowsHosts(open: Bool, appIsActive: Bool) -> Bool {
+        open && appIsActive
+    }
+
+    private func syncHostsShowing() {
+        // In persistent mode `visible` describes the docked rails, which
+        // carry their own sections; this one lives only in the floating panel.
+        let panelOpen = visible && Self.presentationMode == .transient
+        hostsSection.setShowing(Self.transientPanelShowsHosts(open: panelOpen, appIsActive: NSApp.isActive))
+    }
     private weak var fullscreenSidebarWindow: NSWindow?
     private weak var fullscreenSidebarGroup: NSWindowTabGroup?
 
@@ -267,6 +283,12 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
             self,
             selector: #selector(applicationDidResignActive(_:)),
             name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+        center.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive(_:)),
+            name: NSApplication.didBecomeActiveNotification,
             object: nil
         )
     }
@@ -587,7 +609,11 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
                 cwdSummary: metadata.cwdSummary,
                 gitSummary: gitSnapshot?.summary,
                 statusSummary: signal?.summary,
-                statusTone: signal?.tone ?? (isSelected ? .neutral : .idle)
+                statusTone: signal?.tone ?? (isSelected ? .neutral : .idle),
+                // Records lookups only, made when the row list already
+                // refreshes (tree, focus and split notifications, the
+                // fallback tick); no process or file access.
+                sessionState: controller.flatMap { TabSessionState.of(paneIDs: $0.surfaceTree.map(\.id)) }
             )
         }
     }
@@ -738,6 +764,8 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
         )
     }
 
+    override var commandTargetWindow: NSWindow? { transientPanelWindow() }
+
     private func transientPanelWindow() -> NSWindow? {
         if Self.presentationMode == .transient, let anchorWindow {
             return anchorWindow
@@ -833,7 +861,12 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
         reattachPanel(to: window)
     }
 
+    @objc private func applicationDidBecomeActive(_ notification: Notification) {
+        syncHostsShowing()
+    }
+
     @objc private func applicationDidResignActive(_ notification: Notification) {
+        hostsSection.setShowing(false)
         guard Self.presentationMode == .transient else { return }
         guard visible else { return }
         teardownObservation()

@@ -250,6 +250,8 @@ case "$MODE" in
                 -only-testing:YENTests/RemoteHostsStoreTests
                 -only-testing:YENTests/RemotePanesTests
                 -only-testing:YENTests/RemoteHostsPaletteRowsTests
+                -only-testing:YENTests/SessionStateTests
+                -only-testing:YENTests/TabSidebarHostsSectionTests
                 -only-testing:YENTests/ShellTests
                 -only-testing:YENTests/SplitTreeTests
                 -only-testing:YENTests/SurfaceRouteEnvironmentTests

@@ -10,18 +10,24 @@ final class DockedTabSidebarModel: TabSidebarDataSource {
         self?.refreshTabs(rescan: false)
     }
     private var refreshTimer: Timer?
+    private var railVisible = true
+    private var occlusionObserver: NSObjectProtocol?
     #if DEBUG
     var testingMetadataScanCount: Int { observationSession.testingMetadataScanCount }
     #endif
 
     func attach(to window: NSWindow?) {
         hostWindow = window
+        observeOcclusion(of: window)
+        syncHostsShowing()
         observationSession.attach(to: window)
         refreshTabs()
         restartRefreshTimerIfNeeded()
     }
 
     func setVisible(_ visible: Bool) {
+        railVisible = visible
+        syncHostsShowing()
         if visible {
             observationSession.attach(to: hostWindow)
             restartRefreshTimerIfNeeded()
@@ -30,6 +36,35 @@ final class DockedTabSidebarModel: TabSidebarDataSource {
             stopRefreshTimer()
             observationSession.detach()
             updateTabsIfNeeded([])
+        }
+    }
+
+    override var commandTargetWindow: NSWindow? { hostWindow }
+
+    /// A rail shows its Hosts section only while its window is on screen: a
+    /// background tab, a minimized window or one on another Space is not.
+    nonisolated static func railShowsHosts(railVisible: Bool, hasWindow: Bool, windowOnScreen: Bool) -> Bool {
+        railVisible && hasWindow && windowOnScreen
+    }
+
+    private func syncHostsShowing() {
+        hostsSection.setShowing(Self.railShowsHosts(
+            railVisible: railVisible,
+            hasWindow: hostWindow != nil,
+            windowOnScreen: hostWindow?.occlusionState.contains(.visible) == true
+        ))
+    }
+
+    private func observeOcclusion(of window: NSWindow?) {
+        if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        occlusionObserver = nil
+        guard let window else { return }
+        occlusionObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncHostsShowing() }
         }
     }
 
@@ -69,6 +104,8 @@ final class DockedTabSidebarModel: TabSidebarDataSource {
 
     deinit {
         MainActor.assumeIsolated {
+            if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+            hostsSection.setShowing(false)
             stopRefreshTimer()
             observationSession.detach()
         }

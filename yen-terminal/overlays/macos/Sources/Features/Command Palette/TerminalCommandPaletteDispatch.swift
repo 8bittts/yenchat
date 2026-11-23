@@ -85,6 +85,13 @@ extension TerminalCommandPaletteView {
     }
 
     func insertHistoryCommand(_ command: String) {
+        Self.insertCommand(command, into: surfaceView)
+    }
+
+    /// Type `command` at the surface's prompt through a paste, without
+    /// running it, then put the user's clipboard back. Shared with the tab
+    /// sidebar's Hosts rows.
+    static func insertCommand(_ command: String, into surfaceView: YEN.SurfaceView) {
         let pasteboard = NSPasteboard.general
         let snapshot = PasteboardSnapshot.capture(from: pasteboard)
 

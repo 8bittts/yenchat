@@ -45,6 +45,9 @@ struct TabSidebarRowAccessibilityDescriptor: Equatable {
 		if let statusSummary = tab.statusSummary {
 			parts.append(statusSummary)
 		}
+		if let sessionState = tab.sessionState {
+			parts.append(sessionState.label)
+		}
 		if let shortcut = tab.shortcut {
 			parts.append("Command \(shortcut)")
 		}
@@ -95,6 +98,10 @@ struct TabSidebarView<Model: TabSidebarDataSource>: View {
 				.padding(.vertical, 6)
 				.accessibilityElement(children: .contain)
 				.accessibilityLabel("Open tabs")
+
+				TabSidebarHostsSectionView(section: model.hostsSection, targetWindow: { model.commandTargetWindow })
+					.padding(.horizontal, bodyPadding)
+					.padding(.bottom, 6)
 			}
 
 			Spacer(minLength: 0)
@@ -348,6 +355,13 @@ private struct TabSidebarRow: View {
 				titleView
 
 				Spacer(minLength: 0)
+
+				if let sessionState = tab.sessionState {
+					Image(systemName: sessionState.symbolName)
+						.settingsScaledSystemFont(size: 10)
+						.foregroundColor(.secondary)
+						.help(sessionState.label)
+				}
 
 				if let shortcut = tab.shortcut {
 					Text("⌘\(shortcut)")

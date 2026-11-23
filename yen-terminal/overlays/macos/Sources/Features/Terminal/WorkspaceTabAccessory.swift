@@ -54,9 +54,9 @@ final class WorkspaceTabAccessory: NSStackView {
         alignTitle()
     }
 
-    private func updateTrailingContent() {
+    func updateTrailingContent() {
         if let shortcutLabel, shortcutLabel.isHidden == isRevealed { shortcutLabel.isHidden = !isRevealed }
-        let hidesCount = isRevealed || isNarrow
+        let hidesCount = isRevealed || (isNarrow && splitCount?.showsSessionMarker != true)
         if let splitCount, splitCount.isHidden != hidesCount { splitCount.isHidden = hidesCount }
     }
 

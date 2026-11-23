@@ -300,6 +300,7 @@ enum PersistentSessions {
         // hook in here: an opened or restored remote pane gets its attach
         // command first and is then skipped below like any pane with a command.
         RemotePanes.prepare(&config, paneID: paneID)
+        PaneSessionRecords.setLive(paneID, false)
         config.environmentVariables.removeValue(forKey: environmentKey)
         config.environmentVariables.removeValue(forKey: binaryEnvironmentKey)
 
@@ -318,6 +319,7 @@ enum PersistentSessions {
             config.environmentVariables[binaryEnvironmentKey] = binary
         }
         recordOwner(paneID, socketDirectory)
+        PaneSessionRecords.setLive(paneID, true)
     }
 
     /// True when the pane runs inside a live session, which survives a quit.
