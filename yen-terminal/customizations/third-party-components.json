@@ -1,0 +1,248 @@
+{
+	"about": "Third-party code YEN.app ships beyond the vendored tools. scripts/gen-third-party-notices.ts writes notices/ThirdPartyComponents.txt from this list, and tests/171-third-party-notices.test.ts fails when an engine dependency is in no list or a pinned archive no longer matches the notice.",
+	"bundled": [
+		{
+			"key": "libxev",
+			"name": "libxev",
+			"license": "MIT",
+			"home": "https://github.com/mitchellh/libxev",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "vaxis",
+			"name": "libvaxis",
+			"license": "MIT",
+			"home": "https://github.com/rockorager/libvaxis",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "zigimg",
+			"name": "zigimg",
+			"license": "MIT",
+			"home": "https://github.com/zigimg/zigimg",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "z2d",
+			"name": "z2d",
+			"license": "MPL-2.0",
+			"home": "https://github.com/vancluever/z2d",
+			"note": "The source code of z2d is available at the archive and project addresses in this section.",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["COPYING", "LICENSE"]
+		},
+		{
+			"key": "zig_objc",
+			"name": "zig-objc",
+			"license": "MIT",
+			"home": "https://github.com/mitchellh/zig-objc",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "uucode",
+			"name": "uucode",
+			"license": "MIT AND Unicode-3.0",
+			"home": "https://github.com/jacobsandlund/uucode",
+			"source": { "zon": "build.zig.zon" },
+			"files": [
+				"LICENSE.md",
+				"licenses/LICENSE_unicode",
+				"licenses/LICENSE_Bjoern_Hoehrmann"
+			]
+		},
+		{
+			"key": "zf",
+			"name": "zf",
+			"license": "MIT",
+			"home": "https://github.com/natecraddock/zf",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "bindings",
+			"name": "Dear Bindings",
+			"license": "MIT",
+			"home": "https://github.com/dearimgui/dear_bindings",
+			"source": {
+				"zon": "pkg/dcimgui/build.zig.zon",
+				"licenseUrl": "https://raw.githubusercontent.com/dearimgui/dear_bindings/v0.17/LICENSE.txt"
+			},
+			"files": []
+		},
+		{
+			"key": "imgui",
+			"name": "Dear ImGui",
+			"license": "MIT",
+			"home": "https://github.com/ocornut/imgui",
+			"source": { "zon": "pkg/dcimgui/build.zig.zon" },
+			"files": ["LICENSE.txt"]
+		},
+		{
+			"key": "freetype",
+			"name": "FreeType",
+			"license": "FTL",
+			"home": "https://freetype.org",
+			"note": "Portions of this software are copyright (c) The FreeType Project (www.freetype.org). All rights reserved. YEN uses FreeType under the FreeType License (FTL).",
+			"source": { "zon": "pkg/freetype/build.zig.zon" },
+			"files": ["LICENSE.TXT", "docs/FTL.TXT"]
+		},
+		{
+			"key": "highway",
+			"name": "Highway",
+			"license": "Apache-2.0",
+			"home": "https://github.com/google/highway",
+			"source": { "zon": "pkg/highway/build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "gettext",
+			"name": "GNU gettext runtime (libintl)",
+			"license": "LGPL-2.1-or-later",
+			"home": "https://www.gnu.org/software/gettext/",
+			"note": "YEN links libintl statically. You may modify libintl and relink YEN with your version: the complete source of YEN, including the build scripts that link libintl, is at https://github.com/8bittts/yenchat, and the libintl source is at the archive address in this section.",
+			"source": { "zon": "pkg/libintl/build.zig.zon" },
+			"files": ["gettext-runtime/intl/COPYING.LIB"]
+		},
+		{
+			"key": "libpng",
+			"name": "libpng",
+			"license": "libpng-2.0",
+			"home": "http://www.libpng.org/pub/png/libpng.html",
+			"source": { "zon": "pkg/libpng/build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "oniguruma",
+			"name": "Oniguruma",
+			"license": "BSD-2-Clause",
+			"home": "https://github.com/kkos/oniguruma",
+			"source": { "zon": "pkg/oniguruma/build.zig.zon" },
+			"files": ["COPYING"]
+		},
+		{
+			"key": "sentry",
+			"name": "Sentry Native SDK",
+			"license": "MIT",
+			"home": "https://github.com/getsentry/sentry-native",
+			"note": "YEN uses this library to write crash records on your Mac. It sends nothing over the network.",
+			"source": { "zon": "pkg/sentry/build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "breakpad",
+			"name": "Breakpad",
+			"license": "BSD-3-Clause",
+			"home": "https://chromium.googlesource.com/breakpad/breakpad",
+			"source": { "zon": "pkg/breakpad/build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "simdutf",
+			"name": "simdutf",
+			"license": "MIT",
+			"home": "https://github.com/simdutf/simdutf",
+			"source": { "local": "pkg/simdutf/vendor" },
+			"files": ["LICENSE-MIT"]
+		},
+		{
+			"key": "wuffs",
+			"name": "Wuffs",
+			"license": "Apache-2.0 OR MIT",
+			"home": "https://github.com/google/wuffs",
+			"source": { "zon": "pkg/wuffs/build.zig.zon" },
+			"files": ["LICENSE-MIT"]
+		},
+		{
+			"key": "zlib",
+			"name": "zlib",
+			"license": "Zlib",
+			"home": "https://zlib.net",
+			"source": { "zon": "pkg/zlib/build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "glslang",
+			"name": "glslang",
+			"license": "BSD-3-Clause AND others listed below",
+			"home": "https://github.com/KhronosGroup/glslang",
+			"source": { "zon": "pkg/glslang/build.zig.zon" },
+			"files": ["LICENSE.txt"]
+		},
+		{
+			"key": "spirv_cross",
+			"name": "SPIRV-Cross",
+			"license": "Apache-2.0",
+			"home": "https://github.com/KhronosGroup/SPIRV-Cross",
+			"source": { "zon": "pkg/spirv-cross/build.zig.zon" },
+			"files": ["LICENSE", "LICENSES/LicenseRef-KhronosFreeUse.txt"]
+		},
+		{
+			"key": "jetbrains_mono",
+			"name": "JetBrains Mono (embedded font)",
+			"license": "OFL-1.1",
+			"home": "https://github.com/JetBrains/JetBrainsMono",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["OFL.txt"]
+		},
+		{
+			"key": "nerd_fonts_symbols_only",
+			"name": "Symbols Nerd Font (embedded font)",
+			"license": "MIT",
+			"home": "https://github.com/ryanoasis/nerd-fonts",
+			"source": { "zon": "build.zig.zon" },
+			"files": ["LICENSE"]
+		},
+		{
+			"key": "iterm2_themes",
+			"name": "iTerm2 Color Schemes (bundled color themes)",
+			"license": "MIT",
+			"home": "https://github.com/mbadolato/iTerm2-Color-Schemes",
+			"source": {
+				"zon": "build.zig.zon",
+				"licenseUrl": "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/494b8091719c75537cd330a0a0d4ace5e0474c0e/LICENSE"
+			},
+			"files": []
+		},
+		{
+			"key": "sparkle",
+			"name": "Sparkle (update framework)",
+			"license": "MIT",
+			"home": "https://sparkle-project.org",
+			"source": {
+				"spm": "macos/YEN.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+				"licenseUrl": "https://raw.githubusercontent.com/sparkle-project/Sparkle/{revision}/LICENSE"
+			},
+			"files": []
+		}
+	],
+	"coveredBy": {
+		"zf_vaxis": "vaxis",
+		"zf_vaxis_zigimg": "zigimg",
+		"zf_vaxis_uucode": "uucode"
+	},
+	"excluded": {
+		"translate_c": "build tool, not shipped",
+		"aro": "build tool, not shipped",
+		"apple_sdk": "build tool, not shipped",
+		"android_ndk": "build tool, not shipped",
+		"zig_js": "WebAssembly builds only",
+		"zig_wayland": "Linux builds only",
+		"gobject": "Linux builds only",
+		"gtk4_layer_shell": "Linux builds only",
+		"wayland": "Linux builds only",
+		"wayland_protocols": "Linux builds only",
+		"plasma_wayland_protocols": "Linux builds only",
+		"fontconfig": "Linux builds only",
+		"libxml2": "Linux builds only, through fontconfig",
+		"harfbuzz": "not linked with the macOS CoreText font backend",
+		"macos": "part of the engine source, covered by TerminalEngine.txt",
+		"opengl": "part of the engine source, covered by TerminalEngine.txt",
+		"dcimgui": "wrapper package; its contents are listed as bindings and imgui",
+		"libintl": "wrapper package; its contents are listed as gettext",
+		"pixels": "test images only, not shipped"
+	}
+}

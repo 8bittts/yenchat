@@ -12,6 +12,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+	engineDependencyKeys,
+	NOTICE_PATH,
+	provenanceLines,
+	readManifest,
+} from "../scripts/lib/third-party-components";
 
 // MIT and Apache-2.0 require their notice in every copy of the software, so
 // YEN.app carries one notice per bundled third-party component. The vendor
@@ -110,6 +116,51 @@ describe("third-party notices in the repository", () => {
 		const notices = readdirSync(noticesDir);
 		expect(notices.length).toBeGreaterThan(0);
 		expect(notices.filter((name) => /ghostty/i.test(name))).toEqual([]);
+	});
+});
+
+// The engine compiles libraries and fonts into YEN.app that have no vendor baseline, and
+// YEN ships Sparkle. Their licenses live in one generated notice; regenerate it with
+// `bun scripts/gen-third-party-notices.ts` when these tests fail after a vendor update.
+describe("engine and framework components", () => {
+	const manifest = readManifest(repoRoot);
+	const bundledKeys = manifest.bundled.map((component) => component.key);
+
+	test("every engine dependency is shipped with a notice, covered by one, or excluded", () => {
+		const listed = new Set([
+			...bundledKeys,
+			...Object.keys(manifest.coveredBy),
+			...Object.keys(manifest.excluded),
+		]);
+		const engineKeys = engineDependencyKeys(repoRoot);
+		// Floor against a short listing: the engine pins well over twenty packages.
+		expect(engineKeys.size).toBeGreaterThan(30);
+		expect([...engineKeys].filter((key) => !listed.has(key))).toEqual([]);
+
+		const notEngine = [...listed].filter(
+			(key) => key !== "sparkle" && !engineKeys.has(key),
+		);
+		expect(notEngine).toEqual([]);
+		for (const target of Object.values(manifest.coveredBy)) {
+			expect(bundledKeys).toContain(target);
+		}
+	});
+
+	test("the notice carries every shipped component at its current pin", () => {
+		const text = readFileSync(join(repoRoot, NOTICE_PATH), "utf8");
+		const stale = manifest.bundled.filter(
+			(component) =>
+				!text.includes(provenanceLines(repoRoot, component).join("\n")),
+		);
+		expect(stale.map((component) => component.key)).toEqual([]);
+		// Licenses whose terms ask for this exact text in a binary release.
+		const required = [
+			"Portions of this software are copyright (c) The FreeType Project",
+			"GNU LESSER GENERAL PUBLIC LICENSE",
+			"SIL OPEN FONT LICENSE Version 1.1",
+			"Mozilla Public License Version 2.0",
+		];
+		expect(required.filter((line) => !text.includes(line))).toEqual([]);
 	});
 });
 

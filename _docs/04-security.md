@@ -190,7 +190,11 @@ The engine's notice is `TerminalEngine.txt`, because the fingerprint gate reject
 Its text names the upstream project and copyright holder, as MIT requires; the gate reads paths, Mach-O payloads, the bundled shell CLI and locale catalogs, so a text notice passes without an allowlist entry.
 `scripts/lib/third-party-notices.sh` owns both checks: `03-verify-components.sh` requires a notice for every baseline in its terminal structure unit, and `05-detect-failures.sh` requires each tracked notice in the built app, byte for byte.
 `tests/171-third-party-notices.test.ts` proves both checks fail closed and that a notice file named after the upstream engine still fails the scan.
-The notices cover the engine and the vendored tools, not the libraries those projects link.
+The vendored tools' notices do not cover the libraries those tools link.
+The engine is different: it compiles libraries and fonts into the `yen` binary, and the app ships `Sparkle.framework`, so `ThirdPartyComponents.txt` carries their license texts.
+`yen-terminal/customizations/third-party-components.json` lists each engine dependency as shipped, covered by another entry, or excluded with a reason, and `bun scripts/gen-third-party-notices.ts` writes the notice from the archives the engine pins.
+`tests/171-third-party-notices.test.ts` fails when an engine dependency is in no list or a pin no longer matches the notice; regenerate the notice after a vendor update that trips it.
+libintl is LGPL-2.1 and linked statically; its section points to the public YEN source and build scripts so a user can relink it, and that pointer must stay while YEN links libintl.
 
 ### High-Priority Watch Items
 
