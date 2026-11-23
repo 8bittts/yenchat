@@ -1,6 +1,6 @@
 {
 	"name": "yenchat",
-	"version": "1.286",
+	"version": "1.287",
 	"private": true,
 	"type": "module",
 	"packageManager": "bun@1.4.5",

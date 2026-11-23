@@ -1,8 +1,8 @@
 {
-  "version": "1.286",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.286/yen-1286.dmg",
-  "sha256": "4dc07a9aa24817568c7cfd8970dbf9acf7045574556ec9c256217e0b35516de7",
-  "notes": "Cleaner tabs and update status in the titlebar",
+  "version": "1.287",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.287/yen-1287.dmg",
+  "sha256": "04ffeaabb324bc8f26c155f45ca7286417d325b6b738fdfce3ac8bce044494f3",
+  "notes": "Spark Speed and evenly sized Settings controls",
   "minOS": "27.0",
   "releaseDate": ""
 }
