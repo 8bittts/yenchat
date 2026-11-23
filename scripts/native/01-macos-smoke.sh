@@ -182,6 +182,7 @@ case "$MODE" in
                 -only-testing:YENTests/IDEBlockingProcessRunnerTests
                 -only-testing:YENTests/GeneralSettingsStoreTests
                 -only-testing:YENTests/TokenPlanUsageTests
+                -only-testing:YENTests/TokenClaudeLimitsTests
                 -only-testing:YENTests/TokenUsageIndexTests
                 -only-testing:YENTests/WallpaperStateTests
                 -only-testing:YENTests/WallpaperToggleTests
