@@ -764,10 +764,12 @@ function SettingsSection() {
 				On macOS 27 or later, open General, then Experimental. Turn on Moving
 				Wallpaper and click Wallpaper Controls. Choose a video or GIF, paste a
 				YouTube link, pick a video from Photos, or shuffle from Photos. Use
-				Wallpaper per Desktop to choose separate assignments. The same menu
-				controls pause, sound, and removal. Starting in YEN 1.285, Shuffle from
-				Photos can ask for access to your library, and a YouTube link downloads
-				at up to 1080p with its sound.
+				Wallpaper per Desktop to choose separate assignments. Starting in YEN
+				1.285, a per-desktop wallpaper on an external display comes back when
+				you plug the display in again, even though macOS gives that display new
+				desktops. The same menu controls pause, sound, and removal. Starting in
+				YEN 1.285, Shuffle from Photos can ask for access to your library, and a
+				YouTube link downloads at up to 1080p with its sound.
 			</p>
 			<p className="text-body">
 				Playback starts muted. YEN draws behind desktop icons and preserves your
@@ -1016,6 +1018,16 @@ function PersistentSessionsSection() {
 				ends, its pane closes; if YEN cannot attach, the pane shows why until
 				you press Return. Closing a remote pane, tab, or window only detaches:
 				YEN does not ask, and the session keeps running on the other Mac.
+			</p>
+			<p className="text-body">
+				While YEN reconnects a remote tab to its Mac, the tab&apos;s globe icon
+				is struck through, and its tooltip reads Reconnecting to &lt;Mac&gt;.
+				The pane shows when the next attempt runs, and the icon returns to the
+				plain globe as soon as the session is back. Press{" "}
+				<code className="inline-code-brand">Ctrl + C</code> in the pane to stop
+				trying; the session keeps running on the other Mac. With{" "}
+				<code className="inline-code-brand">progress-style = false</code> in
+				config.yen, no tab shows this marker.
 			</p>
 			<TerminalCodeBlock
 				title="Terminal"

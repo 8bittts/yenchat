@@ -40,6 +40,48 @@ describe("documentation contracts", () => {
 		}
 	});
 
+	test("public docs say a per-desktop wallpaper survives a display reconnect", () => {
+		expect(
+			read(
+				"yen-terminal/overlays/macos/Sources/Features/MovingWallpaper/WallpaperState.swift",
+			),
+		).toContain("mutating func followSpaces(");
+		expect(read("app/docs/docs-client.tsx").replace(/\s+/g, " ")).toContain(
+			"a per-desktop wallpaper on an external display comes back when you plug the display in again, even though macOS gives that display new desktops.",
+		);
+		expect(read("public/llms.txt")).toContain(
+			"per-desktop selection (kept across an external display reconnect",
+		);
+	});
+
+	test("public docs name the Reconnecting marker as the source draws it", () => {
+		const state = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/PaneSessionState.swift",
+		);
+		const transport = read("yen-cli/lib/sessions-remote.sh");
+		const label = state.match(
+			/return "(Reconnecting to) \\\(Self\.names\(hosts\)\)"/,
+		)?.[1];
+		expect(label).toBe("Reconnecting to");
+		expect(state).toContain('case .reconnecting: "network.slash"');
+		// The CLI writes the mark only when the app asked for it.
+		expect(transport).toContain("readonly REMOTE_MARK_SET=$'\\e]9;4;4;0\\a'");
+		expect(transport).toContain(
+			'remote_mark_wanted() { [[ "${YEN_REMOTE_RECONNECT_MARK:-}" == 1 ]]; }',
+		);
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		expect(manual).toContain(
+			"While YEN reconnects a remote tab to its Mac, the tab&apos;s globe icon is struck through, and its tooltip reads Reconnecting to &lt;Mac&gt;.",
+		);
+		expect(read("public/llms.txt")).toContain(
+			'its globe icon is struck through with the tooltip "Reconnecting to <Mac>"',
+		);
+		expect(read("_docs/04-security.md")).toContain(
+			"`RemotePanes.isReconnectReport`",
+		);
+	});
+
 	test("public docs say a failed attach under Tailscale SSH is held on the other Mac", () => {
 		const transport = read("yen-cli/lib/sessions-remote.sh");
 		// Under `login` (Tailscale SSH on a Mac) a failed attach prints why on the
