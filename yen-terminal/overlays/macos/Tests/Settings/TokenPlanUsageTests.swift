@@ -117,4 +117,50 @@ struct TokenPlanUsageTests {
         // The switch itself belongs to the Settings reset, not to the display reset.
         #expect(defaults.bool(forKey: DesktopExtras.usageKey))
     }
+
+    @Test func rotatingMenuBarShowsTheTotalAndEachCurrentLimitInTurn() throws {
+        let now = Date()
+        let later = now.addingTimeInterval(3600)
+        func meter(_ label: String, _ percent: Double, _ reset: Date = later) throws -> TokenPlanMeter {
+            try #require(TokenPlanMeter(label, percent: percent as NSNumber, reset: reset))
+        }
+        let counts: TokenUsageIndex.Counts = [.claude: 514_000_000, .codex: 0, .grok: 0, .openCode: 0]
+        let plans: [TokenTool: [TokenPlanMeter]] = [
+            .claude: [try meter("Weekly", 64), try meter("Opus weekly", 40), try meter("5-hour", 9, now.addingTimeInterval(-1))],
+            .codex: [try meter("5-hour", 12), try meter("Weekly", 97)],
+            .grok: [try meter("Grok weekly", 1)]
+        ]
+        let total = 514_000_000.formatted(.number.notation(.compactName))
+        func pct(_ value: Double) -> String { (value / 100).formatted(.percent.precision(.fractionLength(0))) }
+        // A weekly pool carries no label; the expired Claude 5-hour window is skipped.
+        let expected = ["Claude " + pct(64), "Claude Opus " + pct(40), "Codex 5h " + pct(12), "Codex " + pct(97), "Grok " + pct(1)]
+        for step in 0..<(expected.count + 1) {
+            let caption = TokenMenuDisplay.rotating.caption(counts: counts, plans: plans, step: step, now: now)
+            #expect(caption == total + " · " + expected[step % expected.count])
+        }
+        // With no current reading the rotating view still shows the total.
+        #expect(TokenMenuDisplay.rotating.caption(counts: counts, plans: [:], step: 3, now: now) == total)
+        #expect(TokenMenuDisplay.mark.caption(counts: counts, plans: plans, step: 0, now: now).isEmpty)
+    }
+
+    @Test func savedDisplayChoicesSurviveTheRename() {
+        #expect(TokenMenuDisplay(stored: "Plan limits") == .rotating)
+        #expect(TokenMenuDisplay(stored: "Top provider") == .provider)
+        #expect(TokenMenuDisplay(stored: nil) == .total)
+        #expect(TokenMenuDisplay(stored: "unknown") == .total)
+    }
+
+    @MainActor @Test func rightClickMenuOffersRefreshUpdatesAndQuit() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let menu = TokenUsageMenu(index: TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache")))
+        defer { menu.stop() }
+        let items = menu.contextMenu().items.filter { !$0.isSeparatorItem }
+        #expect(items.map(\.title).dropFirst() == ["Refresh", "Check for Updates…", "Quit YEN"])
+        #expect(items.first?.title.hasPrefix("YEN") == true && items.first?.isEnabled == false)
+        #expect(items[1].target === menu && items[1].keyEquivalent == "r")
+        // No target: the responder chain carries it to the app delegate's Sparkle check.
+        #expect(items[2].action == NSSelectorFromString("checkForUpdates:") && items[2].target == nil)
+        #expect(items[3].action == #selector(NSApplication.terminate(_:)) && items[3].keyEquivalent == "q")
+        #expect(menu.statusButton.map { NSEvent.EventTypeMask(rawValue: UInt64($0.sendAction(on: []))).contains(.rightMouseUp) } == true)
+    }
 }

@@ -612,9 +612,11 @@ function AgentTokenUsageSection() {
 			<p className="text-body">
 				Click the YEN icon to see each tool’s exact daily count and share. Click
 				a provider name or a plan label to open its official dashboard. Use the
-				column button to change the layout. Click the footer display button to
-				cycle through total tokens, the top provider, rotating plan limits, and
-				the icon alone.
+				column button to change the layout. Click the menu bar button in the
+				header to cycle the menu bar through total tokens, the top provider,
+				rotating limits, and the icon alone. Rotating limits shows today’s total
+				with each plan reading in turn, such as 514M · Claude 64%. Right-click
+				the menu bar item to refresh, check for updates, or quit YEN.
 			</p>
 			<p className="text-body">
 				The chart button turns the panel over to show token totals for the last

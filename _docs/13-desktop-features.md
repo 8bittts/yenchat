@@ -136,14 +136,16 @@ Tried and reverted, do not retry without new evidence:
 General → Menu Bar → Show Token Usage enables the experimental agent token counter.
 The menu bar shows the count first and the YEN mark after it (`TokenUsageMenu`).
 Click the status item to open the local day’s overview beneath it on the same display.
+Right-click or Control-click it for a menu with YEN and its version, Refresh, Check for Updates and Quit YEN (`TokenUsageMenu.contextMenu`).
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count and share of counted tokens.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
 Claude Plan Limits, below Show Token Usage, adds a marked block to the Claude Code statusline script so Claude's bars follow every turn ([01-architecture.md](01-architecture.md) → token menu); it is off by default and disabled when the script does not read its input into a variable.
+Claude Code sends its limits to the statusline only after a reply, so Claude's bars appear after the first reply that ends with the switch on.
 A plan reading stays until its reset time.
 A provider name or a pool label opens the dashboard that owns its numbers, and the pointer tints it; the panel has no separate link row.
 The tint is brand orange, darkened on a light theme so small text keeps 4.5:1 (`TokenBarTone.link`); the system accent is not used, because it changes with the user’s choice and falls below that ratio on a white panel.
-Plan labels start at the provider name’s left edge.
+Plan labels start at the provider name’s left edge, and a provider’s plan bars start just after its longest plan label.
 The chart button turns the card over to the analytics view, which keeps the overview’s size.
 The card rests unrotated on either face and shrinks during the turn by the share that perspective enlarges it, so its window never clips it.
 The chart takes all the height the totals leave, so the view has no empty band; a short overview gets a thinner chart without its caption.
@@ -151,7 +153,8 @@ That view shows token totals for the last 7, 30 and 90 days for each provider an
 It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
-The footer cycles the menu bar through total tokens, the leading provider, rotating plan limits and the YEN icon.
+The menu bar button in the header cycles the menu bar through total tokens, the leading provider, rotating limits and the YEN icon (`TokenMenuDisplay`).
+Rotating limits shows today's total and one current plan reading, the next every 5 seconds, such as `514M · Claude 64%`; a weekly pool carries no label, a 5-hour pool reads `5h`, and with no current reading it shows the total alone.
 Plan readings come only from records the four tools write on the Mac and the file YEN's statusline block saves; the menu reads no other app’s data, stores no credential and makes no network request.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.

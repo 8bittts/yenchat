@@ -18,6 +18,14 @@
 				"files": [".worktrees/**"]
 			},
 			{
+				"files": ["_docs/_design/homepages/**"],
+				"rules": [
+					"react-doctor/no-unguarded-browser-global-at-module-scope",
+					"react-doctor/nextjs-no-css-link"
+				],
+				"reason": "Standalone homepage concept prototypes served by Bun (server.ts), not part of the Next.js app: pages.tsx renders static HTML that links its own stylesheet, and interactions.js is a deferred browser-only script that never runs on a server."
+			},
+			{
 				"files": ["app/docs/**", "app/privacy/**", "app/not-found-client.tsx"],
 				"rules": ["react-doctor/design-no-em-dash-in-jsx-text"]
 			},

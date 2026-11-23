@@ -60,6 +60,8 @@ struct TokenUsageOverview: View {
     private var overview: some View {
         VStack(alignment: .leading, spacing: 10) {
             header("Token usage") {
+                action("menubar.rectangle", "Menu bar: " + snapshot.display.rawValue + ". Click for the next view.", perform: cycle)
+                    .accessibilityLabel("Menu bar display").accessibilityValue(snapshot.display.rawValue)
                 action(twoColumns ? "rectangle.split.1x2" : "rectangle.split.2x1",
                        twoColumns ? "Use one column" : "Use two columns") { twoColumns.toggle() }
                 action("arrow.clockwise", "Refresh usage", perform: refresh)
@@ -71,15 +73,7 @@ struct TokenUsageOverview: View {
                 ScrollView { bodyContent }.frame(height: max(120, heightLimit - 108))
             }.frame(maxHeight: max(120, heightLimit - 108))
             Divider()
-            HStack {
-                Text(coverage).font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button(action: cycle) {
-                    Label(snapshot.display.rawValue, systemImage: "arrow.triangle.2.circlepath")
-                }.buttonStyle(.borderless).font(.caption)
-                    .help("Cycle the menu bar display").accessibilityLabel("Cycle menu bar display")
-                    .accessibilityValue(snapshot.display.rawValue)
-            }
+            Text(coverage).font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -224,7 +218,12 @@ struct TokenUsageOverview: View {
                 .accessibilityLabel("Share of counted tokens").accessibilityValue(count == nil || total == 0 ? "Unavailable" : share.formatted(.percent))
             ForEach(meters) { meter in
                 HStack(spacing: 8) {
-                    link(meter.label, tool).font(.caption).lineLimit(1).frame(width: 116, alignment: .leading)
+                    // Each label takes the width of the provider's longest one, so its bars start
+                    // together just after the words.
+                    ZStack(alignment: .leading) {
+                        ForEach(meters) { Text($0.label).hidden() }
+                        link(meter.label, tool)
+                    }.font(.caption).lineLimit(1).fixedSize()
                     track(meter.percent / 100, color: color.opacity(scheme == .dark ? 0.8 : 1))
                     Text((meter.percent / 100).formatted(percent))
                         .font(.caption.monospacedDigit()).frame(minWidth: 30, alignment: .trailing)

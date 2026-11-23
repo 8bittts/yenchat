@@ -45,6 +45,8 @@ final class TokenUsageMenu: NSObject {
         button?.imagePosition = .imageTrailing
         button?.target = self
         button?.action = #selector(toggle)
+        // A right-click or Control-click opens the item's menu instead of the panel.
+        button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         configureRotation()
         updateTitle()
         watcher = TokenSourceWatcher(home: index.home) { [weak self] tool, paths in
@@ -77,6 +79,16 @@ final class TokenUsageMenu: NSObject {
     }
 
     @objc private func toggle() {
+        if let event = NSApp.currentEvent,
+           event.type == .rightMouseUp || (event.type == .leftMouseUp && event.modifierFlags.contains(.control)) {
+            closePanel()
+            // A menu set on the item opens where macOS places status menus; the click below shows
+            // it and returns when it closes, and clearing it keeps a left click opening the panel.
+            item.menu = contextMenu()
+            item.button?.performClick(nil)
+            item.menu = nil
+            return
+        }
         if panel != nil { closePanel(); return }
         guard let button = item.button, button.window != nil else { return }
         let window = TokenPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
@@ -125,6 +137,24 @@ final class TokenUsageMenu: NSObject {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(closePanel),
             name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         refreshAll()
+    }
+
+    /// The right-click menu: the app and its version, Refresh, Check for Updates and Quit.
+    /// Check for Updates has no target, so it reaches `AppDelegate.checkForUpdates(_:)`.
+    func contextMenu() -> NSMenu {
+        let menu = NSMenu()
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let name = NSMenuItem(title: "YEN" + (version.map { " · v" + $0 } ?? ""), action: nil, keyEquivalent: "")
+        name.isEnabled = false
+        menu.addItem(name)
+        menu.addItem(.separator())
+        let refresh = NSMenuItem(title: "Refresh", action: #selector(refreshAll), keyEquivalent: "r")
+        refresh.target = self
+        menu.addItem(refresh)
+        menu.addItem(NSMenuItem(title: "Check for Updates…", action: NSSelectorFromString("checkForUpdates:"), keyEquivalent: ""))
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit YEN", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        return menu
     }
 
     private func position(_ size: CGSize) {
@@ -243,7 +273,7 @@ final class TokenUsageMenu: NSObject {
     private func configureRotation() {
         rotation?.cancel()
         meterIndex = 0
-        guard snapshot.display == .limits else { return }
+        guard snapshot.display == .rotating else { return }
         rotation = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
@@ -257,31 +287,11 @@ final class TokenUsageMenu: NSObject {
     private func updateTitle() {
         let counts = snapshot.counts
         let sum = counts?.values.reduce(0, +) ?? 0
-        let value = counts == nil ? "…" : counts?.isEmpty == true ? "—" : sum.formatted(.number.notation(.compactName))
-        let partial = (1..<TokenTool.allCases.count).contains(counts?.count ?? 0)
-        let caption: String
-        switch snapshot.display {
-        case .total: caption = value + (partial ? "*" : "")
-        case .provider:
-            let leader = TokenTool.allCases.max { (counts?[$0] ?? -1) < (counts?[$1] ?? -1) }
-            if let leader, let count = counts?[leader], count > 0 {
-                caption = leader.rawValue + " " + count.formatted(.number.notation(.compactName))
-            } else { caption = value }
-        case .limits:
-            let now = Date()
-            let labels = TokenTool.allCases.flatMap { tool in
-                (snapshot.plans[tool] ?? []).filter { $0.isCurrent(at: now) }.map { meter in
-                    let name = tool == .grok ? meter.label : tool.rawValue + " " + meter.label
-                    return name + " " + (meter.percent / 100).formatted(.percent)
-                }
-            }
-            caption = labels.isEmpty ? "Limits —" : labels[meterIndex % labels.count]
-        case .mark: caption = ""
-        }
+        let caption = snapshot.display.caption(counts: counts, plans: snapshot.plans, step: meterIndex, now: Date())
         // The mark trails the count, so the space separates the two.
         item.button?.title = caption.isEmpty ? "" : caption + " "
         let summary = counts == nil ? "Reading local token usage" : "Token usage today: \(sum.formatted()) from \(counts?.count ?? 0) of 4 sources"
-        let title = snapshot.display == .limits ? caption + ". " + summary : summary
+        let title = snapshot.display == .rotating ? caption + ". " + summary : summary
         item.button?.toolTip = title
         item.button?.setAccessibilityLabel(title)
         if panel != nil {
@@ -319,9 +329,51 @@ private struct TokenMenuReading: Sendable {
 }
 
 enum TokenMenuDisplay: String, CaseIterable {
-    case total = "Total tokens", provider = "Top provider", limits = "Plan limits", mark = "Icon only"
+    case total = "Total tokens", provider = "Top provider", rotating = "Rotating limits", mark = "Icon only"
     static let key = "com.yenchat.yen.tokenUsage.display"
     static let columnsKey = "com.yenchat.yen.tokenUsage.twoColumns"
+
+    /// The saved choice; v1.288 saved the rotating mode as "Plan limits".
+    init(stored: String?) {
+        self = stored == "Plan limits" ? .rotating : stored.flatMap(Self.init(rawValue:)) ?? .total
+    }
+
+    /// The menu bar text before the mark. Rotating shows today's total and one current plan
+    /// reading, the next one at each `step`, such as "514M · Claude 64%".
+    func caption(counts: TokenUsageIndex.Counts?, plans: [TokenTool: [TokenPlanMeter]], step: Int, now: Date) -> String {
+        let sum = counts?.values.reduce(0, +) ?? 0
+        let value = counts == nil ? "…" : counts?.isEmpty == true ? "—" : sum.formatted(.number.notation(.compactName))
+        let total = value + ((1..<TokenTool.allCases.count).contains(counts?.count ?? 0) ? "*" : "")
+        switch self {
+        case .total: return total
+        case .provider:
+            let leader = TokenTool.allCases.max { (counts?[$0] ?? -1) < (counts?[$1] ?? -1) }
+            guard let leader, let count = counts?[leader], count > 0 else { return value }
+            return leader.rawValue + " " + count.formatted(.number.notation(.compactName))
+        case .rotating:
+            let limits = TokenTool.allCases.flatMap { tool in
+                (plans[tool] ?? []).filter { $0.isCurrent(at: now) }.map { Self.limit(tool, $0) }
+            }
+            return limits.isEmpty ? total : total + " · " + limits[step % limits.count]
+        case .mark: return ""
+        }
+    }
+
+    /// A weekly pool needs no label, since most plans have only that one: "Claude 64%",
+    /// "Claude 5h 12%", "Claude Opus 40%", "Grok 1%".
+    static func limit(_ tool: TokenTool, _ meter: TokenPlanMeter) -> String {
+        let pool: String
+        switch meter.label {
+        case "Weekly": pool = ""
+        case "5-hour": pool = "5h"
+        case _ where tool == .grok: pool = ""
+        case _ where meter.label.hasSuffix(" weekly"): pool = String(meter.label.dropLast(" weekly".count))
+        default: pool = meter.label
+        }
+        let name = tool == .claude ? "Claude" : tool.rawValue
+        let percent = (meter.percent / 100).formatted(.percent.precision(.fractionLength(0)))
+        return [name, pool, percent].filter { !$0.isEmpty }.joined(separator: " ")
+    }
 
     /// Reset All Settings forgets the menu bar display and the panel layout.
     static func reset(defaults: UserDefaults = .standard) {
@@ -336,5 +388,5 @@ final class TokenMenuSnapshot: ObservableObject {
     /// Tokens for each finished day, oldest first; nil until the analytics view asks for them.
     @Published var history: [TokenTool: [Int]]?
     @Published var plans: [TokenTool: [TokenPlanMeter]] = [:]
-    @Published var display = TokenMenuDisplay(rawValue: UserDefaults.standard.string(forKey: TokenMenuDisplay.key) ?? "") ?? .total
+    @Published var display = TokenMenuDisplay(stored: UserDefaults.standard.string(forKey: TokenMenuDisplay.key))
 }
