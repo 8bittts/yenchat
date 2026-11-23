@@ -958,7 +958,9 @@ function PersistentSessionsSection() {
 					server. On a Mac with the Tailscale app from the App Store or the
 					Tailscale website, turn on Remote Login in System Settings &gt;
 					General &gt; Sharing. Those Tailscale apps cannot act as a Tailscale
-					SSH server; the open-source command-line Tailscale can.
+					SSH server; the open-source command-line Tailscale can. With Tailscale
+					SSH on the other Mac, a remote pane that cannot attach shows the
+					reason from that Mac and closes when you press Return.
 				</li>
 				<li>
 					<strong>Sign-in:</strong> YEN lists sessions without prompting, so

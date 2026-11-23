@@ -40,6 +40,29 @@ describe("documentation contracts", () => {
 		}
 	});
 
+	test("public docs say a failed attach under Tailscale SSH is held on the other Mac", () => {
+		const transport = read("yen-cli/lib/sessions-remote.sh");
+		// Under `login` (Tailscale SSH on a Mac) a failed attach prints why on the
+		// peer and waits for Return, because its exit status cannot come back.
+		expect(transport).toContain(
+			'case "$(/bin/ps -o comm= -p "$PPID" 2>/dev/null)" in */login|login)',
+		);
+		expect(transport).toContain(
+			"the session did not attach on the remote Mac (status %s); press Return to close",
+		);
+		expect(transport).toContain("read -r _; exit");
+
+		const sentence =
+			"With Tailscale SSH on the other Mac, a remote pane that cannot attach shows the reason from that Mac and closes when you press Return.";
+		expect(read("app/docs/docs-client.tsx").replace(/\s+/g, " ")).toContain(
+			sentence,
+		);
+		expect(read("public/llms.txt")).toContain(
+			"with Tailscale SSH on the other Mac, a remote pane that cannot attach shows the reason from that Mac and closes when you press Return",
+		);
+		expect(read("_docs/04-security.md")).toContain("(Tailscale issue 18256)");
+	});
+
 	test("public docs say YEN uses a Tailscale name only when it resolves to that Mac", () => {
 		const discovery = read(
 			"yen-terminal/overlays/macos/Sources/Features/Sessions/TailscalePeers.swift",
