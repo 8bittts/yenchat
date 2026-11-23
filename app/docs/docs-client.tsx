@@ -703,7 +703,7 @@ function SettingsSection() {
 				<figure>
 					<Image
 						src="/doc-images/settings-appearance-light.png"
-						alt="The same Settings window after picking a light theme from the dock: the preview switches to the light colors."
+						alt="The same Settings window after picking a light theme from the dock: the preview and the Settings panel switch to the light colors."
 						width={2200}
 						height={1380}
 						sizes="(min-width: 768px) 360px, 100vw"
