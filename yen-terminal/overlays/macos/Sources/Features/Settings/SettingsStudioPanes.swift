@@ -522,8 +522,7 @@ struct SettingsAppearancePane: View {
                     selection: Binding(
                         get: { appearance.windowBorderEffects.sparkSpeed },
                         set: { store.setWindowBorderSparkSpeed($0) }
-                    ),
-                    controlSize: .small
+                    )
                 )
                 .padding(.leading, SettingsSpacing.childIndent)
             }

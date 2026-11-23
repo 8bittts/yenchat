@@ -347,24 +347,24 @@ enum WindowBorderSparkSpeed: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .superSlow: return "Super Slow"
+        case .superSlow: return "Slowww"
         case .slow: return "Slow"
         case .medium: return "Medium"
         case .fast: return "Fast"
-        case .superFast: return "Super Fast"
+        case .superFast: return "Fffast"
         }
     }
 
-    /// The spark's speed relative to Medium. Each step is about 1.6 times the
-    /// one before it, so every step reads as a clear change.
+    /// The spark's speed relative to `WindowBorderRenderingPolicy.sparkSpeed`.
+    /// Slowww crawls at a tenth of it and Fffast runs at two and a half times
+    /// it; each step between them is the same factor (about 2.24), so every
+    /// step reads as the same change.
     var multiplier: Double {
-        switch self {
-        case .superSlow: return 0.4
-        case .slow: return 0.63
-        case .medium: return 1
-        case .fast: return 1.6
-        case .superFast: return 2.5
-        }
+        let slowest = 0.1
+        let fastest = 2.5
+        let steps = Double(Self.allCases.count - 1)
+        let index = Double(Self.allCases.firstIndex(of: self) ?? 0)
+        return slowest * pow(fastest / slowest, index / steps)
     }
 
     static func normalized(rawValue: String, fallback: WindowBorderSparkSpeed) -> WindowBorderSparkSpeed {

@@ -504,18 +504,19 @@ struct WindowBorderRenderingPolicyTests {
     }
 
     @Test func sparkKeepsOneSpeedBetweenItsLapLimits() throws {
-        // 340 points a second: a 2040 point outline takes six seconds.
+        // Medium is half the 340 point base: a 2040 point outline takes twelve seconds.
         let window = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .medium))
-        #expect(abs(window.lapDuration - 6) < 0.0001)
-        // Segments sit three points apart, so each one trails the next by 3/340 of a second.
-        #expect(abs(window.segmentDelay - 3.0 / 340.0) < 0.0001)
+        #expect(abs(window.lapDuration - 12) < 0.0001)
+        // Segments sit three points apart, so each one trails the next by 3/170 of a second.
+        #expect(abs(window.segmentDelay - 3.0 / 170.0) < 0.0001)
 
         let smallPane = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 300, lineWidth: 2, speed: .medium))
-        #expect(smallPane.lapDuration == 3)
+        // The 3 to 12 second base limits double at Medium.
+        #expect(abs(smallPane.lapDuration - 6) < 0.0001)
         #expect(smallPane.tailLength <= 300 / 4)
 
         let largeWindow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 10_000, lineWidth: 2, speed: .medium))
-        #expect(largeWindow.lapDuration == 12)
+        #expect(abs(largeWindow.lapDuration - 24) < 0.0001)
         // The tail is whole segments, so it stops within one segment of its 160 point limit.
         #expect(largeWindow.tailLength <= 160)
         #expect(largeWindow.tailLength > 160 - WindowBorderRenderingPolicy.sparkSegmentSpacing)
