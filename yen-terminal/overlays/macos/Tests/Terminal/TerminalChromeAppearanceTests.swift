@@ -173,6 +173,48 @@ struct TerminalChromeAppearanceTests {
         }
     }
 
+    @Test func tabStripClearsTheUpdateStatusAndTheFullscreenButtonsTogether() {
+        let titlebar = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
+        let tabs = NSView()
+        let buttons = NSView()
+        let update = NSView()
+        for view in [tabs, buttons, update] {
+            titlebar.addSubview(view)
+            view.translatesAutoresizingMaskIntoConstraints = false
+        }
+        NSLayoutConstraint.activate([
+            WorkspaceTabStrip.start(tabs, at: titlebar.leftAnchor, inset: 70),
+            WorkspaceTabStrip.end(tabs, at: titlebar.rightAnchor),
+            buttons.leftAnchor.constraint(equalTo: titlebar.leftAnchor, constant: 80),
+            buttons.widthAnchor.constraint(equalToConstant: 62),
+            update.leftAnchor.constraint(equalTo: buttons.rightAnchor, constant: 8),
+            update.widthAnchor.constraint(equalToConstant: 500),
+        ])
+        let strip = WorkspaceTabStrip()
+        strip.place(after: update, as: .update)
+        strip.place(after: buttons)
+        // Fitting after the neighbors are known must keep both clearances.
+        strip.fit(tabs, to: nil)
+        titlebar.layoutSubtreeIfNeeded()
+        #expect(tabs.frame.minX >= update.frame.maxX)
+        #expect(tabs.frame.maxX == titlebar.bounds.maxX)
+
+        // Hiding the update status releases only its clearance.
+        strip.place(after: nil, as: .update)
+        titlebar.layoutSubtreeIfNeeded()
+        #expect(tabs.frame.minX >= buttons.frame.maxX)
+        #expect(tabs.frame.minX < update.frame.maxX)
+    }
+
+    @Test func windowsWithoutTitlebarTabsKeepTheInWindowUpdateOverlay() {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                              styleMask: [.titled], backing: .buffered, defer: true)
+        window.toolbar = NSToolbar(identifier: "plain")
+        #expect(!UpdateTitlebarStatus.isShown(in: window))
+        #expect(!UpdateTitlebarStatus.isShown(in: nil))
+        #expect(UpdateTitlebarStatus(window: window, model: UpdateViewModel()) == nil)
+    }
+
     @Test func startsFromTheEngineResolvedBackground() throws {
         let config = try TemporaryConfig("background = #112233\n")
         let appearance = TerminalChromeAppearance(

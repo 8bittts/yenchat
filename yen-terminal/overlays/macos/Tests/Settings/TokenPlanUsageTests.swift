@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import YEN
@@ -90,6 +91,13 @@ struct TokenPlanUsageTests {
         }
         // The cache is still usable after the cancelled reads.
         #expect(try index.read(tools: [.claude])[.claude] == 5)
+    }
+
+    @MainActor @Test func menuBarMarkFollowsTheTokenCount() {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let menu = TokenUsageMenu(index: TokenUsageIndex(home: home, directory: home.appendingPathComponent("cache")))
+        defer { menu.stop() }
+        #expect(menu.statusButton?.imagePosition == .imageTrailing)
     }
 
     @MainActor @Test func resetForgetsTheDisplayChoices() throws {

@@ -132,7 +132,8 @@ Tried and reverted, do not retry without new evidence:
 ### Optional menu and desktop features
 
 General → Menu Bar → Show Token Usage enables the experimental agent token counter.
-Click its YEN status item to open the local day’s overview beneath the icon on the same display.
+The menu bar shows the count first and the YEN mark after it (`TokenUsageMenu`).
+Click the status item to open the local day’s overview beneath it on the same display.
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count and share of counted tokens.
 Current plan readings appear below the daily share and each percentage belongs to its named pool.
@@ -375,7 +376,7 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - In the Compact pane style, or while the browser split is open, the window outline follows the native corner radius inside the clipping edge and pads the content clear of it; `WindowBorderRenderingPolicy.windowOutlinePlacement` owns the choice.
 - In split layouts the focused outline surrounds the pane, including its header, and follows focus as panes move or resize.
 - A single or zoomed surface supplies its AppKit frame. Frame observers subscribe only to that surface and window when needed.
-- Settings apply across the tab group, including new tabs. The command palette, update pill and toasts stay above the border.
+- Settings apply across the tab group, including new tabs. The command palette, the in-window update status and toasts stay above the border.
 - Hidden in fullscreen and Quick Terminal; focused styling requires `NSApp.isActive`.
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
 - Differentiate Without Color dashes the unfocused border, and the palette's Window Border actions link to the system setting.

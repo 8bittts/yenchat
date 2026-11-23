@@ -84,6 +84,7 @@ class TerminalViewContainer: NSView {
 	private var dockedSidebarWidthConstraint: NSLayoutConstraint?
 	private var dockedSidebarHostingView: NSView?
 	private var fullscreenControls: FullscreenWorkspaceControls?
+	private var updateTitlebarStatus: UpdateTitlebarStatus?
 	private var dockedSidebarModel: DockedTabSidebarModel?
 	private var dockedSidebarWindowExpansion: DockedSidebarWindowExpansion?
 	private var dockedSidebarWindowCompensationSuppressed = false
@@ -293,10 +294,18 @@ class TerminalViewContainer: NSView {
 		scheduleDockedSidebarUpdate()
 		updateGlassEffectIfNeeded()
 		updateGlassEffectTopInsetIfNeeded()
+		if window == nil {
+			updateTitlebarStatus?.detach()
+			updateTitlebarStatus = nil
+		} else if updateTitlebarStatus == nil {
+			updateTitlebarStatus = UpdateTitlebarStatus(window: window, model: AppDelegate.shared?.updateViewModel)
+		}
+		updateTitlebarStatus?.attach()
 	}
 
 	override func layout() {
 		super.layout()
+		updateTitlebarStatus?.attach()
 		updateGlassEffectTopInsetIfNeeded()
 	}
 

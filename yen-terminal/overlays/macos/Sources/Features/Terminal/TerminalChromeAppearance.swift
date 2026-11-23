@@ -56,8 +56,20 @@ final class WorkspaceTabStrip {
     private var preferredWidth: NSLayoutConstraint?
     private var observation: NSKeyValueObservation?
     private var focusObservation: AnyCancellable?
-    private weak var controls: NSView?
-    private var controlsGap: NSLayoutConstraint?
+    private var clearances: [Neighbor: Clearance] = [:]
+
+    /// A titlebar control the tabs must start after.
+    enum Neighbor: CaseIterable {
+        /// The sidebar and exit buttons shown beside the full-screen controls.
+        case fullscreenControls
+        /// The update status that leads the titlebar.
+        case update
+    }
+
+    private final class Clearance {
+        weak var view: NSView?
+        var gap: NSLayoutConstraint?
+    }
 
     init() {
         // AppKit can keep the accessory when a tab moves to another window.
@@ -82,14 +94,23 @@ final class WorkspaceTabStrip {
     }
 
     func place(after controls: NSView?) {
-        if self.controls === controls, controlsGap?.isActive == true { return }
-        controlsGap?.isActive = false
-        controlsGap = nil
-        self.controls = controls
-        guard let host, let controls, host.ancestorShared(with: controls) != nil else { return }
-        let gap = host.leadingAnchor.constraint(greaterThanOrEqualTo: controls.trailingAnchor, constant: 6)
+        place(after: controls, as: .fullscreenControls)
+    }
+
+    /// Starts the tabs after `view`. The view must not sit inside a toolbar
+    /// item: AppKit asserts in `NSToolbarItemViewer` when a constraint from
+    /// the tab bar crosses into one.
+    func place(after view: NSView?, as neighbor: Neighbor) {
+        let clearance = clearances[neighbor] ?? Clearance()
+        clearances[neighbor] = clearance
+        if clearance.view === view, clearance.gap?.isActive == true { return }
+        clearance.gap?.isActive = false
+        clearance.gap = nil
+        clearance.view = view
+        guard let host, let view, host.ancestorShared(with: view) != nil else { return }
+        let gap = host.leadingAnchor.constraint(greaterThanOrEqualTo: view.trailingAnchor, constant: 6)
         gap.isActive = true
-        controlsGap = gap
+        clearance.gap = gap
     }
 
     func fit(_ view: NSView, to group: NSWindowTabGroup?) {
@@ -100,9 +121,13 @@ final class WorkspaceTabStrip {
         }
         observation = nil
         preferredWidth?.isActive = false
-        controlsGap?.isActive = false
         host = view
-        place(after: controls)
+        for neighbor in Neighbor.allCases {
+            guard let clearance = clearances[neighbor] else { continue }
+            clearance.gap?.isActive = false
+            clearance.gap = nil
+            place(after: clearance.view, as: neighbor)
+        }
         self.group = group
         let width = view.widthAnchor.constraint(equalToConstant: targetWidth)
         // Let the window shrink below the preferred strip width when AppKit

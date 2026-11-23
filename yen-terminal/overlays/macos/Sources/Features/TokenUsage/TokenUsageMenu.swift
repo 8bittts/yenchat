@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 final class TokenUsageMenu: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    /// The menu-bar button: the token count, then the YEN mark after it.
+    var statusButton: NSStatusBarButton? { item.button }
     private var panel: TokenPanel?
     private var localMonitor: Any?
     private var outsideMonitor: Any?
@@ -40,7 +42,7 @@ final class TokenUsageMenu: NSObject {
         image?.size = .init(width: 16, height: 16)
         image?.isTemplate = true
         button?.image = image
-        button?.imagePosition = .imageLeading
+        button?.imagePosition = .imageTrailing
         button?.target = self
         button?.action = #selector(toggle)
         configureRotation()

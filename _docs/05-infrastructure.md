@@ -263,6 +263,10 @@ A private repository would make every download and update fail, so the release-t
 YEN uses `SPUStandardUpdaterController` with one public feed, `/stable/appcast.xml`.
 Explicit `auto-update = check|download|off` overrides Sparkle's stored choice in `AppDelegate.yenConfigDidChange`.
 Sparkle alone decides between its full dialog (first sighting of a version) and the small banner (later reminders).
+With the default `tabs` titlebar style, the update status leads the titlebar beside the window buttons as a glass capsule in the row of workspace tabs (`UpdateTitlebarStatus`), and the tabs start after it.
+It is placed in the toolbar's view like the tab bar, not added as a toolbar item, because NSToolbar moves its items into the overflow menu once the tab bar fills the toolbar.
+An explicit `native` or `transparent` style keeps Ghostty's titlebar status at the right edge.
+Native full screen and a hidden titlebar have no titlebar row to hold it, so the same item draws over the top-left corner of the terminal instead.
 
 Delta updates: `generate-appcast.sh` downloads the DMGs of up to five prior GitHub Releases, runs the vendored `generate_appcast` in a scratch directory, and splices only `<sparkle:deltas>` into YEN's hand-built appcast item.
 Every delta step is non-fatal and falls back to a full-DMG update.

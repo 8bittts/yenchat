@@ -284,8 +284,9 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
                     }
                 }
                 
-                // Show update information above all else.
-                if viewModel.updateOverlayIsVisible {
+                // Show update information above all else. A titlebar-tabs window
+                // shows it beside the window buttons instead (UpdateTitlebarStatus).
+                if viewModel.updateOverlayIsVisible, !UpdateTitlebarStatus.isShown(in: hostingWindow) {
                     UpdateOverlay()
                 }
 
@@ -535,19 +536,15 @@ struct TerminalView<ViewModel: TerminalViewModel>: View {
     }
 }
 
+/// The update status for a window without a titlebar to hold it: native full
+/// screen, or a hidden titlebar. It keeps the titlebar item's place and look.
 fileprivate struct UpdateOverlay: View {
     var body: some View {
         if let appDelegate = AppDelegate.shared {
-            VStack {
-                Spacer()
-                
-                HStack {
-                    Spacer()
-                    UpdatePill(model: appDelegate.updateViewModel)
-                        .padding(.bottom, 9)
-                        .padding(.trailing, 9)
-                }
-            }
+            UpdateTab(model: appDelegate.updateViewModel)
+                .padding(.top, 9)
+                .padding(.leading, 9)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 }
