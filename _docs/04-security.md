@@ -41,7 +41,7 @@ zmx_version=v1.0.1
 
 Every Ghostty URL in `/update-yen` resolves through the `upstream_*` helpers in `scripts/lib/upstream.sh`.
 `YEN_UPSTREAM_HOST`, `YEN_UPSTREAM_OWNER`, `YEN_UPSTREAM_REPO` and `YEN_UPSTREAM_FORGE` exist only for parity tests and a forge cutover.
-`forge_github` is the only adapter; the forge migration is wait-gated in `_docs/todos.md`.
+`forge_github` is the only adapter; `_docs/todos.md` → Watch tracks Ghostty's move off GitHub.
 Before any upstream-plumbing change, run `scripts/40-vendor-parity-snapshot.sh --baseline <path>`, then `--verify <path>` after it.
 Contract test: `tests/124-upstream-lib-contract.test.ts`.
 

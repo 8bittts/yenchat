@@ -33,8 +33,6 @@ Local persistence ships in v1.275; remote attach and everything built on it are 
   - Discovery from a Mac whose own Tailscale is the open-source `tailscaled`.
 
 ---
-## WAIT-GATED
+## WATCH
 
-Do not start these until the trigger fires.
-
-- **Ghostty forge migration.** Destination/timeline still TBD (https://mitchellh.com/writing/ghostty-leaving-github). When announced, recover the one-shot plan from the private pre-open-source history (then-named `docs/00-todos.md`) and re-validate against the actual forge. Plumbing already lives in `scripts/lib/upstream.sh`. The `/update-yen` vendor phase stops working when upstream leaves GitHub, so this is maintenance work.
+- Check on occasion whether Ghostty has left GitHub (https://mitchellh.com/writing/ghostty-leaving-github); the `/update-yen` vendor phase breaks when it does, and `scripts/lib/upstream.sh` holds the forge plumbing.
