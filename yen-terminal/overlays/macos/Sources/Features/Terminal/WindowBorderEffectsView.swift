@@ -20,13 +20,14 @@ struct WindowBorderEffectGeometry: Equatable {
 struct WindowBorderSparkView: NSViewRepresentable {
     let geometry: WindowBorderEffectGeometry
     let color: NSColor
+    let speed: WindowBorderSparkSpeed
 
     func makeNSView(context: Context) -> WindowBorderSparkLayerView {
         WindowBorderSparkLayerView()
     }
 
     func updateNSView(_ view: WindowBorderSparkLayerView, context: Context) {
-        view.configure(geometry: geometry, color: color)
+        view.configure(geometry: geometry, color: color, speed: speed)
     }
 }
 
@@ -140,6 +141,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
         let size: CGSize
         let geometry: WindowBorderEffectGeometry
         let color: [Int]
+        let speed: WindowBorderSparkSpeed
     }
 
     private static let travelKey = "yen.windowBorder.spark.travel"
@@ -149,6 +151,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
     private let headGlow = CAGradientLayer()
     private var geometry: WindowBorderEffectGeometry?
     private var color = NSColor.white
+    private var speed = WindowBorderSparkSpeed.medium
     private var applied: Signature?
     /// When the current lap started, in `CACurrentMediaTime` seconds.
     private var lapStart: CFTimeInterval?
@@ -164,9 +167,10 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
         layer?.addSublayer(trail)
     }
 
-    func configure(geometry: WindowBorderEffectGeometry, color: NSColor) {
+    func configure(geometry: WindowBorderEffectGeometry, color: NSColor, speed: WindowBorderSparkSpeed) {
         self.geometry = geometry
         self.color = color
+        self.speed = speed
         refresh()
     }
 
@@ -176,6 +180,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
 
     var segmentCountForTesting: Int { trail.instanceCount }
     var segmentSizeForTesting: CGSize { segment.bounds.size }
+    var lapDurationForTesting: Double { lapDuration }
     /// How many times the travel animation was built. An update that changes
     /// nothing must not build it again.
     private(set) var travelBuildCount = 0
@@ -185,7 +190,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
             stop()
             return
         }
-        let signature = Signature(size: bounds.size, geometry: geometry, color: Self.colorKey(color))
+        let signature = Signature(size: bounds.size, geometry: geometry, color: Self.colorKey(color), speed: speed)
         if signature == applied, isTraveling { return }
         travelBuildCount += 1
 
@@ -193,7 +198,8 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
         let metrics = WindowBorderRenderingPolicy.pathMetrics(of: path)
         guard let model = WindowBorderRenderingPolicy.sparkModel(
             perimeter: metrics.perimeter,
-            lineWidth: geometry.lineWidth
+            lineWidth: geometry.lineWidth,
+            speed: speed
         ) else {
             stop()
             return

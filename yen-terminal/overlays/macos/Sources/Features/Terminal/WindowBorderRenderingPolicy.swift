@@ -209,12 +209,18 @@ enum WindowBorderRenderingPolicy {
     static let sparkTailLengthRange: ClosedRange<CGFloat> = 48...160
 
     /// The spark keeps one speed on any outline, within a lap time that never
-    /// races around a small pane or crawls around a large window.
-    static func sparkModel(perimeter: CGFloat, lineWidth: CGFloat) -> WindowBorderSparkModel? {
+    /// races around a small pane or crawls around a large window. The chosen
+    /// speed scales the speed and both lap limits, so it changes every outline.
+    static func sparkModel(
+        perimeter: CGFloat,
+        lineWidth: CGFloat,
+        speed: WindowBorderSparkSpeed
+    ) -> WindowBorderSparkModel? {
         guard perimeter.isFinite, perimeter > 0, lineWidth > 0 else { return nil }
+        let multiplier = speed.multiplier
         let lapDuration = min(
-            max(Double(perimeter / sparkSpeed), sparkLapDurationRange.lowerBound),
-            sparkLapDurationRange.upperBound
+            max(Double(perimeter / sparkSpeed) / multiplier, sparkLapDurationRange.lowerBound / multiplier),
+            sparkLapDurationRange.upperBound / multiplier
         )
         let wantedTail = min(max(perimeter * 0.07, sparkTailLengthRange.lowerBound), sparkTailLengthRange.upperBound)
         // A tail never covers more than a quarter of the outline.

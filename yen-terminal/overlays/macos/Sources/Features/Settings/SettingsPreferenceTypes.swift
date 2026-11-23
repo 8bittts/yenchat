@@ -335,6 +335,43 @@ enum WindowBorderAuraPulse: String, CaseIterable, Identifiable {
     }
 }
 
+/// How fast the spark travels around the outline.
+enum WindowBorderSparkSpeed: String, CaseIterable, Identifiable {
+    case superSlow
+    case slow
+    case medium
+    case fast
+    case superFast
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .superSlow: return "Super Slow"
+        case .slow: return "Slow"
+        case .medium: return "Medium"
+        case .fast: return "Fast"
+        case .superFast: return "Super Fast"
+        }
+    }
+
+    /// The spark's speed relative to Medium. Each step is about 1.6 times the
+    /// one before it, so every step reads as a clear change.
+    var multiplier: Double {
+        switch self {
+        case .superSlow: return 0.4
+        case .slow: return 0.63
+        case .medium: return 1
+        case .fast: return 1.6
+        case .superFast: return 2.5
+        }
+    }
+
+    static func normalized(rawValue: String, fallback: WindowBorderSparkSpeed) -> WindowBorderSparkSpeed {
+        WindowBorderSparkSpeed(rawValue: rawValue) ?? fallback
+    }
+}
+
 /// The animated effects an outline can carry on top of its stroke.
 struct WindowBorderEffects: Equatable {
     /// A light that travels around the outline.
@@ -344,6 +381,7 @@ struct WindowBorderEffects: Equatable {
     /// `#RRGGBB`, in sRGB.
     var auraColorHex: String
     var auraPulse: WindowBorderAuraPulse = .medium
+    var sparkSpeed: WindowBorderSparkSpeed = .medium
 
     static let none = WindowBorderEffects(
         sparkEnabled: false,
@@ -379,6 +417,7 @@ enum WindowBorderPreferences {
     static let auraPreferenceKey = "com.yenchat.yen.windowBorder.aura"
     static let auraColorPreferenceKey = "com.yenchat.yen.windowBorder.auraColor"
     static let auraPulsePreferenceKey = "com.yenchat.yen.windowBorder.auraPulse"
+    static let sparkSpeedPreferenceKey = "com.yenchat.yen.windowBorder.sparkSpeed"
     /// The brand orange, `Color.yenBrand`.
     static let defaultAuraColorHex = "#FF5100"
     static let widthRange: ClosedRange<Double> = 1.0...8.0
@@ -409,6 +448,7 @@ enum WindowBorderPreferences {
             auraPreferenceKey: defaultState.effects.auraEnabled,
             auraColorPreferenceKey: defaultState.effects.auraColorHex,
             auraPulsePreferenceKey: defaultState.effects.auraPulse.rawValue,
+            sparkSpeedPreferenceKey: defaultState.effects.sparkSpeed.rawValue,
         ])
     }
 
@@ -432,6 +472,10 @@ enum WindowBorderPreferences {
                 auraPulse: WindowBorderAuraPulse.normalized(
                     rawValue: defaults.string(forKey: auraPulsePreferenceKey) ?? "",
                     fallback: defaultState.effects.auraPulse
+                ),
+                sparkSpeed: WindowBorderSparkSpeed.normalized(
+                    rawValue: defaults.string(forKey: sparkSpeedPreferenceKey) ?? "",
+                    fallback: defaultState.effects.sparkSpeed
                 )
             )
         )
@@ -500,7 +544,8 @@ enum WindowBorderPreferences {
                 sparkEnabled: state.effects.sparkEnabled,
                 auraEnabled: state.effects.auraEnabled,
                 auraColorHex: normalizedAuraColorHex(state.effects.auraColorHex),
-                auraPulse: state.effects.auraPulse
+                auraPulse: state.effects.auraPulse,
+                sparkSpeed: state.effects.sparkSpeed
             )
         )
     }

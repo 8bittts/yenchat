@@ -213,4 +213,8 @@ final class GeneralSettingsStore: SettingsSnapshotStore<GeneralSettingsStore.Sna
         controller.windowBorderAuraPulse = value
     }
 
+    func setWindowBorderSparkSpeed(_ value: WindowBorderSparkSpeed) {
+        controller.windowBorderSparkSpeed = value
+    }
+
 }

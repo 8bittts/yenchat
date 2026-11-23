@@ -121,7 +121,8 @@ struct WindowBorderOverlay: View {
                 if plan.showsSpark {
                     WindowBorderSparkView(
                         geometry: geometry,
-                        color: Self.sparkColor(for: gradient, backdropIsLight: colorScheme == .light)
+                        color: Self.sparkColor(for: gradient, backdropIsLight: colorScheme == .light),
+                        speed: effects.sparkSpeed
                     )
                 }
             }

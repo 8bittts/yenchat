@@ -224,6 +224,8 @@ enum SettingsBorderRow: CaseIterable, Identifiable {
     case scope
     case weight
     case spark
+    /// Shown only while the spark is on.
+    case sparkSpeed
     case aura
     /// Shown only while the aura is on.
     case auraColor
@@ -246,10 +248,13 @@ struct SettingsAppearancePane: View {
         scope == .window ? "Outlines the window." : "Outlines the focused pane."
     }
 
-    static func borderRows(enabled: Bool, auraEnabled: Bool) -> [SettingsBorderRow] {
+    static func borderRows(enabled: Bool, sparkEnabled: Bool, auraEnabled: Bool) -> [SettingsBorderRow] {
         guard enabled else { return [] }
         let auraRows: Set<SettingsBorderRow> = [.auraColor, .auraPulse]
-        return SettingsBorderRow.allCases.filter { auraEnabled || !auraRows.contains($0) }
+        return SettingsBorderRow.allCases.filter { row in
+            if row == .sparkSpeed { return sparkEnabled }
+            return auraEnabled || !auraRows.contains(row)
+        }
     }
 
     static func sparkHint(limit: WindowBorderMotionLimit) -> String {
@@ -420,6 +425,7 @@ struct SettingsAppearancePane: View {
                 ForEach(
                     Self.borderRows(
                         enabled: appearance.windowBorderEnabled,
+                        sparkEnabled: appearance.windowBorderEffects.sparkEnabled,
                         auraEnabled: appearance.windowBorderEffects.auraEnabled
                     )
                 ) { row in
@@ -504,6 +510,23 @@ struct SettingsAppearancePane: View {
                 )
             }
             .accessibilityLabel("Border Spark")
+        case .sparkSpeed:
+            // Five labels do not fit beside a title, so the control takes its own line.
+            VStack(alignment: .leading, spacing: SettingsSpacing.controlSpacing) {
+                SettingsStudioLabel(title: "Spark Speed", isChild: true)
+                SettingsSegmentedControl(
+                    accessibilityLabel: "Border Spark Speed",
+                    segments: WindowBorderSparkSpeed.allCases.map {
+                        SettingsSegment(value: $0, title: $0.displayName)
+                    },
+                    selection: Binding(
+                        get: { appearance.windowBorderEffects.sparkSpeed },
+                        set: { store.setWindowBorderSparkSpeed($0) }
+                    ),
+                    controlSize: .small
+                )
+                .padding(.leading, SettingsSpacing.childIndent)
+            }
         case .aura:
             Toggle(
                 isOn: Binding(

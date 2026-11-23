@@ -731,7 +731,8 @@ function SettingsSection() {
 					background image, and a border. To follow the active split, turn on
 					Border and choose Focused Pane under Outline. Starting in YEN 1.285,
 					Spark sends a light around the focused outline, and Aura adds a soft
-					glow that pulses in a color and at a speed you pick.
+					glow that pulses in a color and at a speed you pick. Spark Speed sets
+					how fast the light travels, from Super Slow to Super Fast.
 				</li>
 				<li>
 					<strong>General:</strong> open at login, copy on select, the scroll

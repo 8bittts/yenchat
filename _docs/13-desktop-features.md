@@ -71,8 +71,8 @@ The default pane is Appearance; every pane has a command palette deep link.
 
 - Padding is one stepper (step 2) that writes both `window-padding-x` and `window-padding-y`.
 - Border shows On, Color (Theme writes Match Theme, Accent writes manual), Outline (Window or Focused Pane, writes the scope) and Weight (Thin 1, Regular 2, Thick 4); a stored width snaps to the nearest weight.
-- Below Weight, Spark and Aura are switches. Aura Color (a color well) and Aura Pulse (Slow, Medium or Fast) show only while Aura is on.
-- The aura color is stored as `#RRGGBB`, and an invalid stored value falls back to the brand orange; an unknown pulse value falls back to Medium.
+- Below Weight, Spark and Aura are switches. Spark Speed (Super Slow, Slow, Medium, Fast or Super Fast) shows only while Spark is on, on its own line under its title because five labels do not fit beside it. Aura Color (a color well) and Aura Pulse (Slow, Medium or Fast) show only while Aura is on.
+- The aura color is stored as `#RRGGBB`, and an invalid stored value falls back to the brand orange; an unknown pulse or spark speed value falls back to Medium.
 - `SettingsAppearancePane.borderRows` lists the child rows, and `SettingsPaneTests` fails when one goes missing.
 - Scope and palettes are also reachable from the command palette's Window Border actions; radius has no control and keeps its stored value.
 - Tab Sidebar is one pop-up: Off clears the enabled flag, Floating is transient mode, Docked is persistent mode.
@@ -382,7 +382,8 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
 - Differentiate Without Color dashes the unfocused border, and the palette's Window Border actions link to the system setting.
 - Spark and Aura are optional effects on the focused outline, and they can be on together; an unfocused window draws the plain outline. `WindowBorderRenderingPolicy.effectPlan` owns the choice.
-- The spark is a light with a fading tail that follows the stroke at the chosen weight. It moves at one speed on any outline, and a lap takes 3 to 12 seconds (`WindowBorderRenderingPolicy.sparkModel`).
+- The spark is a light with a fading tail that follows the stroke at the chosen weight. It moves at one speed on any outline, and at Medium a lap takes 3 to 12 seconds (`WindowBorderRenderingPolicy.sparkModel`).
+- Spark Speed scales the speed and both lap limits by `WindowBorderSparkSpeed.multiplier` (0.4 to 2.5), so each step changes the lap on a small pane and a large window alike, and the speed changes the timing only.
 - The spark takes the outline's own color, lifted toward white on a dark backdrop and deepened toward black on a light one, where a pale spark reads as a gap in the outline. It switches to the other choice when its contrast with the stroke falls below `WindowBorderOverlay.minimumSparkContrastRatio`.
 - The aura is a glow in the picked color around the stroke. It pulses between two opacities at the chosen speed, and the speed changes the timing only (`WindowBorderAuraPulse.halfPeriod`, `WindowBorderRenderingPolicy.auraModel`).
 - Reduce Motion and Low Power Mode each hide the spark and hold the aura still, because the motion is decoration that would redraw the window all day; `WindowBorderRenderingPolicy.motionLimit` owns the choice and the Settings hints name the setting that is on.
