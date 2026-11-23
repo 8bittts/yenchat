@@ -122,7 +122,9 @@ describe("yen sessions --host: the ssh command", () => {
 		expect(remote).toEndWith("' yen-remote list --porcelain");
 		expect(remote).toContain("/Applications/YEN.app");
 		expect(remote).toContain('"$HOME/Applications/YEN.app"');
-		expect(remote).toContain("exit 127");
+		// No YEN there is status 127, reported on the status line that ends stderr.
+		expect(remote).toContain("s=127");
+		expect(remote).toContain("yen-remote-status %s");
 		expect(option(argv, "BatchMode")).toBe("yes");
 		expect(option(argv, "ConnectTimeout")).toMatch(/^\d+$/);
 		expect(option(argv, "ServerAliveInterval")).toMatch(/^\d+$/);

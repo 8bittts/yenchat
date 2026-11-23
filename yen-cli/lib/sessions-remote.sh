@@ -92,14 +92,52 @@ read_porcelain() {
 # The command line the peer's login shell runs. It is fixed text apart from the
 # validated subcommand words, so the login shell only sees
 # `exec /bin/sh -c '<snippet>' yen-remote <words>`.
+#
+# Some transports drop the peer's exit status: Tailscale SSH on a macOS peer
+# runs every command under macOS login, which exits 0 whatever the command's
+# status was. So the peer reports its status in-band:
+# - list ends its stderr with one `yen-remote-status <n>` line, which
+#   take_remote_status reads and removes;
+# - attach shares a terminal with the session, so a line cannot be read back.
+#   When the snippet's parent is login, a failed attach prints why and waits
+#   for Return on the peer, so the message stays on screen although ssh
+#   reports 0. Under any other parent it execs the peer's CLI as before, so
+#   its status reaches the CLI and the app holds the pane locally.
 remote_command() {
-    local apps='/Applications/YEN.app "$HOME/Applications/YEN.app"'
+    local verb="$1" apps='/Applications/YEN.app "$HOME/Applications/YEN.app"' find snippet
     if [[ -n "${YEN_REMOTE_APP:-}" ]]; then
         [[ "$YEN_REMOTE_APP" =~ ^/[A-Za-z0-9._/-]+$ ]] || usage_error "YEN_REMOTE_APP must be an absolute path"
         apps="$YEN_REMOTE_APP"
     fi
-    local snippet='unset YEN_LIB YEN_RESOURCES YEN_CMD_DIR ZMX_SESSION; for a in '"$apps"'; do y="$a/Contents/Resources/bin/yen"; [ -x "$y" ] && exec "$y" sessions "$@"; done; exit '"$REMOTE_STATUS_NOT_INSTALLED"
+    find='unset YEN_LIB YEN_RESOURCES YEN_CMD_DIR ZMX_SESSION; y=; for a in '"$apps"'; do [ -x "$a/Contents/Resources/bin/yen" ] && { y="$a/Contents/Resources/bin/yen"; break; }; done; '
+    if [[ "$verb" == list ]]; then
+        snippet="$find"'s='"$REMOTE_STATUS_NOT_INSTALLED"'; if [ -n "$y" ]; then "$y" sessions "$@"; s=$?; fi; printf "\n'"$REMOTE_STATUS_LINE"' %s\n" "$s" >&2; exit "$s"'
+    else
+        snippet="$find"'case "$(/bin/ps -o comm= -p "$PPID" 2>/dev/null)" in */login|login) ;; *) [ -n "$y" ] && exec "$y" sessions "$@"; exit '"$REMOTE_STATUS_NOT_INSTALLED"' ;; esac; s='"$REMOTE_STATUS_NOT_INSTALLED"'; if [ -n "$y" ]; then "$y" sessions "$@"; s=$?; fi; [ "$s" -eq 0 ] || [ "$s" -eq 130 ] && exit "$s"; if [ "$s" -eq '"$REMOTE_STATUS_NOT_INSTALLED"' ] && [ -z "$y" ]; then printf "\nyen sessions: YEN is not installed on the remote Mac; press Return to close\n" >&2; else printf "\nyen sessions: the session did not attach on the remote Mac (status %s); press Return to close\n" "$s" >&2; fi; read -r _; exit "$s"'
+    fi
     printf "exec /bin/sh -c '%s' yen-remote %s" "$snippet" "$*"
+}
+
+# The last line of a listing's stderr when the peer's snippet ran.
+readonly REMOTE_STATUS_LINE=yen-remote-status
+
+# Print the peer's status from the last status line of a listing's stderr, if
+# any, and remove every status line, and the blank line the snippet puts
+# before its own, so neither is ever replayed. A peer can print such lines
+# itself, but the snippet's comes last, so a peer can only misreport its own
+# outcome, which it could already do with its exit status.
+take_remote_status() {
+    local errors="$1" status
+    status="$(LC_ALL=C sed -n -E "s/^${REMOTE_STATUS_LINE} (0|[1-9][0-9]{0,2})\$/\1/p" "$errors" | tail -n 1)"
+    LC_ALL=C awk -v line="$REMOTE_STATUS_LINE" '
+        $0 ~ "^" line " [0-9]+$" { pending = 0; next }
+        { if (pending) print ""; pending = 0 }
+        /^$/ { pending = 1; next }
+        { print }
+        END { if (pending) print "" }
+    ' "$errors" > "$errors.replay" && mv "$errors.replay" "$errors"
+    [[ -n "$status" && $status -le 255 ]] && printf '%s\n' "$status"
+    return 0
 }
 
 # Options for every connection: keepalives so a dead link ends ssh instead of
@@ -199,7 +237,7 @@ remote_make_scratch() {
 
 # yen sessions list --host <target> [--porcelain]
 remote_list() {
-    local target="$1" porcelain="$2" status=0 parsed=0 code=0 line command options=()
+    local target="$1" porcelain="$2" status=0 parsed=0 code=0 peer_status line command options=()
     # A refusal inside the substitution must stop the CLI, not reach ssh.
     command="$(remote_command list --porcelain)" || exit "$?"
     remote_make_scratch
@@ -213,6 +251,9 @@ remote_list() {
         remote_failure_message "$code" "$target" >&2
         exit "$code"
     fi
+    # The peer's own status, when its snippet ran; otherwise ssh's.
+    peer_status="$(take_remote_status "$remote_scratch/err")"
+    [[ -z "$peer_status" ]] || status="$peer_status"
     if [[ $status -eq $REMOTE_STATUS_NOT_INSTALLED ]]; then
         remote_failure_message "$REMOTE_EXIT_NOT_INSTALLED" "$target" >&2
         exit "$REMOTE_EXIT_NOT_INSTALLED"
