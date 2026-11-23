@@ -277,7 +277,8 @@ final class TokenUsageMenu: NSObject {
             caption = labels.isEmpty ? "Limits —" : labels[meterIndex % labels.count]
         case .mark: caption = ""
         }
-        item.button?.title = caption.isEmpty ? "" : " " + caption
+        // The mark trails the count, so the space separates the two.
+        item.button?.title = caption.isEmpty ? "" : caption + " "
         let summary = counts == nil ? "Reading local token usage" : "Token usage today: \(sum.formatted()) from \(counts?.count ?? 0) of 4 sources"
         let title = snapshot.display == .limits ? caption + ". " + summary : summary
         item.button?.toolTip = title

@@ -241,6 +241,7 @@ Only a gap in the saved days starts a new read, from the first missing day.
 That first read runs on one core: of a 12 GB record history, 6.8 GB fell inside the 89 days, and reading it with a warm file cache takes about 10 seconds and peaks near 70 MB; later reads take under 0.1 seconds.
 The scratch index has no secondary index except for Codex, whose corrections look rows up.
 The menu reads Claude’s account-matched usage cache, Codex’s account limits in token-count events and Grok Build’s latest billing log reading.
+Claude Code refreshes `cachedUsageUtilization` in `~/.claude.json` only occasionally, not on every turn, so Claude’s bars disappear once the cached window resets even while the official window is current; the per-turn reading exists only in Claude Code’s statusline input, which YEN does not read.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
 The token menu depends on no other app: it reads only the four tools’ own records, holds no credential and opens no network connection, so Cursor and Grok Bot plan pools are not shown.

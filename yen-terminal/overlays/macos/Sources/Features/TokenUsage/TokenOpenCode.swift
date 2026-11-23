@@ -1,6 +1,6 @@
 import Foundation
 
-/// Local message projection and log-format decoder adapted from JP the Cat under MIT.
+/// Projects OpenCode's local message store and decodes its log format.
 struct TokenOpenCode {
     let db: SQLiteDatabase
     private static let total = """
