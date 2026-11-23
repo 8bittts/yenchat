@@ -8,6 +8,7 @@ import {
 } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
@@ -67,18 +68,19 @@ function sshPid(call: number) {
 
 /// Wait up to two seconds for every trace of a run to go: the ssh child, the
 /// CLI's temporary directory, and its stderr watcher.
+/// The stderr watchers of the run whose TMPDIR is `tmp`, from `ps`.
+function watchers(tmp: string) {
+	return spawnSync("ps", ["-axww", "-o", "command"], { encoding: "utf8" })
+		.stdout.split("\n")
+		.filter(
+			(line) => line.includes("sessions-remote-watch.sh") && line.includes(tmp),
+		).length;
+}
+
 function settled(pid: number, tmp: string) {
 	const end = Date.now() + 2_000;
 	while (Date.now() < end) {
-		const watchers = spawnSync("ps", ["-axww", "-o", "command"], {
-			encoding: "utf8",
-		})
-			.stdout.split("\n")
-			.filter(
-				(line) =>
-					line.includes("sessions-remote-watch.sh") && line.includes(tmp),
-			);
-		if (!alive(pid) && readdirSync(tmp).length === 0 && watchers.length === 0) {
+		if (!alive(pid) && readdirSync(tmp).length === 0 && watchers(tmp) === 0) {
 			return true;
 		}
 		Bun.sleepSync(100);
@@ -220,5 +222,54 @@ describe("yen sessions attach --host: a pending check and the reconnecting mark"
 		const result = marked(attach);
 		expect(result.status, result.stderr).toBe(0);
 		expect(reports(result.stdout)).not.toContain(MARK);
+	});
+});
+
+describe("yen sessions attach --host: the watcher after sign-in", () => {
+	/// An attach left running: the fake ssh signs in, then holds `sleep<n>`.
+	async function attached(step: string, extra: Record<string, string>) {
+		const tmp = join(harness.sshDir, "tmp");
+		mkdirSync(tmp);
+		harness.plan([`1 ${step}`]);
+		const cli = Bun.spawn([yen, "sessions", ...attach], {
+			env: cliEnvironment(harness.sshDir, { TMPDIR: tmp, ...extra }),
+			stdin: "pipe",
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const pidFile = join(harness.sshDir, "pid-1");
+		const end = Date.now() + 5_000;
+		while (!existsSync(pidFile) && Date.now() < end) await Bun.sleep(50);
+		return { cli, tmp, pidFile };
+	}
+
+	test.each([
+		["without the mark", {}],
+		["with the reconnecting mark", { YEN_REMOTE_RECONNECT_MARK: "1" }],
+	])(
+		"a plain attach's watcher ends at sign-in while ssh stays (%s)",
+		async (_, extra) => {
+			const { cli, tmp, pidFile } = await attached("sleep8", extra);
+			try {
+				expect(existsSync(pidFile)).toBe(true);
+				await Bun.sleep(1_200);
+				expect(alive(sshPid(1))).toBe(true);
+				expect(watchers(tmp)).toBe(0);
+			} finally {
+				cli.kill("SIGTERM");
+				await cli.exited;
+			}
+		},
+	);
+
+	test("the scan sees a watcher that is still waiting for sign-in", async () => {
+		const { cli, tmp } = await attached("check-hold8", {});
+		try {
+			await Bun.sleep(600);
+			expect(watchers(tmp)).toBe(1);
+		} finally {
+			cli.kill("SIGTERM");
+			await cli.exited;
+		}
 	});
 });
