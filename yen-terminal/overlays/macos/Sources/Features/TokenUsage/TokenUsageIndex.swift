@@ -8,6 +8,12 @@ struct TokenUsageIndex: Sendable {
     let home: URL
     let directory: URL
     typealias Counts = [TokenTool: Int]
+    /// The label of Grok's finished requests in the events table; never counted on its own.
+    static let grokRequestsLabel = "Grok requests"
+    /// Deduplicated events: the most complete copy of each record (`events` columns, plus `rank`).
+    private static let best = """
+        SELECT *,ROW_NUMBER() OVER (PARTITION BY tool,id ORDER BY output DESC,n DESC) AS rank FROM events
+        """
 
     /// One connection at a time per cache file in this process. Two refreshes of one index can
     /// overlap (the menu switched off and on while a read runs), and SQLite answers "database is
@@ -67,6 +73,45 @@ struct TokenUsageIndex: Sendable {
         return try JSONDecoder().decode(TokenPlanReading.self, from: Data(state.utf8)).meters
     }
 
+    /// Today's tokens for each working folder and tool, from the cache the last `read` left.
+    /// Usage whose record names no folder is left out.
+    func projects() throws -> [String: TokenUsageIndex.Counts] {
+        let db = try SQLiteDatabase(readOnlyPath: directory.appendingPathComponent("today.sqlite").path)
+        var result: [String: Counts] = [:]
+        let rows = try db.prepare("""
+            SELECT tool,project,SUM(n) FROM (\(Self.best)) WHERE rank=1 AND project IS NOT NULL AND tool<>? GROUP BY tool,project
+            """)
+        rows.bind(1, Self.grokRequestsLabel)
+        while try rows.step() {
+            guard let tool = rows.text(0).flatMap(TokenTool.init(rawValue:)), let folder = rows.text(1) else { continue }
+            result[folder, default: [:]][tool, default: 0] += rows.int(2)
+        }
+        for case let (folder?, count) in try grokRunning(db) where count > 0 { result[folder, default: [:]][.grok, default: 0] += count }
+        for (folder, count) in try openCodeDetail(db)?.projects ?? [:] { result[folder, default: [:]][.openCode, default: 0] += count }
+        return result
+    }
+
+    /// Today's tokens for each local hour, all tools together, from the cache the last `read` left.
+    func hours() throws -> [Int] {
+        let db = try SQLiteDatabase(readOnlyPath: directory.appendingPathComponent("today.sqlite").path)
+        var result = Array(repeating: 0, count: 24)
+        let rows = try db.prepare("SELECT hour,SUM(n) FROM (\(Self.best)) WHERE rank=1 AND tool<>? GROUP BY hour")
+        rows.bind(1, Self.grokRequestsLabel)
+        while try rows.step() {
+            if (0..<24).contains(rows.int(0)) { result[rows.int(0)] += rows.int(1) }
+        }
+        for hours in try openCodeDetail(db)?.hours.values.map({ $0 }) ?? [] {
+            for (hour, count) in hours where (0..<24).contains(hour) { result[hour] += count }
+        }
+        return result
+    }
+
+    private func openCodeDetail(_ db: SQLiteDatabase) throws -> TokenOpenCode.Detail? {
+        let row = try db.prepare("SELECT detail FROM opencode LIMIT 1")
+        guard try row.step(), let text = row.text(0) else { return nil }
+        return try? JSONDecoder().decode(TokenOpenCode.Detail.self, from: Data(text.utf8))
+    }
+
     /// Days of history before today. With today, the analytics view covers 90 days.
     static let historyDays = 89
 
@@ -82,7 +127,7 @@ struct TokenUsageIndex: Sendable {
         let days = (1...Self.historyDays).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }.map(TokenRecord.localDay)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let db = try SQLiteDatabase(path: path)
-        try db.execute("CREATE TABLE IF NOT EXISTS totals(tool TEXT,day INTEGER,n INTEGER,PRIMARY KEY(tool,day)) WITHOUT ROWID")
+        try prepareHistory(db)
         var result: [TokenTool: [Int]] = [:]
         for tool in TokenTool.allCases {
             try Task.checkCancellation()
@@ -91,32 +136,77 @@ struct TokenUsageIndex: Sendable {
             var known: [Int: Int] = [:]
             while try saved.step() { known[saved.int(0)] = saved.int(1) }
             if let gap = days.first(where: { known[$0] == nil }) {
-                let fresh: [Int: Int]
+                let fresh: [Int: [Int: Int]]
                 do {
                     fresh = try totals(tool, in: DateInterval(start: Date(timeIntervalSince1970: Double(gap)), end: today))
                 } catch is CancellationError { throw CancellationError() }
                 catch { continue }
                 try db.transaction {
                     let save = try db.prepare("INSERT OR REPLACE INTO totals VALUES(?,?,?)")
+                    let saveHour = try db.prepare("INSERT OR REPLACE INTO hours VALUES(?,?,?,?)")
                     for day in days where day >= gap {
-                        known[day] = fresh[day] ?? 0
-                        save.reset(); save.bind(1, tool.rawValue); save.bind(2, day); save.bind(3, fresh[day] ?? 0)
+                        let hours = fresh[day] ?? [:]
+                        known[day] = hours.values.reduce(0, +)
+                        save.reset(); save.bind(1, tool.rawValue); save.bind(2, day); save.bind(3, known[day] ?? 0)
                         _ = try save.step()
+                        for (hour, count) in hours where count > 0 {
+                            saveHour.reset(); saveHour.bind(1, tool.rawValue); saveHour.bind(2, day)
+                            saveHour.bind(3, hour); saveHour.bind(4, count)
+                            _ = try saveHour.step()
+                        }
                     }
                 }
             }
             result[tool] = days.map { known[$0] ?? 0 }
         }
-        try db.execute("DELETE FROM totals WHERE day<\(days[0])")
+        try db.execute("DELETE FROM totals WHERE day<\(days[0]); DELETE FROM hours WHERE day<\(days[0])")
         return result
     }
 
+    /// Version 2 keeps each finished day's hours beside its total; an older file is read again once.
+    private func prepareHistory(_ db: SQLiteDatabase) throws {
+        let version = try db.prepare("PRAGMA user_version")
+        guard try version.step(), version.int(0) != 2 else { return }
+        version.reset()
+        try db.transaction {
+            try db.execute("""
+                DROP TABLE IF EXISTS totals; DROP TABLE IF EXISTS hours;
+                CREATE TABLE totals(tool TEXT,day INTEGER,n INTEGER,PRIMARY KEY(tool,day)) WITHOUT ROWID;
+                CREATE TABLE hours(tool TEXT,day INTEGER,hour INTEGER,n INTEGER,PRIMARY KEY(tool,day,hour)) WITHOUT ROWID;
+                PRAGMA user_version=2;
+                """)
+        }
+    }
+
+    /// Tokens by weekday and hour over the analytics window, all tools together: 168 bins,
+    /// Sunday's midnight hour first, in `Calendar.current` weekdays. Run after `history`.
+    func rhythm(now: Date = Date()) throws -> [Int] {
+        let calendar = Calendar.current, today = calendar.startOfDay(for: now)
+        guard let first = calendar.date(byAdding: .day, value: -Self.historyDays, to: today) else { return [] }
+        var bins = Array(repeating: 0, count: 168)
+        func add(day: Int, hour: Int, count: Int) {
+            let weekday = calendar.component(.weekday, from: Date(timeIntervalSince1970: Double(day)))
+            guard (1...7).contains(weekday), (0..<24).contains(hour) else { return }
+            bins[(weekday - 1) * 24 + hour] += count
+        }
+        let path = directory.appendingPathComponent("history.sqlite").path
+        if FileManager.default.fileExists(atPath: path) {
+            let db = try SQLiteDatabase(readOnlyPath: path)
+            let rows = try db.prepare("SELECT day,hour,SUM(n) FROM hours WHERE day>=? AND day<? GROUP BY day,hour")
+            rows.bind(1, TokenRecord.localDay(first)); rows.bind(2, TokenRecord.localDay(today))
+            while try rows.step() { add(day: rows.int(0), hour: rows.int(1), count: rows.int(2)) }
+        }
+        for (hour, count) in ((try? hours()) ?? []).enumerated() { add(day: TokenRecord.localDay(today), hour: hour, count: count) }
+        return bins
+    }
+
     /// Reads the interval into a scratch index, so the day index and its cursors stay untouched.
-    private func totals(_ tool: TokenTool, in interval: DateInterval) throws -> [Int: Int] {
+    /// Returns tokens by local day and hour.
+    private func totals(_ tool: TokenTool, in interval: DateInterval) throws -> [Int: [Int: Int]] {
         let fm = FileManager.default
         let store = tool.root(home: home).resolvingSymlinksInPath().appendingPathComponent("opencode.db")
         if tool == .openCode, fm.fileExists(atPath: store.path) {
-            return try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: store.path)).daily(in: interval)
+            return try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: store.path)).detail(in: interval).hours
         }
         // The temporary folder is reclaimed by the system, so a quit in the middle of a read leaves nothing behind for good.
         let scratch = fm.temporaryDirectory.appendingPathComponent("yen-token-history-" + UUID().uuidString + ".sqlite").path
@@ -124,21 +214,21 @@ struct TokenUsageIndex: Sendable {
         let db = try SQLiteDatabase(path: scratch)
         // One pass over finished days needs no lookup by rank; only Codex corrections look rows up.
         try prepareIndex(db, indexed: tool == .codex)
-        _ = try count(tool, db: db, day: interval, changes: nil)
+        _ = try count(tool, db: db, day: interval, changes: nil, live: false)
         let rows = try db.prepare("""
-            SELECT day,SUM(n) FROM (
-                SELECT day,n,ROW_NUMBER() OVER (PARTITION BY id ORDER BY output DESC,n DESC) AS rank
-                FROM events WHERE tool=?) WHERE rank=1 GROUP BY day
+            SELECT day,hour,SUM(n) FROM (
+                SELECT day,hour,n,ROW_NUMBER() OVER (PARTITION BY id ORDER BY output DESC,n DESC) AS rank
+                FROM events WHERE tool=?) WHERE rank=1 GROUP BY day,hour
             """)
         rows.bind(1, tool.rawValue)
-        var result: [Int: Int] = [:]
-        while try rows.step() { result[rows.int(0)] = rows.int(1) }
+        var result: [Int: [Int: Int]] = [:]
+        while try rows.step() { result[rows.int(0), default: [:]][rows.int(1)] = rows.int(2) }
         return result
     }
 
     private func prepareIndex(_ db: SQLiteDatabase, indexed: Bool = true) throws {
         let version = try db.prepare("PRAGMA user_version")
-        guard try version.step(), version.int(0) != 4 else { return }
+        guard try version.step(), version.int(0) != 5 else { return }
         version.reset()
         // Only YEN's disposable cache is migrated. Re-read unchanged logs using the new counting rules.
         try db.transaction {
@@ -146,11 +236,11 @@ struct TokenUsageIndex: Sendable {
                 DROP TABLE IF EXISTS day; DROP TABLE IF EXISTS opencode;
                 DROP TABLE IF EXISTS cursors; DROP TABLE IF EXISTS events;
                 CREATE TABLE day(start INTEGER);
-                CREATE TABLE opencode(stamp TEXT PRIMARY KEY,count INTEGER);
+                CREATE TABLE opencode(stamp TEXT PRIMARY KEY,count INTEGER,detail TEXT);
                 CREATE TABLE cursors(path TEXT PRIMARY KEY,inode INTEGER,size INTEGER,stamp REAL,offset INTEGER,state TEXT,tail TEXT,tool TEXT);
                 CREATE TABLE events(tool TEXT,path TEXT,id TEXT,n INTEGER,output INTEGER,input INTEGER,cached INTEGER,seq INTEGER,day INTEGER,
-                    PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
-                PRAGMA user_version=4;
+                    hour INTEGER,project TEXT,session TEXT,PRIMARY KEY(tool,path,id)) WITHOUT ROWID;
+                PRAGMA user_version=5;
                 """)
             if indexed {
                 try db.execute("""
@@ -171,7 +261,7 @@ struct TokenUsageIndex: Sendable {
         }
     }
 
-    private func count(_ tool: TokenTool, db: SQLiteDatabase, day: DateInterval, changes: Set<URL>?) throws -> Int {
+    private func count(_ tool: TokenTool, db: SQLiteDatabase, day: DateInterval, changes: Set<URL>?, live: Bool = true) throws -> Int {
         // A directory walk does not follow a provider directory that is itself a symbolic link.
         let root = tool.root(home: home).resolvingSymlinksInPath()
         let fm = FileManager.default
@@ -225,6 +315,14 @@ struct TokenUsageIndex: Sendable {
             for path in missing { try forget(path, db: db) }
         }
         for file in files { try ingest(file.standardizedFileURL.resolvingSymlinksInPath(), tool: tool, day: day, db: db) }
+        var running = 0
+        if tool == .grok, live {
+            // A failed read of the shell log leaves only the running turns out; completed turns still count.
+            do {
+                try ingestGrokRequests(day: day, db: db)
+                running = try grokRunning(db).values.reduce(0, +)
+            } catch is CancellationError { throw CancellationError() } catch {}
+        }
         let query = try db.prepare("""
             SELECT COALESCE(SUM(n),0) FROM (
                 SELECT n,ROW_NUMBER() OVER (PARTITION BY id ORDER BY output DESC,n DESC) AS rank
@@ -232,12 +330,48 @@ struct TokenUsageIndex: Sendable {
             """)
         query.bind(1, tool.rawValue)
         guard try query.step() else { throw CocoaError(.fileReadUnknown) }
-        return max(0, query.int(0))
+        return max(0, query.int(0)) + running
+    }
+
+    private func ingestGrokRequests(day: DateInterval, db: SQLiteDatabase) throws {
+        let log = TokenTool.grok.grokLog(home: home).standardizedFileURL.resolvingSymlinksInPath()
+        guard FileManager.default.isReadableFile(atPath: log.path) else {
+            try forget(log.path, db: db)
+            return
+        }
+        try ingest(log, tool: .grok, day: day, db: db, requests: true)
+    }
+
+    /// Tokens of Grok turns still running, by folder: a session's finished requests minus its
+    /// completed turns. Requests of a finished turn add up to that turn, so they add nothing.
+    private func grokRunning(_ db: SQLiteDatabase) throws -> [String?: Int] {
+        let rows = try db.prepare("""
+            SELECT r.project,MAX(0,r.n-COALESCE(t.n,0)) FROM
+                (SELECT session,MAX(project) AS project,SUM(n) AS n FROM events WHERE tool=? GROUP BY session) r
+            LEFT JOIN (SELECT session,SUM(n) AS n FROM (\(Self.best)) WHERE rank=1 AND tool=? GROUP BY session) t
+            ON r.session=t.session
+            """)
+        rows.bind(1, Self.grokRequestsLabel); rows.bind(2, TokenTool.grok.rawValue)
+        var result: [String?: Int] = [:]
+        while try rows.step() { result[rows.text(0), default: 0] += rows.int(1) }
+        return result
+    }
+
+    /// The working folder of a Grok session, from the folder its records are kept in.
+    private func grokFolder(session: String) -> String? {
+        let root = TokenTool.grok.root(home: home).resolvingSymlinksInPath()
+        let fm = FileManager.default
+        guard let folders = try? fm.contentsOfDirectory(atPath: root.path) else { return nil }
+        for folder in folders where fm.fileExists(atPath: root.appendingPathComponent(folder).appendingPathComponent(session).path) {
+            return TokenRecord.Source.of(root.appendingPathComponent(folder).appendingPathComponent(session)
+                .appendingPathComponent("updates.jsonl"), tool: .grok).project
+        }
+        return nil
     }
 
     private func openCodeCount(_ url: URL, day: DateInterval, cache: SQLiteDatabase) throws -> Int {
-        // Invalidate counts saved before legacy session fallback was supported.
-        let signature = "2:" + [url.path, url.path + "-wal"].map { path -> String in
+        // Invalidate counts saved before the hour and folder detail was kept.
+        let signature = "3:" + [url.path, url.path + "-wal"].map { path -> String in
             var info = Darwin.stat()
             guard lstat(path, &info) == 0 else { return "-" }
             return "\(info.st_ino)/\(info.st_size)/\(info.st_ctimespec.tv_sec)/\(info.st_ctimespec.tv_nsec)"
@@ -245,18 +379,22 @@ struct TokenUsageIndex: Sendable {
         let cached = try cache.prepare("SELECT count FROM opencode WHERE stamp=?")
         cached.bind(1, signature)
         if try cached.step() { return cached.int(0) }
-        let count = try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: url.path)).count(in: day)
+        let detail = try TokenOpenCode(db: SQLiteDatabase(readOnlyPath: url.path)).detail(in: day)
         try cache.transaction {
             try cache.execute("DELETE FROM opencode")
-            let save = try cache.prepare("INSERT INTO opencode VALUES(?,?)")
+            let save = try cache.prepare("INSERT INTO opencode VALUES(?,?,?)")
             save.bind(1, signature)
-            save.bind(2, count)
+            save.bind(2, detail.total)
+            save.bind(3, String(decoding: try JSONEncoder().encode(detail), as: UTF8.self))
             _ = try save.step()
         }
-        return count
+        return detail.total
     }
 
-    private func ingest(_ url: URL, tool: TokenTool, day: DateInterval, db: SQLiteDatabase) throws {
+    /// Reads a record file from its cursor. With `requests`, the file is Grok's shell log, whose
+    /// finished requests are kept under their own label and only fill in turns still running.
+    private func ingest(_ url: URL, tool: TokenTool, day: DateInterval, db: SQLiteDatabase, requests: Bool = false) throws {
+        let label = requests ? Self.grokRequestsLabel : tool.rawValue
         var stat = Darwin.stat()
         guard lstat(url.path, &stat) == 0, stat.st_mode & S_IFMT == S_IFREG else { throw CocoaError(.fileReadUnknown) }
         let size = Int(stat.st_size), inode = Int(truncatingIfNeeded: stat.st_ino)
@@ -271,7 +409,7 @@ struct TokenUsageIndex: Sendable {
         let samePrefix = try exists && size > cursor.int(1) && cursor.int(0) == inode &&
             checkpoint(handle, offset: offset) == cursor.text(5)
         var codex = TokenCodex()
-        if tool == .codex, samePrefix, let state = cursor.text(4) {
+        if tool == .codex, !requests, samePrefix, let state = cursor.text(4) {
             codex = try JSONDecoder().decode(TokenCodex.self, from: Data(state.utf8))
         }
         if !samePrefix { offset = 0 }
@@ -279,30 +417,46 @@ struct TokenUsageIndex: Sendable {
         try db.transaction {
             if !samePrefix {
                 let clear = try db.prepare("DELETE FROM events WHERE tool=? AND path=?")
-                clear.bind(1, tool.rawValue); clear.bind(2, url.path); _ = try clear.step()
+                clear.bind(1, label); clear.bind(2, url.path); _ = try clear.step()
             }
             let insert = try db.prepare("""
-                INSERT INTO events(tool,path,id,n,output,day) VALUES(?,?,?,?,?,?) ON CONFLICT(tool,path,id)
-                DO UPDATE SET n=excluded.n,output=excluded.output,day=excluded.day WHERE (excluded.output,excluded.n)>(output,n)
+                INSERT INTO events(tool,path,id,n,output,day,hour,project,session) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(tool,path,id)
+                DO UPDATE SET n=excluded.n,output=excluded.output,day=excluded.day,hour=excluded.hour,project=excluded.project,
+                    session=excluded.session WHERE (excluded.output,excluded.n)>(output,n)
                 """)
             let rollout = tool == .codex ? TokenCodex.rolloutID(url) : ""
-            let end = try stream(handle, from: offset, through: size, containing: tool.marker, limit: tool.recordLimit) { bytes in
-                if tool == .codex {
+            let source = TokenRecord.Source.of(url, tool: tool)
+            var folders: [String: String?] = [:]
+            let markers = requests ? ["\"shell.turn.inference_done\""] : tool.markers
+            let end = try stream(handle, from: offset, through: size, containing: markers,
+                                 limit: requests ? 64 * 1024 : tool.recordLimit) { bytes in
+                if tool == .codex && !requests {
                     try codex.ingest(bytes, file: url.path, rollout: rollout, day: day, db: db)
                     return
                 }
-                for entry in TokenRecord.decode(bytes, tool: tool, day: day) {
+                var entries = requests ? TokenRecord.grokRequest(bytes, day: day).map { [$0] } ?? []
+                    : TokenRecord.decode(bytes, tool: tool, day: day, source: source)
+                if requests {
+                    // A turn in progress has no completed record yet, so its folder comes from the session folder.
+                    for index in entries.indices {
+                        guard let session = entries[index].session else { continue }
+                        if folders[session] == nil { folders[session] = grokFolder(session: session) }
+                        entries[index].project = folders[session] ?? nil
+                    }
+                }
+                for entry in entries {
                     insert.reset()
-                    insert.bind(1, tool.rawValue); insert.bind(2, url.path); insert.bind(3, entry.key)
+                    insert.bind(1, label); insert.bind(2, url.path); insert.bind(3, entry.key)
                     insert.bind(4, entry.count); insert.bind(5, entry.output); insert.bind(6, entry.day)
+                    insert.bind(7, entry.hour); insert.bind(8, entry.project); insert.bind(9, entry.session)
                     _ = try insert.step()
                 }
             }
             let save = try db.prepare("INSERT OR REPLACE INTO cursors VALUES(?,?,?,?,?,?,?,?)")
             save.bind(1, url.path); save.bind(2, inode); save.bind(3, size); save.bind(4, stamp)
             save.bind(5, end)
-            if tool == .codex { save.bind(6, String(decoding: try JSONEncoder().encode(codex), as: UTF8.self)) }
-            save.bind(7, try checkpoint(handle, offset: end)); save.bind(8, tool.rawValue)
+            if tool == .codex && !requests { save.bind(6, String(decoding: try JSONEncoder().encode(codex), as: UTF8.self)) }
+            save.bind(7, try checkpoint(handle, offset: end)); save.bind(8, label)
             _ = try save.step()
         }
     }
@@ -315,13 +469,16 @@ struct TokenUsageIndex: Sendable {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// Calls `consume` with each complete line that holds `marker` and is no longer than `limit`,
+    /// Calls `consume` with each complete line that holds one of `markers` (any line when there are
+    /// none) and is no longer than `limit`,
     /// and returns the offset after the last complete line. A line is copied out of the read buffer
     /// only when it holds the marker, and a line over the limit is never held.
-    private func stream(_ handle: FileHandle, from start: Int, through size: Int, containing marker: String?, limit: Int,
+    private func stream(_ handle: FileHandle, from start: Int, through size: Int, containing markers: [String], limit: Int,
                         consume: (Data) throws -> Void) throws -> Int {
-        let needle = marker.map { Array($0.utf8) }
-        func wanted(_ bytes: UnsafeRawBufferPointer) -> Bool { needle.map { TokenRecord.contains(bytes, $0) } ?? true }
+        let needles = markers.map { Array($0.utf8) }
+        func wanted(_ bytes: UnsafeRawBufferPointer) -> Bool {
+            needles.isEmpty || needles.contains { TokenRecord.contains(bytes, $0) }
+        }
         var position = start, committed = start
         // The start of a line that began in an earlier chunk.
         var carry = Data()

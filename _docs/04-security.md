@@ -383,8 +383,9 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 ## Optional local usage and wallpaper sources
 
 The usage reader takes counts from local provider records without provider credentials or requests.
-Its cache holds record identifiers, source paths, read positions and counts.
+Its cache holds record identifiers, source paths, read positions, counts, local hours, working folder paths and session ids.
+While the menu runs it writes `~/.local/state/yen/token-usage.json` (folder 0700, file 0600) with counts, plan readings and working folder paths for `yen usage`, and deletes it when the menu stops; record text never enters it.
 The desktop wallpaper picker grants access to selected media, while random Photos selection requests library permission.
 YouTube playback fetches its downloader from a pinned GitHub release and verifies its SHA-256 before execution.
 Only a chosen YouTube video or restoration of that choice can start a media download.
-The app bundles the MovingPaper engine's MIT notice, beside the notices that Third-Party License Notices describes; the token readers are the operator's own code and need none.
+The app bundles the MovingPaper engine's MIT notice, beside the notices that Third-Party License Notices describes; the token readers and the JP the Cat sound are the operator's own work and need none.

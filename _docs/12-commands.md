@@ -28,6 +28,7 @@ Run as `yen <command>`; in YEN shells the app commands (`browse`, `btop`, ...) a
 | `ide` | IDE helper suite; see `yen ide` below | Yes |
 | `agents` | Agent adapter board: `claude` and `codex` profiles with probes, sessions, `timeline`, `note`, `export` evidence bundles, `templates` | Yes |
 | `pane` | `cwd <directory>`, `cwd --hook`, `cwd --clear`, `--dry-run`: report an agent's working directory for the pane (`_docs/13-desktop-features.md` → Agent worktrees) | Yes |
+| `usage` | Today's agent tokens per tool, current plan limits and top folders from the token menu's report; `--json` prints the report and `--here` the current folder's tokens. Needs Show Token Usage (`_docs/13-desktop-features.md` → Optional menu and desktop features) | No |
 | `sessions` | List persistent pane sessions and report a backend listing error alongside any available results; listing, `attach <id>` and `kill <id>` use the zmx build that created the session. `list --porcelain` prints the versioned machine format, and `list --host <host>` and `attach --host <host> <id>` reach another Mac over ssh with distinct exit codes (`_docs/01-architecture.md` → Persistent sessions, Remote attach) | Yes |
 | `browse` (`files`, `fm`) | File browser without cd-on-quit; works without shell integration | Yes |
 | `y` | File browser with cd-on-quit; only in YEN-launched shells | Yes |

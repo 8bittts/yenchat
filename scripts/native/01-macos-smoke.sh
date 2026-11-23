@@ -184,6 +184,9 @@ case "$MODE" in
                 -only-testing:YENTests/TokenPlanUsageTests
                 -only-testing:YENTests/TokenClaudeLimitsTests
                 -only-testing:YENTests/TokenUsageIndexTests
+                -only-testing:YENTests/TokenProjectUsageTests
+                -only-testing:YENTests/TokenLimitAlertsTests
+                -only-testing:YENTests/JPTheCatSoundTests
                 -only-testing:YENTests/WallpaperStateTests
                 -only-testing:YENTests/WallpaperToggleTests
                 -only-testing:YENTests/WallpaperDisplayReplugTests

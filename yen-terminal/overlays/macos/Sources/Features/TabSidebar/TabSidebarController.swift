@@ -614,7 +614,8 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
                 // made when the row list already refreshes (tree, focus and
                 // split notifications, a progress report change, the fallback
                 // tick); no process or file access.
-                sessionState: controller.flatMap { TabSessionState.of(surfaces: $0.surfaceTree.map { $0 }) }
+                sessionState: controller.flatMap { TabSessionState.of(surfaces: $0.surfaceTree.map { $0 }) },
+                tokenSummary: TokenProjectUsage.shared.summary(forDirectory: metadata.trustedWorkingDirectory)
             )
         }
     }

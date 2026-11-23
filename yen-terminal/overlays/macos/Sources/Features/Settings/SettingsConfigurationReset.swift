@@ -127,7 +127,7 @@ enum SettingsConfigurationReset {
     static func resetNotificationPreferencesToDefaults() {
         let manager = NotificationSoundManager.shared
         for service in NotificationService.configurableCases {
-            manager.setSoundName(NotificationSoundManager.silentSelectionID, for: service)
+            manager.setSoundName(service.defaultSelectionID, for: service)
             manager.setDeliveryMode(.bannerAndSound, for: service)
             manager.setVolume(1.0, for: service)
         }

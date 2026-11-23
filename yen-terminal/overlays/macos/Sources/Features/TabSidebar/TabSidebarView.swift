@@ -45,6 +45,9 @@ struct TabSidebarRowAccessibilityDescriptor: Equatable {
 		if let statusSummary = tab.statusSummary {
 			parts.append(statusSummary)
 		}
+		if let tokenSummary = tab.tokenSummary {
+			parts.append(tokenSummary)
+		}
 		if let sessionState = tab.sessionState {
 			parts.append(sessionState.label)
 		}
@@ -411,7 +414,7 @@ private struct TabSidebarRow: View {
 
 	@ViewBuilder
 	private var rowMetadataView: some View {
-		if tab.cwdSummary != nil || tab.gitSummary != nil || tab.statusSummary != nil {
+		if tab.cwdSummary != nil || tab.gitSummary != nil || tab.statusSummary != nil || tab.tokenSummary != nil {
 			HStack(alignment: .center, spacing: 6) {
 				if let cwdSummary = tab.cwdSummary {
 					Text(cwdSummary)
@@ -426,6 +429,16 @@ private struct TabSidebarRow: View {
 					Text(gitSummary)
 						.lineLimit(1)
 						.truncationMode(.tail)
+				}
+
+				if let tokenSummary = tab.tokenSummary {
+					if tab.cwdSummary != nil || tab.gitSummary != nil {
+						rowMetadataSeparator
+					}
+					Text(tokenSummary.replacingOccurrences(of: " today", with: ""))
+						.lineLimit(1)
+						.fixedSize()
+						.help(tokenSummary)
 				}
 
 				if let statusSummary = tab.statusSummary {

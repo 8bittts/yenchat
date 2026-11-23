@@ -1,8 +1,8 @@
 import CoreServices
 import Foundation
 
-/// One kernel stream for the four permitted directories, including roots that
-/// providers may create after enable. Dropped events request a fresh inventory.
+/// One kernel stream for the four permitted directories and Grok's log folder, including roots
+/// that providers may create after enable. Dropped events request a fresh inventory.
 @MainActor
 final class TokenSourceWatcher {
     private var stream: FSEventStreamRef?
@@ -11,6 +11,7 @@ final class TokenSourceWatcher {
 
     init?(home: URL, change: @escaping (TokenTool, Set<URL>?) -> Void) {
         roots = TokenTool.allCases.map { ($0, Self.physicalPath($0.root(home: home))) }
+            + [(.grok, Self.physicalPath(TokenTool.grok.grokLog(home: home).deletingLastPathComponent()))]
         self.change = change
         var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
                                            retain: { pointer in
@@ -65,7 +66,8 @@ final class TokenSourceWatcher {
                 return
             }
             let url = URL(fileURLWithPath: path)
-            if tool.accepts(url) || (tool == .openCode && ["opencode.db", "opencode.db-wal"].contains(url.lastPathComponent)) {
+            if tool.accepts(url) || (tool == .openCode && ["opencode.db", "opencode.db-wal"].contains(url.lastPathComponent))
+                || (tool == .grok && url.lastPathComponent == "unified.jsonl") {
                 change(tool, [url])
             }
         }

@@ -7,7 +7,7 @@ struct TokenOpenCode {
         COALESCE(t_input,0)+COALESCE(t_output,0)+COALESCE(t_reasoning,0)+COALESCE(t_cache_read,0)+COALESCE(t_cache_write,0)
         """
     private static let sessions = """
-        SELECT time_created AS created, tokens_input AS t_input, tokens_output AS t_output,
+        SELECT time_created AS created, NULL AS sid, tokens_input AS t_input, tokens_output AS t_output,
                tokens_reasoning AS t_reasoning, tokens_cache_read AS t_cache_read, tokens_cache_write AS t_cache_write
         FROM session
         """
@@ -16,16 +16,46 @@ struct TokenOpenCode {
 
     /// Tokens per local day inside the interval, read in one snapshot.
     func daily(in interval: DateInterval) throws -> [Int: Int] {
-        var result: [Int: Int] = [:]
+        try detail(in: interval).hours.mapValues { $0.values.reduce(0, +) }
+    }
+
+    /// Tokens by local day and hour, and by session folder, inside the interval, read in one snapshot.
+    struct Detail: Codable, Equatable {
+        var hours: [Int: [Int: Int]] = [:]
+        var projects: [String: Int] = [:]
+        var total: Int { hours.values.reduce(0) { $0 + $1.values.reduce(0, +) } }
+    }
+
+    func detail(in interval: DateInterval) throws -> Detail {
+        var result = Detail()
         try db.transaction {
-            let rows = try db.prepare("SELECT created,\(Self.total) FROM (\(try source())) WHERE created >= ? AND created < ?")
+            let folders = try folderSource()
+            let rows = try db.prepare("""
+                SELECT created,\(Self.total),\(folders == nil ? "NULL" : "f.directory") FROM (\(try source())) AS m
+                \(folders.map { "LEFT JOIN (\($0)) AS f ON f.id=m.sid" } ?? "")
+                WHERE created >= ? AND created < ?
+                """)
             rows.bind(1, Int(interval.start.timeIntervalSince1970 * 1000))
             rows.bind(2, Int(interval.end.timeIntervalSince1970 * 1000))
             while try rows.step() {
-                result[TokenRecord.localDay(Date(timeIntervalSince1970: rows.double(0) / 1000)), default: 0] += rows.int(1)
+                let stamp = Date(timeIntervalSince1970: rows.double(0) / 1000), count = rows.int(1)
+                result.hours[TokenRecord.localDay(stamp), default: [:]][TokenRecord.localHour(stamp), default: 0] += count
+                if let folder = TokenRecord.folder(rows.text(2)) { result.projects[folder, default: 0] += count }
             }
         }
         return result
+    }
+
+    /// Session id to working folder, from whichever session tables the store has with both columns.
+    /// Session counters carry no message, so usage read from them has no folder.
+    private func folderSource() throws -> String? {
+        let tables = try existingTables(["session", "session_v2"])
+        let parts = try ["session", "session_v2"].filter(tables.contains).filter { table in
+            let columns = try db.prepare("SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name IN ('id','directory')")
+            return try columns.step() && columns.int(0) == 2
+        }.map { "SELECT id,directory FROM \($0)" }
+        guard !parts.isEmpty else { return nil }
+        return parts.count == 1 ? parts[0] : parts[0] + " UNION ALL " + parts[1] + " WHERE id NOT IN (SELECT id FROM session)"
     }
 
     private func source() throws -> String {
@@ -53,13 +83,13 @@ struct TokenOpenCode {
 	}
 
 	/// One projection over every assistant row, whichever table holds it, with stable column names:
-	/// `created, t_input, t_output, t_reasoning, t_cache_read, t_cache_write`.
+	/// `created, sid, t_input, t_output, t_reasoning, t_cache_read, t_cache_write`.
 	/// Nil when neither table exists (a legacy session-only store).
 	static func assistantProjection(tables: Set<String>) -> String? {
 		let v2 = tables.contains(sessionMessageTable)
 		let v1 = tables.contains(legacyMessageTable)
 		let sessionMessages = """
-			SELECT json_extract(data, '$.time.created') AS created,
+			SELECT json_extract(data, '$.time.created') AS created, session_id AS sid,
 			       json_extract(data, '$.tokens.input') AS t_input,
 			       json_extract(data, '$.tokens.output') AS t_output,
 			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,
@@ -69,7 +99,7 @@ struct TokenOpenCode {
 			WHERE type = 'assistant'
 			"""
 		let legacyMessages = """
-			SELECT json_extract(data, '$.time.created') AS created,
+			SELECT json_extract(data, '$.time.created') AS created, session_id AS sid,
 			       json_extract(data, '$.tokens.input') AS t_input,
 			       json_extract(data, '$.tokens.output') AS t_output,
 			       json_extract(data, '$.tokens.reasoning') AS t_reasoning,

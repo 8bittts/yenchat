@@ -53,6 +53,8 @@ struct TabSidebarItem: Identifiable, Equatable {
     /// Live or remote, from the tab's panes (`TabSessionState`); nil for an
     /// ordinary tab.
     var sessionState: TabSessionState? = nil
+    /// Today's agent tokens in the tab's folder, while the token menu runs (`TokenProjectUsage`).
+    var tokenSummary: String? = nil
 
     static func == (lhs: TabSidebarItem, rhs: TabSidebarItem) -> Bool {
         lhs.id == rhs.id &&
@@ -65,7 +67,8 @@ struct TabSidebarItem: Identifiable, Equatable {
         lhs.gitSummary == rhs.gitSummary &&
         lhs.statusSummary == rhs.statusSummary &&
         lhs.statusTone == rhs.statusTone &&
-        lhs.sessionState == rhs.sessionState
+        lhs.sessionState == rhs.sessionState &&
+        lhs.tokenSummary == rhs.tokenSummary
     }
 }
 

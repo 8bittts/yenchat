@@ -366,6 +366,12 @@ extension AppDelegate {
     /// Returns false when legacy YEN core routing should handle the response.
     func handleServiceNotificationResponse(_ response: UNNotificationResponse) -> Bool {
         let userInfo = response.notification.request.content.userInfo
+        if userInfo[TokenLimitAlerts.userInfoKey] as? Bool == true,
+           response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            // The delegate answers on the main thread (`userNotificationCenter(_:didReceive:)`).
+            MainActor.assumeIsolated { DesktopExtras.shared.showUsagePanel() }
+            return true
+        }
         switch ServiceNotificationResponseRouter.decision(
             actionIdentifier: response.actionIdentifier,
             userInfo: userInfo

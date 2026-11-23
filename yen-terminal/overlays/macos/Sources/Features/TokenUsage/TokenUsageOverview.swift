@@ -90,6 +90,10 @@ struct TokenUsageOverview: View {
                 // The chart takes every point the totals leave, so the face has no empty band;
                 // a short overview gets a thinner chart without its caption.
                 ViewThatFits(in: .vertical) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        totals(history); trend(history, caption: true)
+                        if let rhythm = snapshot.rhythm, rhythm.count == 168 { TokenRhythmChart(bins: rhythm) }
+                    }
                     VStack(alignment: .leading, spacing: 12) { totals(history); trend(history, caption: true) }
                     VStack(alignment: .leading, spacing: 12) { totals(history); trend(history, caption: false) }
                     VStack(spacing: 0) { totals(history); Spacer(minLength: 0) }
@@ -191,6 +195,34 @@ struct TokenUsageOverview: View {
                             }
                         }
                     }
+                }
+            }
+            folders
+        }
+    }
+
+    static let folderLimit = 5
+
+    /// Today's busiest working folders, all tools together, largest first.
+    static func topFolders(_ projects: [String: TokenUsageIndex.Counts]) -> [(path: String, tokens: Int)] {
+        projects.map { ($0.key, $0.value.values.reduce(0, +)) }.filter { $0.1 > 0 }
+            .sorted { ($0.1, $1.0) > ($1.1, $0.0) }.prefix(folderLimit).map { (path: $0.0, tokens: $0.1) }
+    }
+
+    @ViewBuilder private var folders: some View {
+        let top = Self.topFolders(snapshot.projects)
+        if !top.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Divider()
+                Text("Top folders today").font(YENTypography.secondary).foregroundStyle(.secondary)
+                ForEach(top, id: \.path) { folder in
+                    HStack {
+                        Text((folder.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
+                        Spacer(minLength: 8)
+                        Text(folder.tokens.formatted(Self.compact)).monospacedDigit()
+                    }
+                    .help((folder.path as NSString).abbreviatingWithTildeInPath + " · " + folder.tokens.formatted() + " tokens")
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -304,5 +336,72 @@ private struct TokenCardFlip<Back: View>: ViewModifier, Animatable {
             // Perspective enlarges the near edge by up to 1 / (1 - perspective / 2); shrinking by the
             // same share keeps the turning card inside its window, which would clip it.
             .scaleEffect(1 - Self.perspective / 2 * sin(progress * .pi))
+    }
+}
+
+/// Tokens by weekday and hour over the analytics window: one row per weekday, from the calendar's
+/// first weekday, and one column per hour. A darker cell used more tokens.
+struct TokenRhythmChart: View {
+    let bins: [Int]
+    /// One weekday row: a 10-point cell and a 1-point gap, tall enough for its caption label.
+    static let rowHeight: CGFloat = 11
+
+    /// Weekday rows in display order, as `Calendar` weekdays (1 is Sunday).
+    static func weekdays(_ calendar: Calendar = .current) -> [Int] {
+        (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }
+    }
+
+    /// The busiest weekday and hour, or nil when no tokens were counted.
+    static func busiest(_ bins: [Int]) -> (weekday: Int, hour: Int, tokens: Int)? {
+        guard let peak = bins.indices.max(by: { bins[$0] < bins[$1] }), bins[peak] > 0 else { return nil }
+        return (peak / 24 + 1, peak % 24, bins[peak])
+    }
+
+    static func label(weekday: Int, hour: Int, _ calendar: Calendar = .current) -> String {
+        let day = calendar.shortWeekdaySymbols[weekday - 1]
+        let time = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date()).map {
+            $0.formatted(.dateTime.hour())
+        } ?? String(hour)
+        return day + " " + time
+    }
+
+    var body: some View {
+        let peak = bins.max() ?? 0
+        let rows = Self.weekdays()
+        let symbols = Calendar.current.veryShortWeekdaySymbols
+        let busiest = Self.busiest(bins)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 5) {
+                VStack(alignment: .trailing, spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, weekday in
+                        Text(symbols[weekday - 1]).frame(height: Self.rowHeight)
+                    }
+                }.font(YENTypography.caption).foregroundStyle(.secondary).accessibilityHidden(true)
+                Canvas { context, size in
+                    let cell = CGSize(width: size.width / 24, height: size.height / 7)
+                    for (row, weekday) in rows.enumerated() {
+                        for hour in 0..<24 {
+                            let value = bins[(weekday - 1) * 24 + hour]
+                            let rect = CGRect(x: CGFloat(hour) * cell.width, y: CGFloat(row) * cell.height,
+                                              width: max(1, cell.width - 1), height: max(1, cell.height - 1))
+                            let shade = peak > 0 && value > 0 ? 0.18 + 0.82 * Double(value) / Double(peak) : 0
+                            context.fill(Path(roundedRect: rect, cornerRadius: 1.5),
+                                         with: .color(shade > 0 ? Color.yenBrand.opacity(shade) : Color.primary.opacity(0.07)))
+                        }
+                    }
+                }.frame(height: Self.rowHeight * 7)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Tokens by weekday and hour for the last 90 days")
+            .accessibilityValue(busiest.map { "Busiest " + Self.label(weekday: $0.weekday, hour: $0.hour) } ?? "No usage")
+            HStack {
+                Text("By hour, last 90 days")
+                Spacer()
+                if let busiest {
+                    Text("Busiest " + Self.label(weekday: busiest.weekday, hour: busiest.hour))
+                        .help(busiest.tokens.formatted() + " tokens")
+                }
+            }.font(YENTypography.caption).foregroundStyle(.secondary)
+        }
     }
 }

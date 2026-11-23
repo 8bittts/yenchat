@@ -23,6 +23,12 @@ enum TokenTool: String, CaseIterable, Sendable {
         }
     }
 
+    /// Text a line must contain for the reader to parse it. Codex also names its working folder in
+    /// its session header and in each turn's context.
+    var markers: [String] {
+        self == .codex ? TokenCodex.markers : marker.map { [$0] } ?? []
+    }
+
     /// A line over this size is skipped without being held in memory. Usage records are small: in
     /// 6.8 GB of real records the largest was 163 KB for Claude Code, whose record carries the reply,
     /// and under 1 KB for Codex and Grok, whose compaction and image records reach many megabytes.
@@ -31,6 +37,12 @@ enum TokenTool: String, CaseIterable, Sendable {
         case .claude, .openCode: return 8 * 1024 * 1024
         case .codex, .grok: return 1024 * 1024
         }
+    }
+
+    /// Grok's shell log, beside its sessions folder: it records each model request as it finishes,
+    /// while a session's record counts a turn only once the whole turn completes.
+    func grokLog(home: URL) -> URL {
+        root(home: home).deletingLastPathComponent().appendingPathComponent("logs/unified.jsonl")
     }
 
     func accepts(_ url: URL) -> Bool {
@@ -43,16 +55,43 @@ enum TokenTool: String, CaseIterable, Sendable {
     }
 }
 
-/// Numeric projection of local usage records. Source text never enters the index.
+/// Numeric projection of local usage records. Source text never enters the index; the working
+/// folder and session id are kept so usage can be shown per project and per pane.
 struct TokenRecord {
     typealias Object = [String: Any]
     let key: String
     let count: Int
     let output: Int
     let day: Int
+    var hour = 0
+    var project: String?
+    var session: String?
+
+    /// What a record file says about every record in it: Grok keeps one folder per working
+    /// folder, named by its percent-encoded path, and one folder per session inside it.
+    struct Source {
+        var project: String?
+        var session: String?
+
+        static func of(_ url: URL, tool: TokenTool) -> Self {
+            guard tool == .grok else { return Self() }
+            let sessionFolder = url.deletingLastPathComponent()
+            let decoded = sessionFolder.deletingLastPathComponent().lastPathComponent.removingPercentEncoding
+            return Self(project: decoded.flatMap { $0.hasPrefix("/") ? $0 : nil }, session: sessionFolder.lastPathComponent)
+        }
+    }
 
     /// The local day an event belongs to, as the epoch second of its midnight.
     static func localDay(_ stamp: Date) -> Int { Int(Calendar.current.startOfDay(for: stamp).timeIntervalSince1970) }
+
+    /// The local hour of the day, 0 to 23, for the hour-by-weekday chart.
+    static func localHour(_ stamp: Date) -> Int { Calendar.current.component(.hour, from: stamp) }
+
+    /// A folder path a record names, or nil. Only absolute paths count as a project.
+    static func folder(_ raw: Any?) -> String? {
+        guard let path = raw as? String, path.hasPrefix("/") else { return nil }
+        return path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
 
     static func object(_ bytes: Data, containing field: String) -> Object? {
         guard bytes.withUnsafeBytes({ contains($0, Array(field.utf8)) }) else { return nil }
@@ -84,17 +123,33 @@ struct TokenRecord {
     /// Length-prefix the first component so slashes inside either identifier remain unambiguous.
     static func key(_ first: String, _ second: String) -> String { "\(first.utf8.count):\(first)\(second)" }
 
-    static func decode(_ bytes: Data, tool: TokenTool, day: DateInterval) -> [Self] {
+    static func decode(_ bytes: Data, tool: TokenTool, day: DateInterval, source: Source = Source()) -> [Self] {
         switch tool {
         case .claude: return claude(bytes, day: day).map { [$0] } ?? []
-        case .grok: return grok(bytes, day: day)
+        case .grok: return grok(bytes, day: day).map { var record = $0; record.project = source.project; record.session = source.session; return record }
         case .openCode: return openCode(bytes, day: day).map { [$0] } ?? []
         case .codex: return []
         }
     }
 
+    /// One finished model request from Grok's shell log, keyed by its session. Its count uses the
+    /// same fields as a completed turn, so the requests of a finished turn add up to that turn.
+    static func grokRequest(_ bytes: Data, day: DateInterval) -> Self? {
+        guard let data = object(bytes, containing: "\"shell.turn.inference_done\""),
+              data["msg"] as? String == "shell.turn.inference_done", let session = text(data["sid"]),
+              let stamp = date(data["ts"]), stamp >= day.start, stamp < day.end,
+              let ctx = data["ctx"] as? Object else { return nil }
+        let output = number(ctx["completion_tokens"]) + number(ctx["reasoning_tokens"])
+        let loop = (ctx["loop_index"] as? NSNumber).map { String($0.intValue) } ?? ""
+        var record = Self(key: key(session, (data["ts"] as? String ?? "") + "#" + loop),
+                          count: max(number(ctx["prompt_tokens"]), number(ctx["cached_prompt_tokens"])) + output,
+                          output: output, day: localDay(stamp), hour: localHour(stamp))
+        record.session = session
+        return record
+    }
+
     /// The members the Claude counter reads; the reply's content is not among them.
-    static let claudeMembers = [["type"], ["isApiErrorMessage"], ["requestId"], ["timestamp"],
+    static let claudeMembers = [["type"], ["isApiErrorMessage"], ["requestId"], ["timestamp"], ["cwd"], ["sessionId"],
                                 ["message", "model"], ["message", "id"], ["message", "usage"]]
 
     /// A usage record reduced to `claudeMembers`. A record the projection cannot walk is parsed whole.
@@ -116,7 +171,8 @@ struct TokenRecord {
         } ?? number(usage["cache_creation_input_tokens"])
         let output = number(usage["output_tokens"])
         return Self(key: key(id, request), count: writes + number(usage["input_tokens"])
-            + number(usage["cache_read_input_tokens"]) + output, output: output, day: localDay(stamp))
+            + number(usage["cache_read_input_tokens"]) + output, output: output, day: localDay(stamp),
+            hour: localHour(stamp), project: folder(data["cwd"]), session: text(data["sessionId"]))
     }
 
     private static func grok(_ bytes: Data, day: DateInterval) -> [Self] {
@@ -135,7 +191,7 @@ struct TokenRecord {
         func record(_ bag: Object, message: String) -> Self {
             let output = number(bag["outputTokens"]) + number(bag["reasoningTokens"])
             return Self(key: key(message, request), count: max(number(bag["inputTokens"]), number(bag["cachedReadTokens"])) + output,
-                        output: output, day: localDay(stamp))
+                        output: output, day: localDay(stamp), hour: localHour(stamp))
         }
         if let models = usage["modelUsage"] as? Object, !models.isEmpty {
             return models.compactMap { name, raw in (raw as? Object).map { record($0, message: key(id, name.isEmpty ? "grok" : name)) } }
@@ -153,6 +209,7 @@ struct TokenRecord {
               stamp >= day.start, stamp < day.end else { return nil }
         let output = number(fields["tokens.output"]) + number(fields["tokens.reasoning"])
         return Self(key: key(id, field("run") ?? "opencode-log"), count: output + number(fields["tokens.input"])
-            + number(fields["tokens.cache.read"]) + number(fields["tokens.cache.write"]), output: output, day: localDay(stamp))
+            + number(fields["tokens.cache.read"]) + number(fields["tokens.cache.write"]), output: output, day: localDay(stamp),
+            hour: localHour(stamp))
     }
 }

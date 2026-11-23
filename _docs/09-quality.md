@@ -14,6 +14,7 @@ The required gates before a commit and the vendor-tree preflight are in [AGENTS.
 The provider comparison covers streamed Claude snapshots, Codex counter resets, per-model Grok replay and legacy OpenCode log identities.
 The OpenCode database tests distinguish empty message history from a day without usage.
 The same suite covers records that cross the reader's buffer, the record limit of each tool, the record projection against whole-record parsing, and the marker search.
+`TokenProjectUsageTests` covers each tool's working folder, today's hours, Grok turns still running (finished requests minus completed turns), the finished-day hours behind the weekday chart, the sidebar's folder match and the `yen usage` report; `TokenLimitAlertsTests` covers the once-per-window alerts and the JP the Cat sound.
 `TokenPlanUsageTests` switches the menu on and off 12 times and requires each menu to be released, some while their first read runs.
 A release build is checked without focus in the verify copy: launch it in the background with a scratch home of fixture records and read the status item's accessibility text, which states the exact total and how many of the four sources were read.
 - Concurrent writes: append records the way the tool does, open, write and close for each one; the total rises in whole records and ends exact.

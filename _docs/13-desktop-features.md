@@ -161,7 +161,13 @@ Rotating limits shows today's total and one current plan reading, the next every
 Plan readings come only from records the four tools write on the Mac and the file YEN's statusline block saves; the menu reads no other app’s data, stores no credential and makes no network request.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.
-Turning the switch off cancels collection and removes the item.
+Below the providers, Top folders today lists the five working folders where agents used the most tokens today, all tools together; hovering a row shows its full path.
+Below the daily chart, the analytics view shows tokens by weekday and hour over the same 90 days, one row per weekday from the calendar's first weekday, and names the busiest hour.
+While the menu runs, each tab sidebar row shows today's tokens for its folder after the git branch: usage in that folder and the folders inside it, or, when no agent ran there, the nearest folder above it with usage (`TokenProjectUsage.tokens`).
+Limit Alerts, below Claude Plan Limits, is on by default: a plan pool that reaches 80% and then 95% raises one notification each, once per window, on the Usage Limits stream, and clicking one opens the token panel (`TokenLimitAlerts`).
+The alerted windows are saved, so a relaunch inside a window stays quiet; the next window alerts again.
+`yen usage` prints today's counts, current plan readings and top folders from the report the menu writes after each reading ([12-commands.md](12-commands.md)).
+Turning the switch off cancels collection, removes the item, clears the sidebar counts and deletes the report.
 The [architecture](01-architecture.md) owns the reader and cache boundaries.
 
 On macOS 27 or newer, General → Experimental → Moving Wallpaper exposes Wallpaper Controls inside Settings.
@@ -178,7 +184,7 @@ The wallpaper engine yields while standalone MovingPaper runs.
 MovingPaper shows its own wallpaper whatever YEN's switch says, so a wallpaper that plays with the switch off belongs to MovingPaper or to another YEN process.
 Open YEN at Login remains the single startup control.
 Both features default to off and a successful Reset All Settings switches both off.
-Reset All Settings also removes the token menu’s layout and display choices (`TokenMenuDisplay.reset`).
+Reset All Settings also removes the token menu’s layout and display choices (`TokenMenuDisplay.reset`) and turns Limit Alerts back on with no alerted windows (`TokenLimitAlerts.reset`).
 
 ### Settings hitch benchmark
 
@@ -232,9 +238,10 @@ The engine binds some shifted symbols without Shift (`increase_font_size` is `su
 
 ## Sounds and Notifications
 
-Notification sounds are system-only, for two streams (`General`, `Build`):
+Notification sounds come from macOS and one built-in sound, for three streams (`General`, `Build`, `Usage`, shown as Usage Limits):
 
-- Sound: `None` or a macOS system sound from `/System/Library/Sounds`.
+- Sound: `None`, JP the Cat (a meow shipped as the `JPTheCat` data asset in the app's asset catalog), or a macOS system sound from `/System/Library/Sounds`.
+- Default: Usage Limits starts with JP the Cat; General and Build start with `None` (`NotificationService.defaultSelectionID`), and Reset All Settings restores those defaults.
 - Delivery: `Banner + Sound`, `Banner Only`, `Sound Only`, or `Off`; stored per stream, with no Settings control (see the sound pop-up mapping under Settings).
 - Volume: stored per stream from 0 to 1, with no Settings control.
 - While YEN is active: play sounds and show banners independently.
@@ -244,11 +251,11 @@ Notification sounds are system-only, for two streams (`General`, `Build`):
 Settings reads snapshots through `SoundsSettingsStore`; the controller stores one `NotificationServiceSettings` value per configurable service.
 `NotificationSoundStore` forwards edits to the manager; bulk hydration reads every service without forwarding snapshots back through preference setters.
 `NotificationSoundPreviewCoordinator` debounces one preview and stops it on close.
-Stored ids are `none` or `system:<encodedName>`.
+Stored ids are `none`, `system:<encodedName>` or `yen:jp-the-cat`; any other `yen:` id is `none`.
 `NotificationSoundManager.canonicalSoundSelectionID` maps a system sound missing on this Mac, any retired `custom:` or `bundled:` id, and malformed ids to `none`; it is the single choke point behind lookup, display and playback.
 Old `sounds/` and `sound-packs/` folders under Application Support stay inert: never scanned, deleted or surfaced.
 
-Custom imports and sound packs are retired.
+Custom imports and sound packs are retired; JP the Cat is part of the app, not a pack.
 The Notifications pane shows notification access, command-finish controls, one sound pop-up per stream, and focused behavior; speech permissions, the microphone and translation are on the Dictation pane.
 No release artifact, `public/stable/yen-sound-packs-*` file, or GitHub Release `yen-sound-packs-*` asset may exist, and public docs never advertise custom sounds.
 The retired archive is GitHub release `sound-packs-archive-2026-05-03`.

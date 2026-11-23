@@ -258,7 +258,14 @@ With no record changing the menu uses no measurable CPU time and no idle wakeups
 That was measured in the total view; the rotating limits view wakes once every 5 seconds to show the next reading (`TokenUsageMenu.configureRotation`).
 Typing is not measurably slower with the menu on: key-to-frame latency averaged 18.7 ms against 18.4 ms off, and ten identical runs with the menu off ranged from 17.9 to 19.8 ms.
 While the first analytics read runs, the average rises by about 2 ms and the slowest keys are unchanged.
-Terminal panes and the renderer do not subscribe to usage updates.
+Terminal panes and the renderer do not subscribe to usage updates; the tab sidebar redraws its rows on `.yenTokenProjectUsageDidChange`, which the menu posts only when today's folders change.
+
+Each event keeps its local hour and the working folder its record names: Claude Code's `cwd`, Codex's `cwd` from the rollout's `session_meta` and `turn_context` (the Codex reader also parses those two lines), and Grok's percent-encoded folder under `~/.grok/sessions`.
+OpenCode folders come from the `directory` of the message's session in `session` or `session_v2`, and its hours and folders are cached beside its count.
+`TokenUsageIndex.projects` and `hours` read today's cache after a reading; `rhythm` adds the hours `history` keeps for finished days (`history.sqlite` version 2 holds an `hours` table, and an older file is read again once).
+Grok writes a turn's usage only when the turn completes, so the reader also tails `~/.grok/logs/unified.jsonl` for `shell.turn.inference_done` requests under their own label.
+For each session, finished requests minus completed turns is the turn still running; the requests of a finished turn add up to that turn, so they add nothing, and a log rotated mid-session only undercounts.
+After each reading the menu writes `~/.local/state/yen/token-usage.json` (mode 0600) for `yen usage` and evaluates `TokenLimitAlerts`; neither runs in the test host.
 
 The experimental wallpaper feature hosts MovingPaper-derived AppKit panels behind desktop icons.
 Video playback uses AVFoundation and animated GIFs use ImageIO.

@@ -1,4 +1,5 @@
 #if os(macOS)
+import AppKit
 import AVFoundation
 import Foundation
 
@@ -49,19 +50,28 @@ enum NotificationDeliveryMode: String, CaseIterable, Identifiable, Sendable {
 enum NotificationService: String, CaseIterable, Identifiable {
     case general = "General"
     case build = "Build"
+    case usage = "Usage"
 
     var id: String { rawValue }
 
     static let configurableCases: [NotificationService] = [
         .general,
         .build,
+        .usage,
     ]
 
     private var defaultsSuffix: String {
         switch self {
         case .general: return "General"
         case .build: return "Build"
+        case .usage: return "Usage"
         }
+    }
+
+    /// The sound a stream plays before the user picks one. Plan limit alerts
+    /// start with JP the Cat; the other streams start silent.
+    var defaultSelectionID: String {
+        self == .usage ? NotificationSoundManager.jpTheCatSelectionID : NotificationSoundManager.silentSelectionID
     }
 
     /// UserDefaults key for the sound selection preference.
@@ -79,6 +89,7 @@ enum NotificationService: String, CaseIterable, Identifiable {
 /// Stored sound selections are stable IDs:
 ///   - `none`
 ///   - `system:<encodedName>`
+///   - `yen:jp-the-cat`, the one sound YEN ships (`JPTheCat` data asset)
 ///
 /// Retired `custom:` and `bundled:` selections are accepted only as legacy input
 /// and are normalized to `none` before playback or Settings snapshots read them.
@@ -86,6 +97,10 @@ enum NotificationService: String, CaseIterable, Identifiable {
 final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
     static let shared = NotificationSoundManager()
     static let silentSelectionID = "none"
+    nonisolated static let jpTheCatSelectionID = "yen:jp-the-cat"
+    nonisolated static let jpTheCatAssetName = "JPTheCat"
+    /// Sounds YEN ships, listed before the system sounds in every pop-up.
+    nonisolated static let builtInSounds = [NotificationSoundOption(id: jpTheCatSelectionID, name: "JP the Cat")]
 
     private static let audioExtensionPriority: [String] = ["m4a", "aiff", "aif", "wav", "mp3", "caf"]
     private static let audioExtensions: Set<String> = Set(audioExtensionPriority)
@@ -135,6 +150,7 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
     private enum SoundSelection: Equatable {
         case none
         case system(name: String)
+        case builtIn(name: String)
         case custom(name: String)
         case bundled(pack: String, name: String)
     }
@@ -226,6 +242,8 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
             return "none"
         case .system(let name):
             return "system:\(encodeStorageComponent(name))"
+        case .builtIn(let name):
+            return "yen:\(encodeStorageComponent(name))"
         case .custom(let name):
             return "custom:\(encodeStorageComponent(name))"
         case .bundled(let pack, let name):
@@ -244,6 +262,10 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
         case "system":
             guard parts.count == 2, let name = decodeStorageComponent(parts[1]) else { return nil }
             return .system(name: name)
+        case "yen":
+            guard parts.count == 2, let name = decodeStorageComponent(parts[1]),
+                  builtInSounds.contains(where: { $0.id == "yen:\(name)" }) else { return nil }
+            return .builtIn(name: name)
         case "custom":
             guard parts.count == 2, let name = decodeStorageComponent(parts[1]) else { return nil }
             return .custom(name: name)
@@ -263,6 +285,8 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
             return "None"
         case .system(let name):
             return name
+        case .builtIn(let name):
+            return builtInSounds.first { $0.id == "yen:\(name)" }?.name ?? "None"
         case .custom, .bundled:
             return "None"
         }
@@ -305,7 +329,7 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
         switch parsed {
         case .custom, .bundled:
             return true
-        case .none, .system:
+        case .none, .system, .builtIn:
             return false
         }
     }
@@ -371,7 +395,9 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
 
     /// Read the stored sound selection ID for a service. Returns `none` if unset.
     func soundName(for service: NotificationService) -> String {
-        let raw = UserDefaults.standard.string(forKey: service.defaultsKey) ?? Self.silentSelectionID
+        guard let raw = UserDefaults.standard.string(forKey: service.defaultsKey) else {
+            return service.defaultSelectionID
+        }
         let canonical = canonicalSoundSelectionID(raw)
         if canonical != raw {
             UserDefaults.standard.set(canonical, forKey: service.defaultsKey)
@@ -449,7 +475,7 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
             return false
         }
 
-        guard let url = resolveFileURL(for: selectionID) else {
+        guard let player = makePlayer(for: selectionID) else {
             return false
         }
 
@@ -461,9 +487,6 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
             activeSounds.removeValue(forKey: service)
         }
 
-        guard let player = try? AVAudioPlayer(contentsOf: url) else {
-            return false
-        }
         player.delegate = self
         player.volume = Float(vol)
         player.prepareToPlay()
@@ -481,8 +504,7 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
 
         if selectionID == Self.silentSelectionID { return }
 
-        guard let url = resolveFileURL(for: selectionID) else { return }
-        guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
+        guard let player = makePlayer(for: selectionID) else { return }
         player.delegate = self
         player.volume = Float(min(max(volume, 0.0), 1.0))
         player.prepareToPlay()
@@ -565,6 +587,17 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
 
     // MARK: - File Resolution
 
+    /// A player for a stored selection: a built-in sound from the asset catalog, a system sound from its file.
+    private func makePlayer(for selectionID: String) -> AVAudioPlayer? {
+        let canonicalID = canonicalSoundSelectionID(selectionID)
+        if canonicalID == Self.jpTheCatSelectionID {
+            guard let asset = NSDataAsset(name: Self.jpTheCatAssetName) else { return nil }
+            return try? AVAudioPlayer(data: asset.data)
+        }
+        guard let url = resolveFileURL(for: canonicalID) else { return nil }
+        return try? AVAudioPlayer(contentsOf: url)
+    }
+
     private func resolveFileURL(for selectionID: String) -> URL? {
         let canonicalID = canonicalSoundSelectionID(selectionID)
         if let cached = resolvedFileURLCache[canonicalID] {
@@ -581,7 +614,7 @@ final class NotificationSoundManager: NSObject, AVAudioPlayerDelegate {
         }
 
         switch selection {
-        case .none, .custom, .bundled:
+        case .none, .builtIn, .custom, .bundled:
             return nil
         case .system(let name):
             let url = findSoundFile(named: name, in: "/System/Library/Sounds")

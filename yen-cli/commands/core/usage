@@ -1,0 +1,126 @@
+#!/bin/bash
+# YEN usage command: print today's agent token counts, plan limits and busiest folders.
+#
+# YEN.app writes ~/.local/state/yen/token-usage.json after each reading while
+# Settings → General → Experimental → Show Token Usage is on, and removes it when the
+# switch goes off. The file holds numbers, plan labels and folder paths only. Its writer is
+# TokenUsageReport in yen-terminal/overlays/macos/Sources/Features/TokenUsage/TokenUsageShare.swift.
+
+source "${YEN_LIB}/init.sh"
+
+usage() {
+    cat << 'EOF'
+Usage:
+  yen usage            Today's tokens per tool, current plan limits and top folders
+  yen usage --json     The same report as JSON, for scripts and agents
+  yen usage --here     Today's tokens in the current folder and the folders inside it
+
+Notes:
+  Needs Settings → General → Experimental → Show Token Usage. YEN reads local agent records
+  only; nothing is sent anywhere.
+EOF
+}
+
+REPORT="${YEN_TOKEN_USAGE_REPORT:-$HOME/.local/state/yen/token-usage.json}"
+mode="text"
+case "${1:-}" in
+    "") ;;
+    --json) mode="json" ;;
+    --here) mode="here" ;;
+    -h|--help|help) usage; exit 0 ;;
+    *)
+        echo "yen usage: unknown option: $1" >&2
+        echo "Run 'yen usage --help' for usage." >&2
+        exit 2
+        ;;
+esac
+
+if [[ ! -f "${REPORT}" ]]; then
+    echo "yen usage: no token report yet. Turn on Settings → General → Experimental → Show Token Usage." >&2
+    exit 1
+fi
+
+if [[ "${mode}" == "json" ]]; then
+    cat "${REPORT}"
+    exit 0
+fi
+
+command -v osascript >/dev/null 2>&1 || {
+    echo "yen usage: osascript is required to read the report" >&2
+    exit 1
+}
+
+if ! output=$(
+    YEN_USAGE_REPORT="${REPORT}" \
+    YEN_USAGE_MODE="${mode}" \
+    YEN_USAGE_HERE="$(pwd -P)" \
+    YEN_USAGE_HOME="${HOME}" \
+    osascript -l JavaScript -e '
+        ObjC.import("Foundation");
+        function run() {
+            var env = $.NSProcessInfo.processInfo.environment;
+            function envString(name) {
+                var value = env.objectForKey(name);
+                return value ? value.js : "";
+            }
+            var data = $.NSData.dataWithContentsOfFile(envString("YEN_USAGE_REPORT"));
+            if (!data || data.isNil()) { throw new Error("cannot read the token report"); }
+            var report;
+            try {
+                report = JSON.parse($.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding).js);
+            } catch (error) {
+                throw new Error("the token report is not JSON");
+            }
+            var home = envString("YEN_USAGE_HOME");
+            function number(value) { return Number(value).toLocaleString("en-US"); }
+            function tilde(path) {
+                return home && (path === home || path.indexOf(home + "/") === 0) ? "~" + path.slice(home.length) : path;
+            }
+            function pad(text, width) { while (text.length < width) { text += " "; } return text; }
+            function padLeft(text, width) { while (text.length < width) { text = " " + text; } return text; }
+            var lines = [];
+            var today = new Date();
+            var stamp = new Date(report.updatedAt);
+            var localDay = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
+            if (report.day !== localDay) {
+                lines.push("Report from " + report.day + "; YEN has not read today yet.");
+            }
+            if (envString("YEN_USAGE_MODE") === "here") {
+                var here = envString("YEN_USAGE_HERE");
+                var total = 0;
+                (report.folders || []).forEach(function (folder) {
+                    if (folder.path === here || folder.path.indexOf(here === "/" ? "/" : here + "/") === 0) {
+                        total += folder.tokens;
+                    }
+                });
+                lines.push(number(total) + " tokens today in " + tilde(here));
+                return lines.join("\n");
+            }
+            lines.push("Today: " + number(report.total) + " tokens" +
+                (report.sources < (report.tools || []).length ? " (" + report.sources + " of " + report.tools.length + " sources)" : ""));
+            (report.tools || []).forEach(function (tool) {
+                var limits = (tool.limits || []).map(function (pool) {
+                    return pool.label + " " + Math.round(pool.percent) + "%";
+                }).join(" · ");
+                var count = tool.tokens === null || tool.tokens === undefined ? "unavailable" : number(tool.tokens);
+                lines.push("  " + pad(tool.name, 12) + padLeft(count, 16) + (limits ? "   " + limits : ""));
+            });
+            var folders = (report.folders || []).slice(0, 5);
+            if (folders.length) {
+                lines.push("Top folders:");
+                folders.forEach(function (folder) {
+                    lines.push("  " + padLeft(number(folder.tokens), 16) + "  " + tilde(folder.path));
+                });
+            }
+            lines.push("Updated " + stamp.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+            return lines.join("\n");
+        }
+    ' 2>&1
+); then
+    # osascript reports a thrown Error as "execution error: Error: Error: <message> (-2700)".
+    output="${output##*Error: }"
+    echo "yen usage: ${output% (-*)}" >&2
+    exit 1
+fi
+
+printf "%s\n" "${output}"

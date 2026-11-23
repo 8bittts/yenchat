@@ -150,7 +150,7 @@ struct SettingsPaneTests {
 
     @Test func everyAlertStreamHasATitle() {
         let titles = NotificationService.configurableCases.map(SettingsNotificationsPane.serviceTitle)
-        #expect(titles == ["General", "Build Finished"])
+        #expect(titles == ["General", "Build Finished", "Usage Limits"])
     }
 
     @Test func resetAllAlertNamesTheBackgroundImageOnlyWhenThereIsOne() {

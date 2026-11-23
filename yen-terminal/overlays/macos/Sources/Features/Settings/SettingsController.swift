@@ -2003,6 +2003,7 @@ final class SettingsController: NSWindowController, NSWindowDelegate, Observable
                 postSuccess: {
                     DesktopExtras.shared.setUsage(false)
                     TokenMenuDisplay.reset()
+                    TokenLimitAlerts.reset()
                     DesktopExtras.shared.setWallpaper(false)
                     try? TerminalBackgroundImageStore.cleanupManagedImages()
                 }

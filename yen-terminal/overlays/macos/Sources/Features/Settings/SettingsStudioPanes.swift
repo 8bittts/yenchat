@@ -844,6 +844,7 @@ struct SettingsNotificationsPane: View {
         switch service {
         case .general: return "General"
         case .build: return "Build Finished"
+        case .usage: return "Usage Limits"
         }
     }
 
@@ -903,11 +904,16 @@ struct SettingsNotificationsPane: View {
         ) {
             Text("None").tag(silent)
             Divider()
+            ForEach(NotificationSoundManager.builtInSounds) { sound in
+                Text(sound.name).tag(sound.id)
+            }
+            Divider()
             ForEach(sounds) { sound in
                 Text(sound.name).tag(sound.id)
             }
             // A stored sound this Mac no longer lists stays visible.
-            if displayed != silent, !sounds.contains(where: { $0.id == displayed }) {
+            if displayed != silent, !sounds.contains(where: { $0.id == displayed }),
+               !NotificationSoundManager.builtInSounds.contains(where: { $0.id == displayed }) {
                 Text(store.displaySoundSelection(displayed)).tag(displayed)
             }
         }

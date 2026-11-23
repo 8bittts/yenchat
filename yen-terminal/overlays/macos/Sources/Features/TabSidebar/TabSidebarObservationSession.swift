@@ -28,6 +28,7 @@ final class TabSidebarObservationSession {
         let notifications: [Notification.Name] = [
             .yenTabSidebarGitContextDidChange,
             .yenTabSidebarBuildStatusDidChange,
+            .yenTokenProjectUsageDidChange,
             .yenBellDidRing,
             YEN.Notification.yenFocusSplit,
             YEN.Notification.yenNewSplit,

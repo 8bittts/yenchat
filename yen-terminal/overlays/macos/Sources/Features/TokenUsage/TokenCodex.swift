@@ -8,6 +8,11 @@ struct TokenCodex: Codable {
     private var footprint = 0
     private var buckets = [0, 0, 0]
     private var ordinal = 0
+    /// The rollout's working folder, from its session header and each turn's context.
+    private var cwd: String?
+
+    /// Lines the Codex reader parses: token counts, and the two records that name the working folder.
+    static let markers = ["\"token_count\"", "\"turn_context\"", "\"session_meta\""]
 
     static func rolloutID(_ url: URL) -> String {
         let name = url.deletingPathExtension().lastPathComponent
@@ -16,8 +21,13 @@ struct TokenCodex: Codable {
     }
 
     mutating func ingest(_ bytes: Data, file: String, rollout: String, day: DateInterval, db: SQLiteDatabase) throws {
-        guard let obj = TokenRecord.object(bytes, containing: "\"token_count\""), obj["type"] as? String == "event_msg",
-              let payload = obj["payload"] as? TokenRecord.Object, payload["type"] as? String == "token_count" else { return }
+        guard let obj = try? JSONSerialization.jsonObject(with: bytes) as? TokenRecord.Object,
+              let payload = obj["payload"] as? TokenRecord.Object else { return }
+        if obj["type"] as? String == "turn_context" || obj["type"] as? String == "session_meta" {
+            if let folder = TokenRecord.folder(payload["cwd"]) { cwd = folder }
+            return
+        }
+        guard obj["type"] as? String == "event_msg", payload["type"] as? String == "token_count" else { return }
         if let limits = payload["rate_limits"] as? TokenRecord.Object, let date = TokenRecord.date(obj["timestamp"]),
            let reading = TokenPlanReading.codex(limits, at: date) {
             plan = reading.isRollingPlaceholder(after: previousReading) ? nil : reading
@@ -39,11 +49,12 @@ struct TokenCodex: Codable {
         guard added.contains(where: { $0 > 0 }) else { return }
         defer { ordinal += 1 }
         guard let stamp = TokenRecord.date(obj["timestamp"]), stamp >= day.start, stamp < day.end else { return }
-        let insert = try db.prepare("INSERT INTO events(tool,path,id,n,output,input,cached,seq,day) VALUES(?,?,?,?,?,?,?,?,?)")
+        let insert = try db.prepare("INSERT INTO events(tool,path,id,n,output,input,cached,seq,day,hour,project) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         insert.bind(1, TokenTool.codex.rawValue); insert.bind(2, file)
         insert.bind(3, TokenRecord.key(rollout, String(ordinal))); insert.bind(4, added.reduce(0, +))
         insert.bind(5, added[2]); insert.bind(6, added[0]); insert.bind(7, added[1]); insert.bind(8, ordinal)
-        insert.bind(9, TokenRecord.localDay(stamp))
+        insert.bind(9, TokenRecord.localDay(stamp)); insert.bind(10, TokenRecord.localHour(stamp))
+        if let cwd { insert.bind(11, cwd) }
         _ = try insert.step()
     }
 

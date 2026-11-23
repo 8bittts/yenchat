@@ -18,6 +18,7 @@ printf "  ${BOLD}agents${RESET}                             Adapter board + work
 printf "  ${BOLD}web${RESET}                                Native browser commands (open/back/forward/reload/close/status; open supports --split, stateful supports targets)\n"
 printf "  ${BOLD}pane${RESET}                               Report an agent's working directory for this pane (cwd <dir>/--hook/--clear)\n"
 printf "  ${BOLD}sessions${RESET}                           Persistent pane sessions (list/attach/kill; list and attach take --host for another Mac)\n"
+printf "  ${BOLD}usage${RESET}                              Today's agent tokens, plan limits and top folders (--json/--here)\n"
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────

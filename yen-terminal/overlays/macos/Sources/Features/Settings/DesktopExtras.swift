@@ -64,6 +64,9 @@ final class DesktopExtras: ObservableObject {
 
     func openWallpaper(_ button: NSButton) { wallpaper?.open(from: button) }
 
+    /// A click on a plan limit alert opens the token panel.
+    func showUsagePanel() { menu?.showPanel() }
+
     private func stopWallpaper() {
         workspace.notificationCenter.removeObserver(self)
         wallpaper?.stop()
@@ -85,7 +88,22 @@ struct TokenUsagePreference: View {
             SettingsStudioLabel(title: "Show Token Usage", hint: "Count local agent tokens in the menu bar.")
         }
         .accessibilityLabel("Show Token Usage")
-        if extras.showsUsage { ClaudePlanLimitsPreference() }
+        if extras.showsUsage {
+            ClaudePlanLimitsPreference()
+            LimitAlertsPreference()
+        }
+    }
+}
+
+/// Alerts at 80% and 95% of a plan window, on the Usage Limits notification stream.
+struct LimitAlertsPreference: View {
+    @AppStorage(TokenLimitAlerts.enabledKey) private var enabled = true
+    var body: some View {
+        Toggle(isOn: $enabled) {
+            SettingsStudioLabel(title: "Limit Alerts",
+                                hint: "Notify at 80% and 95% of a plan limit. Notifications → Usage Limits sets the sound.")
+        }
+        .accessibilityLabel("Limit Alerts")
     }
 }
 

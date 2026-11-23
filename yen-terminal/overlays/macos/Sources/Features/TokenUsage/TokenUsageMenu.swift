@@ -14,7 +14,7 @@ final class TokenUsageMenu: NSObject {
     private var watcher: TokenSourceWatcher?
     private var changes: [TokenTool: Set<URL>] = [:]
     private var worker: Task<TokenMenuReading, Never>?
-    private var historian: Task<[TokenTool: [Int]]?, Never>?
+    private var historian: Task<(days: [TokenTool: [Int]], rhythm: [Int])?, Never>?
     private var wantsHistory = false
     private var pending = Set<TokenTool>()
     private var delay: Task<Void, Never>?
@@ -22,6 +22,10 @@ final class TokenUsageMenu: NSObject {
     private var meterIndex = 0
     private var active = true
     private var displayedDay = Calendar.current.startOfDay(for: Date())
+    /// Delivers plan limit alerts; the test host passes none, so a suite never posts one.
+    private let alert: (@MainActor ([TokenLimitAlerts.Alert]) -> Void)?
+    /// Where `yen usage` reads today's numbers; none in the test host.
+    private let report: URL?
 
     /// Reads the user's records into the app's cache folder.
     nonisolated static var standardIndex: TokenUsageIndex {
@@ -32,8 +36,12 @@ final class TokenUsageMenu: NSObject {
         return TokenUsageIndex(home: fm.homeDirectoryForCurrentUser, directory: cache)
     }
 
-    init(index: TokenUsageIndex = TokenUsageMenu.standardIndex) {
+    init(index: TokenUsageIndex = TokenUsageMenu.standardIndex,
+         alert: (@MainActor ([TokenLimitAlerts.Alert]) -> Void)? = TokenUsageMenu.liveAlert,
+         report: URL? = TokenUsageMenu.liveReport) {
         self.index = index
+        self.alert = alert
+        self.report = report
         super.init()
         item.autosaveName = "YENTokenUsage"
         item.isVisible = true
@@ -76,10 +84,36 @@ final class TokenUsageMenu: NSObject {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         closePanel()
         NSStatusBar.system.removeStatusItem(item)
+        if report != nil { TokenProjectUsage.shared.clear() }
+        if let report { TokenUsageReport.remove(at: report) }
+    }
+
+    /// Alerts and the report belong to the app; the test host gets neither.
+    nonisolated static var liveAlert: (@MainActor ([TokenLimitAlerts.Alert]) -> Void)? {
+        if isRunningUnderXCTest() { return nil }
+        return { alerts in deliver(alerts) }
+    }
+
+    nonisolated static var liveReport: URL? { isRunningUnderXCTest() ? nil : TokenUsageReport.url() }
+
+    /// Posts each alert on the Usage Limits stream, which owns its sound and delivery mode.
+    static func deliver(_ alerts: [TokenLimitAlerts.Alert]) {
+        let now = Date()
+        for alert in alerts {
+            AppDelegate.deliverManagedLocalNotification(service: .usage, title: alert.title, body: alert.body(now: now),
+                                                        identifier: alert.identifier, categoryIdentifier: nil,
+                                                        userInfo: [TokenLimitAlerts.userInfoKey: true])
+        }
+    }
+
+    /// Opens the panel below the status item, as a click on it does.
+    func showPanel() {
+        guard panel == nil else { return }
+        toggle()
     }
 
     @objc private func toggle() {
-        if let event = NSApp.currentEvent,
+        if let event = NSApp.currentEvent, event.window === item.button?.window,
            event.type == .rightMouseUp || (event.type == .leftMouseUp && event.modifierFlags.contains(.control)) {
             closePanel()
             // A menu set on the item opens where macOS places status menus; the click below shows
@@ -184,6 +218,8 @@ final class TokenUsageMenu: NSObject {
             displayedDay = day
             snapshot.counts = nil
             snapshot.history = nil
+            snapshot.rhythm = nil
+            snapshot.projects = [:]
             updateTitle()
         }
         // A source that was unreadable gets another try; finished days are never read again.
@@ -221,7 +257,7 @@ final class TokenUsageMenu: NSObject {
                                                   cache: TokenLocalPlans.claude(home: index.home, now: now)),
                 .codex: (try? index.latestCodexPlan()) ?? [],
                 .grok: TokenLocalPlans.grok(home: index.home, now: now)
-            ])
+            ], projects: (try? index.projects()) ?? [:])
         }
         worker = task
         Task { [weak self] in
@@ -239,10 +275,25 @@ final class TokenUsageMenu: NSObject {
                 if tools.contains(.openCode) { self.snapshot.workspace = result.workspace }
                 self.snapshot.plans = result.plans
                 self.snapshot.counts = counts
+                self.snapshot.projects = result.projects
+                self.publish(counts: counts, plans: result.plans, projects: result.projects)
+                if let alert = self.alert {
+                    let due = TokenLimitAlerts.evaluate(plans: result.plans)
+                    if !due.isEmpty { alert(due) }
+                }
                 self.updateTitle()
             }
             if !self.pending.isEmpty && self.delay == nil { self.schedule([]) }
         }
+    }
+
+    /// Shares today's folders with the tab sidebar and writes the file `yen usage` prints.
+    private func publish(counts: TokenUsageIndex.Counts, plans: [TokenTool: [TokenPlanMeter]],
+                         projects: [String: TokenUsageIndex.Counts]) {
+        guard let report else { return }
+        TokenProjectUsage.shared.update(projects)
+        let file = TokenUsageReport.make(counts: counts, plans: plans, projects: projects, now: Date())
+        Task.detached(priority: .utility) { try? TokenUsageReport.write(file, to: report) }
     }
 
     /// The analytics view asks for the finished days once; the first read of a large history takes
@@ -251,13 +302,19 @@ final class TokenUsageMenu: NSObject {
         wantsHistory = true
         guard active, historian == nil else { return }
         let day = displayedDay
-        let task = Task.detached(priority: .utility) { [index] in try? index.history() }
+        let task = Task.detached(priority: .utility) { [index] () -> (days: [TokenTool: [Int]], rhythm: [Int])? in
+            guard let days = try? index.history() else { return nil }
+            return (days, (try? index.rhythm()) ?? [])
+        }
         historian = task
         Task { [weak self] in
             let result = await task.value
             guard let self, self.active else { return }
             self.historian = nil
-            if day == self.displayedDay { self.snapshot.history = result ?? [:] } else { self.loadHistory() }
+            if day == self.displayedDay {
+                self.snapshot.history = result?.days ?? [:]
+                self.snapshot.rhythm = result?.rhythm
+            } else { self.loadHistory() }
         }
     }
 
@@ -326,6 +383,7 @@ private struct TokenMenuReading: Sendable {
     let counts: TokenUsageIndex.Counts
     let workspace: String?
     let plans: [TokenTool: [TokenPlanMeter]]
+    let projects: [String: TokenUsageIndex.Counts]
 }
 
 enum TokenMenuDisplay: String, CaseIterable {
@@ -388,5 +446,9 @@ final class TokenMenuSnapshot: ObservableObject {
     /// Tokens for each finished day, oldest first; nil until the analytics view asks for them.
     @Published var history: [TokenTool: [Int]]?
     @Published var plans: [TokenTool: [TokenPlanMeter]] = [:]
+    /// Today's tokens per working folder and tool.
+    @Published var projects: [String: TokenUsageIndex.Counts] = [:]
+    /// Tokens by weekday and hour over the analytics window (`TokenUsageIndex.rhythm`); nil until read.
+    @Published var rhythm: [Int]?
     @Published var display = TokenMenuDisplay(stored: UserDefaults.standard.string(forKey: TokenMenuDisplay.key))
 }

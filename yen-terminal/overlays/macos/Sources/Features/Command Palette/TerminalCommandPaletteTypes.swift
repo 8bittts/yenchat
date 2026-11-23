@@ -417,6 +417,14 @@ extension TerminalCommandPaletteView {
             searchTags: ["sessions", "persistent", "detached", "attach", "background", "zmx"],
             command: "yen sessions"
         ),
+        TerminalCommandBlueprint(
+            id: "terminal:usage",
+            title: "Token Usage",
+            description: "Show today's agent tokens, plan limits and top folders",
+            leadingIcon: "gauge.with.dots.needle.bottom.50percent",
+            searchTags: ["usage", "tokens", "limits", "claude", "codex", "grok", "opencode", "agents"],
+            command: "yen usage"
+        ),
     ]
 
     static let ideQuickActionBlueprints: [TerminalCommandBlueprint] = [
