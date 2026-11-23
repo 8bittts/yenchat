@@ -262,6 +262,14 @@ describe("yen sessions --host: failure classes", () => {
 		);
 	});
 
+	test("the usage text lists exit 17 for a pending Tailscale SSH check", () => {
+		// The CLI exits 17 (REMOTE_EXIT_CHECK_REQUIRED) and the manual sends
+		// readers to --help for the exit codes, so the help must name it.
+		expect(sessions(["--help"]).stdout).toMatch(
+			/^ {2}17 Tailscale SSH asks for a browser approval/m,
+		);
+	});
+
 	test.each([
 		["Host key verification failed.", EXIT.firstConnection],
 		// Measured against a loopback sshd with PubkeyAuthentication no: an

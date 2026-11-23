@@ -276,7 +276,7 @@ describe("documentation contracts", () => {
 		expect(remote).toContain("turn on Remote Login in System Settings &gt;");
 		expect(remote).toContain("signing in must work without a password");
 		expect(remote).toContain("Set Up Key Sign-In for &lt;Mac&gt;");
-		expect(llms).toContain("exit codes 10-16");
+		expect(llms).toContain("exit codes 10-17");
 		expect(remote).toContain(
 			"SSH server; the open-source command-line Tailscale can.",
 		);
