@@ -8,6 +8,13 @@
 # executable is the installed /Applications/YEN.app; test hosts and Debug builds
 # write the same directory and are not shipped binaries.
 #
+# zmx session daemons crash as zmx*.ips: the installed app's bin/zmx and the
+# byte copies of it each session runs (<session dir>/bin/zmx-<digest>). Their
+# paths are redacted in the report, so a zmx report counts only when its
+# slice_uuid is a UUID of the installed zmx (dwarfdump --uuid); test runs and
+# local builds of zmx have other UUIDs. Installing a new release changes the
+# UUID, so reports from the previous build stop counting.
+#
 # Usage:
 #   ./scripts/manual/12-check-recent-crashes.sh
 #   ./scripts/manual/12-check-recent-crashes.sh --days 3
@@ -30,6 +37,8 @@ ALLOW=false
 DIAG_DIR="${YEN_DIAGNOSTIC_REPORTS_DIR:-${HOME}/Library/Logs/DiagnosticReports}"
 CRASH_DIR="${YEN_CRASH_DIR:-${HOME}/.local/state/yen/crash}"
 SHIPPED_EXECUTABLE='"code_file":"/Applications/YEN.app/Contents/MacOS/yen"'
+SHIPPED_ZMX="${YEN_SHIPPED_ZMX:-/Applications/YEN.app/Contents/Resources/bin/zmx}"
+DWARFDUMP="${YEN_DWARFDUMP:-dwarfdump}"
 
 # Resolve repo root (script lives at scripts/manual/)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -97,7 +106,7 @@ while [ "$#" -gt 0 ]; do
             exit 0
             ;;
         -h|--help)
-            sed -n '2,23p' "$0"
+            sed -n '2,31p' "$0"
             exit 0
             ;;
         *)
@@ -116,6 +125,30 @@ if [ ! -d "$DIAG_DIR" ]; then
     echo "ERROR: DiagnosticReports directory not found: $DIAG_DIR"
     exit 1
 fi
+
+# UUIDs of the installed zmx, lowercase as .ips slice_uuid writes them. No
+# installed zmx means no shipped zmx can have crashed here; an installed one
+# whose UUID cannot be read fails closed.
+SHIPPED_ZMX_UUIDS=""
+if [ -e "$SHIPPED_ZMX" ]; then
+    if ! uuid_out="$("$DWARFDUMP" --uuid "$SHIPPED_ZMX" 2>&1)"; then
+        echo "ERROR: cannot read the UUID of the installed zmx with $DWARFDUMP: $SHIPPED_ZMX"
+        exit 1
+    fi
+    SHIPPED_ZMX_UUIDS="$(printf '%s\n' "$uuid_out" | sed -n 's/^UUID: \([0-9A-Fa-f-]\{36\}\) .*/\1/p' | tr 'A-F' 'a-f')"
+    if [ -z "$SHIPPED_ZMX_UUIDS" ]; then
+        echo "ERROR: cannot read the UUID of the installed zmx with $DWARFDUMP: $SHIPPED_ZMX"
+        exit 1
+    fi
+fi
+
+# A zmx report counts when the first-line slice_uuid is an installed zmx UUID.
+is_shipped_zmx_report() {
+    local uuid
+    [ -n "$SHIPPED_ZMX_UUIDS" ] || return 1
+    uuid="$(sed -n '1s/.*"slice_uuid":"\([0-9a-fA-F-]\{36\}\)".*/\1/p' "$1" | tr 'A-F' 'a-f')"
+    [ -n "$uuid" ] && printf '%s\n' "$SHIPPED_ZMX_UUIDS" | grep -Fxq "$uuid"
+}
 
 MATCHED_COUNT=0
 MATCHED_REPORTS=""
@@ -144,6 +177,8 @@ while IFS= read -r report; do
     IPS_SCANNED=$((IPS_SCANNED + 1))
     base="$(basename "$report")"
     if echo "$base" | grep -Eq '^(yen|YEN)-[0-9]{4}-[0-9]{2}-[0-9]{2}.*\.ips$'; then
+        record_report "$report"
+    elif echo "$base" | grep -Eq '^zmx.*\.ips$' && is_shipped_zmx_report "$report"; then
         record_report "$report"
     fi
 done <<EOF

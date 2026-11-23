@@ -117,7 +117,7 @@ Manual utilities, outside the release and vendor gates:
 | ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
 | `manual/08-check-notification-names.sh`                                        | Notification names stay in sync across Swift and the build hook  |
 | `manual/11-verify-sparkle-signing.sh`                                          | Sparkle signing and key consistency against the DMG and appcast  |
-| `manual/12-check-recent-crashes.sh --days 3`                                   | Blocks shipping while recent `yen` crash reports exist           |
+| `manual/12-check-recent-crashes.sh --days 3`                                   | Blocks shipping on recent `yen` or installed-`zmx` crash reports |
 | `manual/14-verify-dmg-layout.sh [--skip-finder-check]`                         | DMG structure, backgrounds and Finder geometry                   |
 | `manual/15-verify-applescript.sh`, `manual/16-verify-applescript-if-needed.sh` | AppleScript and workspace verifier, and its stamp-driven wrapper |
 | `manual/17-verify-sparkle-delta-dryrun.sh`                                     | Delta generation against the live DMGs, with no writes           |
