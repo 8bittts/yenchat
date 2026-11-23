@@ -117,6 +117,8 @@ describe("yen sessions list --host: a pending Tailscale SSH check", () => {
 		const result = run(list);
 		expect(result.status, result.stderr).toBe(0);
 		expect(result.stdout).toBe(`${header}\n`);
+		// The listing's watcher ends with ssh.
+		expect(watchers(result.tmp)).toBe(0);
 	});
 
 	test("a deadline that ends the CLI still ends ssh and removes its files", () => {
