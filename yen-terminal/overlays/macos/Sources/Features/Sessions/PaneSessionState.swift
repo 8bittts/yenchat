@@ -34,18 +34,28 @@ enum PaneSessionState: Equatable, Sendable {
         of(paneID: paneID, report: nil)
     }
 
+    /// `report` is the pane's published progress report; only a remote pane
+    /// reads it, and only the CLI's mark means reconnecting.
     nonisolated static func of(paneID: UUID, report: YEN.Action.ProgressReport?) -> PaneSessionState {
-        if let identity = RemotePanes.identity(for: paneID) { return .remote(identity) }
+        if let identity = RemotePanes.identity(for: paneID) {
+            return RemotePanes.isReconnectReport(report) ? .reconnecting(identity) : .remote(identity)
+        }
         return PaneSessionRecords.isLive(paneID) ? .live : .local
     }
 }
 
 extension RemotePanes {
-    /// Set in a remote pane's environment, so its CLI writes the reconnecting mark.
+    /// Set in a remote pane's environment, so its CLI writes the reconnecting
+    /// mark (yen-cli/lib/sessions-remote.sh -> remote_mark).
     nonisolated static let reconnectMarkEnvironmentKey = "YEN_REMOTE_RECONNECT_MARK"
 
+    /// The CLI's reconnecting mark: OSC 9;4;4;0, a progress report paused at
+    /// 0%, which YEN reserves for it. Any other report, including a paused one
+    /// at another value, is the remote program's own. The engine drops a
+    /// report after 15 seconds, so the CLI renews it while it waits.
     nonisolated static func isReconnectReport(_ report: YEN.Action.ProgressReport?) -> Bool {
-        false
+        guard let report else { return false }
+        return report.state == .pause && report.progress == 0
     }
 }
 
@@ -66,9 +76,20 @@ enum TabSessionState: Equatable, Sendable {
 
     nonisolated static func of(_ panes: [PaneSessionState]) -> TabSessionState? {
         var hosts: [String] = []
-        for case .remote(let identity) in panes where !hosts.contains(identity.displayName) {
-            hosts.append(identity.displayName)
+        var reconnecting: [String] = []
+        for pane in panes {
+            switch pane {
+            case .reconnecting(let identity):
+                if !reconnecting.contains(identity.displayName) { reconnecting.append(identity.displayName) }
+                if !hosts.contains(identity.displayName) { hosts.append(identity.displayName) }
+            case .remote(let identity):
+                if !hosts.contains(identity.displayName) { hosts.append(identity.displayName) }
+            case .local, .live:
+                break
+            }
         }
+        // Any reconnecting pane wins, naming only the Macs it waits for.
+        if !reconnecting.isEmpty { return .reconnecting(hosts: reconnecting) }
         if !hosts.isEmpty { return .remote(hosts: hosts) }
         if !panes.isEmpty, panes.allSatisfy({ $0 == .live }) { return .live }
         return nil
@@ -88,8 +109,16 @@ enum TabSessionState: Equatable, Sendable {
     var symbolName: String {
         switch self {
         case .live: "rectangle.stack"
-        case .remote, .reconnecting: "network"
+        case .remote: "network"
+        // The same globe, struck through while the link is down.
+        case .reconnecting: "network.slash"
         }
+    }
+
+    private static func names(_ hosts: [String]) -> String {
+        hosts.count <= 2
+            ? hosts.joined(separator: " and ")
+            : hosts.dropLast().joined(separator: ", ") + " and " + (hosts.last ?? "")
     }
 
     /// What VoiceOver reads and the tooltip shows.
@@ -97,11 +126,11 @@ enum TabSessionState: Equatable, Sendable {
         switch self {
         case .live:
             return "Live session: keeps running when YEN quits"
-        case .remote(let hosts), .reconnecting(let hosts):
-            let names = hosts.count <= 2
-                ? hosts.joined(separator: " and ")
-                : hosts.dropLast().joined(separator: ", ") + " and " + (hosts.last ?? "")
+        case .remote(let hosts):
+            let names = Self.names(hosts)
             return hosts.count == 1 ? "Remote session on \(names)" : "Remote sessions on \(names)"
+        case .reconnecting(let hosts):
+            return "Reconnecting to \(Self.names(hosts))"
         }
     }
 }

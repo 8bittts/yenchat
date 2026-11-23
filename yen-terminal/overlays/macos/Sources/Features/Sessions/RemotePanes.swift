@@ -102,6 +102,8 @@ enum RemotePanes {
             return
         }
         config.command = command
+        // The pane's CLI writes the reconnecting mark only when asked.
+        config.environmentVariables[reconnectMarkEnvironmentKey] = "1"
         // attachWrapper holds a failure on screen; a normal end closes through
         // paneProcessEnded, because the engine forces wait-after-command for
         // any surface with a command whatever this says.

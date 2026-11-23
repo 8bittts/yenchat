@@ -156,10 +156,21 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
         guard let stack = window.tab.accessoryView as? WorkspaceTabAccessory else { return }
         let host = PaneTabIconAccessory(rootView: PaneTabSplitCount(count: 0))
         stack.install(host, for: window)
-        // Session state is fixed for a pane's life, so the tree is the only
-        // input: recomputed when panes are added, removed or moved.
+        // Recomputed when panes are added, removed or moved, and when a
+        // pane's progress report changes (a remote pane's reconnecting mark).
+        // @Published fires before it stores, so the read waits one main-queue
+        // turn for the new report.
         host.observation = controller.$surfaceTree
-            .map(Self.accessoryContent(for:))
+            .map { tree -> AnyPublisher<PaneTabSplitCount, Never> in
+                let leaves: [YEN.SurfaceView] = tree.root?.leaves() ?? []
+                let reports = leaves.map { $0.$progressReport.dropFirst().map { _ in () }.eraseToAnyPublisher() }
+                return Publishers.MergeMany(reports)
+                    .receive(on: DispatchQueue.main)
+                    .prepend(())
+                    .map { Self.accessoryContent(for: leaves) }
+                    .eraseToAnyPublisher()
+            }
+            .switchToLatest()
             .removeDuplicates(by: Self.sameContent)
             .sink { [weak host] in
                 host?.rootView = $0
@@ -169,10 +180,8 @@ final class PaneTabIconAccessory: NSHostingView<PaneTabSplitCount> {
             }
     }
 
-    static func accessoryContent(for tree: SplitTree<YEN.SurfaceView>) -> PaneTabSplitCount {
-        let leaves: [YEN.SurfaceView] = tree.root?.leaves() ?? []
-        let ids: [UUID] = leaves.map { $0.id }
-        return PaneTabSplitCount(count: leaves.count, session: TabSessionState.of(paneIDs: ids))
+    static func accessoryContent(for leaves: [YEN.SurfaceView]) -> PaneTabSplitCount {
+        PaneTabSplitCount(count: leaves.count, session: TabSessionState.of(surfaces: leaves))
     }
 
     static func sameContent(_ lhs: PaneTabSplitCount, _ rhs: PaneTabSplitCount) -> Bool {

@@ -12,6 +12,10 @@
 #   YEN_SSH_RETRY_MAX_DELAY     reconnect backoff cap in seconds (default 30; 0 never sleeps)
 #   YEN_REMOTE_APP              absolute path of the YEN.app to run on the peer,
 #                               instead of /Applications and ~/Applications
+#
+# Set by the app for a remote pane's CLI, never by a user:
+#   YEN_REMOTE_RECONNECT_MARK   1: write the reconnecting mark to the pane
+#                               (remote_mark below)
 
 # Exit codes the app and scripts tell apart. 1 and 2 keep their local meaning.
 readonly REMOTE_EXIT_UNREACHABLE=10
@@ -193,10 +197,52 @@ remote_failure_message() {
     esac
 }
 
+# The reconnecting mark (_docs/01-architecture.md -> Reconnecting mark). A
+# remote pane's CLI writes a terminal progress report to its own pane while it
+# waits to reconnect: OSC 9;4;4;0 (paused at 0%), a value YEN reserves for
+# this, cleared with OSC 9;4;0 by the LocalCommand once ssh signs in again and
+# on every way out. The engine drops a report after 15 seconds, so a wait
+# writes the mark again at least every 10. Only when the app asked for it: by
+# hand, in another terminal, OSC 9 may mean something else.
+readonly REMOTE_MARK_SET=$'\e]9;4;4;0\a'
+readonly REMOTE_MARK_CLEAR=$'\e]9;4;0\a'
+readonly REMOTE_MARK_REFRESH=10
+remote_marked=0
+remote_mark_wanted() { [[ "${YEN_REMOTE_RECONNECT_MARK:-}" == 1 ]]; }
+remote_mark() {
+    remote_mark_wanted || return 0
+    printf '%s' "$REMOTE_MARK_SET" 2> /dev/null || true
+    remote_marked=1
+}
+remote_clear_mark() {
+    remote_mark_wanted && [[ $remote_marked == 1 ]] || return 0
+    printf '%s' "$REMOTE_MARK_CLEAR" 2> /dev/null || true
+    remote_marked=0
+}
+
+# Wait before the next attempt; with the mark, in steps that renew it.
+remote_wait() {
+    local remaining="$1" step
+    if ! remote_mark_wanted; then
+        remote_run sleep "$remaining"
+        return
+    fi
+    while true; do
+        remote_mark
+        step=$((remaining < REMOTE_MARK_REFRESH ? remaining : REMOTE_MARK_REFRESH))
+        remote_run sleep "$step"
+        remaining=$((remaining - step))
+        [[ $remaining -gt 0 ]] || break
+    done
+    # Renewed once more, since ssh may take up to its connect timeout.
+    remote_mark
+}
+
 remote_scratch=""
 remote_child=""
 remote_cleanup() {
     # Runs from traps under the command's set -e, so no step may fail it.
+    remote_clear_mark
     if [[ -n "$remote_child" ]]; then
         kill -TERM "$remote_child" 2> /dev/null || true
         wait "$remote_child" 2> /dev/null || true
@@ -304,7 +350,13 @@ remote_attach() {
     command="$(remote_command attach "$id")" || exit "$?"
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
-    options+=(-o PermitLocalCommand=yes -o "LocalCommand=/usr/bin/touch $remote_scratch/connected")
+    if remote_mark_wanted; then
+        # ssh runs this after it signs in, while the CLI waits on it, so the
+        # mark clears the moment the session is back.
+        options+=(-o PermitLocalCommand=yes -o "LocalCommand=/usr/bin/touch $remote_scratch/connected; /usr/bin/printf '\\033]9;4;0\\007'")
+    else
+        options+=(-o PermitLocalCommand=yes -o "LocalCommand=/usr/bin/touch $remote_scratch/connected")
+    fi
 
     while true; do
         rm -f "$remote_scratch/connected"
@@ -315,6 +367,8 @@ remote_attach() {
         if [[ -e "$remote_scratch/connected" ]]; then
             established=1
             attempt=0
+            # The LocalCommand cleared the mark on screen.
+            remote_marked=0
         fi
 
         case "$status" in
@@ -347,6 +401,6 @@ remote_attach() {
         else
             echo "yen sessions: cannot reach $target yet; retrying in ${delay}s (attempt $attempt, Ctrl-C to stop)" >&2
         fi
-        remote_run sleep "$delay"
+        remote_wait "$delay"
     done
 }

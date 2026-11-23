@@ -610,10 +610,11 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
                 gitSummary: gitSnapshot?.summary,
                 statusSummary: signal?.summary,
                 statusTone: signal?.tone ?? (isSelected ? .neutral : .idle),
-                // Records lookups only, made when the row list already
-                // refreshes (tree, focus and split notifications, the
-                // fallback tick); no process or file access.
-                sessionState: controller.flatMap { TabSessionState.of(paneIDs: $0.surfaceTree.map(\.id)) }
+                // Records lookups and each pane's published progress report,
+                // made when the row list already refreshes (tree, focus and
+                // split notifications, a progress report change, the fallback
+                // tick); no process or file access.
+                sessionState: controller.flatMap { TabSessionState.of(surfaces: $0.surfaceTree.map { $0 }) }
             )
         }
     }
@@ -697,6 +698,8 @@ final class TabSidebarController: TabSidebarDataSource, NSMenuItemValidation {
 
     nonisolated static func terminalStatusSignal(for report: YEN.Action.ProgressReport?, isRemote: Bool) -> TabSidebarStatusSignal? {
         guard let report else { return nil }
+        // A remote pane's reconnecting mark shows as the tab's session state.
+        if isRemote && RemotePanes.isReconnectReport(report) { return nil }
         switch report.state {
         case .error:
             return TabSidebarStatusSignal(summary: "Task error", tone: .error)
