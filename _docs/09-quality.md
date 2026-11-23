@@ -57,7 +57,7 @@ Confirm with `ps -o pid,lstart`, the `txt` mapping from `lsof -p`, and `lsappinf
 A view that does not render is usually its own data dependency (an option list populated only in `.onAppear`), not the build system.
 Never `pkill` YEN to relaunch it.
 
-**A native UI finding is verified in a running local build before it is reported.** An audit, review or fix of a native surface ends with a pass through the re-identified `zig-out` copy (`_docs/05-infrastructure.md` → Validating the local `zig-out` build), and the report labels each finding as observed, code-only or not reproduced.
+**A native UI finding is verified in a running local build before it is reported.** An audit, review or fix of a native surface ends with a pass through the `com.yenchat.yenverify` copy that `scripts/manual/18-make-verify-copy.sh` builds (`_docs/05-infrastructure.md` → Validating the local `zig-out` build), and the report labels each finding as observed, code-only or not reproduced.
 Quit a verify copy by the pid recorded when it launched, never by a name pattern: the verify identity is shared between concurrent native lanes, so a pattern can quit another lane's copy.
 A code read, a unit test and an offscreen render have each been wrong about the same panel.
 An offscreen `NSHostingView` render showed `.tint(.red)` leaving a bordered button unchanged, while the running Settings window draws that button red.

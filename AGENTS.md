@@ -80,6 +80,7 @@ bunx react-doctor@latest . --verbose --scope changed --base main
 `lint`, `lint:fix` and the other script names carry the fleet meanings in `8leeai/_docs/13-starter-kit.md` → Script vocabulary.
 `.githooks/commit-msg` refuses AI attribution; `bun install` wires it through `prepare` (`scripts/setup-hooks.ts`), and `tests/156-commit-msg-hook.test.ts` proves it.
 Verify a native UI finding or fix in a running re-identified `zig-out` copy before reporting it; a code read, a unit test or an offscreen render is not evidence that a control renders or responds ([_docs/09-quality.md](_docs/09-quality.md) → Native Test Suite).
+Build that copy only with `scripts/manual/18-make-verify-copy.sh` (`com.yenchat.yenverify`, Developer ID signed); a copy with a new bundle identifier or an ad-hoc signature is a new app to macOS, so it asks the operator for access again ([_docs/05-infrastructure.md](_docs/05-infrastructure.md) → Validating the local `zig-out` build).
 The vendored `Config.zig` and `zmx` must exist before the full test suite.
 Do not acknowledge a missing vendor tree as a successful verification run.
 A `/update-yen` vendor-phase Zig toolchain preflight failure means Ghostty raised `.minimum_zig_version`; install the required toolchain instead of setting `YEN_VENDOR_SKIP_TOOLCHAIN_PREFLIGHT=1`.
