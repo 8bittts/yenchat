@@ -1092,6 +1092,71 @@ ${patchBlock}`;
 		});
 	});
 
+	test("remote pane close patches skip the close confirmation for a remote pane and fail closed on drift", () => {
+		const patchBlock = patchCommands([
+			"remote-pane-close-confirm",
+			"remote-pane-close-confirm-pane",
+		]);
+		// Upstream text the two redirects anchor on.
+		const property = [
+			"        var needsConfirmQuit: Bool {",
+			"            guard let surface = self.surface else { return false }",
+			"            return yen_surface_needs_confirm_quit(surface)",
+			"        }",
+		].join("\n");
+		const paneClose = [
+			"    @objc private func yenDidCloseSurface(_ notification: Notification) {",
+			"        guard let target = notification.object as? YEN.SurfaceView else { return }",
+			"        guard let node = surfaceTree.root?.node(view: target) else { return }",
+			"        closeSurface(",
+			"            node,",
+			'            withConfirmation: (notification.userInfo?["process_alive"] as? Bool) ?? false)',
+			"    }",
+		].join("\n");
+
+		withTempDir((fixtureRoot) => {
+			const surfaceDir = join(fixtureRoot, "ghostty/macos/Sources/YEN/Surface View");
+			const terminalDir = join(fixtureRoot, "ghostty/macos/Sources/Features/Terminal");
+			mkdirSync(surfaceDir, { recursive: true });
+			mkdirSync(terminalDir, { recursive: true });
+			const surfacePath = join(surfaceDir, "SurfaceView_AppKit.swift");
+			const controllerPath = join(terminalDir, "BaseTerminalController.swift");
+			writeFileSync(surfacePath, `${property}\n`, "utf8");
+			writeFileSync(controllerPath, `${paneClose}\n`, "utf8");
+
+			const command = `set -euo pipefail
+cd "${fixtureRoot}"
+PATCH_FILE_UTIL="${patchFilePath}"\n${patchFileFn}
+PATCHES_DIR="${patchesDir}"
+${patchBlock}`;
+			const firstRun = run("bash", ["-lc", command]);
+			expect(firstRun.status, output(firstRun)).toBe(0);
+			expect(output(firstRun)).toContain("Applied Remote pane close confirmation");
+			expect(output(firstRun)).toContain("Applied Remote pane close confirmation (pane)");
+			// Every window, tab and close-other-tabs path reads the property;
+			// a pane close reads the engine's process_alive flag.
+			expect(readFileSync(surfacePath, "utf8")).toContain(
+				"            return RemotePanes.closeNeedsConfirmation(paneID: id, engineNeedsConfirm: yen_surface_needs_confirm_quit(surface))",
+			);
+			expect(readFileSync(controllerPath, "utf8")).toContain(
+				'            withConfirmation: RemotePanes.closeNeedsConfirmation(paneID: target.id, engineNeedsConfirm: (notification.userInfo?["process_alive"] as? Bool) ?? false))',
+			);
+
+			const secondRun = run("bash", ["-lc", command]);
+			expect(secondRun.status).toBe(0);
+			expect(output(secondRun)).toContain("already applied (idempotent skip)");
+
+			writeFileSync(
+				surfacePath,
+				`${property.replace("yen_surface_needs_confirm_quit(surface)", "yen_surface_needs_confirm(surface)")}\n`,
+				"utf8",
+			);
+			const driftRun = run("bash", ["-lc", command]);
+			expect(driftRun.status).toBe(1);
+			expect(output(driftRun)).toContain("patch anchor not found");
+		});
+	});
+
 	test("persistent session termios patches chain onto the exec wrap and fail closed on drift", () => {
 		const chain = [
 			"persistent-session-exec",

@@ -249,6 +249,7 @@ case "$MODE" in
                 -only-testing:YENTests/TailscaleDiscoveryTests
                 -only-testing:YENTests/RemoteHostsStoreTests
                 -only-testing:YENTests/RemotePanesTests
+                -only-testing:YENTests/RemoteCloseConfirmationTests
                 -only-testing:YENTests/RemoteHostsPaletteRowsTests
                 -only-testing:YENTests/SessionStateTests
                 -only-testing:YENTests/TabSidebarHostsSectionTests

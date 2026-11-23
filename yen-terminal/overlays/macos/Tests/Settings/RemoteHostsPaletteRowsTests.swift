@@ -94,8 +94,8 @@ struct RemoteHostsPaletteRowsTests {
     }
 
     @Test func otherSessionStatesAndAnIncompleteListing() {
-        let attachedElsewhere = RemoteSession(id: UUID(), state: .attached, started: nil, directory: nil)
-        let broken = RemoteSession(id: UUID(), state: .unreachable, started: nil, directory: "/opt/work")
+        let attachedElsewhere = RemoteSession(id: UUID(uuidString: "11111111-0000-4000-8000-000000000001")!, state: .attached, started: nil, directory: nil)
+        let broken = RemoteSession(id: UUID(uuidString: "22222222-0000-4000-8000-000000000002")!, state: .unreachable, started: nil, directory: "/opt/work")
         let all = rows(.running(peers: [mini]), [mini.id: .listed(.sessions([attachedElsewhere, broken], complete: false))])
             .filter { $0.id != "hosts:refresh" }
 
@@ -172,6 +172,104 @@ struct RemoteHostsPaletteRowsTests {
         let rows = RemoteHostsPaletteRows.catalogEntries(query: "mini", snapshot: known, isOpenHere: { _ in false }, now: now)
         #expect(rows.first == RemoteHostsPaletteRows.staticRow)
         #expect(rows.contains { $0.title == "Hosts: ~/src/app on Mini" })
+    }
+
+    // MARK: Order
+
+    private func session(_ id: String, minutesAgo: Double?, directory: String = "/Users/dev") -> RemoteSession {
+        RemoteSession(
+            id: UUID(uuidString: id)!,
+            state: .detached,
+            started: minutesAgo.map { now.addingTimeInterval(-$0 * 60) },
+            directory: directory
+        )
+    }
+
+    @Test func eachMacsSessionsComeNewestFirstWithTheIDAsTieBreak() {
+        let old = session("A0000000-0000-4000-8000-000000000000", minutesAgo: 120, directory: "/Users/dev/old")
+        let newB = session("B0000000-0000-4000-8000-000000000000", minutesAgo: 5, directory: "/Users/dev/b")
+        let newA = session("0A000000-0000-4000-8000-000000000000", minutesAgo: 5, directory: "/Users/dev/a")
+        let unknown = session("C0000000-0000-4000-8000-000000000000", minutesAgo: nil, directory: "/Users/dev/unknown")
+        for listed in [[old, newB, unknown, newA], [unknown, newA, old, newB], [newB, newA, unknown, old]] {
+            let titles = rows(.running(peers: [mini]), [mini.id: .listed(.sessions(listed, complete: true))])
+                .filter { $0.id != "hosts:refresh" }
+                .map(\.title)
+            #expect(titles == ["Hosts: ~/a on Mini", "Hosts: ~/b on Mini", "Hosts: ~/old on Mini", "Hosts: ~/unknown on Mini"])
+        }
+    }
+
+    @Test func sessionsComeFirstThenThingsToDoThenProblemsThenRefresh() {
+        func peer(_ name: String) -> TailscalePeer {
+            TailscalePeer(id: "n\(name)", displayName: name, sshTarget: "\(name.lowercased()).example.ts.net", isOnline: true)
+        }
+        let air = peer("Air"), box = peer("Box"), cube = peer("Cube"), desk = peer("Desk"), edge = peer("Edge"), fold = peer("Fold"), gate = peer("Gate")
+        let one = session("A0000000-0000-4000-8000-000000000000", minutesAgo: 10, directory: "/Users/dev/one")
+        let two = session("B0000000-0000-4000-8000-000000000000", minutesAgo: 10, directory: "/Users/dev/two")
+        let titles = rows(.running(peers: [air, box, cube, desk, edge, fold, gate]), [
+            air.id: .listed(.unreachable),
+            box.id: .listed(.sessions([one], complete: true)),
+            cube.id: .listed(.firstConnectionNeeded),
+            desk.id: .offline,
+            edge.id: .listed(.yenTooOld),
+            fold.id: .listed(.sessions([two], complete: true)),
+            gate.id: .listed(.keySignInNeeded),
+        ]).map(\.title)
+        #expect(titles == [
+            "Hosts: ~/one on Box",
+            "Hosts: ~/two on Fold",
+            "Hosts: Trust the Host Key of Cube",
+            "Hosts: Update YEN on Edge",
+            "Hosts: Set Up Key Sign-In for Gate",
+            "Hosts: Cannot Reach Air",
+            "Hosts: Desk Is Offline",
+            "Hosts: Refresh Remote Sessions",
+        ])
+    }
+
+    @Test func twoSessionsThatWouldReadTheSameShowTheirShortIDs() {
+        let first = session("77F56127-69FA-4B5D-80EC-1DAF6F3F6179", minutesAgo: 35)
+        let second = session("B398DB9C-E86E-472B-B59B-BDEF46CBC06D", minutesAgo: 35.5)
+        let other = session("C0000000-0000-4000-8000-000000000000", minutesAgo: 90, directory: "/Users/dev/src")
+        let all = rows(.running(peers: [mini]), [mini.id: .listed(.sessions([first, second, other], complete: true))])
+            .filter { $0.id != "hosts:refresh" }
+        #expect(all.map(\.title) == ["Hosts: ~ on Mini", "Hosts: ~ on Mini", "Hosts: ~/src on Mini"])
+        #expect(all.map(\.subtitle) == [
+            "Detached · started 35 minutes ago · 77F56127",
+            "Detached · started 35 minutes ago · B398DB9C",
+            "Detached · started 1 hour ago",
+        ])
+    }
+
+    @Test func thePaletteKeepsTheHostsOrderAndEveryOtherRowKeepsItsRank() {
+        func peer(_ name: String) -> TailscalePeer {
+            TailscalePeer(id: "n\(name)", displayName: name, sshTarget: "\(name.lowercased()).example.ts.net", isOnline: true)
+        }
+        let air = peer("Air"), mac = peer("Mac")
+        let one = session("A0000000-0000-4000-8000-000000000000", minutesAgo: 10, directory: "/Users/dev/one")
+        let hosts = rows(.running(peers: [air, mac]), [air.id: .listed(.unreachable), mac.id: .listed(.sessions([one], complete: true))])
+        let others = [
+            TerminalCommandPaletteActionSearchDescriptor(id: "a", title: "Aardvark", subtitle: nil, description: nil, searchTags: ["hosts"]),
+            TerminalCommandPaletteActionSearchDescriptor(id: "h", title: "Hosts Map", subtitle: nil, description: nil, searchTags: ["hosts"]),
+            TerminalCommandPaletteActionSearchDescriptor(id: "z", title: "Zebra", subtitle: nil, description: nil, searchTags: ["hosts"]),
+        ]
+        let hostsDescriptors = TerminalCommandPaletteView.hostsSearchDescriptors(hosts)
+        let ranked = TerminalCommandPaletteSearchEngine.immediateResults(query: "hosts", context: .empty, actions: others + hostsDescriptors)
+        let ids = ranked.compactMap { result -> String? in
+            if case .action(let id) = result.execution { return id }
+            return nil
+        }
+        // The Hosts rows keep the shared order: sessions, problems, Refresh.
+        #expect(ids.filter { $0.hasPrefix("hosts:") } == hosts.map(\.id))
+        // Every other row ranks where it would without any Hosts row.
+        let alone = TerminalCommandPaletteSearchEngine.immediateResults(query: "hosts", context: .empty, actions: others)
+        #expect(ids.filter { !$0.hasPrefix("hosts:") } == alone.compactMap { result -> String? in
+            if case .action(let id) = result.execution { return id }
+            return nil
+        })
+        // And relative to the Hosts block it stays where its title puts it.
+        #expect(ids.first == "a")
+        #expect(ids.last == "z")
+        #expect(ids.firstIndex(of: "h")! < ids.firstIndex(where: { $0.hasPrefix("hosts:") })!)
     }
 
     @Test func hostsIntentShowsTheFullRowsInsteadOfTheStaticRow() {

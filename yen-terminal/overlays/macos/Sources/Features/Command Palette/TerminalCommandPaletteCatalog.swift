@@ -312,18 +312,35 @@ extension TerminalCommandPaletteView {
 
     /// Hosts rows: the user's other Macs and their sessions (RemoteHostsPaletteRows).
     private var hostsActionDescriptors: [PaletteActionDescriptor] {
-        hostsEntries.map { entry in
-            actionDescriptor(
+        Self.hostsActionDescriptors(hostsEntries) { action in performHostsAction(action) }
+    }
+
+    static func hostsActionDescriptors(
+        _ entries: [RemoteHostsPaletteEntry],
+        perform: @escaping (RemoteHostsPaletteAction) -> Void
+    ) -> [PaletteActionDescriptor] {
+        entries.map { entry in
+            PaletteActionDescriptor(
                 id: entry.id,
                 title: entry.title,
                 subtitle: entry.subtitle,
                 description: entry.description,
+                symbols: nil,
                 leadingIcon: entry.leadingIcon,
+                leadingColor: nil,
+                badge: nil,
+                emphasis: false,
+                sortKey: nil,
                 searchTags: entry.searchTags
             ) {
-                performHostsAction(entry.action)
+                perform(entry.action)
             }
         }
+    }
+
+    /// What the palette's search ranks for the Hosts rows.
+    static func hostsSearchDescriptors(_ entries: [RemoteHostsPaletteEntry]) -> [TerminalCommandPaletteActionSearchDescriptor] {
+        hostsActionDescriptors(entries) { _ in }.map(\.searchDescriptor)
     }
 
     private func performHostsAction(_ action: RemoteHostsPaletteAction) {
