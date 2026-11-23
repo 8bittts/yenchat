@@ -159,3 +159,62 @@ upstream_file_content main build.zig.zon
 	expect(result.stdout).toContain("Accept: application/vnd.github.raw+json");
 	expect(result.stdout).not.toContain("ref=main");
 });
+
+// Ghostty maintainers rebase-merge pull requests, and a rebase merge drops
+// GitHub's signature, so main's head can be unsigned for hours while older
+// commits on the same branch are signed. The vendor gate must take the newest
+// signed commit on the branch, and must still fail closed when none is signed.
+function newestSigned(commits: Array<{ sha: string; verified: boolean }>) {
+	const body = JSON.stringify(
+		commits.map((c) => ({
+			sha: c.sha,
+			commit: { verification: { verified: c.verified } },
+		})),
+	);
+	return spawnSync(
+		"/bin/bash",
+		[
+			"-c",
+			`
+source "$1"
+forge_github_auth_header() { :; }
+curl() { printf '%s\\n' "$*" >&2; printf '%s' "$BODY"; }
+upstream_newest_verified_commit_sha main
+`,
+			"fixture",
+			libPath,
+		],
+		{ encoding: "utf8", env: { ...process.env, BODY: body } },
+	);
+}
+
+test("the newest signed commit on a branch is the vendor target", () => {
+	const head = "1".repeat(40);
+	const middle = "2".repeat(40);
+	const signed = "3".repeat(40);
+	const older = "4".repeat(40);
+	const r = newestSigned([
+		{ sha: head, verified: false },
+		{ sha: middle, verified: false },
+		{ sha: signed, verified: true },
+		{ sha: older, verified: true },
+	]);
+	expect(r.status).toBe(0);
+	expect(r.stdout.trim()).toBe(signed);
+	// It lists the branch's own history, newest first, not one commit.
+	expect(r.stderr).toContain("/repos/ghostty-org/ghostty/commits?sha=main");
+});
+
+test("no signed commit on the branch resolves to nothing", () => {
+	const r = newestSigned([
+		{ sha: "1".repeat(40), verified: false },
+		{ sha: "2".repeat(40), verified: false },
+	]);
+	expect(r.stdout.trim()).toBe("");
+});
+
+test("the vendor gate resolves the newest signed Ghostty commit", () => {
+	const gate = readFileSync(join(repoRoot, "scripts/14-vendor.sh"), "utf8");
+	expect(gate).toContain("upstream_newest_verified_commit_sha main");
+	expect(gate).not.toContain("upstream_verified_commit_sha main");
+});
