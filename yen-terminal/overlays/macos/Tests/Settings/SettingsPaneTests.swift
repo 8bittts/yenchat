@@ -80,8 +80,29 @@ struct SettingsPaneTests {
         )
         #expect(
             WindowBorderSparkSpeed.allCases.map(\.displayName)
-                == ["Super Slow", "Slow", "Medium", "Fast", "Super Fast"]
+                == ["Slowww", "Slow", "Medium", "Fast", "Fffast"]
         )
+    }
+
+    @MainActor
+    @Test func everyPaneSegmentedControlHasTheHeightOfASegmentedPicker() {
+        // The Border rows mix SwiftUI segmented pickers (Color, Outline,
+        // Weight) with SettingsSegmentedControl (Spark Speed); a pane control
+        // must stand exactly as tall as the pickers beside it.
+        let picker = NSHostingView(rootView: Picker("Weight", selection: .constant(1)) {
+            Text("Thin").tag(0)
+            Text("Regular").tag(1)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden())
+        let control = NSHostingView(rootView: SettingsSegmentedControl(
+            accessibilityLabel: "Border Spark Speed",
+            segments: WindowBorderSparkSpeed.allCases.map { SettingsSegment(value: $0, title: $0.displayName) },
+            selection: .constant(WindowBorderSparkSpeed.medium)
+        )
+        .frame(width: 320))
+        #expect(picker.fittingSize.height > 0)
+        #expect(control.fittingSize.height == picker.fittingSize.height)
     }
 
     @Test func borderEffectHintsNameTheSettingThatStopsTheMotion() {

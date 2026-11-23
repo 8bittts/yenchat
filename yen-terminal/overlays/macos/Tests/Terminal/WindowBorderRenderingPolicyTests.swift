@@ -535,6 +535,17 @@ struct WindowBorderRenderingPolicyTests {
             #expect(laps == laps.sorted(by: >))
             #expect(Set(laps).count == laps.count)
         }
+        // Slowww takes a full minute around a 2040 point window, and each
+        // step is the same factor faster than the one before, up to Fffast.
+        let window = try WindowBorderSparkSpeed.allCases.map { speed in
+            try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: speed))
+                .lapDuration
+        }
+        #expect(abs(window[0] - 60) < 0.01)
+        #expect(abs(window[4] - 2040.0 / 340.0 / 2.5) < 0.01)
+        for index in 1..<window.count - 1 {
+            #expect(abs(window[index - 1] / window[index] - window[index] / window[index + 1]) < 0.001)
+        }
         // Speed changes the timing only, never the tail.
         let slow = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .superSlow))
         let fast = try #require(WindowBorderRenderingPolicy.sparkModel(perimeter: 2040, lineWidth: 2, speed: .superFast))
