@@ -14,9 +14,13 @@ export const RELEASE_WEEKS: readonly ReleaseWeek[] = [
 		"label": "Week of Nov 23–29, 2026",
 		"month": "Nov 2026",
 		"summary": "Your sessions now follow you between Macs. Open the command palette, type hosts, and YEN lists the sessions running on your other Macs on Tailscale. Pick one and it opens in a new tab, still running where you left it. The tab sidebar shows the same Macs under Hosts, and a remote tab leads with its Mac's name, so you always know where you are typing.\n\nWhen the connection drops, the tab's row in the sidebar says it is reconnecting instead of going quiet. When Tailscale SSH asks you to confirm, YEN stops and shows you the link. Closing a remote pane never asks, because the session keeps running on the other Mac and waits there as detached, and ending a session now exits cleanly without leaving a crash report behind.\n\nYour tabs read more clearly, too. Each name uses the standard 13-point face, the pane count sits alone on the right, and the close button appears only when you point at the tab, so the space on both sides of the name stays even. Update status now waits at the start of the tab row beside the window buttons, and in any terminal you can type fast to run fastfetch.\n\nSpark has a speed now. Turn it on under Settings > Appearance > Border and pick Slowww, Slow, Medium, Fast, or Fffast; at Slowww the light takes about a minute to go around a window. Every control in a Settings pane now stands the same height, so the rows line up as you read down the panel, and Digital Onigiri now comes out once a week, every Friday, with the week's technical updates first and the creator's own notes after them when there are any.",
-		"builds": 3,
-		"latestVersion": "1.287",
+		"builds": 4,
+		"latestVersion": "1.288",
 		"versions": [
+			{
+				"version": "1.288",
+				"shippedOn": "2026-11-23"
+			},
 			{
 				"version": "1.287",
 				"shippedOn": "2026-11-23"

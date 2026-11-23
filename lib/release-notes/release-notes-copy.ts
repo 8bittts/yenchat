@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.288":
+		"Turn on Claude Plan Limits under Settings > General, below Show Token Usage, and the token menu shows Claude's live weekly, 5-hour and per-model limits after Claude's next reply. YEN adds a marked block to your Claude Code statusline script that saves those limits to a file on your Mac, and turning the switch off removes the block and the file. The switch stays off when the script does not keep its input in a variable. The app also ships license notices for the libraries and fonts its terminal engine links and for its software updater.",
 	"1.287":
 		"Turn on Spark under Settings > Appearance > Border and a Spark Speed row offers five speeds, from Slowww, about a minute around a window, to Fffast. Each step is the same factor faster than the one before, so Medium now runs at half the earlier speed. Every segmented control in a Settings pane stands the same height, and the menu bar token count now sits a space apart from the YEN mark.",
 	"1.286":

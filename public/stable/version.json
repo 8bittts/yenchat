@@ -1,8 +1,8 @@
 {
-  "version": "1.287",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.287/yen-1287.dmg",
-  "sha256": "04ffeaabb324bc8f26c155f45ca7286417d325b6b738fdfce3ac8bce044494f3",
-  "notes": "Spark Speed and evenly sized Settings controls",
+  "version": "1.288",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.288/yen-1288.dmg",
+  "sha256": "c328b48abe74a4c9e98b85a15450e0b962d52875b2717f394d43e4f4c21b89a6",
+  "notes": "Live Claude plan limits in the token menu",
   "minOS": "27.0",
   "releaseDate": ""
 }
