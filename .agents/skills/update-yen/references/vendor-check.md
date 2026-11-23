@@ -10,7 +10,6 @@ mkdir -p "$(dirname "$OUT")"
 bash $HOME/Documents/yenchat/scripts/14-vendor.sh --check > "$OUT" 2>&1; code=$?; echo "$code" > "$OUT.code"
 ```
 
-
 The script reads each `yen-terminal/.*-baseline`, resolves Ghostty through `scripts/lib/upstream.sh` (`forge_github` today; `YEN_UPSTREAM_*` only for parity or cutover work), queries GitHub release APIs for the other vendors, and prints one status block per vendor plus a `Summary` banner.
 
 ## Reading the Result

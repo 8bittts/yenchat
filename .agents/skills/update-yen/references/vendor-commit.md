@@ -14,7 +14,7 @@ git -C $HOME/Documents/yenchat diff --cached --name-status
 ```
 
 Confirm no sensitive files are staged (`.env*`, keys, credentials) and that `git status --porcelain` shows nothing left behind.
-Step V4's `bun run build` gate often rewrites `lib/csp/generated-inline-script-hashes.ts`; a vendor bump ships no web change, so restore it with `git -C $HOME/Documents/yenchat checkout -- lib/csp/generated-inline-script-hashes.ts` before VK-02 ([01-gtm](../../../../_docs/10-gtm.md) § Web Quality Baselines, CSP).
+Step V4's `bun run build` gate often rewrites `lib/csp/generated-inline-script-hashes.ts`; a vendor bump ships no web change, so restore it with `git -C $HOME/Documents/yenchat checkout -- lib/csp/generated-inline-script-hashes.ts` before VK-02 ([09-quality](../../../../_docs/09-quality.md) § Web Quality Baselines, CSP).
 
 ## Commit and Push
 

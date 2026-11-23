@@ -99,7 +99,7 @@ Quote these lines for the Step 12 Build Time; they are the only durations a rele
 
 Milestone notifications: `scripts/lib/zip-notify.sh` posts macOS notifications (via the `com.yenchat.yen.buildNotification` DistributedNotification that YEN.app forwards to Notification Center) at major sections only — Build started (step 7), App verified (after step 8), Notarized, Release complete, and Release FAILED on packaging abort. Best-effort and never fail the build; silently dropped if YEN.app is not running. Disable with `YEN_ZIP_NOTIFY=off`. Per-command completion notifications remain owned by `.claude/hooks/notify-complete.sh`.
 
-Toolchain hardening (Zig version check, `YEN_SKIP_ZIG_VERSION_CHECK=1`; stable Xcode policy, `YEN_ALLOW_PRERELEASE_XCODE=1`; SDK linker probe, `YEN_SKIP_ZIG_SDK_WORKAROUND=1`) is automatic inside `build-release.sh` and described once in `SKILL.md` -> Inherited Preflight Gates.
+Toolchain hardening (Zig version check, `YEN_SKIP_ZIG_VERSION_CHECK=1`; stable Xcode policy, `YEN_ALLOW_PRERELEASE_XCODE=1`; SDK linker probe, `YEN_SKIP_ZIG_SDK_WORKAROUND=1`) is automatic inside `build-release.sh` and described once in `SKILL.md` -> Release Preflight Gates.
 
 Local mode still runs the same source/build verification path; it only skips cleaning and release packaging/signing/upload. `build-release.sh` also owns xcframework recreation and the current Zig/Xcode workaround behavior; keep the detailed mechanics in `_docs/05-infrastructure.md` instead of duplicating them here.
 
