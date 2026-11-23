@@ -31,5 +31,6 @@ echo "  Updating Info.plist..."
 : # Keep optional final checks from becoming a failed source command.
 
 cp "$CUSTOMIZATIONS_DIR/icons/YENMenuMark.svg" "$APP_PATH/Contents/Resources/"
+rm -rf "$APP_PATH/Contents/Resources/Notices"
 mkdir -p "$APP_PATH/Contents/Resources/Notices"
 cp "$CUSTOMIZATIONS_DIR/notices/"*.txt "$APP_PATH/Contents/Resources/Notices/"

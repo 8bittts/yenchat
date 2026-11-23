@@ -863,7 +863,6 @@ describe("resource bundling phases", () => {
 			const custom = "yen-terminal/customizations";
 			const resources: [string, string][] = [
 				["icons/YENMenuMark.svg", "YENMenuMark.svg"],
-				["notices/JPtheCat.txt", "Notices/JPtheCat.txt"],
 				["notices/MovingPaper.txt", "Notices/MovingPaper.txt"],
 			];
 			for (const [source] of resources) copy(root, join(custom, source));
