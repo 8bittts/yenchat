@@ -171,11 +171,13 @@ private struct TabSidebarHostsRow: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if let subtitle = row.entry.subtitle {
+                        // Middle, so a short session id that tells two
+                        // sessions apart stays visible in a narrow rail.
                         Text(subtitle)
                             .settingsScaledSystemFont(size: 11)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
-                            .truncationMode(.tail)
+                            .truncationMode(.middle)
                     }
                 }
                 Spacer(minLength: 0)
