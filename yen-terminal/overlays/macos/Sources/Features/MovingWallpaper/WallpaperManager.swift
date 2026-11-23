@@ -36,13 +36,19 @@ final class WallpaperManager {
     private let loadingOverlay = LoadingOverlayController()
     private let requestCoordinator = WallpaperRequestCoordinator()
     private let persistenceStore: WallpaperPersistenceStore
+    /// The system's Spaces per display; tests hand in their own.
+    private let spacesSnapshot: @MainActor () -> ManagedDisplaySpacesSnapshot
     private var powerMonitor: PowerStateMonitor?
     private var screenObserver: Any?
     private var spaceObserver: Any?
     private var restoreTask: Task<Void, Never>?
 
-    init(persistenceStore: WallpaperPersistenceStore = WallpaperPersistenceStore()) {
+    init(
+        persistenceStore: WallpaperPersistenceStore = WallpaperPersistenceStore(),
+        spacesSnapshot: @escaping @MainActor () -> ManagedDisplaySpacesSnapshot = { ManagedDisplaySpacesSnapshot.current() }
+    ) {
         self.persistenceStore = persistenceStore
+        self.spacesSnapshot = spacesSnapshot
         router.onPlaybackFailure = { [weak self] url, message in
             self?.handlePlaybackFailure(url: url, message: message)
         }
@@ -83,7 +89,7 @@ final class WallpaperManager {
     }
 
     private func refreshManagedDisplaySpaces() {
-        let snapshot = ManagedDisplaySpacesSnapshot.current()
+        let snapshot = spacesSnapshot()
         activeSpaceIDs = snapshot.activeSpaceByDisplayID
 
         for (displayID, spaces) in snapshot.knownSpacesByDisplayID {
