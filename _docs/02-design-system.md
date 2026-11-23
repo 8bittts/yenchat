@@ -169,4 +169,6 @@ Policy and journal indexes use native disclosures and fragment links that work b
 The homepage uses a fixed dark surround for the phosphor monitor and terminal previews.
 The split preview (`SplitDemo` in `components/home/workspace-demos.tsx`) draws the app's Spark and Aura on its focused pane: stacked SVG strokes that share one head, and a pulsing glow on the pane slot.
 Both animations sit inside the `prefers-reduced-motion: no-preference` block, so reduced motion hides the spark and holds the glow, as the app does.
+The spark follows the app's color rule: white has too little contrast on the pale green outline, so it uses the outline color deepened toward black.
+Compact keeps the grid's padding and gap and grows each pane into the gutter by the same amount it pads its content, so switching styles never moves the page or the pane text.
 Its field guide follows the site theme, and the heading renders in full without animation.

@@ -96,6 +96,8 @@ const sparkStrokes = [
 	"ph-spark-tail-2",
 	"ph-spark-tail-3",
 	"ph-spark-tail-4",
+	"ph-spark-tail-5",
+	"ph-spark-tail-6",
 	"ph-spark-head",
 ] as const;
 

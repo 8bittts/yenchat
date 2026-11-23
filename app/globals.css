@@ -1081,10 +1081,12 @@
 	color: #142319;
 }
 .ph-splits {
+	--ph-splits-pad: 12px;
+	--ph-splits-gap: 10px;
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 10px;
-	padding: 12px;
+	gap: var(--ph-splits-gap);
+	padding: var(--ph-splits-pad);
 	background: #0a110e;
 }
 .ph-pane {
@@ -1119,8 +1121,12 @@
 	pointer-events: none;
 }
 /* The spark runs on the outline itself: a two-pixel stroke inside the pane
-   edge. Its strokes share one head, so the tail fades and a wider stroke
-   glows around the head. Reduced motion leaves it hidden, as the app does. */
+   edge. Its strokes share one head. The app's tail is 7% of the outline and
+   fades evenly from the head, so six stacked tail strokes of falling length
+   build that fade, and a wider stroke glows around the head. White has too
+   little contrast on the pale green outline, so the spark takes the app's
+   fallback: the outline color deepened 65% toward black. Reduced motion
+   leaves it hidden, as the app does. */
 .ph-spark {
 	display: none;
 	position: absolute;
@@ -1137,32 +1143,40 @@
 	height: calc(100% - 2px);
 	rx: 6px;
 	fill: none;
-	stroke: white;
+	stroke: color-mix(in srgb, var(--ph-green) 35%, black);
 	stroke-width: 2px;
 	stroke-dasharray: var(--ph-spark-length) 100px;
 	stroke-dashoffset: var(--ph-spark-length);
 }
 .ph-spark-glow {
 	--ph-spark-length: 0.01px;
-	stroke-width: 8px;
+	stroke-width: 10px;
 	stroke-linecap: round;
-	stroke-opacity: 0.4;
+	stroke-opacity: 0.55;
 }
 .ph-spark-tail-1 {
-	--ph-spark-length: 12px;
-	stroke-opacity: 0.15;
+	--ph-spark-length: 7px;
+	stroke-opacity: 0.25;
 }
 .ph-spark-tail-2 {
-	--ph-spark-length: 9px;
-	stroke-opacity: 0.2;
+	--ph-spark-length: 5.83px;
+	stroke-opacity: 0.25;
 }
 .ph-spark-tail-3 {
-	--ph-spark-length: 6px;
+	--ph-spark-length: 4.67px;
 	stroke-opacity: 0.25;
 }
 .ph-spark-tail-4 {
 	--ph-spark-length: 3.5px;
-	stroke-opacity: 0.35;
+	stroke-opacity: 0.25;
+}
+.ph-spark-tail-5 {
+	--ph-spark-length: 2.33px;
+	stroke-opacity: 0.25;
+}
+.ph-spark-tail-6 {
+	--ph-spark-length: 1.17px;
+	stroke-opacity: 0.25;
 }
 .ph-spark-head {
 	--ph-spark-length: 1.5px;
@@ -1177,7 +1191,8 @@
 	justify-content: space-between;
 	gap: 6px;
 	border-bottom: 1px solid var(--ph-line);
-	padding: 10px 12px;
+	--ph-title-pad-x: 12px;
+	padding: 10px var(--ph-title-pad-x);
 	font-size: 12px;
 }
 .ph-pane-title > span {
@@ -1192,7 +1207,8 @@
 	flex-direction: column;
 	min-height: 125px;
 	gap: 4px;
-	padding: 13px 12px;
+	--ph-code-pad-x: 12px;
+	padding: 13px var(--ph-code-pad-x);
 	font: 12px / 1.5 var(--ph-mono);
 	overflow-wrap: anywhere;
 }
@@ -1202,9 +1218,35 @@
 .ph-pane-code span:last-child {
 	color: var(--ph-muted);
 }
+/* Compact keeps the grid's padding and gap, so the preview never changes
+   size. Each pane grows into the gutter until one pixel of divider and
+   frame is left, and pads its content by the same amount, so the text
+   stays where it was. */
 .ph-splits-compact {
-	gap: 1px;
-	padding: 1px;
+	--ph-grow-out: calc(var(--ph-splits-pad) - 1px);
+	--ph-grow-in: calc((var(--ph-splits-gap) - 1px) / 2);
+}
+.ph-splits-compact .ph-pane-slot:first-child {
+	--ph-grow-left: var(--ph-grow-out);
+	--ph-grow-right: var(--ph-grow-in);
+}
+.ph-splits-compact .ph-pane-slot:last-child {
+	--ph-grow-left: var(--ph-grow-in);
+	--ph-grow-right: var(--ph-grow-out);
+}
+.ph-splits-compact .ph-pane-slot {
+	margin: calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-right))
+		calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-left));
+}
+.ph-splits-compact .ph-pane-title {
+	margin-top: var(--ph-grow-out);
+	padding-left: calc(var(--ph-title-pad-x) + var(--ph-grow-left));
+	padding-right: calc(var(--ph-title-pad-x) + var(--ph-grow-right));
+}
+.ph-splits-compact .ph-pane-code {
+	margin-bottom: var(--ph-grow-out);
+	padding-left: calc(var(--ph-code-pad-x) + var(--ph-grow-left));
+	padding-right: calc(var(--ph-code-pad-x) + var(--ph-grow-right));
 }
 .ph-splits-compact .ph-pane,
 .ph-splits-compact .ph-pane-slot.ph-aura::after {
@@ -1502,7 +1544,8 @@ details[open] .ph-disclosure:after {
 		font-size: 15px;
 	}
 	.ph-pane-code {
-		padding: 12px 8px;
+		--ph-code-pad-x: 8px;
+		padding: 12px var(--ph-code-pad-x);
 	}
 	.ph-releases li {
 		grid-template-columns: 65px 1fr 1.25fr;
@@ -1624,7 +1667,8 @@ details[open] .ph-disclosure:after {
 		font-size: 19px;
 	}
 	.ph-pane-title {
-		padding: 8px;
+		--ph-title-pad-x: 8px;
+		padding: 8px var(--ph-title-pad-x);
 		font-size: 11px;
 	}
 	.ph-pane-title > span {
@@ -1638,12 +1682,8 @@ details[open] .ph-disclosure:after {
 		font-size: 10px;
 	}
 	.ph-splits {
-		padding: 8px;
-		gap: 6px;
-	}
-	.ph-splits-compact {
-		padding: 1px;
-		gap: 1px;
+		--ph-splits-pad: 8px;
+		--ph-splits-gap: 6px;
 	}
 }
 
