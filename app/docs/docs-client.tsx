@@ -1001,7 +1001,12 @@ function PersistentSessionsSection() {
 				prompt, then run it and confirm the key. If the other Mac asks for a
 				password, select <strong>Set Up Key Sign-In for &lt;Mac&gt;</strong> to
 				type <code className="inline-code-brand">ssh-copy-id &lt;Mac&gt;</code>,
-				and run it once. If the other Mac&apos;s host key changes, YEN stops
+				and run it once. If Tailscale asks you to approve a sign-in, select{" "}
+				<strong>Approve &lt;Mac&gt; in Tailscale</strong> to type{" "}
+				<code className="inline-code-brand">ssh &lt;Mac&gt;</code>, run it, and
+				open the link it shows. The approval lasts for your tailnet&apos;s check
+				period, and a remote pane that needs it shows the link and continues
+				once you approve. If the other Mac&apos;s host key changes, YEN stops
 				connecting to it until you fix{" "}
 				<code className="inline-code-brand">~/.ssh/known_hosts</code>.
 			</p>

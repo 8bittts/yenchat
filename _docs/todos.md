@@ -18,25 +18,19 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with the operator-approved sessions, token usage and experimental wallpaper work below.
-Apart from those features, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with the operator-approved sessions work below.
+Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/update-yen` and need no entry here.
 
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
 
 A YEN pane keeps running when the app quits, crashes or updates, and the user attaches to it from another Mac on their tailnet (`_docs/01-architecture.md` → Persistent sessions; threat model in `_docs/04-security.md`).
-Local persistence ships in v1.275; remote attach, Hosts and the tab session icons are on `main` for the next release.
+Local persistence ships in v1.275; remote attach and everything built on it are on `main` for the next release.
 
-- [ ] Show on a remote tab and its sidebar row that the pane is reconnecting.
-  The CLI's reconnect loop needs to signal the app without a per-render process or file read.
-- [ ] Run remote attach on the Tailscale setups it has never met: MagicDNS off (the IP-address target), Tailscale SSH on the peer, an ACL `check` rule, and the open-source `tailscaled`.
-  Each needs a change to the operator's tailnet or to the peer's Tailscale install, so the operator chooses which to stage.
-
-### Experimental moving wallpaper
-
-- [ ] Keep a Per Desktop wallpaper on an external display across an unplug and replug.
-  After a replug macOS gives the display a new Space id, and the assignment keyed to the old id shows nothing; All Desktops mode is untested with a replug.
-  Verify the fix with a real unplug in a signed copy.
+- [ ] Run remote attach on the two Tailscale setups it has never met on a real tailnet.
+  MagicDNS off (for the whole tailnet and on this Mac only) and Tailscale SSH on the peer have run and are in the run record (`_docs/04-security.md` → Remote Attach Threat Model).
+  - The browser-approval `check` state: the operator's plan allows only the default 12-hour check period, so it needs a peer left on a `check` rule for more than 12 hours.
+  - Discovery from a Mac whose own Tailscale is the open-source `tailscaled`.
 
 ---
 ## WAIT-GATED

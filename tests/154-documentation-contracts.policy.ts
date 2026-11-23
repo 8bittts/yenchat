@@ -28,7 +28,12 @@ describe("documentation contracts", () => {
 		const security = read("_docs/04-security.md");
 		const desktop = read("_docs/13-desktop-features.md");
 
-		for (const key of ["first-connection", "key-sign-in", "refresh"]) {
+		for (const key of [
+			"first-connection",
+			"key-sign-in",
+			"tailscale-check",
+			"refresh",
+		]) {
 			const name = title(key);
 			const bare = name.slice("Hosts: ".length);
 			expect(manual, key).toContain(bare);
@@ -52,6 +57,34 @@ describe("documentation contracts", () => {
 		expect(read("public/llms.txt")).toContain(
 			"per-desktop selection (kept across an external display reconnect",
 		);
+	});
+
+	test("public docs describe the Tailscale check state as the CLI and app handle it", () => {
+		const transport = read("yen-cli/lib/sessions-remote.sh");
+		const sessions = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/RemoteSessions.swift",
+		);
+		// Exit 17 maps to the check state, and the listing never replays the link.
+		expect(transport).toContain("readonly REMOTE_EXIT_CHECK_REQUIRED=17");
+		expect(transport).toContain(
+			'[[ $code -eq $REMOTE_EXIT_CHECK_REQUIRED ]] || print_remote_errors "$remote_scratch/err"',
+		);
+		expect(sessions).toContain(
+			"case ExitCode.checkRequired: return .tailscaleCheckNeeded",
+		);
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		expect(manual).toContain(
+			"The approval lasts for your tailnet&apos;s check period, and a remote pane that needs it shows the link and continues once you approve.",
+		);
+		expect(read("public/llms.txt")).toContain(
+			"the approval lasts for your tailnet's check period, and a remote pane that needs it shows the link and continues once you approve",
+		);
+		const security = read("_docs/04-security.md");
+		expect(security).toContain(
+			"YEN never opens the link and never answers the server",
+		);
+		expect(security).toContain("has not been seen on a real tailnet");
 	});
 
 	test("public docs name the Reconnecting marker as the source draws it", () => {
