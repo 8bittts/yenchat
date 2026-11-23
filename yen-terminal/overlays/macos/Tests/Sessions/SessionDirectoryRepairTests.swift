@@ -62,4 +62,3 @@ struct SessionDirectoryRepairTests {
         #expect(mode(path + "/bin") == 0o700)
     }
 }
-
