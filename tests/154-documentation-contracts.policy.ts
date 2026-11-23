@@ -40,6 +40,39 @@ describe("documentation contracts", () => {
 		}
 	});
 
+	test("public docs name the tab session icons and the sidebar Hosts rule as the source does", () => {
+		const stateSource = read(
+			"yen-terminal/overlays/macos/Sources/Features/Sessions/PaneSessionState.swift",
+		);
+		const sidebarSource = read(
+			"yen-terminal/overlays/macos/Sources/Features/TabSidebar/TabSidebarHostsSection.swift",
+		);
+		const live = stateSource.match(/case \.live:\s*return "([^"]+)"/)?.[1];
+		const remote = stateSource.match(/"(Remote session on) \\\(names\)"/)?.[1];
+		expect(live).toBeDefined();
+		expect(remote).toBeDefined();
+		// The section starts collapsed and discovers only while expanded and showing.
+		expect(sidebarSource).toContain(
+			"@Published private(set) var isExpanded = false",
+		);
+		expect(sidebarSource).toContain("expanded && showing");
+
+		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
+		const llms = read("public/llms.txt");
+		const security = read("_docs/04-security.md");
+		for (const label of [live ?? "", remote ?? ""]) {
+			expect(manual, label).toContain(label);
+			expect(llms, label).toContain(label);
+		}
+		expect(manual).toContain(
+			"It starts collapsed. YEN looks for your Macs only while the section is expanded and the sidebar is on screen",
+		);
+		expect(llms).toContain(
+			"it starts collapsed, and YEN looks for your Macs only while it is expanded and the sidebar is on screen",
+		);
+		expect(security).toContain("`TabSidebarHostsSection.wantsDiscovery`");
+	});
+
 	test("public docs, privacy and terms carry the remote sessions contract", () => {
 		const manual = read("app/docs/docs-client.tsx");
 		const start = manual.indexOf('<h3 id="remote-sessions"');
@@ -48,7 +81,11 @@ describe("documentation contracts", () => {
 		expect(end).toBeGreaterThan(start);
 		const remote = manual.slice(start, end);
 		const llms = read("public/llms.txt");
-		const privacy = read("components/docs/legal-privacy-content.tsx");
+		// JSX wraps prose at any word, so compare its text with whitespace collapsed.
+		const privacy = read("components/docs/legal-privacy-content.tsx").replace(
+			/\s+/g,
+			" ",
+		);
 		const terms = read("app/terms/terms-client.tsx");
 		const security = read("_docs/04-security.md");
 
@@ -75,7 +112,7 @@ describe("documentation contracts", () => {
 		expect(terms).toContain("Tailscale and SSH are third-party");
 		expect(security).toContain("## Remote Attach Threat Model");
 		expect(security).toContain(
-			"Nothing here has run on a real tailnet or between two Macs.",
+			"It has never run against Tailscale SSH, an ACL `check` rule, a tailnet with MagicDNS off, or the open-source `tailscaled` variant.",
 		);
 
 		// No public claim the code and its tests cannot back.

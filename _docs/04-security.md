@@ -289,8 +289,9 @@ Bundle one of them only with a caller inside YEN that fails without it.
 
 Who can reach a persistent session from another Mac, what each input is trusted for, and what is left over.
 The mechanics live in [01-architecture.md](01-architecture.md) → Persistent sessions (Remote attach, Hosts store, Remote panes); this section cites them and does not restate them.
-Nothing here has run on a real tailnet or between two Macs.
-The evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fake-ssh.sh`, `scripts/manual/35-verify-remote-attach-loopback.sh` against a private loopback sshd, and the Swift suites `RemoteSessionsTests`, `TailscaleDiscoveryTests`, `RemoteHostsStoreTests`, `RemotePanesTests` and `RemoteHostsPaletteRowsTests`.
+The feature has run between two real Macs over the LAN and over a real tailnet with the Tailscale app on both: discovery, listing, attach, typing, a killed connection, a frozen connection, a Wi-Fi outage on the peer, and a pane that a YEN app on the peer created, attached before and after that app ended.
+It has never run against Tailscale SSH, an ACL `check` rule, a tailnet with MagicDNS off, or the open-source `tailscaled` variant.
+The automated evidence is `tests/172-cli-sessions-remote.test.ts` with `tests/fixtures/fake-ssh.sh`, `scripts/manual/35-verify-remote-attach-loopback.sh` against a private loopback sshd, and the Swift suites `RemoteSessionsTests`, `TailscaleDiscoveryTests`, `RemoteHostsStoreTests`, `RemotePanesTests` and `RemoteHostsPaletteRowsTests`.
 
 ### Who can attach
 
@@ -342,14 +343,15 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 ### When YEN starts a process
 
 - Discovery runs `tailscale status --json` and, for each online peer, one `yen sessions list --host` only while a Hosts surface is visible: in the command palette, that means while the query has Hosts intent (`RemoteHostsIntent`), refreshed when it appears and every 30 seconds while it stays (`RemoteHostsStore.surfaceDidAppear`). Opening the palette for anything else starts nothing.
-- An explicit refresh (`Hosts: Refresh Remote Sessions`) runs once at once.
-- Selecting a session row opens a pane that runs `yen sessions attach --host` (`RemotePanes.open`).
+- The tab sidebar's Hosts section is the second Hosts surface. It starts collapsed in every new sidebar, and counts as visible only while it is expanded and its sidebar is on screen (`TabSidebarHostsSection.wantsDiscovery`, `TabSidebarController.transientPanelShowsHosts`, `DockedTabSidebarModel.railShowsHosts`): the transient panel while it is open and YEN is active, or a docked or fullscreen rail while its window is on screen. An open sidebar alone starts nothing.
+- An explicit refresh (`Hosts: Refresh Remote Sessions`, or `Refresh Remote Sessions` in the sidebar) runs once at once.
+- Selecting a session row in either surface opens a pane that runs `yen sessions attach --host` (`RemotePanes.open`).
 - At launch, a remote pane restored from saved window state runs its attach with `--retry-unreachable` (`RemotePanes.prepare`). This is the only ssh YEN starts at launch, and only for panes the user opened.
 - `Hosts: Trust the Host Key of <Mac>` types `ssh <target>` and `Hosts: Set Up Key Sign-In for <Mac>` types `ssh-copy-id <target>` at a local prompt; neither runs anything, and neither types into a remote pane.
 
 ### Residual risks and non-goals
 
-- Unverified: no test has used a real tailnet, a second Mac, Tailscale SSH, or a `check` rule.
+- Unverified: Tailscale SSH, an ACL `check` rule, MagicDNS off (the IP-address target), and the open-source `tailscaled` variant have never been run; the two-Mac runs used the Tailscale app on both Macs.
 - A listing runs under `BatchMode=yes`, so a peer that accepts only passwords never lists: the CLI reports it as needing key sign-in (exit 16, `REMOTE_EXIT_KEY_REQUIRED`), and remote sessions need an SSH key that signs in without a prompt, or Tailscale SSH.
 - First connection is trust on first use: the user confirms the peer's host key in `ssh <target>`. If name resolution is redirected at that moment, the user can trust the wrong key; YEN never sees or pins the key.
 - Remote Login turns on the macOS ssh server for every network the Mac uses, not only the tailnet, because macOS's `sshd_config` sets no `ListenAddress`. Its Allow access for setting (All users or Only these users) decides which accounts may sign in ([Apple: allow a remote computer to access your Mac](https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac)). YEN does not narrow either.

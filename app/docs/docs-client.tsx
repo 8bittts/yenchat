@@ -829,6 +829,16 @@ function TabSidebarSection() {
 				status when available. Untrusted local paths, remote sessions, and
 				multiplexers can leave directory and Git details blank.
 			</p>
+			<p className="text-body">
+				Starting in YEN 1.285, a Hosts section below the tabs lists your other
+				Macs and their sessions; see{" "}
+				<a href="#remote-sessions" className="link-brand underline">
+					Remote sessions
+				</a>
+				. Tabs and rows also show a session icon: a globe for a tab with a pane
+				attached to another Mac, and stacked rectangles for a tab whose panes
+				all keep running when YEN quits. Hover the icon to read its meaning.
+			</p>
 		</DocSection>
 	);
 }
@@ -914,6 +924,11 @@ function PersistentSessionsSection() {
 				ends one. Turning the setting off affects new panes only.
 			</p>
 			<p className="text-body">
+				Starting in YEN 1.285, a tab whose panes all run in sessions shows a
+				stacked-rectangles icon, labeled Live session: keeps running when YEN
+				quits. A tab that mixes live and ordinary panes shows no icon.
+			</p>
+			<p className="text-body">
 				Sessions stay on your Mac and end when it restarts. With Keep Sessions
 				Running on, YEN can reopen up to eight detached sessions that window
 				restore missed. Use{" "}
@@ -960,6 +975,15 @@ function PersistentSessionsSection() {
 				looks for your Macs and their sessions only while you have asked for
 				hosts, and Hosts: Refresh Remote Sessions checks again. A remote pane
 				stays connected to its own Mac.
+			</p>
+			<p className="text-body">
+				The tab sidebar has a Hosts section below your tabs, with the same rows
+				as Hosts in the palette. It starts collapsed. YEN looks for your Macs
+				only while the section is expanded and the sidebar is on screen; a
+				background tab, a minimized window, or another Space does not count. A
+				tab with a pane attached to a session on another Mac shows a globe icon,
+				and its tooltip names that Mac, as in Remote session on studio. Detached
+				sessions, which no tab shows, appear only in Hosts.
 			</p>
 			<p className="text-body">
 				The first time, the palette asks you to trust the other Mac&apos;s host

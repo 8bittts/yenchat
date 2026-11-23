@@ -86,17 +86,18 @@ export function LegalPrivacyContent() {
 					<h3 className="text-heading-sm mb-2">Remote sessions</h3>
 					<p className="text-body-sm text-text-muted">
 						Starting in YEN 1.285, you can attach to a session on another of
-						your Macs. When you ask for hosts in the command palette, YEN reads
-						the status of the Tailscale software on this Mac to find your other
-						Macs. It then connects to them with the system{" "}
-						<code className="inline-code-brand">ssh</code> over your Tailscale
-						network, so the session&apos;s screen and your typing travel only
-						between your Macs. Tailscale is software and a network you install
-						and control under your own Tailscale account and its terms; it is
-						not a YEN service provider. Sign-in uses your own SSH keys and
-						settings, and YEN stores no passwords. To reattach after a restart,
-						a remote pane keeps the other Mac&apos;s name and session ID in its
-						saved window state on this Mac. None of this is sent to YEN.
+						your Macs. When you ask for hosts in the command palette or open
+						Hosts in the tab sidebar, YEN reads the status of the Tailscale
+						software on this Mac to find your other Macs. It then connects to
+						them with the system <code className="inline-code-brand">ssh</code>{" "}
+						over your Tailscale network, so the session&apos;s screen and your
+						typing travel only between your Macs. Tailscale is software and a
+						network you install and control under your own Tailscale account and
+						its terms; it is not a YEN service provider. Sign-in uses your own
+						SSH keys and settings, and YEN stores no passwords. To reattach
+						after a restart, a remote pane keeps the other Mac&apos;s name and
+						session ID in its saved window state on this Mac. None of this is
+						sent to YEN.
 					</p>
 				</div>
 			</DocSection>
