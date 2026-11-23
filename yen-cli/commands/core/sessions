@@ -68,6 +68,7 @@ Exit codes for --host:
   12 YEN is not installed there  13 YEN there is too old for remote sessions
   14 no such session there       15 the host key changed
   16 sign-in needs an SSH key that works without a password prompt
+  17 Tailscale SSH asks for a browser approval; run 'ssh <host>' once
 EOF
 }
 

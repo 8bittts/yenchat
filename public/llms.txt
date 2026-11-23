@@ -171,7 +171,7 @@ They do not install it and do not define `y`.
 Core:
 - yen help (yen commands) — Show command listing and usage
 - yen version / yen --version — Show version
-- yen sessions — List persistent pane sessions; `yen sessions attach <id>` attaches a terminal to one and `yen sessions kill <id>` ends it; starting in YEN 1.285, `yen sessions list --host <mac>` and `yen sessions attach --host <mac> <id>` reach another Mac over ssh (`--porcelain` gives tab-separated output; exit codes 10-16 are listed in `yen sessions --help`)
+- yen sessions — List persistent pane sessions; `yen sessions attach <id>` attaches a terminal to one and `yen sessions kill <id>` ends it; starting in YEN 1.285, `yen sessions list --host <mac>` and `yen sessions attach --host <mac> <id>` reach another Mac over ssh (`--porcelain` gives tab-separated output; exit codes 10-17 are listed in `yen sessions --help`)
 - yen pane cwd <directory> — Report an agent worktree for the current pane; yen pane cwd --clear restores shell tracking. Run it from an agent or hook, not an interactive prompt; new splits still inherit the shell directory
 - yen init zsh — Output shell integration code for external zsh shells (add to ~/.zshrc)
 - yen init bash — Output shell integration code for external bash shells (add to ~/.bashrc)
