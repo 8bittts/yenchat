@@ -36,6 +36,9 @@ Dates are the evidence in this doc; the owner docs carry none.
   A spike proved it in a re-identified copy of the shipping app: a pane whose `command` was `zmx attach` kept its counter running through an AppleScript quit and showed the whole history after relaunch.
   No macOS framework keeps a PTY and its screen state alive after the app exits, so the native-first rule allows this bundled binary.
   Rejected: a YEN-owned daemon, which would rebuild zmx on the same library; shpool, which is Linux-first with a single client per session; abduco and dtach, which replay no screen state; and tmux control mode, which needs a tmux install and whose upstream viewer has no macOS interface.
+- **Remote attach rides the system `ssh` and the installed Tailscale.** The bundled CLI runs `/usr/bin/ssh` to the other Mac and calls that Mac's own `yen sessions`, so each session is attached with the zmx build that created it, and YEN adds no listener, relay or account.
+  Peers come from the installed Tailscale CLI (`tailscale status --json`), read only while the user has asked for hosts.
+  Rejected: embedding Tailscale (`tsnet`), which would put a second tailnet node and its keys inside YEN; requiring Tailscale SSH, which the Tailscale apps for macOS cannot serve; and a YEN daemon that listens on the tailnet, which would add an authentication surface of YEN's own.
 - **YEN is open source under MIT.** The repository starts from a fresh root commit; the pre-open-source history is private and never pushed to the public repository (`AGENTS.md` → Public Repository).
   Ghostty's MIT notice stays in `LICENSE` because the overlays carry Ghostty-derived code.
 - **No account, no telemetry.** The desktop app requires no YEN account and sends no terminal content or usage telemetry; dictation runs on-device through Apple's `SpeechAnalyzer` when available ([11-speech-to-text.md](11-speech-to-text.md)).

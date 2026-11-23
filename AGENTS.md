@@ -18,6 +18,7 @@ YEN is in maintenance mode; `_docs/00-foundation.md` → Decisions owns the deci
 
 - YEN is open source under the MIT License; `LICENSE` also carries Ghostty's MIT notice, which must stay because the overlays carry Ghostty-derived code.
 - The desktop app requires no YEN account and sends no terminal content or desktop usage telemetry to YEN.
+- Remote sessions run the system `ssh` from the user's Mac to the user's other Macs and nothing else: YEN opens no listener, runs no relay, never relaxes host-key checking, and looks for Macs only while the user has asked for hosts ([_docs/04-security.md](_docs/04-security.md) → Remote Attach Threat Model).
 - YEN does not operate a speech-recognition service.
 - Dictation normally uses Apple's on-device `SpeechAnalyzer`.
 - Runtime fallback uses Apple's legacy recognizer, which can use Apple's service when on-device recognition is unavailable.
@@ -122,6 +123,7 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Verify native UI in a running copy before reporting it | none (prose) |
 | Keep work and backlog entries within the approved maintenance scope | none (prose) |
 | Preserve the MIT notices and the desktop account, privacy and dictation boundaries | none (prose) |
+| Remote sessions use only the system `ssh`, with fixed options and no relaxed host-key check, and discover Macs only on request | `tests/176-cli-sessions-remote-contract.test.ts` (ssh options), `RemoteHostsPaletteContractTests` and `TabSidebarHostsSectionTests` (discovery), `tests/154-documentation-contracts.policy.ts` (public statements) |
 | Serve the current GitHub DMG from the download route | `tests/10-production.prod.ts` |
 | Keep owner documents current, use one backlog, and align public documentation and legal copy | `tests/154-documentation-contracts.policy.ts` covers named public contracts. Other changes require manual review. |
 | Ship a license notice for the engine and each vendored tool | `scripts/lib/third-party-notices.sh` in `scripts/03-verify-components.sh` and `scripts/05-detect-failures.sh`, proven by `tests/171-third-party-notices.test.ts` |

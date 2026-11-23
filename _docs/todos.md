@@ -24,39 +24,19 @@ Vendor updates and desktop releases run through `/update-yen` and need no entry 
 
 ### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
 
-Goal: a YEN pane keeps running when the app quits, crashes or updates, and the user can attach to it from another Mac on their tailnet.
-Local shell persistence ships in v1.275; see `_docs/01-architecture.md` → Persistent sessions.
-Facts the plan builds on:
-- Each pane already persists a stable `UUID` in restore state (`SurfaceView_AppKit.swift` encodes `uuid`), so it can name a session.
-- Upstream split drag-and-drop already exists (`TerminalSplitTreeView.swift` drop zones).
-- The session backend is zmx (`_docs/00-foundation.md` → Decisions), vendored by `scripts/48-vendor-zmx.sh` against YEN's engine and bundled at `Contents/Resources/bin/zmx`; a zmx client works over any PTY, so remote attach can reuse it through SSH.
-Product boundaries hold: no YEN account, no YEN relay, no terminal content sent to YEN; remote traffic goes only between the user's own machines over Tailscale.
+A YEN pane keeps running when the app quits, crashes or updates, and the user attaches to it from another Mac on their tailnet (`_docs/01-architecture.md` → Persistent sessions; threat model in `_docs/04-security.md`).
+Local persistence ships in v1.275; remote attach, Hosts and the tab session icons are on `main` for the next release.
 
-#### Phase 3: Remote attach over Tailscale
-
-- [ ] Discover peers from the installed Tailscale (`tailscale status --json`); do not embed Tailscale or `tsnet`.
-- [ ] Attach to a remote Mac's sessions over Tailscale SSH, with YEN installed on both ends, and label remote panes and tabs with the host.
-- [ ] Reconnect automatically after sleep, a network change or a dropped link, without losing the remote session.
-- [ ] Add a Hosts view (palette and tab sidebar) that lists each peer's sessions.
-- [ ] Write the threat model into `_docs/04-security.md`: who can attach, what the daemon socket exposes, and how Tailscale ACLs gate it.
-- [ ] Document the Tailscale data flow in public `/docs`, `public/llms.txt`, privacy and terms.
-
-#### Phase 4: Window chrome and split design pass
-
-Owner docs: `_docs/02-design-system.md` and `_docs/13-desktop-features.md`.
-
-- [ ] Show session state (live, detached, remote host) in tabs and the tab sidebar.
-
-#### Phase 5: Docs and release
-
-- [ ] Document and release remote attach and window changes when their phases are complete.
+- [ ] Show on a remote tab and its sidebar row that the pane is reconnecting.
+  The CLI's reconnect loop needs to signal the app without a per-render process or file read.
+- [ ] Run remote attach on the Tailscale setups it has never met: MagicDNS off (the IP-address target), Tailscale SSH on the peer, an ACL `check` rule, and the open-source `tailscaled`.
+  Each needs a change to the operator's tailnet or to the peer's Tailscale install, so the operator chooses which to stage.
 
 ### Experimental moving wallpaper
 
-- [ ] Verify multi-display Spaces and power-state changes before desktop release.
-  The Mac used so far has one display and one Space.
-  Low Power Mode did not engage in three attempts from System Settings: `pmset` kept `powermode 0` on AC power and the system power preferences were not written, so the pause on Low Power was never exercised.
-  Force it with `sudo pmset -a powermode 1` (`lowpowermode 1` on a Mac without High Power Mode), then confirm the wallpaper freezes and resumes after `powermode 0`.
+- [ ] Keep a Per Desktop wallpaper on an external display across an unplug and replug.
+  After a replug macOS gives the display a new Space id, and the assignment keyed to the old id shows nothing; All Desktops mode is untested with a replug.
+  Verify the fix with a real unplug in a signed copy.
 
 ---
 ## WAIT-GATED

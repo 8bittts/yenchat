@@ -34,6 +34,8 @@ For native acceptance, check that an appended record changes the menu without op
 `WallpaperToggleTests` drives the Moving Wallpaper switch with its own preferences and fails when a panel outlives the switch.
 `YouTubeDownloaderTests` runs the real downloader against a script in yt-dlp's place, so the stream merge and the single-file fallback are tested without the network.
 For native acceptance, click the switch in a verify copy and count that process's windows one level above `CGWindowLevelForKey(.desktopWindow)`: one per display when on, none when off.
+With two displays, assign the videos through launch arguments so the pass needs no clicks: `-com.yenchat.yen.movingWallpaper.enabled YES`, `-com.yenchat.yen.movingWallpaper.wallpaperMode perDesktop` (or `allDesktops`) and `-com.yenchat.yen.movingWallpaper.desktopFiles` with an XML `<array>` of `<dict>` records holding integer `displayID` and `spaceID` and a string `path`; Space 0 is a display's all-desktops slot.
+Each display must then own one wallpaper window with that display's bounds, the windows must stop changing under `sudo pmset -a powermode 1` and change again after `powermode 0`, and an unplugged display's window must go away while the others keep playing.
 
 Native fast tests inspect a temporary snapshot of their Swift source, shortcut docs, and vendored config.
 `scripts/native/source-fixtures.py` verifies file counts and hashes against the current checkout before and after execution.
@@ -66,6 +68,7 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
 - `YEN.xctestplan` sets `YEN_CONFIG_PATH=/tmp/YEN/testing_config.yen` with `working-directory = /tmp/YEN`, so terminal startup does not open a working directory under `~/Documents`.
 - Onboarding and the upstream window preferences read `UserDefaults.yen`, which honors `YEN_USER_DEFAULTS_SUITE` in Debug builds only, so a suite keeps onboarding off in the test host.
   The session, tab sidebar, token, wallpaper and notification preferences read `UserDefaults.standard`; no suite isolates them, in any build.
+  Two worktrees that run the native lane at the same time therefore write the same `com.yenchat.yen.debug` values, and a test can read back the other host's write (`SettingsWindowLifecycleTests` once read another run's `tabSidebarPresentationMode`); rerun the lane alone before debugging such a read.
 - A `quit` that another session sends by bundle identifier ends the `--fast` test host, which shares `com.yenchat.yen.debug`. The run then prints `Restarting after unexpected exit` and fails the tests that were running. The unified log of the host shows `RECEIVED:(aevt,quit)`; rerun the gate instead of debugging those tests.
 - `AppDelegate` installs the `yen web`, `yen pane` and build-notification observers only outside XCTest; tests drive those receivers directly.
 - Source-scanning suites use the prepared fixture snapshot rather than opening the Documents checkout.
@@ -122,6 +125,8 @@ It needs no Tailscale, no `sudo` and no change to `~/.ssh` or the system sshd.
 - The script kills only the sshd it started and the session it created, and removes its directory on exit.
 
 The script is not a gate: it proves the transport against real OpenSSH on this macOS, not on a tailnet.
+Against a real second Mac, stage `Contents/Resources/bin/yen`, `bin/zmx`, `lib` and `commands` from this checkout in a folder there and point `YEN_REMOTE_APP` at it, because that Mac's installed YEN may predate remote sessions; without the variable the listing must answer exit 13.
+Start the session with that bundle's `zmx run <UUID> -d <command>`, which types the command into a session shell, and give the attaching pty a window size, because a pty with no size wraps the replayed screen.
 
 ## Web Quality Baselines
 
