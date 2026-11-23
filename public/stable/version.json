@@ -1,8 +1,8 @@
 {
-  "version": "1.290",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.290/yen-1290.dmg",
-  "sha256": "2183266b564060bf428725509e503b7cbf65323977eaef5b01422ddd28cb1dda",
-  "notes": "Steadier tab titles and smoother split changes",
+  "version": "1.291",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.291/yen-1291.dmg",
+  "sha256": "883bc6d289810ef89094b84613a2c96945f238454f6f908ed15a32577454d706",
+  "notes": "Token limit alerts, folder counts and yen usage",
   "minOS": "27.0",
   "releaseDate": ""
 }
