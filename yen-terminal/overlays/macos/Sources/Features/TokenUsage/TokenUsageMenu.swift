@@ -109,11 +109,11 @@ final class TokenUsageMenu: NSObject {
     /// Opens the panel below the status item, as a click on it does.
     func showPanel() {
         guard panel == nil else { return }
-        toggle()
+        openPanel()
     }
 
     @objc private func toggle() {
-        if let event = NSApp.currentEvent, event.window === item.button?.window,
+        if let event = NSApp.currentEvent,
            event.type == .rightMouseUp || (event.type == .leftMouseUp && event.modifierFlags.contains(.control)) {
             closePanel()
             // A menu set on the item opens where macOS places status menus; the click below shows
@@ -124,6 +124,10 @@ final class TokenUsageMenu: NSObject {
             return
         }
         if panel != nil { closePanel(); return }
+        openPanel()
+    }
+
+    private func openPanel() {
         guard let button = item.button, button.window != nil else { return }
         let window = TokenPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         window.title = "YEN Token Usage"

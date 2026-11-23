@@ -650,8 +650,9 @@ function AgentTokenUsageSection() {
 					and share.
 				</li>
 				<li>
-					Click the chart button to see the last 7, 30, and 90 days. The first
-					90-day read can take half a minute.
+					Click the chart button to see the last 7, 30, and 90 days and your
+					busiest hours of the week. The first 90-day read can take half a
+					minute.
 				</li>
 				<li>
 					Right-click the menu bar item to refresh, check for updates, or quit
@@ -686,6 +687,26 @@ function AgentTokenUsageSection() {
 					Turning it off removes the block.
 				</li>
 				<li>
+					<strong>Folders:</strong> the panel lists the five folders where
+					agents used the most tokens today, and each tab in the tab sidebar
+					shows today&apos;s tokens for its folder.
+				</li>
+				<li>
+					<strong>Limit alerts:</strong> on by default under Show Token Usage. A
+					plan pool that reaches 80% and then 95% sends one notification each
+					per window, with JP the Cat&apos;s meow. Settings &gt; Notifications
+					&gt; Usage Limits changes the sound.
+				</li>
+				<li>
+					<strong>Terminal:</strong> run{" "}
+					<code className="inline-code-brand">yen usage</code> for today&apos;s
+					counts, limits, and top folders;{" "}
+					<code className="inline-code-brand">yen usage --json</code> prints
+					them for scripts and agents, and{" "}
+					<code className="inline-code-brand">yen usage --here</code> shows the
+					current folder.
+				</li>
+				<li>
 					<strong>Readings:</strong> an asterisk marks a partial total.
 					Unavailable means YEN could not read the source. Zero means the source
 					recorded no tokens today.
@@ -706,7 +727,7 @@ function AgentTokenUsageSection() {
 					</li>
 					<li>
 						<strong>Grok Build:</strong> completed turns, including each model
-						in a turn. An active turn appears after Grok records it.
+						in a turn, plus each finished request of a turn still running.
 					</li>
 					<li>
 						<strong>OpenCode:</strong> assistant usage across gateways in its
@@ -790,7 +811,8 @@ function SettingsSection() {
 				</li>
 				<li>
 					<strong>Notifications:</strong> command-finish alerts, one sound each
-					for General and Build alerts, and what happens while YEN is active.
+					for General, Build, and Usage Limits alerts (a macOS sound or JP the
+					Cat), and what happens while YEN is active.
 				</li>
 				<li>
 					<strong>Dictation:</strong> permissions, the microphone, the live

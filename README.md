@@ -105,4 +105,4 @@ YEN is released under the [MIT License](LICENSE).
 YEN is built on Ghostty, which is also MIT licensed; its notice is included in [LICENSE](LICENSE).
 Persistent sessions use [zmx](https://github.com/neurosnap/zmx), which is MIT licensed.
 Bundled third-party tools keep their own licenses.
-The YEN name and logo are not covered by the MIT License.
+The YEN name and logo, and the JP the Cat name and alert sound, are not covered by the MIT License.
