@@ -52,8 +52,19 @@ enum TailscaleDiscovery {
     static let appExecutable = "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
     static let candidatePaths = [appExecutable, "/usr/local/bin/tailscale", "/opt/homebrew/bin/tailscale"]
 
+    /// The open-source `tailscaled`'s socket on macOS. With the Tailscale app
+    /// also installed, every CLI's default query reaches the app's backend,
+    /// even with the app quit, so only `--socket` reaches this daemon.
+    static let openSourceSocketPath = "/var/run/tailscaled.socket"
+
     /// Tailscale's `OS` value for a Mac.
     static let macOS = "macOS"
+
+    /// The open-source daemon's socket when one exists on this Mac.
+    nonisolated static func installedOpenSourceSocket() -> String? {
+        let type = (try? FileManager.default.attributesOfItem(atPath: openSourceSocketPath))?[.type] as? FileAttributeType
+        return type == .typeSocket ? openSourceSocketPath : nil
+    }
 
     nonisolated static func cliPath(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -73,13 +84,36 @@ enum TailscaleDiscovery {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         timeout: Duration = .seconds(5),
         resolve: @escaping Resolver = TailscaleDiscovery.resolveOnThisMac,
-        resolveTimeout: Duration = .seconds(1)
+        resolveTimeout: Duration = .seconds(1),
+        openSourceSocket: String? = TailscaleDiscovery.installedOpenSourceSocket()
     ) async -> TailscaleStatus {
         guard let path = cliPath(environment: environment) else { return .notInstalled }
+        let query = { (arguments: [String]) in
+            await status(path: path, arguments: arguments, environment: environment, timeout: timeout,
+                         resolve: resolve, resolveTimeout: resolveTimeout)
+        }
+        let first = await query(["status", "--json"])
+        // A Mac with both the app and the open-source daemon: when the default
+        // backend is not connected, the daemon may be the one that is.
+        if case .running = first { return first }
+        guard let openSourceSocket else { return first }
+        let daemon = await query(["--socket=\(openSourceSocket)", "status", "--json"])
+        if case .running = daemon { return daemon }
+        return first
+    }
+
+    nonisolated private static func status(
+        path: String,
+        arguments: [String],
+        environment: [String: String],
+        timeout: Duration,
+        resolve: @escaping Resolver,
+        resolveTimeout: Duration
+    ) async -> TailscaleStatus {
         // The app executable acts as the CLI only when it is told to; a GUI
         // launch from a background process is never wanted here.
         let outcome = await SessionsProcess.run(
-            path, ["status", "--json"],
+            path, arguments,
             environment: SessionsProcess.helperEnvironment(environment, adding: ["TAILSCALE_BE_CLI": "1"]),
             timeout: timeout
         )

@@ -27,10 +27,9 @@ Vendor updates and desktop releases run through `/update-yen` and need no entry 
 A YEN pane keeps running when the app quits, crashes or updates, and the user attaches to it from another Mac on their tailnet (`_docs/01-architecture.md` → Persistent sessions; threat model in `_docs/04-security.md`).
 Local persistence ships in v1.275; remote attach and everything built on it are on `main` for the next release.
 
-- [ ] Run remote attach on the two Tailscale setups it has never met on a real tailnet.
-  MagicDNS off (for the whole tailnet and on this Mac only) and Tailscale SSH on the peer have run and are in the run record (`_docs/04-security.md` → Remote Attach Threat Model).
-  - The browser-approval `check` state: the operator's plan allows only the default 12-hour check period, so it needs a peer left on a `check` rule for more than 12 hours.
-  - Discovery from a Mac whose own Tailscale is the open-source `tailscaled`.
+- [ ] See the app's Hosts rows and an attach pane while a Tailscale SSH `check` approval is pending.
+  The CLI's exit 17 has run on a real tailnet, and so has discovery from a Mac on the open-source `tailscaled` (`_docs/04-security.md` → Remote Attach Threat Model).
+  The operator's plan allows only the default 12-hour check period, so run it once that period has passed since the last approval, from the app to a peer on Tailscale SSH under a `check` rule.
 
 ---
 ## WATCH

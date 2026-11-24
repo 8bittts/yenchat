@@ -84,7 +84,9 @@ describe("documentation contracts", () => {
 		expect(security).toContain(
 			"YEN never opens the link and never answers the server",
 		);
-		expect(security).toContain("has not been seen on a real tailnet");
+		expect(security).toContain(
+			"the app's Hosts rows and an attach pane during a pending check have not been seen",
+		);
 	});
 
 	test("public docs name the Reconnecting marker as the source draws it", () => {
@@ -293,7 +295,7 @@ describe("documentation contracts", () => {
 		expect(terms).toContain("Tailscale and SSH are third-party");
 		expect(security).toContain("## Remote Attach Threat Model");
 		expect(security).toContain(
-			"It has never run against an ACL `check` rule that demands a browser approval at connection time, or with discovery on a Mac whose own Tailscale is the open-source daemon: the attaching Mac has only run the Tailscale app.",
+			"On a Mac whose own Tailscale is the open-source daemon beside a quit Tailscale app, discovery listed the other Mac only after the socket fallback",
 		);
 
 		// No public claim the code and its tests cannot back.

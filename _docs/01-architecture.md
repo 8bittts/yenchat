@@ -133,6 +133,7 @@ Tailscale fills `DNSName` from the netmap even with MagicDNS off, `CurrentTailne
 Discovery resolves the name of each online peer inside the refresh, all at once with a 1-second deadline each (`TailscaleDiscovery.usableNames`); an answer with any other address, such as a split-horizon or spoofed one, is never used, and an offline peer is not resolved and keeps its IP.
 A peer with no valid target is dropped, and the label is `HostName` without control or format characters.
 No Tailscale, a stopped backend and a logged-out node are states (`TailscaleStatus`), not errors; `status --json` prints the state and exits 0 even when stopped.
+With the Tailscale app installed, every Tailscale CLI's default query reaches the app's backend, even with the app quit; so when that answer is not running and the open-source daemon's socket (`/var/run/tailscaled.socket`) exists, discovery asks again with `--socket` and uses that answer only when it is running (`TailscaleDiscovery.status`).
 The Mac App Store and standalone Tailscale apps cannot be a Tailscale SSH server; only the open-source `tailscaled` build can (Tailscale's macOS variants page).
 So a peer running either app needs an ordinary ssh server, which on macOS is Remote Login, and the tailnet only carries the connection.
 
