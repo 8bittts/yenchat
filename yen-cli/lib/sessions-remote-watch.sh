@@ -3,7 +3,7 @@
 # remote_run_watched): sessions-remote-watch.sh <ssh pid> <scratch dir> <list|attach> <text> [<marked>]
 #
 # Tailscale SSH under a `check` rule whose approval is due holds sign-in and
-# sends an auth banner with a per-connection approval link, which ssh prints on
+# sends an auth banner with an approval link, which ssh prints on
 # stderr. list: on the banner, mark <scratch>/check and end ssh, because a
 # listing cannot be approved. attach: from the banner until sign-in (the
 # LocalCommand marker <scratch>/connected), copy each new line of stderr to

@@ -85,7 +85,7 @@ describe("documentation contracts", () => {
 			"YEN never opens the link and never answers the server",
 		);
 		expect(security).toContain(
-			"approval and the attach that follows it have run only on the fixture",
+			"a pane that is already waiting has continued after approval only on the fixture",
 		);
 	});
 
