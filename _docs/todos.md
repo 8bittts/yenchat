@@ -18,18 +18,11 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions) with the operator-approved sessions work below.
-Apart from that feature, this list holds only bug fixes and security work; other new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
+YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions).
+This list holds only bug fixes and security work; new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
 Vendor updates and desktop releases run through `/update-yen` and need no entry here.
 
-### Always-on sessions: persistent panes, reachable from any Mac over Tailscale
-
-A YEN pane keeps running when the app quits, crashes or updates, and the user attaches to it from another Mac on their tailnet (`_docs/01-architecture.md` → Persistent sessions; threat model in `_docs/04-security.md`).
-Local persistence ships in v1.275; remote attach and everything built on it are on `main` for the next release.
-
-- [ ] See the app's Hosts rows and an attach pane while a Tailscale SSH `check` approval is pending.
-  The CLI's exit 17 has run on a real tailnet, and so has discovery from a Mac on the open-source `tailscaled` (`_docs/04-security.md` → Remote Attach Threat Model).
-  The operator's plan allows only the default 12-hour check period, so run it once that period has passed since the last approval, from the app to a peer on Tailscale SSH under a `check` rule.
+No open items.
 
 ---
 ## WATCH

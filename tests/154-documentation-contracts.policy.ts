@@ -85,7 +85,7 @@ describe("documentation contracts", () => {
 			"YEN never opens the link and never answers the server",
 		);
 		expect(security).toContain(
-			"the app's Hosts rows and an attach pane during a pending check have not been seen",
+			"approval and the attach that follows it have run only on the fixture",
 		);
 	});
 
