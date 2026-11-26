@@ -10,6 +10,8 @@
 # Test hooks (never set by the app):
 #   YEN_SSH_BIN                 ssh client to run (default /usr/bin/ssh)
 #   YEN_SSH_RETRY_MAX_DELAY     reconnect backoff cap in seconds (default 30; 0 never sleeps)
+#   YEN_SSH_CHECK_WAIT          seconds an attach keeps reconnecting into a pending
+#                               Tailscale SSH check (default 1800, the check's own limit)
 #   YEN_REMOTE_APP              absolute path of the YEN.app to run on the peer,
 #                               instead of /Applications and ~/Applications
 #
@@ -28,9 +30,10 @@ readonly REMOTE_EXIT_KEY_REQUIRED=16
 readonly REMOTE_EXIT_CHECK_REQUIRED=17
 
 # Tailscale SSH under a `check` rule whose approval is due holds sign-in for up
-# to 30 minutes and sends the control server's text, with a per-connection
-# approval link, as an SSH auth banner, which ssh prints on stderr
-# (ssh/tailssh/tailssh.go, clientAuth, HoldAndDelegate). This is its first line.
+# to 30 minutes and sends the control server's text, with an approval link, as
+# an SSH auth banner, which ssh prints on stderr (ssh/tailssh/tailssh.go,
+# clientAuth, HoldAndDelegate). This is its first line. A connection made
+# while the check is pending gets the same link.
 readonly REMOTE_CHECK_TEXT='Tailscale SSH requires an additional check'
 
 # The first line of `yen sessions list --porcelain`. Bump the number only for
@@ -170,8 +173,12 @@ remote_ssh_options() {
 }
 
 # Replay ssh's stderr without the peer's control characters, from line $2 (1).
+# With $3 1, without the check banner's "# " lines, which an earlier
+# connection of the same attach already showed.
 print_remote_errors() {
-    tail -n "+${2:-1}" "$1" | LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' >&2
+    local drop=()
+    [[ "${3:-0}" == 1 ]] && drop=(-e '/^# /d')
+    tail -n "+${2:-1}" "$1" | LC_ALL=C sed -e $'s/\r$//' ${drop[@]+"${drop[@]}"} -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' >&2
 }
 
 # Map ssh's own failure (exit 255) to a remote exit code from its stderr.
@@ -194,6 +201,18 @@ classify_ssh_failure() {
         return "$REMOTE_EXIT_KEY_REQUIRED"
     fi
     return "$REMOTE_EXIT_UNREACHABLE"
+}
+
+# ssh gave up on a sign-in that Tailscale still holds: the check banner came,
+# then OpenSSH's own sign-in timeout ended ssh. OpenSSH applies
+# ServerAliveInterval x ServerAliveCountMax to authentication, 30 seconds with
+# remote_ssh_options, long before the check's 30 minutes. A denial, or the
+# check's own limit, fails sign-in instead.
+check_still_pending() {
+    local errors="$1"
+    LC_ALL=C grep -qF "$REMOTE_CHECK_TEXT" "$errors" || return 1
+    grep -qE 'Permission denied|access denied' "$errors" && return 1
+    grep -qE '^Connection to .* timed out|^Timeout, server .* not responding' "$errors"
 }
 
 remote_failure_message() {
@@ -253,6 +272,9 @@ remote_wait() {
 remote_scratch=""
 remote_child=""
 remote_watcher=""
+# 1 once an attach has shown the check banner: a reconnect into the same
+# pending check does not show the link again.
+remote_check_shown=0
 remote_cleanup() {
     # Runs from traps under the command's set -e, so no step may fail it.
     remote_clear_mark
@@ -295,7 +317,7 @@ remote_run_watched() {
     rm -f "$remote_scratch/check" "$remote_scratch/shown"
     "$@" 0<&0 2> "$remote_scratch/err" &
     remote_child=$!
-    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" "$remote_marked" < /dev/null &
+    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" "$remote_marked" "$remote_check_shown" < /dev/null &
     remote_watcher=$!
     wait "$remote_child" || status=$?
     remote_child=""
@@ -392,10 +414,18 @@ remote_list() {
 # that never connects is reported and not retried, unless the third argument
 # is 1 (--retry-unreachable): then an unreachable peer is retried from the
 # first attempt, and every other failure still stops at once.
+#
+# A pending Tailscale SSH check outlasts ssh's own sign-in timeout, so when ssh
+# gives up while the check still holds sign-in, the attach connects again at
+# once into the same check, until the approval, a denial, or
+# YEN_SSH_CHECK_WAIT seconds after the first banner.
 remote_attach() {
     local target="$1" id="$2" retry_unreachable="${3:-0}" status code established=0 attempt=0 delay cap line command options=()
+    local check_wait check_started=-1 banner_before
     cap="${YEN_SSH_RETRY_MAX_DELAY:-30}"
     [[ "$cap" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_RETRY_MAX_DELAY must be a whole number of seconds"
+    check_wait="${YEN_SSH_CHECK_WAIT:-1800}"
+    [[ "$check_wait" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_CHECK_WAIT must be a whole number of seconds"
     command="$(remote_command attach "$id")" || exit "$?"
     remote_make_scratch
     while IFS= read -r line; do options+=("$line"); done < <(remote_ssh_options)
@@ -410,9 +440,22 @@ remote_attach() {
     while true; do
         rm -f "$remote_scratch/connected"
         status=0
+        banner_before=$remote_check_shown
         remote_run_watched attach "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$command" || status=$?
+        LC_ALL=C grep -qF "$REMOTE_CHECK_TEXT" "$remote_scratch/err" 2> /dev/null && remote_check_shown=1
+        if [[ $status -eq 255 && ! -e "$remote_scratch/connected" ]] && check_still_pending "$remote_scratch/err"; then
+            [[ $check_started -ge 0 ]] || check_started=$SECONDS
+            if ((SECONDS - check_started < check_wait)); then
+                # Not a lost link: no backoff and no message. The short pause
+                # keeps a peer that fails at once from spinning.
+                remote_run sleep 1
+                continue
+            fi
+            remote_failure_message "$REMOTE_EXIT_CHECK_REQUIRED" "$target" >&2
+            exit "$REMOTE_EXIT_CHECK_REQUIRED"
+        fi
         # Lines the watcher already showed are not shown twice.
-        print_remote_errors "$remote_scratch/err" "$(($(cat "$remote_scratch/shown" 2> /dev/null || echo 0) + 1))"
+        print_remote_errors "$remote_scratch/err" "$(($(cat "$remote_scratch/shown" 2> /dev/null || echo 0) + 1))" "$banner_before"
         if [[ -e "$remote_scratch/connected" ]]; then
             established=1
             attempt=0

@@ -1,6 +1,6 @@
 #!/bin/bash
 # The stderr watcher of a `yen sessions --host` ssh run (lib/sessions-remote.sh,
-# remote_run_watched): sessions-remote-watch.sh <ssh pid> <scratch dir> <list|attach> <text> [<marked>]
+# remote_run_watched): sessions-remote-watch.sh <ssh pid> <scratch dir> <list|attach> <text> [<marked>] [<banner shown>]
 #
 # Tailscale SSH under a `check` rule whose approval is due holds sign-in and
 # sends an auth banner with an approval link, which ssh prints on
@@ -18,14 +18,23 @@
 # drops it after 15 and a check can hold sign-in for 30 minutes. If sign-in
 # came while it wrote, clear it again, since the LocalCommand's clear may have
 # gone first.
-child=$1 scratch=$2 mode=$3 text=$4 marked=${5:-0} shown=0 seen=0 ticks=0
+#
+# attach with <banner shown> 1 (an earlier connection of this attach showed
+# the banner): the banner's "# " lines are not copied again, since a
+# connection made while the check is pending gets the same link. In every
+# attach, OpenSSH's own sign-in timeout line is not copied: the CLI connects
+# again into the pending check (sessions-remote.sh, check_still_pending).
+child=$1 scratch=$2 mode=$3 text=$4 marked=${5:-0} banner_shown=${6:-0} shown=0 seen=0 ticks=0
+drop=(-e '/^Connection to .* timed out$/d' -e '/^Timeout, server .* not responding/d')
+[ "$banner_shown" = 1 ] && drop+=(-e '/^# /d')
 # Copy stderr lines not shown yet to the terminal (attach, after the banner).
 copy_new_lines() {
     total=$(wc -l < "$scratch/err")
     total=$((total))
     if [ "$total" -gt "$shown" ]; then
         sed -n "$((shown + 1)),${total}p" "$scratch/err" \
-            | LC_ALL=C sed -e $'s/\r$//' -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' >&2
+            | LC_ALL=C sed -e $'s/\r$//' "${drop[@]}" \
+                -e 's/[[:cntrl:]]/?/g' -e $'s/\xc2[\x80-\x9f]/?/g' >&2
         shown=$total
         echo "$shown" > "$scratch/shown"
     fi
