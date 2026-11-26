@@ -1,8 +1,8 @@
 {
-  "version": "1.292",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.292/yen-1292.dmg",
-  "sha256": "e96a117cfbf12f7a1644d2de28b914f3acd71c93fc853ba7252c63ad76fa2e3e",
-  "notes": "Moving Wallpaper buttons and a Demo sample",
+  "version": "1.293",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.293/yen-1293.dmg",
+  "sha256": "f733acd6fa8dbb057a87b0d4188390356e8199ab5376b5d1e9aaabb02bf341ac",
+  "notes": "Emoji skin tones and steadier persistent sessions",
   "minOS": "27.0",
   "releaseDate": ""
 }
