@@ -85,7 +85,7 @@ describe("documentation contracts", () => {
 			"YEN never opens the link and never answers the server",
 		);
 		expect(security).toContain(
-			"a pane that is already waiting has continued after approval only on the fixture",
+			"a pane that waits minutes for a person has continued only on the fixture",
 		);
 	});
 
