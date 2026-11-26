@@ -6,8 +6,8 @@ import { join } from "node:path";
 // zmx v1.0.1 freed the caller-owned socket path with its post-fork C
 // allocator when a session daemon shut down. Under ReleaseSafe that buffer
 // came from a different allocator, so every ended session aborted with
-// SIGABRT and left a crash report. scripts/48-vendor-zmx.sh carries upstream
-// f5d604e; this ends real sessions of the vendored binary, through `zmx kill`
+// SIGABRT and left a crash report. Upstream f5d604e fixed it in v1.0.2; this
+// ends real sessions of the vendored binary, through `zmx kill`
 // and through a command that exits, and requires each daemon to exit 0 while
 // a counter session stays up with the same shell.
 

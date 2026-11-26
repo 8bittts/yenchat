@@ -22,9 +22,9 @@ Hand-edit only the tables and watch items.
 ## Snapshot Metadata (Script-Validated)
 
 ```
-snapshot_date=2026-11-23
-ghostty_commit=0cc1fc64e1e7a4c5b841ed4f16fb106d9411c0ec
-ghostty_version=0cc1fc64e1e7a4c5b841ed4f16fb106d9411c0ec
+snapshot_date=2026-11-26
+ghostty_commit=4ebafeb70b3dde9de578040f90fa9d8c13dfa2d0
+ghostty_version=4ebafeb70b3dde9de578040f90fa9d8c13dfa2d0
 ghostty_upstream_repo=https://github.com/ghostty-org/ghostty.git
 yazi_version=v26.9.1
 fd_version=v10.5.2
@@ -32,7 +32,7 @@ ripgrep_version=16.0.0
 lazygit_version=v0.66.3
 btop_version=v1.4.8
 fastfetch_version=2.71.0
-zmx_version=v1.0.1
+zmx_version=v1.0.2
 ```
 
 `ghostty_upstream_repo` is gated so a forge change cannot silently move the upstream source of truth.
@@ -56,7 +56,7 @@ Delete a row once the range has re-landed cleanly.
 
 ## Upstream Ghostty Overlap Assessment
 
-Audit of YEN customizations against upstream Ghostty (commit `0cc1fc64`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
+Audit of YEN customizations against upstream Ghostty (commit `4ebafeb7`). Classification: [SAFE] no conflict, [WATCH] monitor upstream changes, [ACTION] needs work.
 
 Per-bump assessments live in the vendor commit messages, not here.
 
@@ -212,7 +212,7 @@ libintl is LGPL-2.1 and linked statically; its section points to the public YEN 
 - **Stale verifier.** When a check fails after a bump, confirm the checked symbol did not just move in a YEN refactor before blaming upstream.
 - **zmx builds against the vendored engine.** `scripts/48-vendor-zmx.sh` points zmx's engine dependency at a clone of `yen-terminal/ghostty`, records the engine commit plus a digest of the tracked YEN inputs that shape engine Zig sources (Zig overlays, engine-source patch blocks, the branding phases) as `build_input_id`, and builds stripped from one fixed path so the output pin reproduces; an engine bump rebuilds zmx and re-records the pin.
   The script also patches zmx to record each session's pty path in `<UUID>.tty` (password detection) and to send soft-wrapped rows unwrapped in its attach snapshot, so a new pane can reflow early output; `tests/164-zmx-snapshot-unwrap.test.ts` runs the vendored binary and fails if a zmx bump undoes the second.
-  It also carries upstream f5d604e (#316, after v1.0.1): zmx v1.0.1 freed the caller-owned socket path with the daemon's post-fork C allocator, so every session daemon aborted with SIGABRT at shutdown and left a `zmx*.ips` report. The edit's anchor fails closed once the pinned tag contains the fix, and the edit is then dropped. `tests/181-zmx-daemon-shutdown.test.ts` ends real sessions of the vendored binary and fails unless every daemon exits 0.
+  zmx v1.0.1 freed the caller-owned socket path with the daemon's post-fork C allocator, so every session daemon aborted with SIGABRT at shutdown; upstream f5d604e (#316) fixed it in v1.0.2. `tests/181-zmx-daemon-shutdown.test.ts` ends real sessions of the vendored binary and fails unless every daemon exits 0.
   `14-vendor.sh` compares the recorded id with `48-vendor-zmx.sh --print-input-id`, because the zmx tag alone stays current across an engine bump; `tests/119-vendor-process-guardrails.test.ts` fails when the committed id drifts from the tree.
   An edit to one of those inputs outside a vendor run lands with its own rebuild: `VENDOR_LATEST_TAG=<pinned tag> ./scripts/48-vendor-zmx.sh` keeps the zmx version and rewrites only `build_input_id` and `output_sha256` in `.zmx-baseline`.
   After a pull that changes the zmx pin, the integrity gate refuses the old local binary until `./scripts/48-vendor-zmx.sh --force` rebuilds it; the build reproduces the pinned digest.

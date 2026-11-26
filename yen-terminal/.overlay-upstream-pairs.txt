@@ -26,7 +26,7 @@
 #     | LC_ALL=C sort > .overlay-upstream-pairs.txt
 #
 # Re-pin only after reading upstream's change and porting what applies.
-build.zig	e1627882f9bb61cdafbc71a044d93674e37ab9260fe9a427ae0ce6affa499df7
+build.zig	787dac9eebc6d9af71ac72068351511a0cd6980b2bba5db451de23a7aff98cd5
 macos/Assets.xcassets/AccentColor.colorset/Contents.json	9af65086fa30b49252fae1a1225731691de794f7775af74d71befeb507d12b7c
 macos/Sources/App/AppDelegate.swift	1da3d93651f515df7318d9467f411907ee375035f5c33343ca947c4002a71b26
 macos/Sources/App/MainMenu.xib	1ca7690ee6047bfb77f2e9ac40b63bf9932c3e5c597c16aff5a584a37a4f97c8

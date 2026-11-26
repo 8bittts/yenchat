@@ -1,12 +1,12 @@
 # zmx Baseline Tracking
 upstream_repo=https://github.com/neurosnap/zmx
-upstream_version=v1.0.1
-last_sync=2026-11-06
+upstream_version=v1.0.2
+last_sync=2026-11-24
 architecture=arm64
 build_method=zig build against the vendored engine
-build_input_id=engine-0cc1fc64e1e7-5dccff7d276c5e6f
-source_archive_url=https://github.com/neurosnap/zmx/archive/a35f00a2118b15a5e9d522a43035c8d7487df9b7.tar.gz
-source_commit=a35f00a2118b15a5e9d522a43035c8d7487df9b7
-source_tarball_sha256=0ae85204aaab966566d3a5cb4c1aaa7067b6345ae92f44a8f225d2495263d0bc
-output_sha256=c546dabd1386f952b170425ea41227bab0f89dce52493b101c8dd5b07313542f
+build_input_id=engine-4ebafeb70b3d-2464fa93fc594e53
+source_archive_url=https://github.com/neurosnap/zmx/archive/89bced5a36a3d10baabeeb30582bf1776671ea40.tar.gz
+source_commit=89bced5a36a3d10baabeeb30582bf1776671ea40
+source_tarball_sha256=8b0861d47ebdec154bec1de2843ab19135d3ea7dedebf6c80d7e78d2a135a8f7
+output_sha256=440292480c41cf2748559b8647c7d901723c8f265b4007a888b6fbbcb792b389
 provenance_verification=github-commit-bound-archive

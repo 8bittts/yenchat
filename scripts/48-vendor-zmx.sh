@@ -18,12 +18,6 @@
 #                  zmx ls skips that non-socket file
 #   src/terminal.zig  the attach snapshot unwraps soft-wrapped rows, so the pane
 #                  re-wraps them itself and can reflow them when it grows
-#   src/loop.zig   Daemon.deinit no longer frees the caller-owned socket path
-#                  with the daemon's post-fork C allocator, which aborted every
-#                  session daemon at shutdown under ReleaseSafe. Upstream
-#                  f5d604e ("Keep socket path ownership with the daemon caller",
-#                  #316) makes the same change after v1.0.1; drop this edit when
-#                  the pinned tag contains it (its anchor then fails closed)
 #
 # Reproducible output, so the baseline output pin can hold across rebuilds:
 # - Debug info carries a timestamped object map, and the linker derives the
@@ -189,16 +183,6 @@ PY
         defer _ = std.c.close(fd);
         const tty = std.mem.sliceTo(&yen_tty_name, 0);
         _ = std.c.write(fd, tty.ptr, tty.len);
-    }' 1 >&2
-    # Upstream f5d604e (#316): the daemon frees socket_path with its post-fork
-    # C allocator, but the caller allocated it with the process allocator and
-    # still owns it. A missing anchor means the pinned tag already carries the
-    # fix: delete this edit, re-vendor, and keep tests/181 green.
-    patch_anchor "$source_dir/src/loop.zig" \
-        '        self.pty_write_buf.deinit(gpa);
-        gpa.free(self.socket_path);
-    }' \
-        '        self.pty_write_buf.deinit(gpa);
     }' 1 >&2
 }
 
