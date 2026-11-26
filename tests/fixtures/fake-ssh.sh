@@ -23,6 +23,11 @@
 # check-hold records its pid like sleep and waits; check-pass waits, then signs
 # in (LocalCommand runs only then) and exits 0; check-deny is the denial or the
 # 30-minute timeout: a banner, then sign-in fails and ssh exits 255.
+# check-timeout<seconds> is ssh giving up on a held sign-in first: OpenSSH
+# applies ServerAliveInterval x ServerAliveCountMax to authentication, so with
+# YEN's options it prints "Connection to <host> port 22 timed out" after 30
+# seconds and exits 255 while the check is still pending (measured with
+# OpenSSH 10.5 against an sshd whose sign-in was held).
 # status=sleep<seconds> records its pid in $FAKE_SSH_DIR/pid-<n> and hangs,
 # like ssh waiting on a dead link.
 # $FAKE_SSH_DIR/stdout-<n>, when present, is printed as the remote output, and
@@ -63,6 +68,11 @@ if [[ "$status" == check* ]]; then
         check-pass*)
             /bin/sleep "${status#check-pass}"
             status=0
+            ;;
+        check-timeout*)
+            /bin/sleep "${status#check-timeout}"
+            echo "Connection to mini port 22 timed out" >&2
+            exit 255
             ;;
         check-deny)
             echo "tailscale: access denied" >&2

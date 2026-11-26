@@ -48,13 +48,17 @@ const advice =
 
 /// A CLI run with its own TMPDIR, so its temporary files can be checked, and
 /// an optional deadline that ends it with SIGTERM as the app's would.
-function run(args: string[], timeout = 15_000) {
+function run(
+	args: string[],
+	timeout = 15_000,
+	extra: Record<string, string> = {},
+) {
 	const tmp = join(harness.sshDir, "tmp");
 	mkdirSync(tmp);
 	const started = Date.now();
 	const result = spawnSync(yen, ["sessions", ...args], {
 		encoding: "utf8",
-		env: cliEnvironment(harness.sshDir, { TMPDIR: tmp }),
+		env: cliEnvironment(harness.sshDir, { TMPDIR: tmp, ...extra }),
 		input: "",
 		timeout,
 		killSignal: "SIGTERM",
@@ -155,6 +159,36 @@ describe("yen sessions attach --host: a pending Tailscale SSH check", () => {
 		expect(result.stderr).toContain("lost the connection to mini");
 		expect(result.stderr.split(link)).toHaveLength(2);
 		expect(harness.calls()).toHaveLength(2);
+	});
+
+	// OpenSSH gives up on a held sign-in after ServerAliveInterval x
+	// ServerAliveCountMax, 30 seconds with YEN's options, long before the
+	// check's 30 minutes. The pane must keep waiting for the approval.
+	test("a check that outlasts ssh's sign-in timeout reconnects and goes on after the approval", () => {
+		harness.plan(["1 check-timeout1", "1 check-timeout1", "1 check-pass1"]);
+		const result = run(attach);
+		expect(result.status, result.stderr).toBe(0);
+		expect(harness.calls()).toHaveLength(3);
+		expect(result.stderr.split(link)).toHaveLength(2);
+		expect(result.stderr).not.toContain("timed out");
+		expect(result.stderr).not.toContain("asks for a Tailscale SSH check");
+	});
+
+	test("a check denied after ssh's sign-in timeout ends the attach with 17", () => {
+		harness.plan(["1 check-timeout1", "1 check-deny"]);
+		const result = run(attach);
+		expect(result.status, result.stderr).toBe(CHECK_REQUIRED);
+		expect(result.stderr).toContain(advice);
+		expect(harness.calls()).toHaveLength(2);
+	});
+
+	test("a check still pending past the wait limit ends the attach with 17", () => {
+		harness.plan(Array(8).fill("1 check-timeout1"));
+		const result = run(attach, 15_000, { YEN_SSH_CHECK_WAIT: "2" });
+		expect(result.status, result.stderr).toBe(CHECK_REQUIRED);
+		expect(result.stderr).toContain(advice);
+		expect(harness.calls().length).toBeLessThan(8);
+		expect(result.stderr.split(link)).toHaveLength(2);
 	});
 
 	test("a denied check ends the attach with 17 and the step", () => {
