@@ -174,6 +174,14 @@ describe("yen sessions attach --host: a pending Tailscale SSH check", () => {
 		expect(result.stderr).not.toContain("asks for a Tailscale SSH check");
 	});
 
+	test("an approval that lets the next connection in at once still shows the link once", () => {
+		harness.plan(["1 check-timeout1", "1 check-pass0"]);
+		const result = run(attach);
+		expect(result.status, result.stderr).toBe(0);
+		expect(harness.calls()).toHaveLength(2);
+		expect(result.stderr.split(link)).toHaveLength(2);
+	});
+
 	test("a check denied after ssh's sign-in timeout ends the attach with 17", () => {
 		harness.plan(["1 check-timeout1", "1 check-deny"]);
 		const result = run(attach);
