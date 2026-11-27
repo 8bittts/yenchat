@@ -78,7 +78,7 @@ describe("documentation contracts", () => {
 			expect(guide).toContain("tailnet");
 			expect(guide).toContain("check period");
 			expect(guide).toContain(
-				"After approving, select the session again to reattach to the same shell.",
+				"Leave the pane open while you approve the sign-in. The same pane connects after approval.",
 			);
 		}
 		const security = read("_docs/04-security.md");

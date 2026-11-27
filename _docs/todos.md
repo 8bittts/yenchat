@@ -23,7 +23,7 @@ Routine releases and vendor updates run through `/update-yen`.
 
 ### Verify remote sessions on two Macs
 
-Use a build containing the pending-check fixes on the attaching Mac and a disposable session on the peer.
+Use YEN 1.294 or later on the attaching Mac and a disposable session on the peer.
 
 - [ ] Under a due Tailscale SSH check, leave the pane waiting for at least one minute before approving.
   Confirm the link appears once, the same pane attaches, and a later link drop returns to the same running session.

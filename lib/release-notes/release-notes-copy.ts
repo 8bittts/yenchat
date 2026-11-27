@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.294":
+		"When Tailscale SSH asks you to approve a sign-in, the remote pane stays open. Follow the link once. The same pane connects to your running session after approval and reconnects if the link later drops.",
 	"1.293":
 		"On a Mac that runs Tailscale's open-source daemon while the Tailscale app is installed but quit, Hosts in the command palette and the tab sidebar now finds your other Macs instead of saying Tailscale is off. Persistent sessions no longer repeat a multi-line prompt after you resize their pane, and a session started without a TERM value uses xterm-256color. In the terminal engine, an emoji with a skin tone now takes two cells and draws as an emoji.",
 	"1.292":
