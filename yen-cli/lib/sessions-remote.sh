@@ -317,7 +317,7 @@ remote_run_watched() {
     rm -f "$remote_scratch/check" "$remote_scratch/shown"
     "$@" 0<&0 2> "$remote_scratch/err" &
     remote_child=$!
-    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" "$remote_marked" "$remote_check_shown" < /dev/null &
+    /bin/bash "$YEN_LIB/sessions-remote-watch.sh" "$remote_child" "$remote_scratch" "$mode" "$REMOTE_CHECK_TEXT" "$remote_marked" "$remote_check_shown" "$SECONDS" < /dev/null &
     remote_watcher=$!
     wait "$remote_child" || status=$?
     remote_child=""
@@ -421,7 +421,7 @@ remote_list() {
 # YEN_SSH_CHECK_WAIT seconds after the first banner.
 remote_attach() {
     local target="$1" id="$2" retry_unreachable="${3:-0}" status code established=0 attempt=0 delay cap line command options=()
-    local check_wait check_started=-1 banner_before
+    local check_wait deadline banner_before
     cap="${YEN_SSH_RETRY_MAX_DELAY:-30}"
     [[ "$cap" =~ ^[0-9]+$ ]] || usage_error "YEN_SSH_RETRY_MAX_DELAY must be a whole number of seconds"
     check_wait="${YEN_SSH_CHECK_WAIT:-1800}"
@@ -442,10 +442,14 @@ remote_attach() {
         status=0
         banner_before=$remote_check_shown
         remote_run_watched attach "$REMOTE_SSH_BIN" "${options[@]}" -t -- "$target" "$command" || status=$?
-        LC_ALL=C grep -qF "$REMOTE_CHECK_TEXT" "$remote_scratch/err" 2> /dev/null && remote_check_shown=1
+        if [[ -e "$remote_scratch/check" && ! -e "$remote_scratch/connected" ]]; then
+            remote_failure_message "$REMOTE_EXIT_CHECK_REQUIRED" "$target" >&2
+            exit "$REMOTE_EXIT_CHECK_REQUIRED"
+        fi
         if [[ $status -eq 255 && ! -e "$remote_scratch/connected" ]] && check_still_pending "$remote_scratch/err"; then
-            [[ $check_started -ge 0 ]] || check_started=$SECONDS
-            if ((SECONDS - check_started < check_wait)); then
+            remote_check_shown=1
+            read -r deadline < "$remote_scratch/check-deadline" || exit 1
+            if ((SECONDS < deadline)); then
                 # Not a lost link: no backoff and no message. The short pause
                 # keeps a peer that fails at once from spinning.
                 remote_run sleep 1
@@ -457,6 +461,10 @@ remote_attach() {
         # Lines the watcher already showed are not shown twice.
         print_remote_errors "$remote_scratch/err" "$(($(cat "$remote_scratch/shown" 2> /dev/null || echo 0) + 1))" "$banner_before"
         if [[ -e "$remote_scratch/connected" ]]; then
+            # An approved check belongs to this connection. A later sign-in
+            # can require its own link and a fresh wait.
+            remote_check_shown=0
+            rm -f "$remote_scratch/check-deadline"
             established=1
             attempt=0
             # The LocalCommand cleared the mark on screen.
@@ -479,8 +487,12 @@ remote_attach() {
             *) exit "$status" ;;
         esac
 
-        code=0
-        classify_ssh_failure "$remote_scratch/err" || code=$?
+        # Once this ssh authenticated, its earlier banner cannot explain a
+        # dropped link. Classify sign-in failures only if this attempt never authenticated.
+        code=$REMOTE_EXIT_UNREACHABLE
+        if [[ ! -e "$remote_scratch/connected" ]]; then
+            classify_ssh_failure "$remote_scratch/err" || code=$?
+        fi
         if [[ $code -ne $REMOTE_EXIT_UNREACHABLE || ($established -eq 0 && $retry_unreachable != 1) ]]; then
             remote_failure_message "$code" "$target" >&2
             exit "$code"

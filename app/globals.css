@@ -670,12 +670,6 @@
 	background: var(--ph-night);
 	color: var(--ph-text);
 }
-.ph-site main a:focus-visible,
-.ph-site main button:focus-visible,
-.ph-site main summary:focus-visible {
-	outline: 3px solid currentColor;
-	outline-offset: 4px;
-}
 .ph-hero {
 	background: radial-gradient(
 		ellipse at 78% 55%,
@@ -792,10 +786,6 @@
 	font-size: 14px;
 	font-weight: 500;
 }
-.ph-text-link:hover,
-.ph-verify a:hover {
-	text-decoration-thickness: 2px;
-}
 .ph-requirements {
 	margin-top: 15px;
 	font-size: 11px;
@@ -900,11 +890,6 @@
 .ph-instrument .ph-wrap {
 	padding-block: 14px;
 }
-.ph-instrument a:hover,
-.ph-chapters a:hover {
-	text-decoration: underline;
-	text-underline-offset: 4px;
-}
 .ph-chapters {
 	border-bottom: 1px solid var(--ph-line);
 	background: #101b14;
@@ -994,12 +979,6 @@
 	background: #0b1510;
 	font: 14px / 1.7 var(--ph-mono);
 }
-.ph-cwd,
-.ph-output,
-.ph-pane-code small,
-.ph-requests p span:nth-child(2) {
-	color: var(--ph-green);
-}
 .ph-cwd span,
 .ph-requests small {
 	color: var(--ph-muted);
@@ -1052,10 +1031,6 @@
 	border: 1px solid #607666;
 	color: var(--ph-text);
 }
-.ph-secondary:hover,
-.ph-segment button:hover {
-	background: #293b2f;
-}
 .ph-live {
 	color: var(--ph-muted);
 	font-size: 11px;
@@ -1075,10 +1050,6 @@
 	font-size: 11px;
 	cursor: pointer;
 	color: var(--ph-muted);
-}
-.ph-segment button[aria-pressed="true"] {
-	background: #d2e8d3;
-	color: #142319;
 }
 .ph-splits {
 	--ph-splits-pad: 12px;
@@ -1181,10 +1152,6 @@
 .ph-spark-head {
 	--ph-spark-length: 1.5px;
 }
-.ph-splits .ph-pane:focus-visible {
-	outline: 3px dashed white;
-	outline-offset: -4px;
-}
 .ph-pane-title {
 	display: flex;
 	align-items: center;
@@ -1198,9 +1165,6 @@
 .ph-pane-title > span {
 	font-size: 10px;
 	color: var(--ph-muted);
-}
-.ph-pane[aria-pressed="true"] .ph-pane-title > span {
-	color: var(--ph-green);
 }
 .ph-pane-code {
 	display: flex;
@@ -1218,6 +1182,15 @@
 .ph-pane-code span:last-child {
 	color: var(--ph-muted);
 }
+.ph-cwd,
+.ph-output,
+.ph-pane-code small,
+.ph-requests p span:nth-child(2) {
+	color: var(--ph-green);
+}
+.ph-pane[aria-pressed="true"] .ph-pane-title > span {
+	color: var(--ph-green);
+}
 /* Compact keeps the grid's padding and gap, so the preview never changes
    size. Each pane grows into the gutter until one pixel of divider and
    frame is left, and pads its content by the same amount, so the text
@@ -1226,6 +1199,10 @@
 	--ph-grow-out: calc(var(--ph-splits-pad) - 1px);
 	--ph-grow-in: calc((var(--ph-splits-gap) - 1px) / 2);
 }
+.ph-splits-compact .ph-pane-slot {
+	margin: calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-right))
+		calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-left));
+}
 .ph-splits-compact .ph-pane-slot:first-child {
 	--ph-grow-left: var(--ph-grow-out);
 	--ph-grow-right: var(--ph-grow-in);
@@ -1233,10 +1210,6 @@
 .ph-splits-compact .ph-pane-slot:last-child {
 	--ph-grow-left: var(--ph-grow-in);
 	--ph-grow-right: var(--ph-grow-out);
-}
-.ph-splits-compact .ph-pane-slot {
-	margin: calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-right))
-		calc(-1 * var(--ph-grow-out)) calc(-1 * var(--ph-grow-left));
 }
 .ph-splits-compact .ph-pane-title {
 	margin-top: var(--ph-grow-out);
@@ -1254,6 +1227,10 @@
 }
 .ph-splits-compact .ph-spark rect {
 	rx: 0;
+}
+.ph-splits .ph-pane:focus-visible {
+	outline: 3px dashed white;
+	outline-offset: -4px;
 }
 .ph-drawer {
 	display: grid;
@@ -1335,6 +1312,14 @@
 	border: 2px solid transparent;
 	background: var(--ph-aura);
 	cursor: pointer;
+}
+.ph-secondary:hover,
+.ph-segment button:hover {
+	background: #293b2f;
+}
+.ph-segment button[aria-pressed="true"] {
+	background: #d2e8d3;
+	color: #142319;
 }
 .ph-swatches button[aria-pressed="true"] {
 	border-color: var(--ph-text);
@@ -1489,18 +1474,10 @@ details[open] .ph-disclosure:after {
 	align-self: start;
 	white-space: nowrap;
 }
-.ph-releases li > a:hover {
-	text-decoration: underline;
-}
 .ph-releases h3 {
 	font-weight: 530;
 	font-size: 21px;
 	letter-spacing: -0.04em;
-}
-.ph-releases li p,
-.ph-final p:not(.ph-kicker) {
-	color: var(--ph-muted);
-	line-height: 1.62;
 }
 .ph-final {
 	padding-block: clamp(44px, 6vw, 94px);
@@ -1512,6 +1489,11 @@ details[open] .ph-disclosure:after {
 }
 .ph-final h2 + p {
 	margin-top: 13px;
+}
+.ph-releases li p,
+.ph-final p:not(.ph-kicker) {
+	color: var(--ph-muted);
+	line-height: 1.62;
 }
 .ph-final .ph-kicker {
 	margin-bottom: 10px;
@@ -1797,12 +1779,30 @@ details[open] .ph-disclosure:after {
 	font: 11px / 1.5 var(--ph-mono);
 	color: var(--ph-muted);
 }
+.ph-text-link:hover,
+.ph-verify a:hover {
+	text-decoration-thickness: 2px;
+}
+.ph-instrument a:hover,
+.ph-chapters a:hover {
+	text-decoration: underline;
+	text-underline-offset: 4px;
+}
+.ph-releases li > a:hover {
+	text-decoration: underline;
+}
 .ph-native figcaption a:hover {
 	text-decoration: underline;
 }
 .ph-native .ph-text-link {
 	display: inline-block;
 	margin-top: 20px;
+}
+.ph-site main a:focus-visible,
+.ph-site main button:focus-visible,
+.ph-site main summary:focus-visible {
+	outline: 3px solid currentColor;
+	outline-offset: 4px;
 }
 @media (max-width: 700px) {
 	.ph-native-grid {

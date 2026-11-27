@@ -1,6 +1,6 @@
 #!/bin/bash
 # The stderr watcher of a `yen sessions --host` ssh run (lib/sessions-remote.sh,
-# remote_run_watched): sessions-remote-watch.sh <ssh pid> <scratch dir> <list|attach> <text> [<marked>] [<banner shown>]
+# remote_run_watched): sessions-remote-watch.sh <ssh pid> <scratch dir> <list|attach> <text> [<marked>] [<banner shown>] [<parent seconds>]
 #
 # Tailscale SSH under a `check` rule whose approval is due holds sign-in and
 # sends an auth banner with an approval link, which ssh prints on
@@ -25,6 +25,11 @@
 # attach, OpenSSH's own sign-in timeout line is not copied: the CLI connects
 # again into the pending check (sessions-remote.sh, check_still_pending).
 child=$1 scratch=$2 mode=$3 text=$4 marked=${5:-0} banner_shown=${6:-0} shown=0 seen=0 ticks=0
+# Share the attaching shell's clock across watcher processes. The deadline
+# survives SSH retries and is cleared only after sign-in.
+SECONDS=${7:-0}
+deadline=""
+[ -f "$scratch/check-deadline" ] && read -r deadline < "$scratch/check-deadline"
 drop=(-e '/^Connection to .* timed out$/d' -e '/^Timeout, server .* not responding/d')
 [ "$banner_shown" = 1 ] && drop+=(-e '/^# /d')
 # Copy stderr lines not shown yet to the terminal (attach, after the banner).
@@ -40,22 +45,38 @@ copy_new_lines() {
     fi
 }
 
-while kill -0 "$child" 2> /dev/null && [ -d "$scratch" ]; do
+while [ -d "$scratch" ]; do
+    # Read stderr once after a fast exit so a pending retry cannot hide a
+    # banner that arrived between polls.
+    running=1
+    kill -0 "$child" 2> /dev/null || running=0
     # Read before the banner check, so lines that came with sign-in are copied.
     signed_in=0
     [ -e "$scratch/connected" ] && signed_in=1
     if [ "$seen" = 0 ] && [ -s "$scratch/err" ] && LC_ALL=C grep -qF "$text" "$scratch/err"; then
         seen=1
         if [ "$mode" = list ]; then
+            [ "$running" = 1 ] || exit 0
             : > "$scratch/check"
             kill -TERM "$child" 2> /dev/null
             exit 0
+        fi
+        if [ -z "$deadline" ]; then
+            wait_limit=${YEN_SSH_CHECK_WAIT:-1800}
+            deadline=$((SECONDS + 10#$wait_limit))
+            echo "$deadline" > "$scratch/check-deadline"
         fi
     fi
     [ "$seen" = 1 ] && copy_new_lines
     # After sign-in no banner can come: an attach's watcher has nothing left
     # to do, so it ends here instead of polling for the life of the session.
     [ "$mode" = attach ] && [ "$signed_in" = 1 ] && exit 0
+    [ "$running" = 1 ] || exit 0
+    if [ -n "$deadline" ] && [ "$SECONDS" -ge "$deadline" ] && [ ! -e "$scratch/connected" ]; then
+        : > "$scratch/check"
+        kill -TERM "$child" 2> /dev/null
+        exit 0
+    fi
     if [ "$mode" = attach ] && [ "$marked" = 1 ]; then
         ticks=$((ticks + 1))
         if [ "$ticks" -ge 50 ]; then

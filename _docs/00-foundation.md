@@ -26,12 +26,27 @@ Dates are the evidence in this doc; the owner docs carry none.
 - 2026-11-23: the operator retires JP the Cat and MovingPaper, whose repositories are deleted, and approves four JP the Cat features for the token menu: per-folder counts in the panel and the tab sidebar, plan limit alerts with JP's meow as a built-in alert sound, `yen usage`, Grok turns counted while they run, and an hour-by-weekday chart.
 - 2026-11-22: the operator approves two animated effects for the window border, Spark and Aura, and a homepage preview of them, because a focused-split outline is a visual cue few terminals offer.
 
+## Remote session validation
+
+- Two Macs on a LAN exercised listing, typing, resize, disconnects and reattaching to a pane after the peer app quit.
+  Exit codes 10 through 14 and 16 ran on the LAN.
+  Changed host keys (15) ran on private loopback SSH.
+- Over a tailnet, both Hosts surfaces opened a session on the peer.
+  The same session survived a link drop and a Tailscale outage, and its Reconnecting indicator cleared on reattach.
+  Discovery and listing also worked by IP with MagicDNS off, and through the open-source daemon beside a stopped Tailscale app.
+- With Tailscale SSH on the peer, its in-band status distinguished missing YEN, an older installation and a missing session.
+  A due check produced exit 17, the Hosts approval row and the approval link in the pane.
+  A pane advanced when the check cleared immediately.
+  A pane waiting for a person dropped at the OpenSSH keepalive limit before the retry fix.
+- Real OpenSSH on loopback exercised held sign-in and recovery after a dropped authenticated link.
+  The remaining two-Mac cases are in [the backlog](todos.md).
+
 ## Decisions
 
 - **Maintenance mode.** YEN gets vendor updates, dependency updates, desktop releases, and fixes for bugs, crashes, security issues and broken builds.
   New features, redesigns, refactors, performance work, and growth or SEO work wait for an explicit operator request, because a solo project cannot compete with a funded team on the same engine (Timeline, 2026-11-16).
   `AGENTS.md` → Maintenance Mode carries the rule; `_docs/todos.md` holds only work inside it.
-- **Approved feature work.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); the plan lives in `_docs/todos.md`.
+- **Approved feature work.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); [Architecture](01-architecture.md#persistent-sessions) describes the session lifecycle and remote transport.
   The local token menu with its folders, limit alerts, `yen usage` and analytics, the experimental desktop wallpaper and the window border effects (Spark and Aura) also have explicit operator approval (Timeline, 2026-11-23).
 - **Tokens, not dollars.** JP the Cat priced every model from a curated table it re-audited before each release and refreshed from a remote feed; the token menu keeps no price table and makes no network request, so it shows tokens and the providers' own plan percentages only.
 - **zmx is the session backend.** zmx (MIT, Zig 0.17, built on libghostty-vt) owns each pane's PTY in its own process group, so a pane survives the app quitting and replays its screen and scrollback on reattach.

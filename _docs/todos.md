@@ -18,11 +18,25 @@
 ---
 ## ACTIVE
 
-YEN is in maintenance mode (`_docs/00-foundation.md` → Decisions).
-This list holds only bug fixes and security work; new features, redesigns, refactors, performance work and growth work stay out of scope unless the operator asks.
-Vendor updates and desktop releases run through `/update-yen` and need no entry here.
+Maintenance scope and approved exceptions are in [AGENTS.md](../AGENTS.md#maintenance-mode).
+Routine releases and vendor updates run through `/update-yen`.
 
-No open items.
+### Verify remote sessions on two Macs
+
+Use a build containing the pending-check fixes on the attaching Mac and a disposable session on the peer.
+
+- [ ] Under a due Tailscale SSH check, leave the pane waiting for at least one minute before approving.
+  Confirm the link appears once, the same pane attaches, and a later link drop returns to the same running session.
+  On a separate due check, deny approval and confirm the attach stops with exit 17.
+- [ ] Through the peer's Tailscale SSH server, induce a partial listing in a disposable fixture.
+  Confirm the valid rows remain visible and the listing reports an error.
+- [ ] Drop the connection to a disposable session, end that session locally on the peer, and reconnect through Tailscale SSH.
+  Keep the link down through the 30-second retry interval and check the tab's reconnecting indicator.
+  Confirm the pane explains that the session ended and waits for Return once the link returns.
+- [ ] Use a temporary known-hosts file with a mismatched key for the test peer.
+  Confirm listing exits 15 and Hosts reports the change without modifying the user's trust settings.
+
+Record the observed outcomes in the commit that closes each item.
 
 ---
 ## WATCH

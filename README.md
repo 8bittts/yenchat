@@ -21,7 +21,9 @@ A build finishes, a dev server keeps its port, and an SSH connection stays up wh
 There is nothing to set up: no tmux config, no session names, no extra commands.
 It is on by default.
 Settings > General shows how many sessions are running and stops them all with one button, and `yen sessions` lists, attaches and ends them from any shell.
-Closing a pane still ends what runs in it.
+Closing a local pane ends its session.
+You can also attach from another Mac over SSH on your tailnet.
+Closing that remote pane detaches and leaves the shell running on its original Mac. [Remote sessions guide](https://yen.chat/#remote-sessions)
 
 ### Speech-to-text in any app
 

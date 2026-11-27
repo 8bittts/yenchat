@@ -1,6 +1,6 @@
 # YEN Documentation Map
 
-Open-source (MIT) macOS terminal, in maintenance mode ([00-foundation.md](00-foundation.md) → Decisions), built on a vendored Ghostty mirror with YEN overlays, a native browser, a file browser, on-device dictation, and the public website at `yen.chat` with its manual at [yen.chat/docs](https://yen.chat/#guide).
+Open-source (MIT) macOS terminal, in maintenance mode ([00-foundation.md](00-foundation.md) → Decisions), built on a vendored Ghostty mirror with YEN overlays, a native browser, a file browser, on-device dictation, and the public website at `yen.chat` with its [public manual](https://yen.chat/#guide).
 Agent routing lives in `AGENTS.md`; this index follows the fleet documentation standard that `/docs` audits against.
 
 ## Owner docs
@@ -8,13 +8,13 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 | Doc                          | Owns                                                                                                                    |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `00-foundation.md`           | History, decisions, and the index of design assets                                                                      |
-| `01-architecture.md`         | Component boundaries, cross-component contracts, native interaction and input patterns                                  |
+| `01-architecture.md`         | Component boundaries, persistent sessions, remote attach, and native input                                  |
 | `02-design-system.md`        | Themes and the generated catalog, the public web design system, Phosphor typography                                     |
 | `04-security.md`             | Upstream overlap, fail-closed vendor gate contracts, the bundled binary inventory, the remote attach threat model        |
 | `05-infrastructure.md`       | Desktop toolchain, build guardrails, signing, DMG, release hosting, Sparkle, versioning, web release practice, media retention, environment variables |
 | `07-email.md`                | The support mailbox and mail authentication                                                                             |
 | `08-growth.md`               | Measurement limits, public discovery                                                                          |
-| `09-quality.md`              | Gates, the native test suite, web quality baselines, the dictation live manual matrix                                   |
+| `09-quality.md`              | Gates, the native test suite, remote session checks, web quality baselines, and the dictation manual matrix                                   |
 | `10-gtm.md`                  | Public accuracy and legal copy, blog.yen.chat and its release notes, content voice                                      |
 | `11-speech-to-text.md`       | Dictation                                                                                                               |
 | `12-commands.md`             | `yen` CLI, shell integration, shortcuts, palette actions, automation, `yen ide` contract                                |

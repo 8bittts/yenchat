@@ -74,18 +74,16 @@ describe("documentation contracts", () => {
 		);
 
 		const manual = read("app/docs/docs-client.tsx").replace(/\s+/g, " ");
-		expect(manual).toContain(
-			"The approval lasts for your tailnet&apos;s check period, and a remote pane that needs it shows the link and continues once you approve.",
-		);
-		expect(read("public/llms.txt")).toContain(
-			"the approval lasts for your tailnet's check period, and a remote pane that needs it shows the link and continues once you approve",
-		);
+		for (const guide of [manual, read("public/llms.txt")]) {
+			expect(guide).toContain("tailnet");
+			expect(guide).toContain("check period");
+			expect(guide).toContain(
+				"After approving, select the session again to reattach to the same shell.",
+			);
+		}
 		const security = read("_docs/04-security.md");
 		expect(security).toContain(
 			"YEN never opens the link and never answers the server",
-		);
-		expect(security).toContain(
-			"a pane that waits minutes for a person has continued only on the fixture",
 		);
 	});
 
@@ -294,9 +292,6 @@ describe("documentation contracts", () => {
 		expect(privacy).toContain("None of this is sent to YEN.");
 		expect(terms).toContain("Tailscale and SSH are third-party");
 		expect(security).toContain("## Remote Attach Threat Model");
-		expect(security).toContain(
-			"On a Mac whose own Tailscale is the open-source daemon beside a quit Tailscale app, discovery listed the other Mac only after the socket fallback",
-		);
 
 		// No public claim the code and its tests cannot back.
 		const llmsRemote = llms

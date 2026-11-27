@@ -28,7 +28,7 @@ Run as `yen <command>`; in YEN shells the app commands (`browse`, `btop`, ...) a
 | `ide` | IDE helper suite; see `yen ide` below | Yes |
 | `agents` | Agent adapter board: `claude` and `codex` profiles with probes, sessions, `timeline`, `note`, `export` evidence bundles, `templates` | Yes |
 | `pane` | `cwd <directory>`, `cwd --hook`, `cwd --clear`, `--dry-run`: report an agent's working directory for the pane (`_docs/13-desktop-features.md` → Agent worktrees) | Yes |
-| `usage` | Today's agent tokens per tool, current plan limits and top folders from the token menu's report; `--json` prints the report and `--here` the current folder's tokens. Needs Show Token Usage (`_docs/13-desktop-features.md` → Optional menu and desktop features) | No |
+| `usage` | Today's agent tokens per tool, current plan limits and top folders from the token menu's report; `--json` prints the report and `--here` the current folder's tokens. Needs Show Token Usage (`_docs/13-desktop-features.md` → Optional menu and desktop features) | Yes |
 | `sessions` | List persistent pane sessions and report a backend listing error alongside any available results; listing, `attach <id>` and `kill <id>` use the zmx build that created the session. `list --porcelain` prints the versioned machine format, and `list --host <host>` and `attach --host <host> <id>` reach another Mac over ssh with distinct exit codes (`_docs/01-architecture.md` → Persistent sessions, Remote attach) | Yes |
 | `browse` (`files`, `fm`) | File browser without cd-on-quit; works without shell integration | Yes |
 | `y` | File browser with cd-on-quit; only in YEN-launched shells | Yes |
@@ -201,7 +201,7 @@ They probe read-only over `ssh` plus remote `python3`, report `executionLocation
 3. Copy the new `suggest_command()` list into the `cli-builtins:` line of `scripts/lib/privileged-action-surface-baseline.txt`; `03-verify-components.sh` fails the release on drift, and `bun test` does not check it.
 4. Add a palette descriptor in `TerminalCommandPaletteCatalog.swift` with an SF Symbol, shortcut symbols and search tags; appearance features get quick actions.
 5. Add the row here with Public set to No.
-6. To publish, add it to `CommandsSection` in `app/docs/docs-client.tsx` and to `public/llms.txt`, then set Public to Yes.
+6. To publish, add it to the relevant guide in `app/docs/docs-client.tsx` and to `public/llms.txt`, then set Public to Yes.
 
 [CRITICAL] A binary that is not registered in the CLI is invisible: `yen help` is how users find commands.
 Helpers that are not user-facing, such as `zmx`, need only the inventory and gate entries in `_docs/04-security.md`.

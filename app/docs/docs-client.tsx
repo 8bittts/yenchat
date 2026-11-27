@@ -1101,10 +1101,11 @@ function PersistentSessionsSection() {
 				and run it once. If Tailscale asks you to approve a sign-in, select{" "}
 				<strong>Approve &lt;Mac&gt; in Tailscale</strong> to type{" "}
 				<code className="inline-code-brand">ssh &lt;Mac&gt;</code>, run it, and
-				open the link it shows. The approval lasts for your tailnet&apos;s check
-				period, and a remote pane that needs it shows the link and continues
-				once you approve. If the other Mac&apos;s host key changes, YEN stops
-				connecting to it until you fix{" "}
+				open the link it shows. An attach pane also shows the approval link. The
+				approval lasts for your tailnet&apos;s check period. In YEN 1.293, a
+				pane can close while waiting for approval. After approving, select the
+				session again to reattach to the same shell. If the other Mac&apos;s
+				host key changes, YEN stops connecting to it until you fix{" "}
 				<code className="inline-code-brand">~/.ssh/known_hosts</code>.
 			</p>
 			<p className="text-body">

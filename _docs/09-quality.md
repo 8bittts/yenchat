@@ -127,8 +127,12 @@ It needs no Tailscale, no `sudo` and no change to `~/.ssh` or the system sshd.
 - `35-remote-attach-probe.py` attaches in a pty, then cuts the link twice: it kills the sshd connection child, and it stops the grandchild that carries the traffic so only the 30-second keepalive notices. Each pass requires the ticks the session prints to keep counting after the reattach.
 - The script kills only the sshd it started and the session it created, and removes its directory on exit.
 
-The script is not a gate: it proves the transport against real OpenSSH on this macOS, not on a tailnet.
-Against a real second Mac, stage `Contents/Resources/bin/yen`, `bin/zmx`, `lib` and `commands` from this checkout in a folder there and point `YEN_REMOTE_APP` at it, because that Mac's installed YEN may predate remote sessions; without the variable the listing must answer exit 13.
+The script exercises real OpenSSH and zmx on one Mac.
+The CLI approval tests in `tests/184-cli-sessions-tailscale-check.test.ts` cover delayed approval, denial, deadline expiry and another check after a dropped link.
+The native fast lane covers discovery, Hosts, pane restoration and session state.
+[Foundation](00-foundation.md#remote-session-validation) records what ran on two Macs.
+Against a real second Mac, stage `Contents/Resources/bin/yen`, `bin/zmx`, `lib` and `commands` from this checkout in a folder there and point `YEN_REMOTE_APP` at it, to exercise that checkout independently of the installed release.
+For the exit 13 check, select a peer CLI that predates remote listing; a current install should list its sessions.
 Start the session with that bundle's `zmx run <UUID> -d <command>`, which types the command into a session shell, and give the attaching pty a window size, because a pty with no size wraps the replayed screen.
 
 ## Web Quality Baselines

@@ -38,7 +38,8 @@ The site has no database and Vercel functions run in `pdx1`.
 `apply-overlays.sh` brands upstream text, copies overlays, and applies fail-closed patches; the result survives every vendor bump.
 `build-release.sh` assembles `ghostty/zig-out/YEN.app` and bundles the CLI, helpers and vendored binaries.
 
-**Persistent sessions.**
+### Persistent sessions
+
 A persistent pane runs inside the bundled zmx (`Contents/Resources/bin/zmx`, vendored by `scripts/48-vendor-zmx.sh`), so its shell keeps running when the app quits, crashes or updates.
 Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSessions`. It is on by default only in the release app (`com.yenchat.yen`), so the Debug build, its test host and the verify copy never start sessions in the user's state directory unless the preference is set.
 - The app only marks a pane. `PersistentSessions.prepare` sets `YEN_PERSISTENT_SESSION=<pane UUID>`, `ZMX_DIR=~/.local/state/yen/zmx` and `ZMX_DIR_MODE=0700`, and always overwrites or removes an inherited marker, because a split or tab inherits its parent's environment.
@@ -66,7 +67,8 @@ Settings > General > Keep Sessions Running stores `com.yenchat.yen.persistentSes
   A session that another copy started, such as a local build or a verification copy sharing the socket directory, opens no window; `yen sessions` lists it and the sweep below ends it.
 - `PersistentSessionReaper` ends orphans: UUID-named sessions with no client that no terminal window holds. It runs only in an app whose preference is on, so a Debug build or test host sharing the socket directory never ends the release app's sessions. It sweeps 30 seconds after launch and every 10 minutes, and ends an orphan only after watching it orphaned for 24 hours without a gap: a sweep more than three intervals after the last one restarts observation, because a session detached while YEN was quit was never watched.
 
-**Remote attach.**
+### Remote attach
+
 Another Mac's sessions are reached over plain `ssh` to its tailnet name, with YEN installed on both ends; YEN embeds no Tailscale, runs no relay, and sends nothing to YEN.
 The transport lives only in the CLI (`yen-cli/lib/sessions-remote.sh`); the app runs its bundled CLI and maps the exit code.
 - `yen sessions list --host <target>` and `yen sessions attach --host <target> <id>` run `/usr/bin/ssh [options] -- <target> <command>`, where the command is fixed text: `exec /bin/sh -c '<snippet>' yen-remote <words>`. The snippet runs the first executable `Contents/Resources/bin/yen` under `/Applications/YEN.app` or `$HOME/Applications/YEN.app` with `sessions <words>`, and reports 127 when there is none, because a non-interactive login has no `yen` on `PATH`. Only `/bin/sh` parses the snippet, so the login shell runs one `exec` with a single-quoted argument; `tests/172-cli-sessions-remote.test.ts` runs it under zsh, bash and sh.
@@ -102,11 +104,17 @@ Without a version 1 header, the peer is too old (13) when it exited 2 (a YEN wit
 | 17 | Tailscale SSH on the peer asks for a `check` approval in a browser, or the approval was denied or not given in time | `.tailscaleCheckNeeded` |
 
 `ssh` exits 255 for every failure of its own, so the CLI classifies its stderr: `REMOTE HOST IDENTIFICATION HAS CHANGED` is 15, `Host key verification failed` is 11, the Tailscale check banner is 17, `Permission denied`, `Too many authentication failures` or `No more authentication methods` is 16, and anything else is 10. ssh checks the host key before it signs in, so a password-only peer with an unknown key reports 11 first and 16 once the key is trusted (measured against a loopback sshd with `PubkeyAuthentication no`). Remote sessions need sign-in to work without a password prompt, with an SSH key; a listing runs with `BatchMode=yes` and never prompts.
-A Tailscale SSH `check` rule whose approval is due holds sign-in for up to 30 minutes and sends the control server's text as an SSH auth banner, which ssh prints on stderr: `# Tailscale SSH requires an additional check.` and `# To authenticate, visit: <link>`; on a real tailnet a later connection from the same Mac got the same link while the first check was still pending (`ssh/tailssh/tailssh.go` `clientAuth`, the `HoldAndDelegate` case, and `fetchSSHAction` with `delegateFetchTimeout`, Tailscale 1.104.7). Approval lets sign-in go on; a denial, or no approval in 30 minutes, fails it, and ssh exits 255.
-  While ssh runs, `lib/sessions-remote-watch.sh` reads its stderr file every 0.2 seconds for the banner's first line. For a listing it ends ssh and the CLI exits 17 at once, without the banner, because the link belongs in the user's terminal and a listing cannot be approved; the user approves by running `ssh <target>` once. For an attach it copies the banner, and any later line before sign-in, to the pane while ssh waits, so the user can approve and the attach goes on, and it does not show those lines again when ssh ends. A denied or expired check is 17 for both, never 16, and ends the reconnect loop.
-  OpenSSH gives up on the held sign-in long before the check does: it applies `ServerAliveInterval` × `ServerAliveCountMax` to authentication, so with the options above ssh prints `Connection to <host> port <port> timed out` and exits 255 after 30 seconds (measured with OpenSSH 10.5 against a loopback sshd whose sign-in was held: 30 seconds at 10 × 3, 60 at 20 × 3, and no client limit with keepalives off). An attach therefore treats the banner followed by that timeout, with no denial, as a check still pending (`check_still_pending`): it connects again after one second, with no backoff and no message, into the same pending check, and neither the watcher nor the CLI shows the banner or the timeout line again. It stops at the approval, at a denial, or `YEN_SSH_CHECK_WAIT` seconds (1800, the check's own limit) after the first banner, with 17. Keepalives stay at 10 × 3, so a connection that has signed in still notices a dead link in 30 seconds.
-  The watcher only reads stderr: it never opens the link or answers the server. A user whose ssh config sets `LogLevel` below `INFO` hides the banner from ssh's stderr (Tailscale issue 7589), so the listing then waits for the app's deadline and shows as unreachable.
-  This state is built from Tailscale's source and the fake ssh's `check-hold`, `check-pass`, `check-timeout` and `check-deny` steps (`tests/184-cli-sessions-tailscale-check.test.ts`), and has run on a real tailnet: a listing exited 17, the palette showed `Approve <Mac> in Tailscale`, and an attach pane showed both banner lines and waited. On a real tailnet a waiting pane also ended after about 30 seconds, before anyone approved, which is how the sign-in timeout above was found.
+A Tailscale SSH `check` rule can hold sign-in for up to 30 minutes and sends an approval link in an SSH authentication banner.
+The watcher recognizes the line `# Tailscale SSH requires an additional check.` on ssh's stderr.
+A listing stops with exit 17 and keeps the link private.
+An attach shows the link in the pane so the user can approve in a browser.
+If OpenSSH's keepalive expires while approval is pending, the CLI retries after one second and suppresses the repeated banner for that check.
+The first observed banner starts the shared approval deadline (`YEN_SSH_CHECK_WAIT`, default 1800 seconds).
+Denial or expiry ends the attach with exit 17.
+Successful sign-in clears that deadline and banner state.
+If the authenticated link drops, the pane reconnects and shows the link for any newly required approval.
+A user's ssh setting below `LogLevel INFO` hides the banner, so the app can reach its listing deadline and report the Mac as unreachable.
+
 A peer status of 127 is 12, and a remote attach that exits 1 is 14. The peer's `yen sessions attach` exits 1 for a missing socket, for a damaged install (`zmx is not available`, a missing `common.sh`), and when its zmx client fails (measured: zmx attach exits 1 on a connect error and 0 when the shell exits, whatever the shell's status); the peer's own message shows in the pane first.
 
 Reconnect lives in `attach --host`.
