@@ -228,9 +228,9 @@ describe("third-party notice gates", () => {
 
 			const noFolder = check();
 			expect(noFolder.status).toBe(1);
-			expect(noFolder.lines).toEqual([
-				"license notice not bundled: Contents/Resources/Notices/bat.txt",
+			expect(noFolder.lines.toSorted()).toEqual([
 				`license notice not bundled: Contents/Resources/Notices/${ENGINE_NOTICE}`,
+				"license notice not bundled: Contents/Resources/Notices/bat.txt",
 			]);
 
 			write(join(bundled, "bat.txt"), "MIT License\nbat\n");
