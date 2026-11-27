@@ -199,6 +199,14 @@ describe("yen sessions attach --host: a pending Tailscale SSH check", () => {
 		expect(harness.calls()).toHaveLength(2);
 	});
 
+	test("the wait limit starts at the first banner even when ssh keeps waiting", () => {
+		harness.plan(["0 check-hold30"]);
+		const result = run(attach, 5_000, { YEN_SSH_CHECK_WAIT: "1" });
+		expect(result.status, result.stderr).toBe(CHECK_REQUIRED);
+		expect(result.stderr.split(link)).toHaveLength(2);
+		expect(settled(sshPid(1), result.tmp)).toBe(true);
+	});
+
 	test("a check still pending past the wait limit ends the attach with 17", () => {
 		harness.plan(Array(8).fill("1 check-timeout1"));
 		const result = run(attach, 15_000, { YEN_SSH_CHECK_WAIT: "2" });
