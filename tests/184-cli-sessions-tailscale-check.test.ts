@@ -161,6 +161,15 @@ describe("yen sessions attach --host: a pending Tailscale SSH check", () => {
 		expect(harness.calls()).toHaveLength(2);
 	});
 
+	test("after approving and losing the link, the pane reconnects and shows a newly due check", () => {
+		harness.plan(["1 check-drop1", "1 check-pass1"]);
+		const result = run(attach);
+		expect(result.status, result.stderr).toBe(0);
+		expect(harness.calls()).toHaveLength(2);
+		expect(result.stderr).toContain("lost the connection to mini");
+		expect(result.stderr.split(link)).toHaveLength(3);
+	});
+
 	// OpenSSH gives up on a held sign-in after ServerAliveInterval x
 	// ServerAliveCountMax, 30 seconds with YEN's options, long before the
 	// check's 30 minutes. The pane must keep waiting for the approval.

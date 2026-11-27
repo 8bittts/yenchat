@@ -69,6 +69,12 @@ if [[ "$status" == check* ]]; then
             /bin/sleep "${status#check-pass}"
             status=0
             ;;
+        check-drop*)
+            # Approval lets this connection sign in before the link drops.
+            /bin/sleep "${status#check-drop}"
+            status=255
+            message="Connection to mini closed."
+            ;;
         check-timeout*)
             /bin/sleep "${status#check-timeout}"
             echo "Connection to mini port 22 timed out" >&2
