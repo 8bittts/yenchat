@@ -222,10 +222,6 @@ struct WallpaperPersistenceStore {
             }
 
             let key = currentKey(for: parsed)
-            if !key.isAllDesktops {
-                persisted.state.knownSpaces[key.displayID, default: []].insert(key.spaceID)
-            }
-
             if let spaceIndex = parsed.spaceIndex, !key.isAllDesktops {
                 persisted.state.spacePositions[key] = spaceIndex
             }

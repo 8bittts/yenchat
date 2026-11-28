@@ -34,11 +34,7 @@ struct WallpaperDisplayReplugTests {
     private func shown(on displayID: CGDirectDisplayID, by manager: WallpaperManager) -> (panels: Int, file: String?) {
         let frame = NSScreen.screens.first { $0.displayID == displayID }?.frame
         let panels = NSApp.windows.filter { $0 is WallpaperPanel && $0.isVisible && $0.frame == frame }.count
-        let input = manager.controlsInput()
-        let file = input.mode == .allDesktops
-            ? input.sharedFileName
-            : input.displays.first { $0.id == displayID }?.spaces.first(where: \.isCurrent)?.fileName
-        return (panels, file)
+        return (panels, manager.controlsState.fileName)
     }
 
     /// The managed-spaces snapshot macOS would report: the display's Spaces in

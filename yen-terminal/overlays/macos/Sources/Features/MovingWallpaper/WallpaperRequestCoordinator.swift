@@ -25,7 +25,7 @@ final class WallpaperRequestCoordinator {
         let token = UUID()
         activeTokens[target] = token
         let task = Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self, isCurrent(token, for: target) else { return }
             defer { finish(target, token: token) }
             await operation(token)
         }

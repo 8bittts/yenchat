@@ -9,15 +9,10 @@ struct WallpaperEntry: Equatable {
     var youtubeOrigin: String?
 }
 
-/// All in-memory wallpaper state. Replaces the previous parallel dictionaries
-/// (`desktopFiles`, `youtubeURLs`, `playbackPositions`, `knownSpaces`) so that
-/// every mutation touches one canonical store.
+/// In-memory assignments and their playback and Space positions.
 struct WallpaperState: Equatable {
     var entries: [DesktopKey: WallpaperEntry] = [:]
     var playbackPositions: [DesktopKey: CMTime] = [:]
-    /// Every Space we've ever observed on each display. macOS exposes no API to
-    /// enumerate Spaces, so we accumulate them as the user visits.
-    var knownSpaces: [CGDirectDisplayID: Set<UInt64>] = [:]
     /// Each Per Desktop assignment's position among its display's Spaces, in
     /// the system's order, the last time that display listed the Space. Saved,
     /// because it is what finds the desktop again once the ids change.
@@ -26,6 +21,11 @@ struct WallpaperState: Equatable {
     var isEmpty: Bool { entries.isEmpty }
 
     func localURL(for key: DesktopKey) -> URL? { entries[key]?.localURL }
+
+    /// The first assigned file among the desktops currently on screen.
+    func firstAssignedFile(on desktops: [DesktopKey]) -> URL? {
+        desktops.lazy.compactMap(localURL(for:)).first
+    }
 
     /// The entry with the smallest `DesktopKey`, chosen deterministically so that
     /// collapsing differing per-desktop assignments to one shared wallpaper always
@@ -43,20 +43,11 @@ struct WallpaperState: Equatable {
     /// Write one assignment. A saved playback position belongs to the file that
     /// was playing, so it is dropped when the key gets a different file;
     /// otherwise a new video would start at the old one's offset.
-    private mutating func store(_ entry: WallpaperEntry, at key: DesktopKey) {
+    mutating func setEntry(_ entry: WallpaperEntry, for key: DesktopKey) {
         if entries[key]?.localURL != entry.localURL {
             playbackPositions.removeValue(forKey: key)
         }
         entries[key] = entry
-    }
-
-    mutating func setEntry(_ entry: WallpaperEntry, for key: DesktopKey) {
-        store(entry, at: key)
-        // Recording the all-desktops sentinel would surface a phantom "Desktop 1"
-        // row in the Per Desktop menu after an all-desktops restore-redownload.
-        if !key.isAllDesktops {
-            knownSpaces[key.displayID, default: []].insert(key.spaceID)
-        }
     }
 
     mutating func clearEntry(for key: DesktopKey) {
@@ -68,13 +59,14 @@ struct WallpaperState: Equatable {
     /// Replace all assignments with a single shared entry across the given displays.
     /// Used when switching to `.allDesktops` mode or when the wallpaper changes globally.
     mutating func applyShared(entry: WallpaperEntry, across displayIDs: [CGDirectDisplayID]) {
+        spacePositions.removeAll()
         let keys = Set(displayIDs.map(DesktopKey.init(displayID:)))
         for key in Array(entries.keys) where !keys.contains(key) {
             entries.removeValue(forKey: key)
         }
         playbackPositions = playbackPositions.filter { keys.contains($0.key) }
         for key in keys {
-            store(entry, at: key)
+            setEntry(entry, for: key)
         }
     }
 
@@ -111,19 +103,6 @@ struct WallpaperState: Equatable {
         }
     }
 
-    /// Replace this state's entries and playback positions with `persisted`'s,
-    /// but keep every Space we already saw from the live system snapshot.
-    /// Used after `refreshManagedDisplaySpaces()` so loading persistence does
-    /// not erase Spaces the user can currently switch to — those would never
-    /// appear in the Per Desktop menu otherwise.
-    mutating func adopt(persisted: WallpaperState) {
-        let liveKnownSpaces = knownSpaces
-        self = persisted
-        for (displayID, spaces) in liveKnownSpaces {
-            knownSpaces[displayID, default: []].formUnion(spaces)
-        }
-    }
-
     /// Drop assignments for displays not in `connectedDisplayIDs` and pin the
     /// shared value (if any) to every connected display. With no display
     /// connected the state is left alone, so the wallpaper is still there for
@@ -143,7 +122,7 @@ struct WallpaperState: Equatable {
         for id in connectedDisplayIDs {
             let key = DesktopKey(displayID: id)
             if entries[key] != shared {
-                store(shared, at: key)
+                setEntry(shared, for: key)
                 changed = true
             }
         }
@@ -163,7 +142,6 @@ struct WallpaperState: Equatable {
             let newKey = DesktopKey(displayID: oldKey.displayID, spaceID: space)
             entries[newKey] = entry
             playbackPositions[newKey] = positions[oldKey]
-            knownSpaces[oldKey.displayID, default: []].insert(space)
         }
     }
     /// Keep Per Desktop assignments on their desktops when macOS renumbers a
@@ -223,7 +201,6 @@ struct WallpaperState: Equatable {
         entries[target] = entry
         playbackPositions[target] = playbackPositions.removeValue(forKey: key)
         spacePositions.removeValue(forKey: key)
-        knownSpaces[key.displayID, default: []].insert(spaceID)
         return true
     }
 }

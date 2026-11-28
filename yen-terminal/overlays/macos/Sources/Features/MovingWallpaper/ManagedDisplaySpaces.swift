@@ -6,10 +6,9 @@ private func CGSMainConnectionID() -> CGSConnectionID
 @_silgen_name("CGSCopyManagedDisplaySpaces")
 private func CGSCopyManagedDisplaySpaces(_: CGSConnectionID) -> Unmanaged<CFArray>?
 
-/// Snapshot of the current active and known Spaces for each connected display.
+/// Snapshot of the active and ordered Spaces for each connected display.
 struct ManagedDisplaySpacesSnapshot: Equatable {
     let activeSpaceByDisplayID: [CGDirectDisplayID: UInt64]
-    let knownSpacesByDisplayID: [CGDirectDisplayID: Set<UInt64>]
     /// Each display's Spaces in the order the system lists them (Mission
     /// Control order), for the displays the system actually listed. A display
     /// that fell back to the global Space has no entry here.
@@ -40,10 +39,6 @@ struct ManagedDisplaySpacesSnapshot: Equatable {
             screensByDisplayIdentifier.values.map { ($0, fallbackGlobalSpaceID) },
             uniquingKeysWith: { first, _ in first }
         )
-        var knownSpacesByDisplayID = Dictionary(
-            screensByDisplayIdentifier.values.map { ($0, Set<UInt64>()) },
-            uniquingKeysWith: { first, _ in first }
-        )
         var orderedSpacesByDisplayID: [CGDirectDisplayID: [UInt64]] = [:]
 
         for entry in rawEntries {
@@ -57,27 +52,16 @@ struct ManagedDisplaySpacesSnapshot: Equatable {
 
             activeSpaceByDisplayID[displayID] = currentSpace
 
-            var knownSpaces = knownSpacesByDisplayID[displayID] ?? []
-            knownSpaces.insert(currentSpace)
-
             if let spaces = entry["Spaces"] as? [Any] {
                 let ordered = spaces.compactMap(spaceID(from:))
-                knownSpaces.formUnion(ordered)
                 if !ordered.isEmpty {
                     orderedSpacesByDisplayID[displayID] = ordered
                 }
             }
-
-            knownSpacesByDisplayID[displayID] = knownSpaces
-        }
-
-        for displayID in screensByDisplayIdentifier.values where knownSpacesByDisplayID[displayID]?.isEmpty != false {
-            knownSpacesByDisplayID[displayID] = [fallbackGlobalSpaceID]
         }
 
         return ManagedDisplaySpacesSnapshot(
             activeSpaceByDisplayID: activeSpaceByDisplayID,
-            knownSpacesByDisplayID: knownSpacesByDisplayID,
             orderedSpacesByDisplayID: orderedSpacesByDisplayID
         )
     }

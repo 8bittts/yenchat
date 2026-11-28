@@ -113,7 +113,7 @@ struct WallpaperControlsTests {
         let manager = WallpaperManager(persistenceStore: store, spacesSnapshot: { live })
         defer { manager.tearDown() }
 
-        let before = manager.controlsInput().state
+        let before = manager.controlsState
         #expect(before.perDesktop)
         #expect(before.fileName == "other.gif")
 
@@ -121,7 +121,7 @@ struct WallpaperControlsTests {
 
         #expect(store.load().state.entries.mapValues(\.localURL.lastPathComponent)
             == [DesktopKey(displayID: displayID, spaceID: 1501): "loop.gif"])
-        let after = manager.controlsInput().state
+        let after = manager.controlsState
         #expect(after.fileName == nil)
         #expect(after.hasAnyWallpaper)
     }
@@ -132,13 +132,13 @@ struct WallpaperControlsTests {
         let manager = WallpaperManager(persistenceStore: store)
         defer { manager.tearDown() }
         manager.setWallpaper(url: wallpaper)
-        #expect(manager.controlsInput().state.fileName == "loop.gif")
+        #expect(manager.controlsState.fileName == "loop.gif")
 
         var changes = 0
         manager.onChange = { changes += 1 }
         manager.clearCurrentWallpaper()
 
-        let state = manager.controlsInput().state
+        let state = manager.controlsState
         #expect(state.fileName == nil)
         #expect(!state.hasAnyWallpaper)
         #expect(changes > 0, "the Settings row must hear about the removal")
@@ -154,11 +154,11 @@ struct WallpaperControlsTests {
         manager.onChange = { changes += 1 }
 
         manager.togglePause()
-        #expect(manager.controlsInput().state.isPaused)
+        #expect(manager.controlsState.isPaused)
         manager.toggleMute()
-        #expect(!manager.controlsInput().state.isMuted)
+        #expect(!manager.controlsState.isMuted)
         manager.togglePerDesktop()
-        #expect(manager.controlsInput().state.perDesktop)
+        #expect(manager.controlsState.perDesktop)
         #expect(changes >= 3)
     }
 }

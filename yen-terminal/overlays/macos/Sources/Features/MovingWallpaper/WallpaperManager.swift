@@ -7,7 +7,7 @@ final class WallpaperManager {
 
     // MARK: - State
 
-    /// All per-desktop wallpaper assignments, playback positions, and observed Spaces.
+    /// Wallpaper assignments, playback positions, and saved Space positions.
     private var state = WallpaperState()
     /// Whether all desktops share one wallpaper or each gets its own.
     private var mode = WallpaperMode.allDesktops
@@ -98,10 +98,6 @@ final class WallpaperManager {
         let snapshot = spacesSnapshot()
         activeSpaceIDs = snapshot.activeSpaceByDisplayID
         orderedSpaceIDs = snapshot.orderedSpacesByDisplayID
-
-        for (displayID, spaces) in snapshot.knownSpacesByDisplayID {
-            state.knownSpaces[displayID, default: []].formUnion(spaces)
-        }
     }
 
     /// Move Per Desktop assignments onto a display's new Space ids
@@ -126,38 +122,15 @@ final class WallpaperManager {
 
     // MARK: - Controls
 
-    /// Snapshot the Settings controls need without exposing the downloader.
-    func controlsInput() -> WallpaperControlsInput {
-        WallpaperControlsInput(
-            downloadProgress: youtubeDownloader.progress,
-            mode: mode,
+    var controlsState: WallpaperControlsState {
+        WallpaperControlsState(
+            isDownloading: youtubeDownloader.progress != nil,
+            perDesktop: mode == .perDesktop,
             isMuted: isMuted,
             isPaused: isPaused,
             hasAnyWallpaper: !state.isEmpty,
-            sharedFileName: mode == .allDesktops ? state.sharedLocalURL?.lastPathComponent : nil,
-            displays: NSScreen.screens.compactMap { screen in
-                screen.displayID.map { displayID in
-                    DisplayControlsInput(
-                        id: displayID,
-                        name: screen.localizedName,
-                        spaces: spaceControlsInputs(for: displayID)
-                    )
-                }
-            }
+            fileName: currentFileName
         )
-    }
-
-    /// Every known Space of a display, sorted by space ID, with and without
-    /// wallpapers — we track every Space the user visits.
-    private func spaceControlsInputs(for displayID: CGDirectDisplayID) -> [SpaceControlsInput] {
-        let currentSpace = currentSpaceID(for: displayID)
-        return (state.knownSpaces[displayID] ?? []).sorted().map { spaceID in
-            let key = DesktopKey(displayID: displayID, spaceID: spaceID)
-            return SpaceControlsInput(
-                fileName: state.localURL(for: key)?.lastPathComponent,
-                isCurrent: spaceID == currentSpace
-            )
-        }
     }
 
     /// Local file paths currently referenced by live wallpaper assignments.
@@ -197,10 +170,11 @@ final class WallpaperManager {
         youtubeDownloader.cancel()
     }
 
-    /// The file each control acts on: the shared wallpaper, or in Per Desktop
-    /// mode the current desktop's wallpaper on the first display.
+    /// A file that Remove would clear. A secondary display can have the only
+    /// wallpaper on its current desktop.
     private var currentFileName: String? {
-        connectedDisplayIDs.first.flatMap { state.localURL(for: desktopKey(for: $0))?.lastPathComponent }
+        if mode == .allDesktops { return state.sharedLocalURL?.lastPathComponent }
+        return state.firstAssignedFile(on: connectedDisplayIDs.map(desktopKey(for:)))?.lastPathComponent
     }
 
     // MARK: - Sources
@@ -374,16 +348,6 @@ final class WallpaperManager {
 
     // MARK: - Removal, Mode, Playback
 
-    /// Remove wallpaper from a specific display (current space in perDesktop mode).
-    func clearWallpaper(for displayID: CGDirectDisplayID) {
-        cancelAssignment(for: assignmentTarget(for: displayID))
-        let key = desktopKey(for: displayID)
-        pendingRedownloads[key] = nil
-        state.clearEntry(for: key)
-        router.closeController(for: displayID)
-        saveState()
-    }
-
     /// Remove what the controls show: every wallpaper in All Desktops mode, or
     /// the current desktop's wallpaper on each display in Per Desktop mode.
     func clearCurrentWallpaper() {
@@ -391,9 +355,17 @@ final class WallpaperManager {
             clearAllWallpapers()
             return
         }
+        // Settings starts one request for every display together. Cancel it
+        // before clearing individual desktops so a late result stays discarded.
+        cancelAssignment(for: .allDesktops)
         for displayID in connectedDisplayIDs {
-            clearWallpaper(for: displayID)
+            let key = desktopKey(for: displayID)
+            requestCoordinator.cancel(.desktop(key))
+            pendingRedownloads[key] = nil
+            state.clearEntry(for: key)
+            router.closeController(for: displayID)
         }
+        saveState()
     }
 
     /// Remove all wallpapers.
@@ -403,8 +375,7 @@ final class WallpaperManager {
         // Close the windows first: closing saves their playback positions,
         // which must not outlive the wallpapers they belong to.
         tearDownWindows()
-        state.entries.removeAll()
-        state.playbackPositions.removeAll()
+        state = WallpaperState()
         saveState()
     }
 
@@ -464,7 +435,7 @@ final class WallpaperManager {
         let persisted = persistenceStore.load()
         mode = persisted.mode
         isMuted = persisted.isMuted
-        state.adopt(persisted: persisted.state)
+        state = persisted.state
         // A display's Space ids can change while the app is not running too.
         let followed = followLiveSpaces()
 

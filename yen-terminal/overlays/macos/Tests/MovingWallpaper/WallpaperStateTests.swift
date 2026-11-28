@@ -7,6 +7,16 @@ import Testing
 struct WallpaperStateTests {
     private let entry = WallpaperEntry(localURL: URL(filePath: "/Users/dev/Movies/loop.mp4"))
 
+    @Test func visibleFileIncludesASecondaryDisplayAndSkipsInactiveDesktops() {
+        let main = DesktopKey(displayID: 1, spaceID: 10)
+        let secondary = DesktopKey(displayID: 2, spaceID: 20)
+        var state = WallpaperState()
+        state.setEntry(entry, for: DesktopKey(displayID: 1, spaceID: 11))
+        #expect(state.firstAssignedFile(on: [main, secondary]) == nil)
+        state.setEntry(entry, for: secondary)
+        #expect(state.firstAssignedFile(on: [main, secondary]) == entry.localURL)
+    }
+
     /// A wallpaper saved while only an external display was connected must
     /// appear on the built-in display when that is the one connected now.
     @Test func allDesktopsWallpaperFollowsTheConnectedDisplays() {

@@ -26,7 +26,7 @@ final class WallpaperControls {
     }
 
     /// The state the Settings buttons show. `onChange` reports each change.
-    var state: WallpaperControlsState { wallpaperManager.controlsInput().state }
+    var state: WallpaperControlsState { wallpaperManager.controlsState }
 
     var onChange: (() -> Void)? {
         get { wallpaperManager.onChange }
