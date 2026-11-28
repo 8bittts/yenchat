@@ -7,10 +7,9 @@ tell application "System Events"
     tell target
         if (count windows) is 0 then error "Open a verification terminal first."
         set frontmost to true
-        set initialWindows to count windows
         click (first menu item of menu 1 of menu bar item 2 of menu bar 1 whose name starts with "Check for Updates")
         repeat 120 times
-            if (count windows) > initialWindows or (exists sheet 1 of window 1) then
+            if (name of window 1) is "Software Update" then
                 return "Check for Updates presented a foreground window: " & name of window 1
             end if
             delay 0.1

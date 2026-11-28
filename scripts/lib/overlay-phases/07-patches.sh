@@ -487,6 +487,7 @@ apply_overlay_patch performable-clipboard-shortcut-fixed-shortcut-upgrade
 apply_overlay_patch directional-split-chord-routing
 
 apply_overlay_patch paste-selection-validation-purity
+apply_overlay_patch sparkle-acknowledge-retry
 
 
 # ============================================================================

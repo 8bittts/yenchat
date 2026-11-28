@@ -22,3 +22,4 @@ ghostty/macos/Sources/Features/Terminal/Window Styles/TitlebarTabsVenturaTermina
 ghostty/macos/Sources/YEN/Surface View/SurfaceDragSource.swift
 ghostty/macos/Sources/Features/App Intents/NewTerminalIntent.swift
 ghostty/macos/Sources/YEN/Surface View/SurfaceScrollView.swift
+ghostty/macos/Sources/Features/Update/UpdateDriver.swift

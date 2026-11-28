@@ -1298,5 +1298,20 @@
 			"--new-block",
 			"@$PATCHES_DIR/remote-pane-close-confirm-pane.new"
 		]
+	},
+	"sparkle-acknowledge-retry": {
+		"target": "ghostty/macos/Sources/Features/Update/UpdateDriver.swift",
+		"arguments": [
+			"--label",
+			"Acknowledge Sparkle errors before retry",
+			"--mode",
+			"exact",
+			"--marker",
+			"acknowledgement() // Finish the failed session before checking again.",
+			"--old-block",
+			"@$PATCHES_DIR/sparkle-acknowledge-retry.old",
+			"--new-block",
+			"@$PATCHES_DIR/sparkle-acknowledge-retry.new"
+		]
 	}
 }

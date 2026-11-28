@@ -24,6 +24,7 @@ A release build is checked without focus in the verify copy: launch it in the ba
 Run the two sides in alternating order, at least 5 runs of 150 keys each, with `cat` in the pane so every key echoes at once; the mean of a 150-key run ranged from 17.9 to 19.8 ms across ten identical runs, so a smaller gap is no difference.
 A launch argument the engine does not know, such as `-ApplePersistenceIgnoreState`, opens a Configuration Errors window that takes the keys, so pass only `-com.yenchat.yen.*` arguments.
 With the overview open in a verify copy using fixture data, run `swift scripts/manual/37-check-token-panel-position.swift <pid>` to cycle all four menu bar displays and check that the button stays in place.
+With a terminal open in YENVerify, run `bash scripts/manual/38-check-update-menu.sh` to check that the main menu brings Software Update to the front.
 Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
 A Debug build beside a scratch home exposes the panel and the Settings switch to Accessibility, so a helper can press them by description without activating the app.

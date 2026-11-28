@@ -11,7 +11,9 @@ import SwiftUI
 class UpdateController {
     private(set) var updater: SPUUpdater
     private let userDriver: UpdateDriver
-    private var pendingCheckForUpdatesWorkItem: DispatchWorkItem?
+    private var sessionObservation: AnyCancellable?
+    private var stateObservation: AnyCancellable?
+    private var updateWindow: NSWindow?
 
     var viewModel: UpdateViewModel {
         userDriver.viewModel
@@ -34,10 +36,14 @@ class UpdateController {
             userDriver: userDriver,
             delegate: userDriver
         )
-    }
-
-    deinit {
-        pendingCheckForUpdatesWorkItem?.cancel()
+        stateObservation = viewModel.$state.dropFirst().sink { [weak self] state in
+            guard let self else { return }
+            if state == .idle {
+                if self.sessionObservation == nil { self.updateWindow?.orderOut(nil) }
+            } else {
+                self.sessionObservation = nil
+            }
+        }
     }
 
     /// Start the updater.
@@ -65,15 +71,6 @@ class UpdateController {
     ///
     /// This is typically connected to a menu item action.
     func checkForUpdates() {
-        pendingCheckForUpdatesWorkItem?.cancel()
-        pendingCheckForUpdatesWorkItem = nil
-
-        // If we're already idle, then just check for updates immediately.
-        if viewModel.state == .idle {
-            updater.checkForUpdates()
-            return
-        }
-
         if case let .installing(installing) = viewModel.state {
             // If the update is already installed, we can't actually
             // cancel it, and SPUUpdater.checkForUpdates will simply fail,
@@ -98,19 +95,56 @@ class UpdateController {
             return
         }
 
-        // If we're not idle then we need to cancel any prior state.
-        viewModel.state.cancel()
-
-        // The above will take time to settle, so we delay the check for some time.
-        // The 100ms is arbitrary and I'd rather not, but we have to wait more than
-        // one loop tick it seems.
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.pendingCheckForUpdatesWorkItem = nil
-            self.updater.checkForUpdates()
+        if userDriver.hasUnobtrusiveTarget {
+            presentUpdateWindow()
+        } else if viewModel.state != .idle {
+            userDriver.standard.showUpdateInFocus()
+            return
         }
-        pendingCheckForUpdatesWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(100), execute: workItem)
+        guard viewModel.state == .idle else { return }
+        if updater.sessionInProgress {
+            // Sparkle may still be acknowledging an error or finishing a background check.
+            guard sessionObservation == nil else { return }
+            sessionObservation = updater.publisher(for: \.sessionInProgress)
+                .filter { !$0 }.first().receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    guard let self else { return }
+                    self.sessionObservation = nil
+                    if self.viewModel.state == .idle { self.checkForUpdates() }
+                }
+        } else {
+            updater.checkForUpdates()
+        }
+    }
+
+    private func presentUpdateWindow() {
+        if updateWindow == nil {
+            let controller = NSHostingController(rootView: ManualUpdateView(model: viewModel))
+            let window = NSWindow(contentViewController: controller)
+            window.title = "Software Update"
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            updateWindow = window
+        }
+        NSApp.activate()
+        updateWindow?.makeKeyAndOrderFront(nil)
+    }
+}
+
+private struct ManualUpdateView: View {
+    @ObservedObject var model: UpdateViewModel
+
+    var body: some View {
+        Group {
+            switch model.state {
+            case .idle, .installing:
+                Text(model.state == .idle ? "Checking for updates…" : model.text)
+                    .padding().frame(width: 300)
+            default:
+                UpdatePopoverView(model: model)
+            }
+        }.fixedSize()
     }
 }
 

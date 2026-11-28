@@ -1,0 +1,3 @@
+            retry: { [weak self, weak viewModel] in
+                viewModel?.state = .idle
+                DispatchQueue.main.async { [weak self] in

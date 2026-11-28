@@ -90,7 +90,8 @@ function GetStartedSection() {
 				<li>Drag YEN to Applications.</li>
 				<li>Open YEN from Applications.</li>
 				<li>
-					To update, choose YEN &gt; Check for Updates. Automatic checks are
+					Choose YEN &gt; Check for Updates to see the update status in a
+					window. If the check fails, click Retry. Automatic checks are
 					optional.
 				</li>
 			</Steps>

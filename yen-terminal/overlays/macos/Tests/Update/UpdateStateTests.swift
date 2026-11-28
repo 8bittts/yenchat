@@ -4,6 +4,47 @@ import Testing
 @testable import YEN
 
 struct UpdateStateTests {
+    @MainActor @Test func retryAcknowledgesTheFailedSparkleSession() throws {
+        final class TestDriver: UpdateDriver {
+            override var hasUnobtrusiveTarget: Bool { true }
+        }
+        let model = UpdateViewModel()
+        var driver: TestDriver? = TestDriver(viewModel: model, hostBundle: .main)
+        var acknowledgements = 0
+        driver?.showUpdaterError(NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)) {
+            acknowledgements += 1
+        }
+        guard case .error(let failure) = model.state else {
+            Issue.record("The failed check must offer Retry.")
+            return
+        }
+        // Release the driver so the scheduled retry cannot start another update in the test host.
+        driver = nil
+        failure.retry()
+        #expect(acknowledgements == 1)
+    }
+
+    @MainActor @Test func verificationHostCannotInstallTheProductionApp() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for id in ["com.yenchat.yenverify", "com.yenchat.yen"] {
+            let bundleURL = root.appendingPathComponent(id + ".app")
+            let contents = bundleURL.appendingPathComponent("Contents")
+            try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+            let plist = ["CFBundleIdentifier": id, "CFBundleVersion": "1", "CFBundleName": "Fixture", "CFBundlePackageType": "APPL"]
+            try PropertyListEncoder().encode(plist).write(to: contents.appendingPathComponent("Info.plist"))
+            let host = try #require(Bundle(url: bundleURL))
+            let driver = UpdateDriver(viewModel: UpdateViewModel(), hostBundle: host)
+            let updater = SPUUpdater(hostBundle: host, applicationBundle: host, userDriver: driver, delegate: driver)
+            let validate = { try driver.updater(updater, shouldProceedWithUpdate: .empty(), updateCheck: .updates) }
+            if id == "com.yenchat.yenverify" {
+                #expect(throws: CocoaError.self) { try validate() }
+            } else {
+                try validate()
+            }
+        }
+    }
+
     @Test func idleEquality() {
         let state1: UpdateState = .idle
         let state2: UpdateState = .idle

@@ -1,0 +1,4 @@
+            retry: { [weak self, weak viewModel] in
+                acknowledgement() // Finish the failed session before checking again.
+                viewModel?.state = .idle
+                DispatchQueue.main.async { [weak self] in

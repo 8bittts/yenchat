@@ -9,6 +9,15 @@ extension UpdateDriver: SPUUpdaterDelegate {
         "https://yen.chat/stable/appcast.xml"
     }
 
+    func updater(_ updater: SPUUpdater, shouldProceedWithUpdate item: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
+        // Installing a public build into YENVerify would relaunch with the production bundle ID and restore its windows.
+        if updater.hostBundle.bundleIdentifier == "com.yenchat.yenverify" {
+            throw CocoaError(.featureUnsupported, userInfo: [
+                NSLocalizedDescriptionKey: "An update is available. Open YEN in Applications to install it."
+            ])
+        }
+    }
+
     /// Called when an update is scheduled to install silently,
     /// which occurs when `auto-update = download`.
     ///
