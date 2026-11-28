@@ -128,7 +128,10 @@ final class TokenUsageMenu: NSObject {
     }
 
     private func openPanel() {
-        guard let button = item.button, button.window != nil else { return }
+        guard let button = item.button, let itemWindow = button.window else { return }
+        let anchor = itemWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        guard let screen = itemWindow.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return }
+        let visible = screen.visibleFrame
         let window = TokenPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         window.title = "YEN Token Usage"
         window.level = .popUpMenu
@@ -141,20 +144,12 @@ final class TokenUsageMenu: NSObject {
         window.dismiss = { [weak self] in self?.closePanel() }
         panel = window
         let host = NSHostingView(rootView: TokenUsageOverview(snapshot: snapshot, mark: button.image,
-            heightLimit: (button.window?.screen?.visibleFrame.height ?? 700) - 24,
+            heightLimit: visible.height - 24,
             cycle: { [weak self] in self?.cycleDisplay() }, refresh: { [weak self] in self?.refreshAll() },
             loadHistory: { [weak self] in self?.loadHistory() })
-            .fixedSize().background(GeometryReader { geometry in
-                Color.clear.preference(key: TokenPanelSize.self, value: geometry.size)
-            }).onPreferenceChange(TokenPanelSize.self) { [weak self, weak window] size in
-                DispatchQueue.main.async {
-                    guard let self, let window, self.panel === window else { return }
-                    self.position(size)
-                }
-            })
+            .fixedSize())
         window.contentView = host
-        position(host.fittingSize)
-        window.makeKeyAndOrderFront(nil)
+        window.open(below: anchor, size: host.fittingSize, visible: visible)
         button.highlight(true)
         let clicks: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: clicks.union(.keyDown)) { [weak self] event in
@@ -193,14 +188,6 @@ final class TokenUsageMenu: NSObject {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit YEN", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         return menu
-    }
-
-    private func position(_ size: CGSize) {
-        guard size.width > 0, size.height > 0, let panel, let button = item.button, let window = button.window else { return }
-        let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
-        guard let screen = window.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return }
-        let frame = TokenPanel.frame(below: anchor, size: size, visible: screen.visibleFrame)
-        if frame != panel.frame { panel.setFrame(frame, display: true) }
     }
 
     @objc private func closePanel() {
@@ -355,12 +342,6 @@ final class TokenUsageMenu: NSObject {
         let title = snapshot.display == .rotating ? caption + ". " + summary : summary
         item.button?.toolTip = title
         item.button?.setAccessibilityLabel(title)
-        if panel != nil {
-            DispatchQueue.main.async { [weak self] in
-                guard let self, let size = self.panel?.contentView?.fittingSize else { return }
-                self.position(size)
-            }
-        }
     }
 }
 
@@ -369,18 +350,28 @@ private final class TokenPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override func cancelOperation(_ sender: Any?) { dismiss?() }
 
-    /// A six-point gap below the anchor and an eight-point inset from the visible display edge.
-    static func frame(below anchor: CGRect, size: CGSize, visible: CGRect) -> CGRect {
-        let safe = visible.insetBy(dx: 8, dy: 8)
-        let x = max(safe.minX, min(anchor.midX - size.width / 2, safe.maxX - size.width))
-        let top = min(anchor.minY - 6, safe.maxY)
-        return CGRect(x: x.rounded(), y: max(safe.minY, top - size.height).rounded(), width: size.width, height: size.height)
-    }
-}
+    private var placement: (topRight: CGPoint, minimumOrigin: CGPoint)?
 
-private struct TokenPanelSize: PreferenceKey {
-    static let defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
+    func open(below anchor: CGRect, size: CGSize, visible: CGRect) {
+        let safe = visible.insetBy(dx: 8, dy: 8)
+        let left = max(safe.minX, min(anchor.midX - size.width / 2, safe.maxX - size.width))
+        let top = min(anchor.minY - 6, safe.maxY)
+        setFrame(CGRect(x: left.rounded(), y: max(safe.minY, top - size.height).rounded(),
+                        width: size.width, height: size.height), display: true)
+        makeKeyAndOrderFront(nil)
+        // AppKit aligns the opening frame to the screen. Pin the corner it actually displayed.
+        placement = (CGPoint(x: frame.maxX, y: frame.maxY), safe.origin)
+    }
+
+    // The hosting view resizes its window when the layout changes. Keep the header under the pointer.
+    override func setFrame(_ frameRect: NSRect, display flag: Bool) {
+        var next = frameRect
+        if let placement {
+            next.origin = CGPoint(x: max(placement.minimumOrigin.x, placement.topRight.x - next.width).rounded(),
+                                  y: max(placement.minimumOrigin.y, placement.topRight.y - next.height).rounded())
+        }
+        super.setFrame(next, display: flag)
+    }
 }
 
 private struct TokenMenuReading: Sendable {

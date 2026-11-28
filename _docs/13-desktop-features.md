@@ -139,6 +139,8 @@ Tried and reverted, do not retry without new evidence:
 General → Experimental → Show Token Usage enables the experimental agent token counter.
 The menu bar shows the count first and the YEN mark after it (`TokenUsageMenu`).
 Click the status item to open the local day’s overview beneath it on the same display.
+The panel stays in place while the menu bar display cycles and when the token counts refresh.
+Changing columns keeps the header controls at the same top-right corner when the layout fits on screen.
 Right-click or Control-click it for a menu with YEN and its version, Refresh, Check for Updates and Quit YEN (`TokenUsageMenu.contextMenu`).
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
 Each provider shows its exact daily count and share of counted tokens.
