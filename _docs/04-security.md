@@ -381,7 +381,10 @@ Whoever can set the app's environment, write its preferences or saved state, or 
 The usage reader takes counts from local provider records without provider credentials or requests.
 Its cache holds record identifiers, source paths, read positions, counts, local hours, working folder paths and session ids.
 While the menu runs it writes `~/.local/state/yen/token-usage.json` (folder 0700, file 0600) with counts, plan readings and working folder paths for `yen usage`, and deletes it when Show Token Usage is turned off; after a quit the file keeps the last reading with its time. Record text never enters it.
-The desktop wallpaper picker grants access to selected media, while random Photos selection requests library permission.
+The Photos picker shares the selected video with YEN.
+Shuffle Photos requests library access, and Photos can fetch the selected media from iCloud.
+Demo fetches an uncached sample from `https://yen.chat/videos/` and reuses the local file on later selections.
 YouTube playback fetches its downloader from a pinned GitHub release and verifies its SHA-256 before execution.
-Only a chosen YouTube video or restoration of that choice can start a media download.
+Choosing a YouTube link starts its download if needed.
+Restoring that assignment can download the video again if its cached file is missing.
 The app bundles the MovingPaper engine's MIT notice, beside the notices that Third-Party License Notices describes; the token readers and the JP the Cat sound are the operator's own work and need none.

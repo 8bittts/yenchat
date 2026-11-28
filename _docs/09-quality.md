@@ -23,7 +23,6 @@ A release build is checked without focus in the verify copy: launch it in the ba
 `scripts/manual/34-measure-key-latency.swift` measures key-to-frame latency in a frontmost copy: it posts a key to that process only and reads the display time of the next frame whose pixels changed.
 Run the two sides in alternating order, at least 5 runs of 150 keys each, with `cat` in the pane so every key echoes at once; the mean of a 150-key run ranged from 17.9 to 19.8 ms across ten identical runs, so a smaller gap is no difference.
 A launch argument the engine does not know, such as `-ApplePersistenceIgnoreState`, opens a Configuration Errors window that takes the keys, so pass only `-com.yenchat.yen.*` arguments.
-The wallpaper's Photos path is checked in the same copy: the From Photos… button opens the "Choose a Video from Photos" panel, the operator picks the video, and the pick arrives as a file under the copy's `MovingWallpaper/Photos` folder and becomes the assignment; a panel closed without a pick leaves the assignment as it was.
 Check the menu anchor before and after expanding a provider row.
 Its filesystem test observes and counts a change through a symbolic link.
 The history test checks each finished day against its fixture and reads again after the source is gone.
@@ -35,6 +34,13 @@ For native acceptance, check that an appended record changes the menu without op
 `WallpaperToggleTests` drives the Moving Wallpaper switch with its own preferences and fails when a panel outlives the switch.
 `YouTubeDownloaderTests` runs the real downloader against a script in yt-dlp's place, so the stream merge and the single-file fallback are tested without the network.
 For native acceptance, click the switch in a verify copy and count that process's windows one level above `CGWindowLevelForKey(.desktopWindow)`: one per display when on, none when off.
+With Wallpaper per Desktop on and a clip showing, start an uncached Demo and press Remove while it downloads.
+The panel must close and stay closed, and pressing Demo again must show a new panel.
+`YouTubeDownloaderTests.removeDuringADownloadKeepsTheCurrentDesktopClear` waits for the request to finish and checks both the saved assignments and the visible panels.
+From Photos… opens the “Choose a Video from Photos” panel.
+Switching Moving Wallpaper off must close the picker.
+With the feature on, closing the picker without a selection must preserve the current assignment.
+When the operator selects a video, verify that it becomes the assignment and appears in the copy’s `MovingWallpaper/Photos` folder.
 With two displays, assign the videos through launch arguments so the pass needs no clicks: `-com.yenchat.yen.movingWallpaper.enabled YES`, `-com.yenchat.yen.movingWallpaper.wallpaperMode perDesktop` (or `allDesktops`) and `-com.yenchat.yen.movingWallpaper.desktopFiles` with an XML `<array>` of `<dict>` records holding integer `displayID` and `spaceID` and a string `path`; Space 0 is a display's all-desktops slot.
 Each display must then own one wallpaper window with that display's bounds, the windows must stop changing under `sudo pmset -a powermode 1` and change again after `powermode 0`, and an unplugged display's window must go away while the others keep playing.
 

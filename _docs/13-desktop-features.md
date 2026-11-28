@@ -174,8 +174,9 @@ On macOS 27 or newer, turning on General → Experimental → Moving Wallpaper s
 Demo plays a random sample other than the one showing; it downloads that sample from yen.chat/videos (`public/videos`) on first use and keeps it in the `Demo` cache (`DemoWallpapers`), and `tests/186-demo-wallpapers.test.ts` keeps the app's list equal to that folder.
 Playback starts muted.
 In Per Desktop mode each source button and Remove act on the current desktop of every display (`WallpaperManager.clearCurrentWallpaper`); in All Desktops mode Remove clears every wallpaper.
-Remove cancels a pending Demo, YouTube or Shuffle Photos request, so its result cannot bring the wallpaper back.
-The Showing row uses the first connected display with a wallpaper on its current desktop.
+In Per Desktop mode, Showing names the first connected display’s current wallpaper, skipping displays whose current desktop has none.
+Remove is available when Showing names a file.
+It also cancels a pending Demo, YouTube or Shuffle Photos request, so its result cannot restore the removed wallpaper.
 macOS gives a display new Space ids when it is plugged in again, so a Per Desktop assignment also saves its Space's position in the system's order of that display's Spaces (`WallpaperState.followSpaces`).
 When none of a display's assigned Spaces exists any more, each assignment moves to the Space now at its position, and the first one with no saved position moves to the display's current Space; this runs on a display change, a Space change and at launch.
 An assignment never moves to another display or onto a Space that already has a wallpaper, and while any assigned Space of the display still exists, nothing moves.

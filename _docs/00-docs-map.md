@@ -7,6 +7,7 @@ Agent routing lives in `AGENTS.md`; this index follows the fleet documentation s
 
 | Doc                          | Owns                                                                                                                    |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `00-docs-map.md`             | Document inventory, ownership, authority order, and audit rules |
 | `00-foundation.md`           | History, decisions, and the index of design assets                                                                      |
 | `01-architecture.md`         | Component boundaries, persistent sessions, remote attach, and native input                                  |
 | `02-design-system.md`        | Themes and the generated catalog, the public web design system, Phosphor typography                                     |
