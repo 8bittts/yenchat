@@ -395,7 +395,9 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - In the Comfortable pane style both scopes share one frame: the window outline follows the outer edge of the pane frames with the pane corner radius and adds no padding, so the terminal grid does not move when the scope changes.
 - In the Compact pane style, or while the browser split is open, the window outline follows the native corner radius inside the clipping edge and pads the content clear of it; `WindowBorderRenderingPolicy.windowOutlinePlacement` owns the choice.
 - In split layouts the focused outline surrounds the pane, including its header, and follows focus as panes move or resize.
-- A single or zoomed surface supplies its AppKit frame. Frame observers subscribe only to that surface and window when needed.
+- A single, split or zoomed pane draws its outline on the visible split-tree leaf.
+  When the focused surface is outside the visible tree, its AppKit frame supplies the fallback.
+  Only that fallback observes frame changes for the surface and its window.
 - Settings apply across the tab group, including new tabs. The command palette, the in-window update status and toasts stay above the border.
 - Hidden in fullscreen and Quick Terminal; focused styling requires `NSApp.isActive`.
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
@@ -408,7 +410,9 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - Reduce Motion and Low Power Mode each hide the spark and hold the aura still, because the motion is decoration that would redraw the window all day; `WindowBorderRenderingPolicy.motionLimit` owns the choice and the Settings hints name the setting that is on.
 - The effect layers never take a click: `WindowBorderEffectLayerView.hitTest` returns nil, and `WindowBorderRenderingPolicyTests` proves a click through an outline with both effects reaches the view below.
 - Both effects are Core Animation layers in `WindowBorderEffectsView.swift`, so the render server animates them and the app does no per-frame work. Keep them out of SwiftUI timelines and animatable shapes, which would redraw on the main thread at display rate above a terminal.
-- The aura is one small image stretched between its corners, so a resize moves a layer frame and redraws nothing; the spark keeps its place on the outline when the outline changes size.
+- The aura stretches one small image between its corners during a resize.
+  Spark measures the resized path once and keeps its place on the outline.
+  A color change updates the spark and its glow while the current lap continues.
 
 **Permission onboarding.** First activation shows live status for Accessibility, Microphone and Speech Recognition with Grant buttons.
 "Skip for Now" or closing is stored as dismissal and "Get Started" as completion; recovery stays in Settings > Dictation > Permissions.

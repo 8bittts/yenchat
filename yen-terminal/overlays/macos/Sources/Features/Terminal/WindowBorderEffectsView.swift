@@ -140,7 +140,6 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
     private struct Signature: Equatable {
         let size: CGSize
         let geometry: WindowBorderEffectGeometry
-        let color: [Int]
         let speed: WindowBorderSparkSpeed
     }
 
@@ -150,7 +149,7 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
     private let segment = CALayer()
     private let headGlow = CAGradientLayer()
     private var geometry: WindowBorderEffectGeometry?
-    private var color = NSColor.white
+    private var appliedColor: [Int]?
     private var speed = WindowBorderSparkSpeed.medium
     private var applied: Signature?
     /// When the current lap started, in `CACurrentMediaTime` seconds.
@@ -169,8 +168,15 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
 
     func configure(geometry: WindowBorderEffectGeometry, color: NSColor, speed: WindowBorderSparkSpeed) {
         self.geometry = geometry
-        self.color = color
         self.speed = speed
+        let colorKey = Self.colorKey(color)
+        if appliedColor != colorKey {
+            appliedColor = colorKey
+            Self.withoutImplicitAnimations {
+                segment.backgroundColor = color.cgColor
+                headGlow.colors = [color.withAlphaComponent(0.55).cgColor, color.withAlphaComponent(0).cgColor]
+            }
+        }
         refresh()
     }
 
@@ -190,12 +196,13 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
             stop()
             return
         }
-        let signature = Signature(size: bounds.size, geometry: geometry, color: Self.colorKey(color), speed: speed)
+        let signature = Signature(size: bounds.size, geometry: geometry, speed: speed)
         if signature == applied, isTraveling { return }
         travelBuildCount += 1
 
-        let path = clockwisePath(for: geometry)
-        let metrics = WindowBorderRenderingPolicy.pathMetrics(of: path)
+        let outline = geometry.path(in: bounds)
+        let metrics = WindowBorderRenderingPolicy.pathMetrics(of: outline)
+        let path = clockwisePath(outline, signedArea: metrics.signedArea)
         guard let model = WindowBorderRenderingPolicy.sparkModel(
             perimeter: metrics.perimeter,
             lineWidth: geometry.lineWidth,
@@ -228,10 +235,8 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
             segment.bounds = CGRect(x: 0, y: 0, width: model.segmentLength, height: geometry.lineWidth)
             // Segments turn with the outline at a corner.
             segment.allowsEdgeAntialiasing = true
-            segment.backgroundColor = color.cgColor
 
             headGlow.bounds = CGRect(x: 0, y: 0, width: model.headGlowDiameter, height: model.headGlowDiameter)
-            headGlow.colors = [color.withAlphaComponent(0.55).cgColor, color.withAlphaComponent(0).cgColor]
 
             // Start one lap in the past, so every tail segment is already moving.
             let begin = newLapStart - model.lapDuration
@@ -255,11 +260,9 @@ final class WindowBorderSparkLayerView: WindowBorderEffectLayerView {
     }
 
     /// The outline path, running clockwise on screen.
-    private func clockwisePath(for geometry: WindowBorderEffectGeometry) -> CGPath {
-        let path = geometry.path(in: bounds)
-        let area = WindowBorderRenderingPolicy.pathMetrics(of: path).signedArea
+    private func clockwisePath(_ path: CGPath, signedArea: CGFloat) -> CGPath {
         let yAxisPointsDown = trail.contentsAreFlipped()
-        guard (area > 0) != yAxisPointsDown else { return path }
+        guard (signedArea > 0) != yAxisPointsDown else { return path }
         var mirror = CGAffineTransform(translationX: bounds.minX + bounds.maxX, y: 0).scaledBy(x: -1, y: 1)
         return path.copy(using: &mirror) ?? path
     }
