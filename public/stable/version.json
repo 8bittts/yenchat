@@ -1,8 +1,8 @@
 {
-  "version": "1.294",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.294/yen-1294.dmg",
-  "sha256": "cfd586c96acae37d3a17a9099889d5d6875e140ab7e386fdd28800ecb5c019ce",
-  "notes": "Keep remote panes open through sign-in approval",
+  "version": "1.295",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.295/yen-1295.dmg",
+  "sha256": "8727816c1f28604ecc8594755fc127c93417ae7fee96e9cc0a6db8aa02dccad0",
+  "notes": "System info can now report drive health",
   "minOS": "27.0",
   "releaseDate": ""
 }

@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.295":
+		"The bundled fastfetch can now show the health of your Mac's SSD. Add a physicaldisk module with \"health\": true to your fastfetch config, and the drive's line ends with the share of its rated life left, such as Health 98%, plus any critical warning the drive reports.",
 	"1.294":
 		"When Tailscale SSH asks you to approve a sign-in, the remote pane stays open. Follow the link once. The same pane connects to your running session after approval and reconnects if the link later drops.",
 	"1.293":
