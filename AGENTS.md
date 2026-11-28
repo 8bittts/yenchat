@@ -121,7 +121,7 @@ Infisical `prod` and `dev` hold no web key today; a future key lives in `prod` a
 | Do not edit `lib/release-notes/release-notes-data.ts` by hand | none (prose) |
 | Run `gitleaks` before pushing scripts, config or fixtures | none (prose) |
 | No personal identity or home paths in the public repository | none (prose) |
-| Verify native UI in a running copy before reporting it | none (prose) |
+| Verify native UI in a running copy before reporting it | Manual observation. For updater checks, `scripts/manual/38-check-update-menu.sh` targets the recorded PID and `scripts/lib/verify-check-only-copy.sh` rejects a copy containing Sparkle’s installer. |
 | Keep work and backlog entries within the approved maintenance scope | none (prose) |
 | Preserve the MIT notices and the desktop account, privacy and dictation boundaries | none (prose) |
 | Remote sessions use only the system `ssh`, with fixed options and no relaxed host-key check, and discover Macs only on request | `tests/176-cli-sessions-remote-contract.test.ts` (ssh options), `RemoteHostsPaletteContractTests` and `TabSidebarHostsSectionTests` (discovery), `tests/154-documentation-contracts.policy.ts` (public statements) |

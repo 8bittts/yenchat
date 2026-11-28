@@ -197,7 +197,7 @@ The verifier refuses to run while another YEN process holds an older config.
 
 #### Validating the local `zig-out` build without quitting your own YEN.app
 
-[CRITICAL] Never point `--app` at `zig-out/YEN.app` and launch it by hand: both bundles are `com.yenchat.yen`, so LaunchServices activates the installed app and the checks pass against the wrong binary.
+Launching `zig-out/YEN.app` by hand can activate the installed app because both use `com.yenchat.yen`.
 When the operator's session must stay up, give the build its own identity:
 
 ```bash
@@ -210,9 +210,9 @@ bash $HOME/Documents/yenchat/scripts/manual/16-verify-applescript-if-needed.sh -
 Always use it; never build the copy by hand in a `mktemp` folder, re-sign it ad hoc, or invent another name or identifier.
 macOS keys an Accessibility or Automation grant to the code requirement, so an ad-hoc copy asked the operator for access on every build, and a deleted temp copy left System Settings with no row to toggle.
 The fixed identifier and Team ID let one grant cover every later copy; the script refuses while a copy is running.
-The refusal keys on the identifier, not the folder, so another session's running copy blocks a new copy even with `YEN_VERIFY_DIR` set; wait for it to quit, and never quit a copy this session did not start.
+The builder checks for a running `yenverify` and for processes using the destination executable, including a copy relaunched as `yen`.
+Wait for the session that owns the running copy.
 When two sessions verify at once, give each its own folder with `YEN_VERIFY_DIR`: the grant follows the identifier and Team ID, not the path, while one shared path lets a later build replace an earlier session's copy in the middle of its test.
-The renamed executable clears the running-instance guard honestly, because the guard keys on the target's executable name.
 Identify the scripted window by its scratch-directory tab titles and confirm it with `lsappinfo`.
 The verifier overwrites both `config.yen` locations and restores them on exit from a backup inside its temp directory, so copy any live config first.
 
@@ -268,7 +268,12 @@ Explicit `auto-update = check|download|off` overrides Sparkle's stored choice in
 With a terminal open, Check for Updates brings the current check or result forward in one Software Update window.
 Retry acknowledges a failed session before another check starts.
 Without a terminal window, Sparkle supplies its standard interface.
-YENVerify can check the public feed and reports when an update is available, but refuses to install a production build into the verification bundle.
+YENVerify can check the public feed; its update delegate refuses the production build.
+The [verify-copy builder](../scripts/manual/18-make-verify-copy.sh) also removes Sparkle’s installer before signing, including when copying a build that predates the delegate guard.
+Rebuild historical QA copies with that helper before opening them.
+An install in an old, unprotected copy can relaunch a second production identity and restore the installed app’s windows, even with a scratch home.
+If panes look wrong after a test relaunch, compare both PIDs and executable paths, bring the installed instance forward, and confirm its layout before touching saved state.
+Quit only the identified test process after confirming its sessions can close.
 With the default `tabs` titlebar style, the update status leads the titlebar beside the window buttons as a glass capsule in the row of workspace tabs (`UpdateTitlebarStatus`), and the tabs start after it.
 It is placed in the toolbar's view like the tab bar, not added as a toolbar item, because NSToolbar moves its items into the overflow menu once the tab bar fills the toolbar.
 An explicit `native` or `transparent` style keeps Ghostty's titlebar status at the right edge.
@@ -278,7 +283,8 @@ Delta updates: `generate-appcast.sh` downloads the DMGs of up to five prior GitH
 Every delta step is non-fatal and falls back to a full-DMG update.
 Sparkle may emit multiple items when the minimum macOS version changes.
 Select only the item matching the target build and copy its signed patches into the release directory.
-`scripts/manual/17-verify-sparkle-delta-dryrun.sh` re-proves the mechanics with no writes.
+To exercise installation mechanics, run `bash scripts/manual/17-verify-sparkle-delta-dryrun.sh <new-version> <old-version>`.
+It applies a generated delta to a disposable copy from two published DMGs and verifies the result without launching either app.
 `appcast.xml` generation fails closed on an invalid `minOS`, and `05-detect-failures.sh` verifies `sparkle:edSignature` against the DMG.
 
 Release notes are a required release step owned by `_docs/10-gtm.md` → Release Notes.
@@ -298,6 +304,7 @@ The homepage, `yen version`, the welcome banner and the shell's `TERM_PROGRAM_VE
 |---------|-----|
 | Wrong version or old UI | Confirm the running bundle (`09-quality.md` → Native Test Suite), then `clear-app-cache.sh` |
 | `ProcessInfoPlistFile` fails or "Update Error!" | `INFOPLIST_PREPROCESS` was re-enabled or `SUFeedURL` is wrong |
+| Repeated update checks after a timeout | Inspect the running process’s Sparkle log for a feed timeout and an active session. Retry in Software Update. If an older app cannot retry, use the signed DMG from `/download` when ready to quit. |
 | Zig dependency fetch fails (`HttpConnectionClosing`, `TlsInitializationFailed`, transient `FileNotFound`) | `build-release.sh` retries three times with cache cleanup; then check `deps.files.ghostty.org` |
 | Undefined `vt.o`, `zig_macos.o` or `spirv_cross_c.o` symbols | `LibtoolStep.zig` stopped flattening archives; reapply overlays and use `build-release.sh` |
 | Build fails with a fingerprint | Copy the fingerprint from the error into `build.zig.zon` |
