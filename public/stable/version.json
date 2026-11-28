@@ -1,8 +1,8 @@
 {
-  "version": "1.296",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.296/yen-1296.dmg",
-  "sha256": "720fc0265dece4c3e009409f23e5ad3126a7e9a0ba5c26337db78fe7f5576f0b",
-  "notes": "Token menu shows active tools and weekly limits",
+  "version": "1.297",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.297/yen-1297.dmg",
+  "sha256": "de9340e791028129f1b5af60b557cd60e8adeb2fe3be5d533b60456e1893db7c",
+  "notes": "Show manual update checks and recover after timeouts",
   "minOS": "27.0",
   "releaseDate": ""
 }

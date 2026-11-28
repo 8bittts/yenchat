@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.297":
+		"Choose YEN > Check for Updates to bring the check, its progress and the result into a Software Update window. You can reopen the same window during a download. If a check times out, Retry finishes the failed session before checking again.",
 	"1.296":
 		"The token menu stays in place as you switch menu bar displays. Daily totals include cached tokens. The menu shows Claude’s weekly and Fable limits, the Codex weekly limit and the SuperGrok weekly limit when their tools record them locally. Idle tools disappear. Removing a moving wallpaper also cancels a pending download, and changing the Spark color keeps the light moving.",
 	"1.295":
