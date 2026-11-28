@@ -127,7 +127,9 @@ struct TokenUsageOverview: View {
                 Text("Provider").frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(Self.windows, id: \.self) { Text(String($0) + " days") }
             }.font(YENTypography.caption).foregroundStyle(.secondary)
-            ForEach(Array(TokenTool.allCases.enumerated()), id: \.offset) { index, tool in
+            ForEach(Array(TokenTool.allCases.enumerated().filter { _, tool in
+                (counts[tool] ?? 0) > 0 || history[tool]?.contains(where: { $0 > 0 }) == true
+            }), id: \.element) { index, tool in
                 GridRow {
                     HStack(spacing: 6) {
                         Circle().fill(tones[index]).frame(width: 7, height: 7).accessibilityHidden(true)
@@ -179,19 +181,29 @@ struct TokenUsageOverview: View {
     private var bodyContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Today’s tokens").font(YENTypography.secondary).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today’s tokens").font(YENTypography.secondary)
+                    Text("Includes cached tokens").font(YENTypography.caption)
+                }.foregroundStyle(.secondary)
                 Spacer()
                 Text(snapshot.counts == nil ? "Reading…" : counts.isEmpty ? "Unavailable" : total.formatted())
                     .font(YENTypography.title.weight(.semibold)).monospacedDigit()
 
             }
             TimelineView(.periodic(from: .now, by: 30)) { clock in
+                let active = TokenTool.allCases.enumerated().filter { _, tool in
+                    tool.hasMenuActivity(tokens: counts[tool], meters: snapshot.plans[tool] ?? [], at: clock.date)
+                }
+                let columns = twoColumns ? 2 : 1
+                if active.isEmpty, snapshot.counts != nil {
+                    Text(counts.isEmpty ? "Usage unavailable" : "No recorded activity")
+                        .font(YENTypography.caption).foregroundStyle(.secondary)
+                }
                 Grid(alignment: .topLeading, horizontalSpacing: 20, verticalSpacing: 12) {
-                    ForEach(0..<(twoColumns ? 2 : 4), id: \.self) { row in
+                    ForEach(Array(stride(from: 0, to: active.count, by: columns)), id: \.self) { start in
                         GridRow {
-                            ForEach(0..<(twoColumns ? 2 : 1), id: \.self) { column in
-                                let index = row * (twoColumns ? 2 : 1) + column
-                                provider(TokenTool.allCases[index], color: tones[index], now: clock.date)
+                            ForEach(Array(active[start..<min(start + columns, active.count)]), id: \.element) { index, tool in
+                                provider(tool, color: tones[index], now: clock.date)
                             }
                         }
                     }
@@ -230,9 +242,8 @@ struct TokenUsageOverview: View {
 
     private func provider(_ tool: TokenTool, color: Color, now: Date) -> some View {
         let count = counts[tool]
-        let share = total > 0 ? Double(count ?? 0) / Double(total) : 0
         let percent = FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0...1))
-        let meters = (snapshot.plans[tool] ?? []).filter { $0.isCurrent(at: now) }
+        let meters = tool.menuMeters(snapshot.plans[tool] ?? [], at: now)
         return VStack(alignment: .leading, spacing: 5) {
             Divider()
             HStack {
@@ -240,21 +251,13 @@ struct TokenUsageOverview: View {
                 Spacer(minLength: 4)
                 Text(count?.formatted() ?? (snapshot.counts == nil ? "Reading…" : "Unavailable")).monospacedDigit()
             }
-            HStack(spacing: 7) {
-                track(share, color: color)
-                // Reserve the widest caption so the four tracks end on one line.
-                Text(0.999.formatted(percent) + " of today").hidden()
-                    .overlay(alignment: .trailing) { Text(count == nil || total == 0 ? "—" : share.formatted(percent) + " of today") }
-                    .font(YENTypography.caption.monospacedDigit()).foregroundStyle(.secondary)
-            }.accessibilityElement(children: .ignore)
-                .accessibilityLabel("Share of counted tokens").accessibilityValue(count == nil || total == 0 ? "Unavailable" : share.formatted(.percent))
             ForEach(meters) { meter in
                 HStack(spacing: 8) {
                     // Each label takes the width of the provider's longest one, so its bars start
                     // together just after the words.
                     ZStack(alignment: .leading) {
-                        ForEach(meters) { Text($0.label).hidden() }
-                        link(meter.label, tool)
+                        ForEach(meters) { Text($0.menuLabel).hidden() }
+                        link(meter.menuLabel, tool)
                     }.font(YENTypography.caption).lineLimit(1).fixedSize()
                     track(meter.percent / 100, color: color.opacity(scheme == .dark ? 0.8 : 1))
                     Text((meter.percent / 100).formatted(percent))

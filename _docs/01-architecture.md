@@ -258,6 +258,7 @@ Saved windows win over cached ones of the same name, a turn without limits write
 Turning the switch off removes the block byte for byte and deletes the saved file; the script, not a preference, records whether it is on.
 Codex records its limits only while it runs, so the index also reads the newest rollout from an earlier day.
 A plan reading stays until its own reset time, and a percentage outside 0 to 100 is clamped.
+A Grok weekly reading older than 12 hours remains eligible only when its timestamp falls inside the reported weekly window and the window has not reset.
 The token menu depends on no other app: it reads only the four tools’ own records, holds no credential and opens no network connection, so Cursor and Grok Bot plan pools are not shown.
 The retired connection source is listed in `scripts/lib/overlay-data/retired-paths.tsv`, which removes its copy from an existing build tree.
 A source that was readable and fails one read, such as a locked store, gets one more try after the 8-second debounce; a second failure waits for the next file change, so an absent tool costs no wakeups.

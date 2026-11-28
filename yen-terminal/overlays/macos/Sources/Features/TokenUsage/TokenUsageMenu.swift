@@ -404,8 +404,10 @@ enum TokenMenuDisplay: String, CaseIterable {
             guard let leader, let count = counts?[leader], count > 0 else { return value }
             return leader.rawValue + " " + count.formatted(.number.notation(.compactName))
         case .rotating:
-            let limits = TokenTool.allCases.flatMap { tool in
-                (plans[tool] ?? []).filter { $0.isCurrent(at: now) }.map { Self.limit(tool, $0) }
+            let limits = TokenTool.allCases.filter { tool in
+                tool.hasMenuActivity(tokens: counts?[tool], meters: plans[tool] ?? [], at: now)
+            }.flatMap { tool in
+                tool.menuMeters(plans[tool] ?? [], at: now).map { Self.limit(tool, $0) }
             }
             return limits.isEmpty ? total : total + " · " + limits[step % limits.count]
         case .mark: return ""

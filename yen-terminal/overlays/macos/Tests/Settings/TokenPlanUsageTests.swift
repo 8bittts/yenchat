@@ -36,6 +36,29 @@ struct TokenPlanUsageTests {
         #expect(meters.map(\.percent) == [14])
     }
 
+    @Test func grokKeepsAnOlderWeeklyReadingOnlyWithinItsReportedPeriod() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let log = home.appendingPathComponent(".grok/logs/unified.jsonl")
+        try FileManager.default.createDirectory(at: log.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let end = start.addingTimeInterval(7 * 86_400)
+        let now = end.addingTimeInterval(-86_400)
+        func write(started: Date, observed: Date) throws {
+            let period = ["type": "USAGE_PERIOD_TYPE_WEEKLY", "start": started.ISO8601Format(), "end": end.ISO8601Format()]
+            let config: [String: Any] = ["currentPeriod": period, "creditUsagePercent": 14]
+            let row: [String: Any] = ["msg": "billing: fetched credits config", "ts": observed.ISO8601Format(), "ctx": ["config": config]]
+            try JSONSerialization.data(withJSONObject: row).write(to: log)
+        }
+        try write(started: start, observed: start)
+        #expect(TokenLocalPlans.grok(home: home, now: now).map(\.percent) == [14])
+        #expect(TokenLocalPlans.grok(home: home, now: end).isEmpty)
+        try write(started: start, observed: start.addingTimeInterval(-1))
+        #expect(TokenLocalPlans.grok(home: home, now: now).isEmpty)
+        try write(started: start, observed: now.addingTimeInterval(60))
+        #expect(TokenLocalPlans.grok(home: home, now: now).isEmpty)
+    }
+
     @Test func planPercentagesClampToTheBarRange() {
         // A pool past its included limit still shows a full bar.
         #expect(TokenPlanMeter("Weekly", percent: 104.2, reset: nil)?.percent == 100)
@@ -126,14 +149,14 @@ struct TokenPlanUsageTests {
         }
         let counts: TokenUsageIndex.Counts = [.claude: 514_000_000, .codex: 0, .grok: 0, .openCode: 0]
         let plans: [TokenTool: [TokenPlanMeter]] = [
-            .claude: [try meter("Weekly", 64), try meter("Opus weekly", 40), try meter("5-hour", 9, now.addingTimeInterval(-1))],
+            .claude: [try meter("Weekly", 64), try meter("Fable weekly", 40), try meter("5-hour", 9, now.addingTimeInterval(-1))],
             .codex: [try meter("5-hour", 12), try meter("Weekly", 97)],
             .grok: [try meter("Grok weekly", 1)]
         ]
         let total = 514_000_000.formatted(.number.notation(.compactName))
         func pct(_ value: Double) -> String { (value / 100).formatted(.percent.precision(.fractionLength(0))) }
         // A weekly pool carries no label; the expired Claude 5-hour window is skipped.
-        let expected = ["Claude " + pct(64), "Claude Opus " + pct(40), "Codex 5h " + pct(12), "Codex " + pct(97), "Grok " + pct(1)]
+        let expected = ["Claude " + pct(64), "Claude Fable " + pct(40), "Codex " + pct(97), "Grok " + pct(1)]
         for step in 0..<(expected.count + 1) {
             let caption = TokenMenuDisplay.rotating.caption(counts: counts, plans: plans, step: step, now: now)
             #expect(caption == total + " · " + expected[step % expected.count])
@@ -141,6 +164,21 @@ struct TokenPlanUsageTests {
         // With no current reading the rotating view still shows the total.
         #expect(TokenMenuDisplay.rotating.caption(counts: counts, plans: [:], step: 3, now: now) == total)
         #expect(TokenMenuDisplay.mark.caption(counts: counts, plans: plans, step: 0, now: now).isEmpty)
+    }
+
+    @Test func overviewRequiresRecordedActivityAndOnlyShowsRequestedPools() throws {
+        let now = Date()
+        let later = now.addingTimeInterval(60)
+        let weekly = try #require(TokenPlanMeter("Weekly", percent: 8, reset: later))
+        let zero = try #require(TokenPlanMeter("Weekly", percent: 0, reset: later))
+        let expired = try #require(TokenPlanMeter("Fable weekly", percent: 100, reset: now))
+        let short = try #require(TokenPlanMeter("5-hour", percent: 50, reset: later))
+        #expect(!TokenTool.openCode.hasMenuActivity(tokens: 0, meters: [], at: now))
+        #expect(TokenTool.openCode.hasMenuActivity(tokens: 1, meters: [], at: now))
+        #expect(!TokenTool.claude.hasMenuActivity(tokens: nil, meters: [zero, expired], at: now))
+        #expect(TokenTool.codex.hasMenuActivity(tokens: 0, meters: [weekly], at: now))
+        #expect(TokenTool.claude.menuMeters([expired, weekly, short], at: now) == [weekly])
+        #expect(TokenTool.codex.menuMeters([short, weekly], at: now) == [weekly])
     }
 
     @Test func savedDisplayChoicesSurviveTheRename() {

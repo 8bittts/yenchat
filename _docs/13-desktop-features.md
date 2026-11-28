@@ -143,8 +143,11 @@ The panel stays in place while the menu bar display cycles and when the token co
 Changing columns keeps the header controls at the same top-right corner when the layout fits on screen.
 Right-click or Control-click it for a menu with YEN and its version, Refresh, Check for Updates and Quit YEN (`TokenUsageMenu.contextMenu`).
 The panel takes the app appearance, which follows the terminal theme, so a light theme opens a light panel.
-Each provider shows its exact daily count and share of counted tokens.
-Current plan readings appear below the daily share and each percentage belongs to its named pool.
+The overview shows a tool when it recorded tokens today or reports usage above zero in a displayed plan window that has not reset.
+The daily token total includes cache reads and writes.
+Each bar shows the last reported percentage for its named plan pool: Claude Weekly and Fable weekly, Codex Weekly, or the Grok subscription reading.
+OpenCode appears after it records tokens today.
+The analytics table includes tools with recorded tokens during its 90-day range.
 Claude Plan Limits, below Show Token Usage, adds a marked block to the Claude Code statusline script so Claude's bars follow every turn ([01-architecture.md](01-architecture.md) → token menu); it is off by default and disabled when the script does not read its input into a variable.
 Claude Code sends its limits to the statusline only after a reply, so Claude's bars appear after the first reply that ends with the switch on.
 A plan reading stays until its reset time.
@@ -159,7 +162,7 @@ It shows tokens, not money; YEN holds no price table.
 The layout button switches between one and two columns.
 Bars use darker tones on a light theme so each stays at 3:1 contrast against the panel (`TokenBarTone`).
 The menu bar button in the header cycles the menu bar through total tokens, the leading provider, rotating limits and the YEN icon (`TokenMenuDisplay`).
-Rotating limits shows today's total and one current plan reading, the next every 5 seconds, such as `514M · Claude 64%`; a weekly pool carries no label, a 5-hour pool reads `5h`, and with no current reading it shows the total alone.
+Rotating limits shows today's total and one current plan reading, the next every 5 seconds, such as `514M · Claude 64%`; the rotating caption uses the same pools as the overview and shows the total alone when none is available.
 Plan readings come only from records the four tools write on the Mac and the file YEN's statusline block saves; the menu reads no other app’s data, stores no credential and makes no network request.
 An asterisk marks partial coverage.
 A readable source with no usage contributes zero, and an unavailable source is omitted from the total.

@@ -6,6 +6,7 @@ struct TokenPlanMeter: Codable, Equatable, Sendable, Identifiable {
     let percent: Double
     let reset: Date?
     var id: String { label }
+    var menuLabel: String { label == "Grok weekly" ? "SuperGrok weekly" : label }
 
     init?(_ label: String, percent: Any?, reset: Date?) {
         guard let value = percent as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
@@ -17,6 +18,24 @@ struct TokenPlanMeter: Codable, Equatable, Sendable, Identifiable {
     }
 
     func isCurrent(at now: Date) -> Bool { reset.map { $0 > now } ?? true }
+}
+
+extension TokenTool {
+    /// The pools the menu shows, in display order. A missing or expired reading has no bar.
+    func menuMeters(_ readings: [TokenPlanMeter], at now: Date) -> [TokenPlanMeter] {
+        let labels: [String]
+        switch self {
+        case .claude: labels = ["Weekly", "Fable weekly"]
+        case .codex: labels = ["Weekly"]
+        case .grok: labels = ["Grok weekly", "Grok subscription"]
+        case .openCode: labels = []
+        }
+        return labels.compactMap { label in readings.first { $0.label == label && $0.isCurrent(at: now) } }
+    }
+
+    func hasMenuActivity(tokens: Int?, meters: [TokenPlanMeter], at now: Date) -> Bool {
+        (tokens ?? 0) > 0 || menuMeters(meters, at: now).contains { $0.percent > 0 }
+    }
 }
 
 struct TokenPlanReading: Codable, Sendable {
@@ -96,8 +115,11 @@ enum TokenLocalPlans {
                   obj["msg"] as? String == "billing: fetched credits config",
                   let ctx = obj["ctx"] as? TokenRecord.Object, let config = ctx["config"] as? TokenRecord.Object,
                   let period = config["currentPeriod"] as? TokenRecord.Object,
-                  let stamp = TokenRecord.date(obj["ts"]), (0...43200).contains(now.timeIntervalSince(stamp)),
+                  let stamp = TokenRecord.date(obj["ts"]), stamp <= now,
                   let end = TokenRecord.date(period["end"]), end > now,
+                  (now.timeIntervalSince(stamp) <= 43_200 ||
+                   (period["type"] as? String == "USAGE_PERIOD_TYPE_WEEKLY" &&
+                    TokenRecord.date(period["start"]).map { $0 <= stamp && end.timeIntervalSince($0) <= 7 * 86_400 + 1 } == true)),
                   // Grok omits the percentage on some fetches, so keep looking for the last line that has one.
                   let meter = TokenPlanMeter(period["type"] as? String == "USAGE_PERIOD_TYPE_WEEKLY" ? "Grok weekly" : "Grok subscription",
                                              percent: config["creditUsagePercent"], reset: end) else { continue }

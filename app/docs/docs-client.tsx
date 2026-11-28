@@ -646,8 +646,9 @@ function AgentTokenUsageSection() {
 					Usage.
 				</li>
 				<li>
-					Click the YEN item in the menu bar. Each tool shows its daily count
-					and share.
+					Click the YEN item in the menu bar. Daily counts include cached
+					tokens. A tool appears when it recorded tokens today or reports
+					positive usage in a displayed plan window.
 				</li>
 				<li>
 					Click the chart button to see the last 7, 30, and 90 days and your
@@ -661,12 +662,12 @@ function AgentTokenUsageSection() {
 			</Steps>
 			<Shot
 				src="/doc-images/agent-token-usage.png"
-				alt="Example token menu with 10,000 daily tokens, inline provider counts and a plan bar under each tool that recorded one."
+				alt="Example token menu showing daily counts including cached tokens and weekly plan usage for active tools."
 				width={730}
-				height={812}
+				height={626}
 				sizes="(max-width: 360px) 100vw, 320px"
 				className="h-auto w-full max-w-xs"
-				caption="The top bar is each tool&apos;s share of today&apos;s tokens. The smaller bars are plan usage."
+				caption="Daily totals include cached tokens. Each bar shows the last reported usage for its named plan."
 			/>
 			<ul className="list-disc list-outside pl-5 space-y-3 text-body">
 				<li>
@@ -681,7 +682,8 @@ function AgentTokenUsageSection() {
 				</li>
 				<li>
 					<strong>Plan bars:</strong> show the percentage used in each named
-					pool for Claude, Codex, and Grok Build when their tools record it.
+					pool when a local reading is available: Weekly and Fable weekly for
+					Claude, Weekly for Codex, and the subscription pool for Grok Build.
 					Claude Code shares its limits only with its statusline, so turn on
 					Claude Plan Limits to add a marked block to your statusline script.
 					Turning it off removes the block.
@@ -707,9 +709,9 @@ function AgentTokenUsageSection() {
 					current folder.
 				</li>
 				<li>
-					<strong>Readings:</strong> an asterisk marks a partial total.
-					Unavailable means YEN could not read the source. Zero means the source
-					recorded no tokens today.
+					<strong>Readings:</strong> an asterisk marks a partial total. A
+					readable source can be idle. OpenCode appears in the overview only
+					after it records tokens that day.
 				</li>
 			</ul>
 			<details>

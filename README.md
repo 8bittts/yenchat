@@ -46,7 +46,7 @@ Paste a screenshot or a copied picture and YEN saves it to a private, auto-prune
 
 ### A menu bar for your agents
 
-The [agent token usage experiment](https://yen.chat/#agent-token-usage) shows daily counts for Claude Code, Codex, Grok Build and OpenCode in the menu bar.
+The [agent token usage experiment](https://yen.chat/#agent-token-usage) shows daily counts including cached tokens and available plan readings for active tools in the menu bar.
 The breakdown follows your Mac’s local day, including activity outside YEN.
 
 ### A moving desktop
