@@ -34,7 +34,7 @@ final class WallpaperManager {
     // MARK: - Collaborators
 
     private let router = WallpaperWindowRouter()
-    private let youtubeDownloader = YouTubeDownloader()
+    private let youtubeDownloader: YouTubeDownloader
     private let loadingOverlay = LoadingOverlayController()
     private let requestCoordinator = WallpaperRequestCoordinator()
     private let persistenceStore: WallpaperPersistenceStore
@@ -49,9 +49,11 @@ final class WallpaperManager {
 
     init(
         persistenceStore: WallpaperPersistenceStore = WallpaperPersistenceStore(),
+        youtubeDownloader: YouTubeDownloader? = nil,
         spacesSnapshot: @escaping @MainActor () -> ManagedDisplaySpacesSnapshot = { ManagedDisplaySpacesSnapshot.current() }
     ) {
         self.persistenceStore = persistenceStore
+        self.youtubeDownloader = youtubeDownloader ?? YouTubeDownloader()
         self.spacesSnapshot = spacesSnapshot
         router.onPlaybackFailure = { [weak self] url, message in
             self?.handlePlaybackFailure(url: url, message: message)
@@ -231,19 +233,20 @@ final class WallpaperManager {
     }
 
     /// Download a YouTube video and set it as wallpaper.
-    func setYouTubeWallpaper(urlString: String, for displayID: CGDirectDisplayID? = nil) {
+    @discardableResult
+    func setYouTubeWallpaper(urlString: String, for displayID: CGDirectDisplayID? = nil) -> Task<Void, Never>? {
         guard YouTubeURLParser.isYouTubeURL(urlString) else {
             WallpaperPresentation.showAlert(
                 title: "Invalid URL",
                 message: "That doesn't look like a YouTube URL."
             )
-            return
+            return nil
         }
 
         let target = assignmentTarget(for: displayID)
         let originSpaceID = displayID.map { currentSpaceID(for: $0) }
         cancelRestoreTask()
-        requestCoordinator.start(for: target) { [weak self] token in
+        return requestCoordinator.start(for: target) { [weak self] token in
             guard let self else { return }
             let outcome = await youtubeDownloader.download(youtubeURL: urlString) { [weak self] progress in
                 self?.showDownloadProgress(progress, on: displayID)

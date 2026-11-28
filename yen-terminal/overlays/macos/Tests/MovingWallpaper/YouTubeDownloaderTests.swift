@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import CoreVideo
 import Foundation
@@ -94,6 +95,31 @@ struct YouTubeDownloaderTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
         let path = script.path
         return YouTubeDownloader(cacheDirectory: cache, resolveBinary: { path })
+    }
+
+    @Test func removeDuringADownloadKeepsTheCurrentDesktopClear() async throws {
+        defer { cleanUp() }
+        try #require(!NSScreen.screens.isEmpty)
+        let movie = try await makeVideo(named: "original.mp4")
+        let downloader = try makeDownloader(video: nil, audio: nil, single: movie)
+        let store = WallpaperPersistenceStore(userDefaults: WallpaperMemoryDefaults())
+        let manager = WallpaperManager(persistenceStore: store, youtubeDownloader: downloader)
+        defer { manager.tearDown() }
+        manager.setMode(.perDesktop)
+        manager.setWallpaper(url: movie)
+
+        var removed = false
+        manager.onChange = {
+            guard !removed, downloader.progress != nil else { return }
+            removed = true
+            manager.clearCurrentWallpaper()
+        }
+        let request = try #require(manager.setYouTubeWallpaper(urlString: link))
+        await request.value
+
+        #expect(removed)
+        #expect(store.load().state.isEmpty)
+        #expect(!NSApp.windows.contains { $0 is WallpaperPanel && $0.isVisible })
     }
 
     private func tracks(of url: URL) async throws -> [AVMediaType] {

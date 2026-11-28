@@ -15,19 +15,22 @@ final class WallpaperRequestCoordinator {
     private var activeTokens: [WallpaperAssignmentTarget: UUID] = [:]
     private var activeTasks: [WallpaperAssignmentTarget: Task<Void, Never>] = [:]
 
+    @discardableResult
     func start(
         for target: WallpaperAssignmentTarget,
         operation: @escaping @MainActor (_ token: UUID) async -> Void
-    ) {
+    ) -> Task<Void, Never> {
         cancel(target)
 
         let token = UUID()
         activeTokens[target] = token
-        activeTasks[target] = Task { @MainActor [weak self] in
+        let task = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { finish(target, token: token) }
             await operation(token)
         }
+        activeTasks[target] = task
+        return task
     }
 
     func cancel(_ target: WallpaperAssignmentTarget) {

@@ -90,6 +90,16 @@ struct WallpaperControlsTests {
         #expect(DemoWallpapers.cachedURL("test-02.mp4", in: cache) == nil)
     }
 
+    @Test func aCancelledRequestCannotOpenItsLoadingOverlay() async {
+        defer { cleanUp() }
+        let requests = WallpaperRequestCoordinator()
+        var started = false
+        let task = requests.start(for: .allDesktops) { _ in started = true }
+        requests.cancelAll()
+        await task.value
+        #expect(!started)
+    }
+
     // MARK: - Remove and state
 
     @Test func removeInPerDesktopModeClearsOnlyTheCurrentDesktop() throws {
