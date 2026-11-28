@@ -653,7 +653,7 @@ struct WindowBorderRenderingPolicyTests {
     }
 
     @MainActor
-    @Test func sparkIsNotRebuiltWhenAnUpdateChangesNothing() {
+    @Test func sparkChangesColorWithoutRestartingTravel() throws {
         let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -672,14 +672,17 @@ struct WindowBorderRenderingPolicyTests {
         view.layout()
         #expect(view.travelBuildCount == 1)
 
-        view.configure(geometry: geometry, color: .systemOrange, speed: .medium)
-        #expect(view.travelBuildCount == 2)
+        view.configure(geometry: geometry, color: .orange, speed: .medium)
+        let trail = try #require(view.layer?.sublayers?.compactMap { $0 as? CAReplicatorLayer }.first)
+        let color = try #require(trail.sublayers?.first?.backgroundColor)
+        #expect(color == NSColor.orange.cgColor)
+        #expect(view.travelBuildCount == 1)
         #expect(view.isTraveling)
 
         // A new speed takes effect at once.
         let mediumLap = view.lapDurationForTesting
-        view.configure(geometry: geometry, color: .systemOrange, speed: .superFast)
-        #expect(view.travelBuildCount == 3)
+        view.configure(geometry: geometry, color: .orange, speed: .superFast)
+        #expect(view.travelBuildCount == 2)
         #expect(view.isTraveling)
         #expect(view.lapDurationForTesting < mediumLap)
     }
