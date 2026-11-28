@@ -17,6 +17,8 @@
 
 // version -> curated public summary.
 export const RELEASE_COPY: Record<string, string> = {
+	"1.296":
+		"The token menu stays in place as you switch menu bar displays. Daily totals include cached tokens. The menu shows Claude’s weekly and Fable limits, the Codex weekly limit and the SuperGrok weekly limit when their tools record them locally. Idle tools disappear. Removing a moving wallpaper also cancels a pending download, and changing the Spark color keeps the light moving.",
 	"1.295":
 		"The bundled fastfetch can now show the health of your Mac's SSD. Add a physicaldisk module with \"health\": true to your fastfetch config, and the drive's line ends with the share of its rated life left, such as Health 98%, plus any critical warning the drive reports.",
 	"1.294":

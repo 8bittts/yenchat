@@ -1,8 +1,8 @@
 {
-  "version": "1.295",
-  "url": "https://github.com/8bittts/yenchat/releases/download/v1.295/yen-1295.dmg",
-  "sha256": "8727816c1f28604ecc8594755fc127c93417ae7fee96e9cc0a6db8aa02dccad0",
-  "notes": "System info can now report drive health",
+  "version": "1.296",
+  "url": "https://github.com/8bittts/yenchat/releases/download/v1.296/yen-1296.dmg",
+  "sha256": "720fc0265dece4c3e009409f23e5ad3126a7e9a0ba5c26337db78fe7f5576f0b",
+  "notes": "Token menu shows active tools and weekly limits",
   "minOS": "27.0",
   "releaseDate": ""
 }
