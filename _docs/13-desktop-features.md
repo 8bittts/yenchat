@@ -391,7 +391,8 @@ Failed loads remain retryable, and each window still applies the parsed config t
 - New, restored and re-laid-out splits inherit the scope, and screenshots render the wallpaper once.
 
 **Chromatic window border** (Settings > Appearance > Border; scope also through the palette's `Window Border: Toggle Focused Split`, palettes through its other Window Border actions).
-Scope `Window` or `Focused Split` (falls back to the window when no split frame exists); manual or Match Theme colors.
+Settings offers Window or Focused Pane for the outline and Theme or Accent for the color.
+Focused Pane falls back to the window when the focused pane and its frame are unavailable.
 - In the Comfortable pane style both scopes share one frame: the window outline follows the outer edge of the pane frames with the pane corner radius and adds no padding, so the terminal grid does not move when the scope changes.
 - In the Compact pane style, or while the browser split is open, the window outline follows the native corner radius inside the clipping edge and pads the content clear of it; `WindowBorderRenderingPolicy.windowOutlinePlacement` owns the choice.
 - In split layouts the focused outline surrounds the pane, including its header, and follows focus as panes move or resize.
@@ -403,7 +404,8 @@ Scope `Window` or `Focused Split` (falls back to the window when no split frame 
 - Match Theme normalizes quoted names, separators and extensions, and says so when it falls back to manual colors.
 - Differentiate Without Color dashes the unfocused border, and the palette's Window Border actions link to the system setting.
 - Spark and Aura are optional effects on the focused outline, and they can be on together; an unfocused window draws the plain outline. `WindowBorderRenderingPolicy.effectPlan` owns the choice.
-- The spark is a light with a fading tail that follows the stroke at the chosen weight. It moves at one speed on any outline, and at the 340 point a second base a lap takes 3 to 12 seconds (`WindowBorderRenderingPolicy.sparkModel`).
+- The spark and its fading tail follow the stroke at the chosen weight.
+  At the base rate, it travels at 340 points per second until a lap reaches the 3-second minimum or 12-second maximum.
 - Spark Speed scales the base speed and both lap limits by `WindowBorderSparkSpeed.multiplier`: Slowww is 0.1, Fffast is 2.5, and each step between them is the same factor (about 2.24), so Medium is 0.5. A 2040 point window takes 60 seconds a lap at Slowww and 12 at Medium. Each step changes the lap on a small pane and a large window alike, and the speed changes the timing only.
 - The spark takes the outline's own color, lifted toward white on a dark backdrop and deepened toward black on a light one, where a pale spark reads as a gap in the outline. It switches to the other choice when its contrast with the stroke falls below `WindowBorderOverlay.minimumSparkContrastRatio`.
 - The aura is a glow in the picked color around the stroke. It pulses between two opacities at the chosen speed, and the speed changes the timing only (`WindowBorderAuraPulse.halfPeriod`, `WindowBorderRenderingPolicy.auraModel`).

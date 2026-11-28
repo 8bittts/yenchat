@@ -64,6 +64,10 @@ Quit a verify copy by the pid recorded when it launched, never by a name pattern
 A code read, a unit test and an offscreen render have each been wrong about the same panel.
 An offscreen `NSHostingView` render showed `.tint(.red)` leaving a bordered button unchanged, while the running Settings window draws that button red.
 A Settings window can render dark while the system appearance is Light, so confirm the rendered appearance before reporting a contrast finding.
+For Spark and Aura, activate the verification app and capture the terminal window by its window number.
+An inactive window intentionally holds a plain outline.
+Compare pixels along the stroke across frames to exclude cursor motion.
+For a resize, compare the spark’s position as a fraction of a clockwise lap before and after the resize.
 Synthetic input has limits of its own: Escape never reaches the verification copy, so an Esc finding cannot be told apart from a harness artifact; the shipped recorder's Esc cancel fails there the same way.
 
 **Capture tests never request permissions.** A prompt is modal and steals focus from every suite.
@@ -77,7 +81,10 @@ Synthetic input has limits of its own: Escape never reaches the verification cop
 - Source-scanning suites use the prepared fixture snapshot rather than opening the Documents checkout.
   A host blocked on a checkout read indicates a missing fixture conversion; inspect its stack and source path before requesting access.
 - The test host is the Debug bundle `com.yenchat.yen.debug` and shares TCC state with a Debug app launched for E2E work. Answer its prompts before a native run, and `sample` a silent host before calling it a code hang.
-- The Debug bundle holds the upstream themes but not the custom theme files or the curated manifest, so its Themes picker is empty and `theme = YEN` reports "not found"; check chrome color there with an explicit `background`.
+- A standalone Xcode build needs the packaged theme catalog to exercise Match Theme.
+  Run `yen-terminal/customizations/bundle-yen-resources.sh` on the local release bundle before making the verification copy.
+  Confirm the picker lists the selected theme and the terminal renders its background.
+  For a Debug chrome check without the catalog, set an explicit `background` in the scratch config.
 - Native UI launch checks can pass app preferences as single-dash pairs such as `-com.yenchat.yen.persistentSessions NO`.
   The engine reads terminal options, while AppKit gets the original arguments for its defaults.
   Run `python3 scripts/manual/33-check-native-launch-defaults.py "$YEN_VERIFY_APP"` to check startup, configuration reload, and arguments passed to a child command.
@@ -143,7 +150,8 @@ These apply to the homepage, Terms, and the separate blog.
 
 - Contrast at least 4.5:1 for body text and 3:1 for large text; text on brand orange uses high-contrast tokens; no opacity-reduced body copy.
 - Every page has `<a href="#main-content" className="skip-link">`, `<main id="main-content">`, an `h1` → `h2` → `h3` hierarchy, and visible focus rings.
-- Every control has an accessible name; toggles expose `aria-pressed`; `aria-controls` targets only IDs in the current DOM; inputs have labels (visible or `sr-only`).
+- Every control has an accessible name, and inputs have visible or `sr-only` labels.
+  Toggle buttons expose `aria-pressed`, switches expose `aria-checked`, and `aria-controls` targets an ID in the current DOM.
 - The Terms link, which includes privacy and cookie policy, stays visible at every breakpoint, never behind `hidden md:flex`.
 - [HARD REQUIREMENT] Reduced motion: CSS sets `animation: none` under `prefers-reduced-motion: reduce` for pings, pulses and custom keyframes; JS checks `matchMedia` before typing, recording or looping animations and jumps to the final state. An animation that persists anyway carries an `/* Animation exception: ... */` comment.
 

@@ -676,6 +676,12 @@ struct WindowBorderRenderingPolicyTests {
         let trail = try #require(view.layer?.sublayers?.compactMap { $0 as? CAReplicatorLayer }.first)
         let color = try #require(trail.sublayers?.first?.backgroundColor)
         #expect(color == NSColor.orange.cgColor)
+        let glow = try #require(view.layer?.sublayers?.compactMap { $0 as? CAGradientLayer }.first)
+        let stops = try #require(glow.colors as? [CGColor])
+        let visibleStops = stops.filter { $0.alpha > 0 }
+        #expect(!visibleStops.isEmpty)
+        #expect(visibleStops.allSatisfy { $0.copy(alpha: 1) == NSColor.orange.cgColor })
+
         #expect(view.travelBuildCount == 1)
         #expect(view.isTraveling)
 

@@ -23,8 +23,8 @@ Dates are the evidence in this doc; the owner docs carry none.
 - 2026-11-21: `/yen-zip` becomes `/update-yen`, which adds a deps phase (Bun packages and Sparkle) ahead of the vendor phase and the release cut; `/update-projs` stops covering yenchat, so one command owns every YEN update.
 
 - 2026-11-21: the operator approves an opt-in local token menu and built-in MovingPaper controls on supported Macs.
-- 2026-11-23: the operator retires JP the Cat and MovingPaper, whose repositories are deleted, and approves four JP the Cat features for the token menu: per-folder counts in the panel and the tab sidebar, plan limit alerts with JP's meow as a built-in alert sound, `yen usage`, Grok turns counted while they run, and an hour-by-weekday chart.
 - 2026-11-22: the operator approves two animated effects for the window border, Spark and Aura, and a homepage preview of them, because a focused-split outline is a visual cue few terminals offer.
+- 2026-11-23: the operator retires JP the Cat and MovingPaper, whose repositories are deleted, and approves JP the Cat features for the token menu: per-folder counts in the panel and the tab sidebar, plan limit alerts with JP's meow as a built-in alert sound, `yen usage`, Grok turns counted while they run, and an hour-by-weekday chart.
 
 ## Remote session validation
 
@@ -47,7 +47,7 @@ Dates are the evidence in this doc; the owner docs carry none.
   New features, redesigns, refactors, performance work, and growth or SEO work wait for an explicit operator request, because a solo project cannot compete with a funded team on the same engine (Timeline, 2026-11-16).
   `AGENTS.md` → Maintenance Mode carries the rule; `_docs/todos.md` holds only work inside it.
 - **Approved feature work.** Persistent panes with Tailscale remote attach are the feature the operator judged missing to make YEN their default terminal, so it and its design pass are in scope (Timeline, 2026-11-19); [Architecture](01-architecture.md#persistent-sessions) describes the session lifecycle and remote transport.
-  The local token menu with its folders, limit alerts, `yen usage` and analytics, the experimental desktop wallpaper and the window border effects (Spark and Aura) also have explicit operator approval (Timeline, 2026-11-23).
+  The local token menu with its folders, limit alerts, `yen usage` and analytics, the experimental desktop wallpaper and the window border effects (Spark and Aura) also have explicit operator approval (Timeline, 2026-11-21 through 2026-11-23).
 - **Tokens, not dollars.** JP the Cat priced every model from a curated table it re-audited before each release and refreshed from a remote feed; the token menu keeps no price table and makes no network request, so it shows tokens and the providers' own plan percentages only.
 - **zmx is the session backend.** zmx (MIT, Zig 0.17, built on libghostty-vt) owns each pane's PTY in its own process group, so a pane survives the app quitting and replays its screen and scrollback on reattach.
   A spike proved it in a re-identified copy of the shipping app: a pane whose `command` was `zmx attach` kept its counter running through an AppleScript quit and showed the whole history after relaunch.
